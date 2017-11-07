@@ -2,6 +2,7 @@
 #define COMPLEX_TO_RAW_H
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
+#include <directional/complex_to_representative.h>
 #include <igl/local_basis.h>
 
 

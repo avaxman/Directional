@@ -12,6 +12,8 @@
 #include <igl/streamlines.h>
 //#include <igl/copyleft/comiso/nrosy.h>
 #include <igl/viewer/Viewer.h>
+#include <directional/complex_field.h>
+#include <directional/complex_to_raw.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -23,6 +25,11 @@
 Eigen::MatrixXd V;
 Eigen::MatrixXi F;
 
+Eigen::VectorXi cIDs;
+Eigen::MatrixXd cValues;
+Eigen::MatrixXcd complexField;
+Eigen::MatrixXd raw;
+
 igl::StreamlineData sl_data;
 igl::StreamlineState sl_state;
 
@@ -33,36 +40,6 @@ bool treat_as_symmetric = true;
 int anim_t = 0;
 int anim_t_dir = 1;
 
-
-void representative_to_nrosy(
-        const Eigen::MatrixXd &V,
-        const Eigen::MatrixXi &F,
-        const Eigen::MatrixXd &R,
-        const int N,
-        Eigen::MatrixXd &Y)
-{
-    using namespace Eigen;
-    using namespace std;
-    MatrixXd B1, B2, B3;
-
-    igl::local_basis(V, F, B1, B2, B3);
-
-    Y.resize(F.rows(), 3 * N);
-    for (unsigned i = 0; i < F.rows(); ++i)
-    {
-        double x = R.row(i) * B1.row(i).transpose();
-        double y = R.row(i) * B2.row(i).transpose();
-        double angle = atan2(y, x);
-
-        for (unsigned j = 0; j < N; ++j)
-        {
-            double anglej = angle + M_PI * double(j) / double(N);
-            double xj = cos(anglej);
-            double yj = sin(anglej);
-            Y.block(i, j * 3, 1, 3) = xj * B1.row(i) + yj * B2.row(i);
-        }
-    }
-}
 
 bool pre_draw(igl::viewer::Viewer &viewer)
 {
@@ -120,11 +97,14 @@ int main(int argc, char *argv[])
     treat_as_symmetric = true;
 
     Eigen::MatrixXd temp_field, temp_field2;
-    igl::copyleft::comiso::nrosy(V, F, b, bc, VectorXi(), VectorXd(), MatrixXd(), 1, 0.5, temp_field, S);
-    representative_to_nrosy(V, F, temp_field, half_degree, temp_field2);
+    //igl::copyleft::comiso::nrosy(V, F, b, bc, VectorXi(), VectorXd(), MatrixXd(), 1, 0.5, temp_field, S);
+  
+    directional::complex_field(V, F, b,  bc , 4, complexField);
+  
+    // Convert it to raw field
+   directional::complex_to_raw(V,F,complexField,4,raw);
 
-
-    igl::streamlines_init(V, F, temp_field2, treat_as_symmetric, sl_data, sl_state);
+    igl::streamlines_init(V, F, raw, treat_as_symmetric, sl_data, sl_state);
 
 
     // Viewer Settings
