@@ -15,7 +15,6 @@
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
-#include "Main.h"
 
 
 Eigen::VectorXi cIDs;

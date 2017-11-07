@@ -13,8 +13,6 @@
 #include <igl/edge_topology.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
-#include "Main.h"
-
 
 Eigen::MatrixXi F, fieldF, meshF, singF, EV, FE, EF;
 Eigen::MatrixXd V, C, meshV, meshC, fieldV, fieldC, singV, singC, representative;
