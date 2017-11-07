@@ -7,15 +7,13 @@ message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../shared/cmake)
 
 ### libIGL options: choose between header only and compiled static library
-option(LIBIGL_USE_STATIC_LIBRARY "Use LibIGL as static library" ON)
-option(LIBDIRECTIONAL_USE_STATIC_LIBRARY "Use Libdirectional as static library" ON)
+option(LIBIGL_USE_STATIC_LIBRARY "Use LibIGL as static library" OFF)
+option(LIBDIRECTIONAL_USE_STATIC_LIBRARY "Use Libdirectional as static library" OFF)
 option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
 option(LIBIGL_WITH_NANOGUI     "Use Nanogui menu"   OFF)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
-
 ### Adding libIGL and libdirectional: choose the path to your local copy
-include(libigl)
 include(libdirectional)
 
 ### Output directories
@@ -28,12 +26,10 @@ endif()
 
 ### Choose which chapters to compile
 option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
-option(TUTORIALS_CHAPTER2 "Compile chapter 2" ON)
-option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
-option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
-option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
-option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
-option(TUTORIALS_CHAPTER7 "Compile chapter 7" ON)
+option(TUTORIALS_CHAPTER2 "Compile chapter 2" OFF)
+option(TUTORIALS_CHAPTER3 "Compile chapter 3" OFF)
+option(TUTORIALS_CHAPTER4 "Compile chapter 4" OFF)
+
 
 # Store location of tutorial/shared directory
 set(TUTORIAL_SHARED_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared CACHE PATH "location of shared tutorial resources")

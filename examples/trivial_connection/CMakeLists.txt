@@ -68,7 +68,7 @@ message("libigl extra sources: ${LIBIGL_EXTRA_SOURCES}")
 message("libigl extra libraries: ${LIBIGL_EXTRA_LIBRARIES}")
 message("libigl definitions: ${LIBIGL_DEFINITIONS}")
 
-message("libhedra includes: ${LIBDIRECTIONAL_INCLUDE_DIRS}")
+message("libdirectional includes: ${LIBDIRECTIONAL_INCLUDE_DIRS}")
 
 # Prepare the build environment
 include_directories(${LIBIGL_INCLUDE_DIRS})
