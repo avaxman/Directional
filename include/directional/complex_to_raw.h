@@ -21,10 +21,13 @@ namespace directional
 		const Eigen::MatrixXd& B3,
 		const Eigen::MatrixXcd& complex,
 		int N,
-		Eigen::MatrixXd& raw)
+		Eigen::MatrixXd& raw,
+    bool normalize=false)
 	{
 		Eigen::MatrixXd representative;
 		complex_to_representative(B1, B2, complex, N, representative);
+    if (normalize)
+      representative.rowwise().normalize();
 		representative_to_raw(B3, representative, N, raw);
 	}
 
@@ -41,11 +44,12 @@ namespace directional
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXcd& complex,
 		int N,
-		Eigen::MatrixXd& raw)
+    Eigen::MatrixXd& raw,
+    bool normalize=false)
 	{
 		Eigen::MatrixXd B1, B2, B3;
 		igl::local_basis(V, F, B1, B2, B3);
-		complex_to_raw(B1, B2, B3, complex, N, raw);
+		complex_to_raw(B1, B2, B3, complex, N, raw,normalize);
 	}
 }
 

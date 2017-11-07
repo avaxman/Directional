@@ -25,9 +25,9 @@ else()
 endif()
 
 ### Choose which chapters to compile
-option(TUTORIALS_CHAPTER1 "Compile chapter 1" OFF)
-option(TUTORIALS_CHAPTER2 "Compile chapter 2" OFF)
-option(TUTORIALS_CHAPTER3 "Compile chapter 3" OFF)
+option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
+option(TUTORIALS_CHAPTER2 "Compile chapter 2" ON)
+option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
 option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
 
 

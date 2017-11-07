@@ -102,10 +102,9 @@ int main(int argc, char *argv[])
     directional::complex_field(V, F, b,  bc , 4, complexField);
   
     // Convert it to raw field
-   directional::complex_to_raw(V,F,complexField,4,raw);
+    directional::complex_to_raw(V,F,complexField,4,raw, true);
 
-    igl::streamlines_init(V, F, raw, treat_as_symmetric, sl_data, sl_state);
-
+    igl::streamlines_init(V, F, raw, false, sl_data, sl_state);
 
     // Viewer Settings
     igl::viewer::Viewer viewer;
@@ -120,7 +119,7 @@ int main(int argc, char *argv[])
 
     // Paint mesh grayish
     Eigen::MatrixXd C;
-    C.setConstant(viewer.data.V.rows(), 3, .9);
+    C.setConstant(viewer.data.V.rows(), 3, 0.1);
     viewer.data.set_colors(C);
 
 
