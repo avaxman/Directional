@@ -263,11 +263,14 @@ If you use libhedra in your academic projects, please cite the implemented paper
 ```
 @misc{libdirectional,
   title = {{libdirectional}: directional field synthesis, design, and processing,
-  author = {Amir Vaxman and Sam de Rijkenheid and others},
+  author = {Amir Vaxman and others},
   note = {https://github.com/avaxman/libdirectional},
   year = {2017},
 }
 ```
+
+## Copyright
+2017 Amir Vaxman, Sam de Redelijkheid, Daniele Panozzo, Olga Diamanti, Olga Sorkine-Hornung, and others.
 
 ## References
 <a name="fn1">1</a>: A. Jacobson and D. Panozzo and others, [libigl: A simple C++ geometry processing library](http://libigl.github.io/libigl/), 2016.<br>
