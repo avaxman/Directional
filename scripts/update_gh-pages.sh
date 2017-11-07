@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: cd $LIBIGL; scripts/update_gh-pages.sh
+# Usage: cd $LIBDIRECTIONAL; scripts/update_gh-pages.sh
 set -o xtrace
 
 HEADER="title: libdirectional
