@@ -4,7 +4,6 @@
 	<meta charset="utf-8"/>
 	<title>libdirectional Tutorial</title>
 	<meta name="author" content="Amir Vaxman"/>
-	<meta name="date" content="15 June 2017"/>
 	<link type="text/css" rel="stylesheet" href="style.css"/>
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> <link rel="stylesheet" href="http://yandex.st/highlightjs/7.3/styles/default.min.css"> <script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script> <script>hljs.initHighlightingOnLoad();</script>
 </head>
@@ -15,40 +14,74 @@
 <h1 id="tableofcontents">Table of contents</h1>
 
 <ul>
-<li><a href="#chapter1:discandrep">Chapter 1: Discretization and Representation</a>
+<li><a href="#chapter1:iovis">Chapter 1: I/O and Visualization</a>
+
+<ul>
+<li><a href="#glyphrendering">101 Basic Glyph Rendering</a></li>
+<li><a href="#pickingediting">102 Picking and editing</a></li>
+<li><a href="#streamlinetracing">103 Streamline Tracing</a></li>
+</ul></li>
+<li><a href="#chapter2:discandrep">Chapter 2: Discretization and Representation</a>
 
 <ul>
 <li><a href="#discretization">Discretization</a></li>
 <li><a href="#representation">Representation</a></li>
-<li><a href="#principalmatching">101 Principal Matching</a></li>
-<li><a href="#sampling">102 Sampling</a></li>
-<li><a href="#combing">103 Combing</a></li>
+<li><a href="#principalmatching">201 Principal Matching and combing</a></li>
+<li><a href="#conversions">202 Conversions</a></li>
+<li><a href="#sampling">203 Sampling</a></li>
 </ul></li>
-<li><a href="#chapter2:cartesian">Chapter 2: Cartesian Representations</a>
+<li><a href="#chapter3:cartesian">Chapter 3: Cartesian Methods</a>
 
 <ul>
 <li><a href="#cartesian">Cartesian Fields</a></li>
-<li><a href="#globallyoptimal">201 Globally Optimal Fields</a></li>
-<li><a href="#polyvectors">202 PolyVectors</a></li>
-<li><a href="#integrablepolyvectors">203 Integrable PolyVectors</a></li>
-<li><a href="#conjugatefields">204 Conjugate Fields</a></li>
+<li><a href="#globallyoptimal">301 Globally Optimal Fields</a></li>
+<li><a href="#polyvectors">302 PolyVectors</a></li>
+<li><a href="#integrablePVs">303 Integrable PolyVectors</a></li>
+<li><a href="#conjugatefields">304 Conjugate Fields</a></li>
 </ul></li>
-<li><a href="#chapter3:polar">Chapter 3: Polar Representations</a>
+<li><a href="#chapter4:polar">Chapter 4: Polar Methods</a>
 
 <ul>
-<li><a href="#trivialconnection">301 Trivial Connection</a></li>
-</ul></li>
-<li><a href="#chapter4:visualization">Chapter 4: Visualization</a>
-
-<ul>
-<li><a href="#streamlinetracing">401 Streamline Tracing</a></li>
+<li><a href="#trivialconnection">401 Trivial Connection</a></li>
 </ul></li>
 <li><a href="#future">Outlook for continuing development</a></li>
 </ul>
 
-<h1 id="chapter1chapter1:discandrep">Chapter 1 <a href="#cn:1" id="cnref:1" title="see citation" class="citation">(1)</a></h1>
+<h1 id="chapter1:iovis">Chapter 1: I/O and Visualization </h1>
+
+<h2 id="glyphrendering"><a href="#glyphrendering">101 Basic Glyph Rendering</a></h2>
+
+<h2 id="pickingediting"><a href="#pickingediting">102 Picking and editing</a></h2>
+
+<h2 id="streamlinetracing"><a href="#streamlinetracing">103 Streamline Tracing</a></h2>
+
+<h1 id="chapter1:discandrep">Chapter 2: Discretization and Representation </h1>
 
 <h2 id="discretization"><a href="#discretization">Discretization</a></h2>
+
+<h2 id="representation"><a href="#representation">Representation</a></h2>
+
+<h2 id="principalmatching"><a href="#principalmatching">201 Principal Matching and combing</a></h2>
+
+<h2 id="conversions"><a href="#conversions">202 Conversions</a></h2>
+
+<h2 id="sampling"><a href="#sampling">203 Sampling</a></h2>
+
+<h1 id="chapter3:cartesian">Chapter 3: Cartesian Representations </h1>
+
+<h2 id="cartesian"><a href="#cartesian">Cartesian Fields</a></h2>
+
+<h2 id="globallyoptimal"><a href="#globallyoptimal">301 Globally Optimal Fields</a></h2>
+
+<h2 id="polyvectors"><a href="#polyvectors">302 PolyVectors</a></h2>
+
+<h2 id="integrablepvs"><a href="#integrablePVs">303 Integrable PolyVectors</a></h2>
+
+<h2 id="conjugatefields"><a href="#conjugatefields">304 Conjugate Fields</a></h2>
+
+<h1 id="chapter4:polar">Chapter 4: Polar Representations </h1>
+
+<h2 id="trivialconnection"><a href="#trivialconnection">401 Trivial Connection</a></h2>
 
 <h1 id="future">Outlook for continuing development </h1>
 
@@ -62,17 +95,6 @@
 <li><p>Cutting, integration, and parameterization.</p></li>
 <li><p>Support for tensor fields.</p></li>
 </ol>
-
-<div class="citations">
-<hr />
-<ol>
-
-<li id="cn:1">
-<p>chapter1:discandrep <a href="#cnref:1" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
-</li>
-
-</ol>
-</div>
 
 </body>
 </html>

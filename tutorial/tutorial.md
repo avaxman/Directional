@@ -1,6 +1,5 @@
 title: libdirectional Tutorial
 author: Amir Vaxman
-date: 15 June 2017
 css: style.css
 html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 <link rel="stylesheet" href="http://yandex.st/highlightjs/7.3/styles/default.min.css">
@@ -12,27 +11,55 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 
 # Table of contents
 
-* [Chapter 1: Discretization and Representation](#chapter1:discandrep)
+* [Chapter 1: I/O and Visualization](#chapter1:iovis)
+    * [101 Basic Glyph Rendering](#glyphrendering)
+    * [102 Picking and editing](#pickingediting)
+    * [103 Streamline Tracing](#streamlinetracing)
+* [Chapter 2: Discretization and Representation](#chapter2:discandrep)
     * [Discretization](#discretization)
     * [Representation](#representation)
-    * [101 Principal Matching](#principalmatching)
-    * [102 Sampling](#sampling)
-    * [103 Combing](#combing)
-* [Chapter 2: Cartesian Representations](#chapter2:cartesian)
+    * [201 Principal Matching and combing](#principalmatching)
+    * [202 Conversions](#conversions)
+    * [203 Sampling](#sampling)
+* [Chapter 3: Cartesian Methods](#chapter3:cartesian)
     * [Cartesian Fields](#cartesian)
-    * [201 Globally Optimal Fields](#globallyoptimal)
-    * [202 PolyVectors](#polyvectors)
-    * [203 Integrable PolyVectors](#integrablepolyvectors)
-    * [204 Conjugate Fields](#conjugatefields)
-* [Chapter 3: Polar Representations](#chapter3:polar)
-    * [301 Trivial Connection](#trivialconnection)
-* [Chapter 4: Visualization](#chapter4:visualization)
-    * [401 Streamline Tracing](#streamlinetracing)
+    * [301 Globally Optimal Fields](#globallyoptimal)
+    * [302 PolyVectors](#polyvectors)
+    * [303 Integrable PolyVectors](#integrablePVs)
+    * [304 Conjugate Fields](#conjugatefields)
+* [Chapter 4: Polar Methods](#chapter4:polar)
+    * [401 Trivial Connection](#trivialconnection)
 * [Outlook for continuing development](#future)
 
-# Chapter 1 [#chapter1:discandrep]
+# Chapter 1: I/O and Visualization [chapter1:iovis]
+
+## [101 Basic Glyph Rendering](#glyphrendering)[glyphrendering]
+## [102 Picking and editing](#pickingediting)[pickingediting]
+## [103 Streamline Tracing](#streamlinetracing)[streamlinetracing]
+
+# Chapter 2: Discretization and Representation [chapter1:discandrep]
 
 ## [Discretization](#discretization)[discretization]
+
+## [Representation](#representation)[Representation]
+
+## [201 Principal Matching and combing](#principalmatching)[principalmatching]
+
+## [202 Conversions](#conversions)[conversions]
+
+## [203 Sampling](#sampling)[sampling]
+
+# Chapter 3: Cartesian Representations [chapter3:cartesian]
+
+## [Cartesian Fields](#cartesian)[cartesian]
+## [301 Globally Optimal Fields](#globallyoptimal)[globallyoptimal]
+## [302 PolyVectors](#polyvectors)[polyvectors]
+## [303 Integrable PolyVectors](#integrablePVs)[integrablePVs]
+## [304 Conjugate Fields](#conjugatefields)[conjugatefields]
+
+# Chapter 4: Polar Representations [chapter4:polar]
+
+## [401 Trivial Connection](#trivialconnection)[trivialconnection]
 
 
 # Outlook for continuing development [future]
