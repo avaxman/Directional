@@ -37,29 +37,33 @@ add_library(tutorials INTERFACE)
 target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_SHARED_PATH=\"${TUTORIAL_SHARED_PATH}\"")
 target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+
 # Chapter 1
 if(TUTORIALS_CHAPTER1)
-  add_subdirectory("101_PrincipalMatching")
-  add_subdirectory("102_Sampling")
-  add_subdirectory("103_Combing")
+  add_subdirectory("101_GlyphRendering")
+  add_subdirectory("102_PickingEditing")
+  add_subdirectory("103_StreamlineTracing")
 endif()
 
 # Chapter 2
 if(TUTORIALS_CHAPTER2)
-  add_subdirectory("201_GloballyOptimal")
-  add_subdirectory("202_PolyVectors")
-  add_subdirectory("203_IntegrablePVs")
-  add_subdirectory("204_ConjugateFields")
+  add_subdirectory("201_PrincipalMatching")
+  add_subdirectory("202_Sampling")
+  add_subdirectory("203_Combing")
 endif()
 
 # Chapter 3
 if(TUTORIALS_CHAPTER3)
-  add_subdirectory("301_TrivialConnections")
+  add_subdirectory("301_GloballyOptimal")
+  add_subdirectory("302_PolyVectors")
+  add_subdirectory("303_IntegrablePVs")
+  add_subdirectory("304_ConjugateFields")
 endif()
 
 # Chapter 4
 if(TUTORIALS_CHAPTER4)
-  add_subdirectory("401_StreamlineTracing")
+  add_subdirectory("401_TrivialConnections")
 endif()
+
 
 
