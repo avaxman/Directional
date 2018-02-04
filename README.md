@@ -22,8 +22,6 @@ make
 This should properly set up the example including all dependencies upon which you can build it using your favourite compiler. For windows, you should use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
 
 
-
-
 ##Future Plans
 
 The following functionality is still needed for libdirectional:
