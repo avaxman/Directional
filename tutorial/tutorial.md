@@ -72,6 +72,12 @@ By default the size of each vector is set to be related to the average edge leng
 ## [102 Picking and editing](#pickingediting)[pickingediting]
 ## [103 Streamline Tracing](#streamlinetracing)[streamlinetracing]
 
+Vector fields on surfaces are commonly visualized by tracing [streamlines (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines)]. libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
+
+![([Example 103](103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
+
+
+
 # Chapter 2: Discretization and Representation [chapter1:discandrep]
 
 ## [Representation](#representation)[Representation]
