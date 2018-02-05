@@ -12,8 +12,6 @@
 #include <directional/representative_to_raw.h>
 #include <directional/complex_to_representative.h>
 #include <directional/complex_field.h>
-#include <directional/drawable_field.h>
-#include <directional/draw_singularities.h>
 
 std::vector<int> singVertices;
 std::vector<int> singIndices;

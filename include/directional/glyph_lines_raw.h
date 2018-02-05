@@ -103,10 +103,10 @@ namespace directional
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
     // Draw cylinders
-    directional::line_cylinders(P1, P2, width, vectorColors, 6, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
+    directional::line_cylinders(P1, P2, width, vectorColors, 4, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
     
     // Draw sphere over intersection
-    directional::point_spheres(barycenters, width*2, vectorColors.topRows(barycenters.rows()), 10, colorPerVertex, extendMesh,  fieldV, fieldF, fieldC);
+    directional::point_spheres(barycenters, width*2, vectorColors.topRows(barycenters.rows()), 4, colorPerVertex, extendMesh,  fieldV, fieldF, fieldC);
     
     /*Fs.array() += Fc.rows();
     

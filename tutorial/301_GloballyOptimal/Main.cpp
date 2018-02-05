@@ -193,9 +193,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 
 int main()
 {
-	viewer.callback_key_down = &key_down;
-    viewer.callback_key_up = &key_up;
-	viewer.callback_mouse_down = &mouse_down;
+
 	std::cout <<
 		"  R       Reset the constraints" << std::endl <<
 		"  N       Toggle field normalization" << std::endl <<
@@ -220,11 +218,11 @@ int main()
 
 	cIDs.resize(0);
 	cValues.resize(0, 3);
-
-
 	directional::dual_cycles(meshF, cycles);
 
-
 	draw_field();
+  viewer.callback_key_down = &key_down;
+  viewer.callback_key_up = &key_up;
+  viewer.callback_mouse_down = &mouse_down;
 	viewer.launch();
 }

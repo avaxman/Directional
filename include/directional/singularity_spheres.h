@@ -67,7 +67,7 @@ namespace directional
   
   {
     double l = igl::avg_edge_length(V, F);
-    singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,l/50.0,colorPerVertex,extendMesh,singV, singF, singC);
+    singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,l/10.0,colorPerVertex,extendMesh,singV, singF, singC);
   }
   
 }

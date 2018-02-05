@@ -27,7 +27,7 @@ namespace directional
       std::ifstream f(fileName);
       int numF;
       f>>N;
-      f>> numF;
+      f>>numF;
       rawField.conservativeResize(numF, 3*N);
       
       //Can we do better than element-wise reading?
