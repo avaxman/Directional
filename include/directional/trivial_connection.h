@@ -10,7 +10,6 @@
 #include <igl/local_basis.h>
 #include <igl/parallel_transport_angles.h>
 #include <igl/edge_topology.h>
-#include <igl/gaussian_curvature.h>
 #include <igl/boundary_loop.h>
 #include <directional/cycle_curvature.h>
 #include <Eigen/Core>
