@@ -4,19 +4,27 @@
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
+#include <igl/edge_topology.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
+#include <directional/principal_matching.h>
+#include <directional/get_indices.h>
 
 
-int currF, currVec, N;
+int currF=0, N;
 Eigen::MatrixXi F;
 Eigen::MatrixXd V, rawField, barycenters;
+Eigen::VectorXd effort;
 Eigen::RowVector3d rawGlyphColor;
 igl::viewer::Viewer viewer;
+Eigen::VectorXi matching, indices;
+Eigen::MatrixXi EV, FE, EF;
+Eigen::VectorXi prinIndices;
 
-//User input variables
-bool drag = false;
-bool zeroPressed = false;
+Eigen::MatrixXd glyphPrincipalColors(5,3);
+
+bool zeroPressed=false, showSingularities=false;
+
 
 void update_mesh()
 {
@@ -31,7 +39,26 @@ void update_mesh()
   Eigen::MatrixXd fullV=V;
   Eigen::MatrixXi fullF=F;
   
-  directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
+  Eigen::Vector3i otherFaces;
+  Eigen::Vector3i zeroInFace;
+  for (int i=0;i<3;i++){
+    otherFaces(i)=(EF(FE(currF,i),0)==currF ? EF(FE(currF,i),1) : EF(FE(currF,i),0));
+    zeroInFace(i)=(EF(FE(currF,i),0)==currF ? matching(FE(currF,i)) : -matching(FE(currF,i)));
+  }
+  
+  Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
+  for (int i=0;i<F.rows();i++)
+    for (int j=0;j<N;j++)
+      fullGlyphColor.block(i,3*j,1,3)<<rawGlyphColor;
+  
+  //for marked face and its neighbors, coloring adjacent matchings
+  for (int i=0;i<N;i++){
+    fullGlyphColor.block(currF,3*i,1,3)<<glyphPrincipalColors.row(i);
+    for (int j=0;j<3;j++)
+      fullGlyphColor.block(otherFaces(j),3*((i+zeroInFace(j))%N),1,3)<<glyphPrincipalColors.row(i);
+  }
+  
+  directional::glyph_lines_raw(V, F, rawField, fullGlyphColor, false, true, fullV, fullF, fullC);
   
   viewer.data.clear();
   viewer.data.set_face_based(true);
@@ -52,33 +79,11 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 // Handle keyboard input
 bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
-  int borders;
   switch (key)
   {
       // Select vector
     case '0': zeroPressed=true; break;
-    case '1':
-      currVec = 0;
-      break;
-    case '2':
-      currVec = std::min(1, N - 1);
-      break;
-    case '3':
-      currVec = std::min(2, N - 1);
-      break;
-    case '4':
-      currVec = std::min(3, N - 1);
-      break;
-    case '5':
-      currVec = std::min(4, N - 1);
-      break;
-    case '6':
-      currVec = std::min(5, N - 1);
-      break;
-      // Toggle field drawing for easier rotation
-    case 'D':
-      drag = !drag;
-      break;
+    case '1': showSingularities=!showSingularities; update_mesh(); break;
   }
   return true;
 }
@@ -104,18 +109,6 @@ bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
       update_mesh();
       return true;
     }
-    //choosing face
-    if (((igl::viewer::Viewer::MouseButton)button==igl::viewer::Viewer::MouseButton::Right)&&(fid==currF)){
-      // Calculate direction from the center of the face to the mouse
-      Eigen::RowVector3d newVec =(V.row(F(fid, 0)) * bc(0) +
-                                  V.row(F(fid, 1)) * bc(1) +
-                                  V.row(F(fid, 2)) * bc(2) - barycenters.row(fid)).normalized();
-      
-      rawField.block(currF, currVec*3, 1,3)=newVec;
-      update_mesh();
-      return true;
-      
-    }
   }
   return false;
 };
@@ -123,15 +116,25 @@ bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
 int main()
 {
   std::cout <<
-  "  1-"<< N <<"  Choose vector in current face." << std::endl <<
   "  0+Left button    Choose face" << std::endl <<
-  "  0+Right button   Edit vector in current face" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", N, rawField);
+  "  1  Show/hide singularities" << std::endl <<
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", V, F);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/inspired_mesh.rawfield", N, rawField);
+  igl::edge_topology(V, F, EV, FE, EF);
+  
+  //computing
+  directional::principal_matching(V, F,rawField,N, matching, effort);
+  directional::get_indices(V,F,EV, EF, effort,N,prinIndices);
   
   igl::barycenter(V, F, barycenters);
   
   rawGlyphColor <<0.0, 0.2, 1.0;
+  glyphPrincipalColors<<1.0,0.0,0.5,
+  0.0,1.0,0.5,
+  1.0,0.5,0.0,
+  0.0,0.5,1.0,
+  0.5,1.0,0.0;
+  
   update_mesh();
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

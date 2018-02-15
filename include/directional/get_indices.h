@@ -11,6 +11,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/parallel_transport_angles.h>
 #include <directional/cycle_curvature.h>
+#include <directional/dual_cycles.h>
 
 #include <Eigen/Core>
 #include <vector>
@@ -53,10 +54,23 @@ namespace directional
 		cycle_curvature(V, F, basisCycleMat, cycleCurvature);
 		directional::get_indices(basisCycleMat, effort, cycleCurvature, N, indices);
 	}
+  
+  IGL_INLINE void get_indices(const Eigen::MatrixXd& V,
+                              const Eigen::MatrixXi& F,
+                              const Eigen::MatrixXi& EV,
+                              const Eigen::MatrixXi& EF,
+                              const Eigen::VectorXd& effort,
+                              const int N,
+                              Eigen::VectorXi& indices)
+  {
+    Eigen::SparseMatrix<double, Eigen::RowMajor> basisCycleMat;
+    directional::dual_cycles(F,EV, EF, basisCycleMat);
+    Eigen::VectorXd cycleCurvature;
+    directional::cycle_curvature(V, F, basisCycleMat, cycleCurvature);
+    directional::get_indices(basisCycleMat, effort, cycleCurvature, N, indices);
+  }
 
 }
-
-
 
 
 #endif
