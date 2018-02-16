@@ -71,18 +71,36 @@ namespace directional
         continue;
       //computing free coefficient effort (a.k.a. Diamanti et al. 2014]
       Complex freeCoeffEffort(1.0, 0.0);
-      double effort0to0=0;
+      double minRotAngle=10000.0;
+      int indexMinFromZero=0;
+      //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
       for (int j = 0; j < N; j++) {
-        RowVector3d vecjf = raw.block(EF(i, 0), 3 * j, 1, 3);
-        Complex vecjfc = Complex(vecjf.dot(B1.row(EF(i, 0))), vecjf.dot(B2.row(EF(i, 0))));
+        RowVector3d vec0f = raw.block(EF(i, 0), 0, 1, 3);
+        Complex vec0fc = Complex(vec0f.dot(B1.row(EF(i, 0))), vec0f.dot(B2.row(EF(i, 0))));
         RowVector3d vecjg = raw.block(EF(i, 1), 3 * j, 1, 3);
         Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
-        Complex transvecjfc = vecjfc*edgeTransport(i);
-        freeCoeffEffort *= vecjgc / transvecjfc;
-        effort0to0+=arg(freeCoeffEffort); //NOTE: this might break in wild directional fields
+        Complex transvec0fc = vec0fc*edgeTransport(i);
+        double currRotAngle = arg(vecjgc / transvec0fc);
+        if (abs(currRotAngle)<abs(minRotAngle)){
+          indexMinFromZero=j;
+          minRotAngle=currRotAngle;
+        }
       }
-      effort(i) = arg(freeCoeffEffort);  //arg always returns the principal value
-      matching(i)=round((effort(i)-effort0to0)/(2.0*igl::PI));
+      
+      //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
+      double currEffort=0;
+      for (int j = 0; j < N; j++) {
+        RowVector3d vecjf = raw.block(EF(i, 0), 3*j, 1, 3);
+        Complex vecjfc = Complex(vecjf.dot(B1.row(EF(i, 0))), vecjf.dot(B2.row(EF(i, 0))));
+        RowVector3d vecjg = raw.block(EF(i, 1), 3 * ((j+indexMinFromZero+N)%N), 1, 3);
+        Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
+        Complex transvecjfc = vecjfc*edgeTransport(i);
+        currEffort+= arg(vecjgc / transvecjfc);
+      }
+      
+      matching(i)=indexMinFromZero-round(currEffort/(2.0*igl::PI));
+      effort(i)=currEffort+2*igl::PI*(double)(indexMinFromZero-matching(i));
+      
     }
     
   }

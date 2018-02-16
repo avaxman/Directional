@@ -94,10 +94,12 @@ namespace directional
     {
       if (glyphColor.rows() == 1)
         vectorColors = glyphColor.replicate(P1.rows(), 1);
-      else if (glyphColor.rows() == F.rows())
+      else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
         vectorColors = glyphColor.replicate(N, 1);
-      else
-        vectorColors = glyphColor;
+      else{
+        for (int i=0;i<N;i++)
+          vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
+      }
     }
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;

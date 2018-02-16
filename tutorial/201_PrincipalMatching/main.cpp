@@ -9,6 +9,7 @@
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/get_indices.h>
+#include <directional/singularity_spheres.h>
 
 
 int currF=0, N;
@@ -20,24 +21,29 @@ igl::viewer::Viewer viewer;
 Eigen::VectorXi matching, indices;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
+Eigen::VectorXi singIndices, singPositions;
+Eigen::MatrixXd positiveIndexColors, negativeIndexColors;
 
 Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 bool zeroPressed=false, showSingularities=false;
 
 
+
+
 void update_mesh()
 {
   
-  Eigen::MatrixXd fullC(F.rows(),3);
-  fullC.col(0)=Eigen::VectorXd::Constant(F.rows(),1.0);
-  fullC.col(1)=Eigen::VectorXd::Constant(F.rows(),1.0);
-  fullC.col(2)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  Eigen::MatrixXd C(F.rows(),3);
+  C.col(0)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  C.col(1)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  C.col(2)=Eigen::VectorXd::Constant(F.rows(),1.0);
   
-  fullC.row(currF)<<0.5,0.1,0.1;
+  C.row(currF)<<0.5,0.1,0.1;
   
   Eigen::MatrixXd fullV=V;
   Eigen::MatrixXi fullF=F;
+  Eigen::MatrixXd fullC=C;
   
   Eigen::Vector3i otherFaces;
   Eigen::Vector3i zeroInFace;
@@ -55,10 +61,14 @@ void update_mesh()
   for (int i=0;i<N;i++){
     fullGlyphColor.block(currF,3*i,1,3)<<glyphPrincipalColors.row(i);
     for (int j=0;j<3;j++)
-      fullGlyphColor.block(otherFaces(j),3*((i+zeroInFace(j))%N),1,3)<<glyphPrincipalColors.row(i);
+      if (otherFaces(j)!=-1)  //boundary edge
+        fullGlyphColor.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphPrincipalColors.row(i);
   }
   
   directional::glyph_lines_raw(V, F, rawField, fullGlyphColor, false, true, fullV, fullF, fullC);
+  
+  if (showSingularities)
+    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
   
   viewer.data.clear();
   viewer.data.set_face_based(true);
@@ -118,13 +128,28 @@ int main()
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", V, F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/inspired_mesh.rawfield", N, rawField);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", V, F);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
   igl::edge_topology(V, F, EV, FE, EF);
   
   //computing
-  directional::principal_matching(V, F,rawField,N, matching, effort);
+  directional::principal_matching(V, F,rawField, matching, effort);
   directional::get_indices(V,F,EV, EF, effort,N,prinIndices);
+  
+  std::vector<int> singPositionsList;
+  std::vector<int> singIndicesList;
+  for (int i=0;i<V.rows();i++)
+    if (prinIndices(i)!=0){
+      singPositionsList.push_back(i);
+      singIndicesList.push_back(prinIndices(i));
+    }
+  
+  singPositions.resize(singPositionsList.size());
+  singIndices.resize(singIndicesList.size());
+  for (int i=0;i<singPositionsList.size();i++){
+    singPositions(i)=singPositionsList[i];
+    singIndices(i)=singIndicesList[i];
+  }
   
   igl::barycenter(V, F, barycenters);
   
@@ -134,6 +159,19 @@ int main()
   1.0,0.5,0.0,
   0.0,0.5,1.0,
   0.5,1.0,0.0;
+  
+  // Set colors for Singularities
+  positiveIndexColors.resize(4,3);
+  positiveIndexColors << .25, 0, 0,
+  .5,  0, 0,
+  .75, 0, 0,
+  1,   0, 0;
+  
+  negativeIndexColors.resize(4,3);
+  negativeIndexColors << 0, .25, 0,
+  0, .5,  0,
+  0, .75, 0,
+  0, 1,   0;
   
   update_mesh();
   viewer.callback_key_down = &key_down;
