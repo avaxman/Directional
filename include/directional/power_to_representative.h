@@ -22,7 +22,7 @@ namespace directional
 	//  N:              The degree of the field.
 	// Output:
 	//  U: #F x 3 representative vectors on the faces.
-	IGL_INLINE void complex_to_representative(const Eigen::MatrixXd& B1,
+	IGL_INLINE void power_to_representative(const Eigen::MatrixXd& B1,
                                               const Eigen::MatrixXd& B2,
                                               const Eigen::MatrixXcd& Y,
                                               const int N,
@@ -45,7 +45,7 @@ namespace directional
 
 
 	// Version with only (V,F) as input
-	IGL_INLINE void complex_to_representative(const Eigen::MatrixXd& V,
+	IGL_INLINE void power_to_representative(const Eigen::MatrixXd& V,
                                               const Eigen::MatrixXi& F,
                                               const Eigen::MatrixXcd& Y,
                                               const int N,
@@ -53,7 +53,7 @@ namespace directional
 	{
 		Eigen::MatrixXd B1, B2, x;
 		igl::local_basis(V, F, B1, B2, x);
-		complex_to_representative(B1, B2, Y, N, U);
+		power_to_representative(B1, B2, Y, N, U);
 	}
 }
 #endif

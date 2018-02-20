@@ -29,7 +29,7 @@ namespace directional
 	// Outputs:
 	//  solver: A pre-computed solver. Must be recomputed if soft_id changes.
 	//  energy: The energy matrix for the given problem, must be recomputed along with the solvers.
-	IGL_INLINE void complex_field_prepare_solver(
+	IGL_INLINE void power_field_prepare_solver(
 		const Eigen::MatrixXd& V,          // Vertices of the mesh
 		const Eigen::MatrixXi& F,          // Faces
 		const Eigen::MatrixXi& TT,         // Adjacency triangle-triangle
@@ -108,7 +108,7 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  complex: The vector field represented as complex doubles.
-	IGL_INLINE void complex_field(
+	IGL_INLINE void power_field(
 		const Eigen::MatrixXd& B1,
 		const Eigen::MatrixXd& B2,
 		const Eigen::VectorXi& soft_id,    // Soft constraints face ids
@@ -116,14 +116,14 @@ namespace directional
 		const Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
 		const Eigen::SparseMatrix<std::complex<double>>& A,
 		const int N,                 // Degree of the n-rosy field
-		Eigen::MatrixXcd& complex
+		Eigen::MatrixXcd& power
 		)
 	{
 		using namespace std;
 		using namespace Eigen;
 		if (soft_id.size() == 0)
 		{
-			complex = MatrixXcd::Constant(B1.rows(), 1, std::complex<double>());
+			power = MatrixXcd::Constant(B1.rows(), 1, std::complex<double>());
 			return;
 		}
 
@@ -148,7 +148,7 @@ namespace directional
 		SparseMatrix<std::complex<double>> b(count, 1);
 		b.setFromTriplets(tb.begin(), tb.end());
 		assert(solver.info() == Success);
-		complex = solver.solve(A.adjoint()*MatrixXcd(b));
+		power = solver.solve(A.adjoint()*MatrixXcd(b));
 		assert(solver.info() == Success);
 
 	}
@@ -172,7 +172,7 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  complex: The vector field represented as complex doubles.
-	IGL_INLINE void complex_field
+	IGL_INLINE void power_field
 	(
 		const Eigen::MatrixXd& V,          // Vertices of the mesh
 		const Eigen::MatrixXi& F,          // Faces
@@ -182,13 +182,13 @@ namespace directional
 		const Eigen::VectorXi& soft_id,    // Soft constraints face ids
 		const Eigen::MatrixXd& soft_value, // Soft constraints 3d vectors
 		const int N,                 // Degree of the n-rosy field
-		Eigen::MatrixXcd& complex
+		Eigen::MatrixXcd& powerField
 	)
 	{
 		Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
 		Eigen::SparseMatrix<std::complex<double>> A;
-		complex_field_prepare_solver(V, F, TT, B1, B2, soft_id, N, solver, A);
-		complex_field(B1, B2, soft_id, soft_value, solver, A, N, complex);
+		power_field_prepare_solver(V, F, TT, B1, B2, soft_id, N, solver, A);
+		power_field(B1, B2, soft_id, soft_value, solver, A, N, powerField);
 
 	}
 
@@ -210,21 +210,21 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  complex: The vector field represented as complex doubles.
-	IGL_INLINE void complex_field
+	IGL_INLINE void power_field
 	(
 		const Eigen::MatrixXd& V,          // Vertices of the mesh
 		const Eigen::MatrixXi& F,          // Faces
 		const Eigen::VectorXi& soft_id,    // Soft constraints face ids
 		const Eigen::MatrixXd& soft_value, // Soft constraints 3d vectors
 		const int N,                 // Degree of the n-rosy field
-		Eigen::MatrixXcd& complex
+		Eigen::MatrixXcd& powerField
 	)
 	{
 		Eigen::MatrixXi TT;
 		igl::triangle_triangle_adjacency(F, TT);
 		Eigen::MatrixXd B1, B2, x;
 		igl::local_basis(V, F, B1, B2, x);
-		complex_field(V, F, TT, B1, B2, soft_id, soft_value, N, complex);
+		power_field(V, F, TT, B1, B2, soft_id, soft_value, N, powerField);
 	}
 }
 #endif

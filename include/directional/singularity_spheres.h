@@ -70,6 +70,38 @@ namespace directional
     singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,l/10.0,colorPerVertex,extendMesh,singV, singF, singC);
   }
   
+  void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
+                                      const Eigen::MatrixXi& F,
+                                      const Eigen::VectorXi& fullIndices,
+                                      const Eigen::MatrixXd& positiveColors,
+                                      const Eigen::MatrixXd& negativeColors,
+                                      const bool colorPerVertex,
+                                      const bool extendMesh,
+                                      Eigen::MatrixXd& singV,
+                                      Eigen::MatrixXi& singF,
+                                      Eigen::MatrixXd& singC)
+  
+  {
+    
+    std::vector<int> singPositionsList;
+    std::vector<int> singIndicesList;
+    for (int i=0;i<V.rows();i++)
+      if (fullIndices(i)!=0){
+        singPositionsList.push_back(i);
+        singIndicesList.push_back(fullIndices(i));
+      }
+    
+    Eigen::VectorXi singPositions(singPositionsList.size());
+    Eigen::VectorXi singIndices(singIndicesList.size());
+    for (int i=0;i<singPositionsList.size();i++){
+      singPositions(i)=singPositionsList[i];
+      singIndices(i)=singIndicesList[i];
+    }
+    
+    double l = igl::avg_edge_length(V, F);
+    singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,l/10.0,colorPerVertex,extendMesh,singV, singF, singC);
+  }
+  
 }
 
 #endif
