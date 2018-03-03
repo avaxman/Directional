@@ -47,7 +47,6 @@ void update_directional_field()
   
   using namespace Eigen;
   using namespace std;
-  typedef complex<double> Complex;
   VectorXd rotationAngles;
   prinSingIndices=VectorXi::Zero(basisCycles.rows());
   for (int i=0;i<singVertices.size();i++)
