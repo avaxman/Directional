@@ -10,16 +10,16 @@
 #include <directional/principal_matching.h>
 #include <directional/get_indices.h>
 #include <directional/singularity_spheres.h>
-#include <directional/comb_field.h>
+#include <directional/principal_combing.h>
 
 
 int currF=0, N;
 Eigen::MatrixXi F;
-Eigen::MatrixXd V, rawField, , combedField, barycenters;
-Eigen::VectorXd effort;
+Eigen::MatrixXd V, rawField, combedField, barycenters;
+Eigen::VectorXd effort, combedEffort;
 Eigen::RowVector3d rawGlyphColor;
 igl::viewer::Viewer viewer;
-Eigen::VectorXi matching, indices;
+Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singPositions;
@@ -54,6 +54,23 @@ void update_mesh()
   if (showSingularities)
     directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
   
+  //drawing seam edges
+  if (showCombedField){
+    double l = igl::avg_edge_length(V, F);
+    std::vector<int> seamEdges;
+    for (int i=0;i<EV.rows();i++)
+      if (combedMatching(i)!=0)
+        seamEdges.push_back(i);
+    
+    Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
+    for (int i=0;i<seamEdges.size();i++){
+      P1.row(i)=V.row(EV(seamEdges[i],0));
+      P2.row(i)=V.row(EV(seamEdges[i],1));
+    }
+  
+    directional::line_cylinders(P1, P2, l/50.0, Eigen::MatrixXd::Constant(F.rows(), 3, 0.0), 6, false, true, fullV, fullF, fullC);
+  }
+  
   viewer.data.clear();
   viewer.data.set_face_based(true);
   viewer.data.set_mesh(fullV, fullF);
@@ -83,8 +100,9 @@ int main()
   igl::edge_topology(V, F, EV, FE, EF);
   
   //computing
-  directional::comb_field(V,F, rawField, combedField, prinIndices, combedMatching, combedEffort);
+  directional::principal_combing(V,F, rawField, combedField, combedMatching, combedEffort);
   directional::principal_matching(V, F,rawField, matching, effort);
+  directional::get_indices(V,F,EV, EF, effort,N,prinIndices);
   
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;
