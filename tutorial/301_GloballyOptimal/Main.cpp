@@ -4,7 +4,6 @@
 #include <directional/power_to_raw.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
-#include <directional/dual_cycles.h>
 #include <directional/get_indices.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
@@ -18,43 +17,38 @@
 #include <igl/boundary_loop.h>
 
 
-Eigen::VectorXi cIDs, matching;
+Eigen::VectorXi cIDs, matching, indices;
+Eigen::VectorXd effort;
 Eigen::MatrixXi F;
-Eigen::MatrixXd V, C, rawField,representative, cValues;
+Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd powerField;
 igl::viewer::Viewer viewer;
 
 Eigen::MatrixXd positiveIndexColors(4, 3), negativeIndexColors(4, 3);
 
-int N = 4;
-bool drag = false;
+int N = 5;
 bool normalized = false;
-bool showSing = false;
 bool onePressed = false;
 
-void draw_field()
+void update_mesh()
 {
+  
+  Eigen::MatrixXd fullC(F.rows(),3);
+  fullC = Eigen::RowVector3d(1, 1, 1).replicate(F.rows(), 1);
+  
+  for (int i = 0; i < cIDs.rows(); i++)
+    fullC.row(cIDs(i)) = Eigen::RowVector3d(1, 0, 0);
+  
+  Eigen::MatrixXd fullV=V;
+  Eigen::MatrixXi fullF=F;
   
   directional::power_field(V, F, cIDs, cValues, N, powerField);
   directional::power_to_representative(V, F, powerField, N, representative);
-  
   
   if (normalized)
     representative.rowwise().normalize();
   
   directional::representative_to_raw(V,F,representative, N, rawField);
-  
-  C = Eigen::RowVector3d(1, 1, 1).replicate(F.rows(), 1);
-  
-  for (int i = 0; i < cIDs.rows(); i++)
-    C.row(cIDs(i)) = Eigen::RowVector3d(1, 0, 0);
-  
-  Eigen::VectorXi indices;
-  Eigen::VectorXd effort;
-  
-  Eigen::MatrixXd fullV=V;
-  Eigen::MatrixXi fullF=F;
-  Eigen::MatrixXd fullC=C;
   
   if (cIDs.rows()!=0){
     directional::principal_matching(V, F, representative, N, matching, effort);
@@ -102,27 +96,18 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
       // Toggle field drawing for easier rotation
       
     case '1': onePressed=true; break;
-    case 'D':
-      drag = !drag;
-      break;
-      
-      // Toggle singularities
-    case 'S':
-      showSing = !showSing;
-      draw_field();
-      break;
-      
+    
       // Reset the constraints
     case 'R':
       cIDs.resize(0);
       cValues.resize(0, 6);
-      draw_field();
+      update_mesh();
       break;
       
       // Toggle normalization
     case 'N':
       normalized = !normalized;
-      draw_field();
+      update_mesh();
       break;
       
       /*case 'W':
@@ -141,7 +126,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 //Select vertices using the mouse
 bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
-  if (drag || (key != 0 && key != 2) || !onePressed)
+  if ((key != 0 && key != 2) || !onePressed)
     return false;
   int fid;
   Eigen::Vector3d bc;
@@ -165,7 +150,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
       cIDs.conservativeResize(cIDs.rows() - 1);
       cValues.row(i) = cValues.row(cValues.rows() - 1);
       cValues.conservativeResize(cValues.rows() - 1, 3);
-      draw_field();
+      update_mesh();
       return true;
     }
     
@@ -188,7 +173,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
      (V.row(F(fid, 0)) +
       V.row(F(fid, 1)) +
       V.row(F(fid, 2))) / 3).normalized();
-    draw_field();
+    update_mesh();
     return true;
   }
   return false;
@@ -220,7 +205,7 @@ int main()
   cIDs.resize(0);
   cValues.resize(0, 3);
   
-  draw_field();
+  update_mesh();
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
   viewer.callback_mouse_down = &mouse_down;

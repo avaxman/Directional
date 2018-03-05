@@ -1,10 +1,10 @@
-// Copyright (C) 2016 Daniele Panozzo <daniele.panozzo@gmail.com>
+// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef POLY_VECTOR_H
-#define POLY_VECTOR_H
+#ifndef POLYVECTOR_FIELD_H
+#define POLYVECTOR_FIELD_H
 
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
@@ -114,21 +114,20 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void poly_vector(
-		const Eigen::MatrixXd& B1,
+	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& B1,
 		const Eigen::MatrixXd& B2,
 		const Eigen::VectorXi& soft_id,
 		const Eigen::MatrixXd& soft_value,
 		const std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*>& solvers,
 		const std::vector<Eigen::SparseMatrix<std::complex<double>>>& energy,
 		const int N, 
-		Eigen::MatrixXcd& poly)
+		Eigen::MatrixXcd& polyvectorField)
 	{
 		using namespace std;
 		using namespace Eigen;
 		if (soft_id.size() == 0)
 		{
-			poly = MatrixXcd::Constant(B1.rows(), N, std::complex<double>());
+			polyvectorField = MatrixXcd::Constant(B1.rows(), N, std::complex<double>());
 			return;
 		}
 
@@ -158,7 +157,7 @@ namespace directional
 			++count;
 		}
 
-		poly.resize(B1.rows(), N);
+		polyvectorField.resize(B1.rows(), N);
 		typedef SparseMatrix<std::complex<double>> SparseMatrixXcd;
 		SparseMatrixXcd b(count, N);
 		b.setFromTriplets(tb.begin(), tb.end());
@@ -167,7 +166,7 @@ namespace directional
 		{
 			// Solve the linear system
 			assert(solvers[n]->info() == Success);
-			poly.col(n) = solvers[n]->solve(energy[n].adjoint()*MatrixXcd(b).col(n));
+			polyvectorField.col(n) = solvers[n]->solve(energy[n].adjoint()*MatrixXcd(b).col(n));
 			assert(solvers[n]->info() == Success);
 		}
 	}
@@ -188,9 +187,7 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void poly_vector
-	(
-		const Eigen::MatrixXd& V,
+	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXi& TT,
 		const Eigen::MatrixXd& B1,
@@ -198,13 +195,12 @@ namespace directional
 		const Eigen::VectorXi& soft_id,
 		const Eigen::MatrixXd& soft_value,
 		const int N,
-		Eigen::MatrixXcd& poly
-	)
+		Eigen::MatrixXcd& polyvectorField)
 	{
 		std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*> solvers;
 		std::vector<Eigen::SparseMatrix<std::complex<double>>> As;
 		poly_vector_prepare_solvers(V, F, TT, B1, B2, soft_id, N, solvers, As);
-		poly_vector(B1, B2, soft_id, soft_value, solvers, As, N, poly);
+		polyvector_field(B1, B2, soft_id, soft_value, solvers, As, N, polyvectorField);
 		for (std::vector< Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>* >::iterator it = solvers.begin(); it != solvers.end(); ++it)
 		{
 			delete (*it);
@@ -226,21 +222,18 @@ namespace directional
 	//  N: The degree of the field.
 	// Outputs:
 	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void poly_vector
-	(
-		const Eigen::MatrixXd& V,
+	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::VectorXi& soft_id,
 		const Eigen::MatrixXd& soft_value,
 		const int N,
-		Eigen::MatrixXcd& poly
-	)
+		Eigen::MatrixXcd& polyvectorField)
 	{
 		Eigen::MatrixXi TT;
 		igl::triangle_triangle_adjacency(F, TT);
 		Eigen::MatrixXd B1, B2, x;
 		igl::local_basis(V, F, B1, B2, x);
-		poly_vector(V, F, TT, B1, B2, soft_id, soft_value, N, poly);
+		polyvector_field(V, F, TT, B1, B2, soft_id, soft_value, N, polyvectorField);
 	}
 }
 #endif
