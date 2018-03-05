@@ -11,6 +11,11 @@ To use the examples simply clone the repository using:
 git clone --recursive https://github.com/avaxman/libdirectional.git
 ```
 
+## Tutorial
+
+A tutorial that walks through the entire functionality of libdirectional is forthcoming---real soon! 
+
+<!---
 Then open a shell in the folder containing the example you wish to run, in the folder `examples' and call:
 ```shell
 mkdir build
@@ -20,14 +25,13 @@ make
 ```
 
 This should properly set up the example including all dependencies upon which you can build it using your favourite compiler. For windows, you should use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
-
+-->
 
 ##Future Plans
 
 The following functionality is still needed for libdirectional:
  
 Face-based polar representation, and consequent mixed-integer algorithms.
-Integrable PolyVector fields
 Support for 3D octahedral fields.
 Other discretizations: vertex-based, DEC.
 Discrete vector calculus: operators and Hodge decomposition.
