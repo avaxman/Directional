@@ -1,5 +1,5 @@
-#ifndef COMPLEX_TO_RAW_H
-#define COMPLEX_TO_RAW_H
+#ifndef POWER_TO_RAW_H
+#define POWER_TO_RAW_H
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
@@ -40,7 +40,7 @@ namespace directional
 	//  N: the degree of the field.
 	// Outputs:
 	//  raw: #F by 3*N matrix with all N explicit vectors of each directional in the order X,Y,Z,X,Y,Z, ...
-	IGL_INLINE void complex_to_raw(const Eigen::MatrixXd& V,
+	IGL_INLINE void power_to_raw(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXcd& powerField,
 		int N,
@@ -49,7 +49,7 @@ namespace directional
 	{
 		Eigen::MatrixXd B1, B2, B3;
 		igl::local_basis(V, F, B1, B2, B3);
-		complex_to_raw(B1, B2, B3, powerField, N, rawField,normalize);
+		power_to_raw(B1, B2, B3, powerField, N, rawField,normalize);
 	}
 }
 

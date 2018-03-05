@@ -69,6 +69,17 @@ namespace directional
     directional::cycle_curvature(V, F, basisCycleMat, cycleCurvature);
     directional::get_indices(basisCycleMat, effort, cycleCurvature, N, indices);
   }
+  
+  IGL_INLINE void get_indices(const Eigen::MatrixXd& V,
+                              const Eigen::MatrixXi& F,
+                              const Eigen::VectorXd& effort,
+                              const int N,
+                              Eigen::VectorXi& indices)
+  {
+    Eigen::MatrixXi EV, FE, EF;
+    igl::edge_topology(V,F, EV, FE, EF);
+    get_indices(V,F,EV,EF,effort,N,indices);
+  }
 
 }
 
