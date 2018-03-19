@@ -15,7 +15,7 @@ git clone --recursive https://github.com/avaxman/libdirectional.git
 
 A tutorial that walks through the entire functionality of libdirectional is forthcoming---real soon! 
 
-<!---
+<!--
 Then open a shell in the folder containing the example you wish to run, in the folder `examples' and call:
 ```shell
 mkdir build

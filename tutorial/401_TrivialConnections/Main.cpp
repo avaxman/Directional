@@ -1,11 +1,4 @@
 #include <iostream>
-#include <directional/dual_cycles.h>
-#include <directional/trivial_connection.h>
-#include <directional/rotation_to_representative.h>
-#include <directional/representative_to_raw.h>
-#include <directional/draw_cycles.h>
-#include <directional/write_raw_field.h>
-#include <directional/write_singularities.h>
 #include <Eigen/Core>
 #include <igl/viewer/Viewer.h>
 #include <igl/read_triangle_mesh.h>
@@ -13,140 +6,100 @@
 #include <igl/edge_topology.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
+#include <directional/dual_cycles.h>
+#include <directional/trivial_connection.h>
+#include <directional/rotation_to_representative.h>
+#include <directional/representative_to_raw.h>
+#include <directional/power_to_representative.h>
+#include <directional/power_field.h>
 #include <directional/singularity_spheres.h>
 #include <directional/glyph_lines_raw.h>
 
-Eigen::MatrixXi F,  EV, FE, EF;
-Eigen::MatrixXd V, C, representative,rawField;
-Eigen::VectorXd rotationField, other;
-Eigen::VectorXi match; 
-Eigen::VectorXi indices;
-Eigen::SparseMatrix<double, Eigen::RowMajor> cycles;
+
+Eigen::VectorXi cycleIndices;
+Eigen::VectorXd cycleCurvature;
+Eigen::SparseMatrix<double, Eigen::RowMajor> basisCycles;
+Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
+
+Eigen::RowVector3d rawGlyphColor;
+Eigen::MatrixXi F, EV, FE, EF;
+Eigen::MatrixXd V, BC, FN;
+Eigen::MatrixXd rawField;
+Eigen::MatrixXd positiveIndexColors(4,3), negativeIndexColors(4,3);
+Eigen::VectorXd rotationField;
+std::vector<std::vector<int>> cycleFaces;
+int currCycle=0;
+
 igl::viewer::Viewer viewer;
 
-Eigen::VectorXi singIndices;
-Eigen::VectorXi singPositions;
+int eulerChar, numGenerators, numBoundaries;
 
-Eigen::MatrixXd positiveIndexColors(4, 3),
-negativeIndexColors(4,3);
-
-int euler;
-int generators;
-
-int N = 4;
-int ring1 = 290;
+int N = 3;
 
 bool drag = false;
 bool select = false;
 
 double globalRotation=0;
 
-
-void calculate_field()
+void update_mesh()
 {
-  //Calculate the field
-  double e;
-  directional::trivial_connection(V, F, cycles, indices, N, rotationField, e);
-  directional::rotation_to_representative(V, F, EV, EF, rotationField, N, globalRotation, representative);
-  directional::representative_to_raw(V, F, representative, N, rawField);
+  using namespace Eigen;
+  VectorXd rotationAngles;
+  double linfError;
   
-  std::cout << "Field error: " << e << std::endl;
-  
-  // Sum all non-generator indices and check if they add up to N*Euler
-  int sum = round(indices.head(indices.size() - generators).sum());
-  if (euler*N != sum)
+  int sum = round(cycleIndices.head(cycleIndices.size() - numGenerators).sum());
+  if (eulerChar*N != sum)
   {
     std::cout << "Warning: All non-generator singularities should add up to N * the Euler characteristic."<<std::endl;
     std::cout << "Total indices: " << sum << std::endl;
-    std::cout << "Expected: " << euler *N << std::endl;
+    std::cout << "Expected: " << eulerChar*N << std::endl;
   }
   
-  // Turn the field into a drawable mesh
-  //directional::drawable_field(meshV, meshF, representative, Eigen::RowVector3d(0, 0, 1), N, directional::field_draw_flags::NONE, fieldV, fieldF, fieldC);
-}
-
-void draw_field()
-{
-  // Draw the active cycle
-  C = Eigen::RowVector3d(1, 1, 1).replicate(F.rows(), 1);
-  directional::draw_cycles(EF, cycles, Eigen::Vector3d(1, 0, 0), ring1, C);
+  directional::trivial_connection(V,F,basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
+  std::cout<<"field linfError: "<<linfError<<std::endl;
   
-  // Draw the Singularities
-  //directional::draw_singularities(meshV, indices, positiveIndices, negativeIndices, .007, singV, singF, singC);
+  Eigen::MatrixXd representative;
+  directional::rotation_to_representative(V, F,EV,EF,rotationAngles,N,globalRotation, representative);
+  directional::representative_to_raw(V,F,representative,N, rawField);
+  
+  Eigen::MatrixXd C(F.rows(),3);
+  C.col(0)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  C.col(1)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  C.col(2)=Eigen::VectorXd::Constant(F.rows(),1.0);
+  
+
+  //cycle colors
+  for (int i=0;i<cycleFaces[currCycle].size();i++)
+    C.row(cycleFaces[currCycle][i])<<1.0,0.0,0.0;
   
   Eigen::MatrixXd fullV=V;
   Eigen::MatrixXi fullF=F;
   Eigen::MatrixXd fullC=C;
   
-  std::vector<int> singIndicesList,singPositionsList;
-  for (int i=0;i<indices.rows();i++)
-    if (indices(i)!=0){
-      singIndicesList.push_back(indices(i));
-      singPositionsList.push_back(i);
-    }
+  Eigen::VectorXi singVertices, singIndices;
+  std::vector<int> singVerticesList;
+  for (int i=0;i<V.rows();i++)
+    if (cycleIndices(i))
+      singVerticesList.push_back(i);
   
-  singIndices.conservativeResize(singIndicesList.size());
-  singPositions.conservativeResize(singPositionsList.size());
-  for (int i=0;i<singIndicesList.size();i++){
-    singIndices(i)=singIndicesList[i];
-    singPositions(i)=singPositionsList[i];
+  singVertices.resize(singVerticesList.size());
+  singIndices.resize(singVerticesList.size());
+  for (int i=0;i<singVerticesList.size();i++){
+    singVertices(i)=singVerticesList[i];
+    singIndices(i)=singVerticesList[i];
   }
   
+  directional::singularity_spheres(V, F, singVertices, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
   
-  directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
-  directional::glyph_lines_raw(V, F, rawField, Eigen::RowVector3d(0, 0, 1), false, true, fullV, fullF, fullC);
+  directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
-  
-  
-  // Merge the cycle, singularities and mesh to be able to draw them
-  /*Eigen::MatrixXd a;
-   Eigen::MatrixXi b;
-   ConcatMeshes(meshV, meshF, fieldV, fieldF, a, b);
-   if (singV.rows())
-   {
-   ConcatMeshes(a, b, singV, singF, V, F);
-   C.resize(F.rows(), 3);
-   C << meshC, fieldC, singC;
-   }
-   else
-   {
-   V = a;
-   F = b;
-   C.resize(F.rows(), 3);
-   C << meshC, fieldC;
-   }
-   */
-  // Send data to viewer
   viewer.data.clear();
   viewer.data.set_face_based(true);
   viewer.data.set_mesh(fullV, fullF);
   viewer.data.set_colors(fullC);
-}
-
-void update_mesh()
-{
-  // Update mesh-dependent variables
-  igl::edge_topology(V, F, EV, FE, EF);
   
-  directional::dual_cycles(F, EV, EF, cycles);
-  std::vector<std::vector<int>> boundaryLoops;
-  igl::boundary_loop(F, boundaryLoops);
-  euler = V.rows() - EV.rows() + F.rows();
-  generators = cycles.rows() - V.rows() - boundaryLoops.size();
 }
 
-void paint_ring()
-{
-  //Clear out the mesh
-  /*meshC = Eigen::RowVector3d(1, 1, 1).replicate(F.rows(), 1);
-   //Draw the new cycles
-   directional::draw_cycles(EF, cycles, Eigen::Vector3d(1, 0, 0), ring1, meshC);
-   if (singC.rows())
-   C << meshC, fieldC, singC;
-   else
-   C << meshC, fieldC;
-   viewer.data.set_colors(C);*/
-}
 
 bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
@@ -158,56 +111,47 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
-  int borders;
   switch (key)
   {
     case '1': select=true; break;
     case '2':
-      calculate_field();
-      draw_field();
       globalRotation+=0.1;
+      update_mesh();
       break;
     case '-':
     case '_':
-      indices(ring1)--;
-      draw_field();
+      cycleIndices(currCycle)--;
+      update_mesh();
       break;
     case '+':
     case '=':
-      indices(ring1)++;
-      draw_field();
+      cycleIndices(currCycle)++;
+      update_mesh();
       break;
-    case 'C':
-      calculate_field();
-      draw_field();
-      break;
-    case 'D':
-      drag = !drag;
-      break;
+
     case 'B':
-      borders = cycles.rows()- (generators + V.rows());
-      if (borders)
+      if (numBoundaries)
       {
         //Loop through the border cycles.
-        if (ring1 >= V.rows() && ring1 < V.rows() + borders - 1)
-          ring1++;
+        if (currCycle >= V.rows() && currCycle < V.rows() + numBoundaries - 1)
+          currCycle++;
         else
-          ring1 = V.rows();
-        paint_ring();
+          currCycle = V.rows();
+        update_mesh();
       }
       break;
     case 'G':
-      if (generators)
+      if (numGenerators)
       {
         //Loop through the generators cycles.
-        if (ring1 >= cycles.rows() - generators && ring1 < cycles.rows() - 1)
-          ring1++;
+        if (currCycle >= basisCycles.rows() - numGenerators && currCycle < basisCycles.rows() - 1)
+          currCycle++;
         else
-          ring1 = cycles.rows() - generators;
-        paint_ring();
+          currCycle = basisCycles.rows() - numGenerators;
+        update_mesh();
       }
       break;
-    case 'W':
+    /*case 'W':
       if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
@@ -224,15 +168,15 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
       update_mesh();
       calculate_field();
       draw_field();
-      break;
+      break;*/
   }
   return true;
 }
 
-//Select vertices using the mouse
+
 bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
-  if (drag || key != 0 || select ==0)
+  if (key != 0)
     return false;
   int fid;
   Eigen::Vector3d bc;
@@ -243,45 +187,58 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view * viewer.core.model,
                                viewer.core.proj, viewer.core.viewport, V, F, fid, bc))
   {
-    viewer.data.set_colors(C);
-    double d = 0;
-    for (int i = 0; i < 3; i++)
-    {
-      //Skip border vertices
-      if (cycles.row(F(fid, i)).squaredNorm() == 0)
-        continue;
-      double cur = bc(i);
-      //Save closest vertex
-      if (cur > d)
-      {
-        d = cur;
-        if (key == 0)
-          ring1 = F(fid, i);
-      }
-    }
-    paint_ring();
+    Eigen::Vector3d::Index maxCol;
+    bc.maxCoeff(&maxCol);
+    currCycle=F(fid, maxCol);
+    update_mesh();
     return true;
   }
   return false;
 };
+
 
 int main()
 {
   
   
   std::cout <<
-  "  W       Save mesh+indices" << std::endl <<
-  "  R       Read mesh+indices" << std::endl <<
-  "  1+ L-bttn  Select cycle" << std::endl <<
-  "  D       Disable mouse select" << std::endl <<
-  "  B       Loop through border cycles" << std::endl <<
-  "  G       Loop through generator cycles" << std::endl <<
-  "  C       Calculate field" << std::endl <<
-  "  +       Increase index" << std::endl <<
-  "  -       Decrease index" << std::endl <<
-  "  2       rotate globally" << std::endl;
+  "  The field will appear if indices are correct " << std::endl<<
+  "  1+ L-bttn  Select vertex cycle" << std::endl <<
+  "  B          Loop through boundary cycles" << std::endl <<
+  "  G          Loop through generator cycles" << std::endl <<
+  "  +          Increase index of current cycle" << std::endl <<
+  "  -          Decrease index  of current cycle" << std::endl <<
+  "  2          rotate field globally" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", V, F);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/camelhead.off", V, F);
+  igl::edge_topology(V, F, EV,FE,EF);
+  
+  directional::dual_cycles(F,EV, EF, basisCycles);
+  directional::cycle_curvature(V, F, basisCycles, cycleCurvature);
+  cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
+  
+  std::vector<std::vector<int>> boundaryLoops;
+  igl::boundary_loop(F, boundaryLoops);
+  numBoundaries=boundaryLoops.size();
+  eulerChar = V.rows() - EV.rows() + F.rows();
+  numGenerators = basisCycles.rows() - V.rows() - boundaryLoops.size();
+  numBoundaries=basisCycles.rows()- (numGenerators + V.rows());
+  
+  std::cout<<"Euler characteristic: "<<eulerChar<<std::endl;
+  std::cout<<"#generators: "<<numGenerators<<std::endl;
+  std::cout<<"#boundaries: "<<numBoundaries<<std::endl;
+  
+  //collecting cycle faces for visualization
+  cycleFaces.resize(basisCycles.rows());
+  for (int k=0; k<basisCycles.outerSize(); ++k)
+    for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it){
+      int f1=EF(it.col(),0);
+      int f2=EF(it.col(),1);
+      if (f1!=-1)
+        cycleFaces[it.row()].push_back(f1);
+      if (f2!=-1)
+        cycleFaces[it.row()].push_back(f2);
+    }
   
   // Set colors for Singularities
   positiveIndexColors << .25, 0, 0,
@@ -295,11 +252,6 @@ int main()
   0, 1,   0;
   
   update_mesh();
-  
-  //Initialize singularities, indices should add up to N * the Euler characteristic.
-  indices = Eigen::VectorXi::Zero(cycles.rows());
-  calculate_field();
-  draw_field();
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
   viewer.callback_mouse_down = &mouse_down;

@@ -42,7 +42,6 @@ namespace directional
 		int numV = F.maxCoeff() + 1;
 		int eulerCharacteristic = numV - EV.rows() + F.rows();
 		int g = (2 - eulerCharacteristic);
-		std::cout << "g:" << g << std::endl;
 
 		std::vector<Triplet<double> > basisCycleTriplets(EV.rows() * 2);
 
