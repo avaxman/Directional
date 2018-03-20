@@ -18,7 +18,7 @@
 
 Eigen::VectorXi cycleIndices;
 Eigen::VectorXd cycleCurvature;
-Eigen::SparseMatrix<double, Eigen::RowMajor> basisCycles;
+Eigen::SparseMatrix<double> basisCycles, boundReduceMat;
 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
 
 Eigen::RowVector3d rawGlyphColor;
@@ -72,6 +72,7 @@ void update_mesh()
   for (int i=0;i<cycleFaces[currCycle].size();i++)
     C.row(cycleFaces[currCycle][i])<<1.0,0.0,0.0;
   
+  
   Eigen::MatrixXd fullV=V;
   Eigen::MatrixXi fullF=F;
   Eigen::MatrixXd fullC=C;
@@ -86,7 +87,7 @@ void update_mesh()
   singIndices.resize(singVerticesList.size());
   for (int i=0;i<singVerticesList.size();i++){
     singVertices(i)=singVerticesList[i];
-    singIndices(i)=singVerticesList[i];
+    singIndices(i)=cycleIndices(singVerticesList[i]);
   }
   
   directional::singularity_spheres(V, F, singVertices, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
@@ -213,7 +214,7 @@ int main()
   igl::readOFF(TUTORIAL_SHARED_PATH "/camelhead.off", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
-  directional::dual_cycles(F,EV, EF, basisCycles);
+  directional::dual_cycles(F,EV, EF, basisCycles, boundReduceMat);
   directional::cycle_curvature(V, F, basisCycles, cycleCurvature);
   cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
   
@@ -230,15 +231,20 @@ int main()
   
   //collecting cycle faces for visualization
   cycleFaces.resize(basisCycles.rows());
-  for (int k=0; k<basisCycles.outerSize(); ++k)
+  for (int k=0; k<basisCycles.outerSize(); ++k){
+     //std::cout<<"k: "<<k<< std::endl;
     for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it){
       int f1=EF(it.col(),0);
       int f2=EF(it.col(),1);
+      //std::cout<<"it.col():"<<it.col()<<std::endl;
+      //std::cout<<"it.row():"<<it.row()<<std::endl;
+      //std::cout<<"f1, f2: "<<f1<<","<<f2<<std::endl;
       if (f1!=-1)
         cycleFaces[it.row()].push_back(f1);
       if (f2!=-1)
         cycleFaces[it.row()].push_back(f2);
     }
+  }
   
   // Set colors for Singularities
   positiveIndexColors << .25, 0, 0,

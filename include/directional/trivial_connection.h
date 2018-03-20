@@ -38,7 +38,8 @@ namespace directional
   //  error: gives the total error of the field. If this is not approximately 0 your singularities probably don't add up properly.
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
-                                     const Eigen::SparseMatrix<double, Eigen::RowMajor>& basisCycles,
+                                     const Eigen::SparseMatrix<double>& basisCycles,
+                                     const Eigen::SparseMatrix<double>& reduceBoundMat,
                                      const Eigen::VectorXd& cycleCurvature,
                                      const Eigen::VectorXi& cycleIndices,
                                      Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
@@ -49,44 +50,6 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    VectorXi rows = VectorXi::Zero(basisCycles.rows());
-    VectorXi columns = ArrayXi::Zero(basisCycles.cols());
-    
-    //Filter out empty rows and columns
-    /*for (int k = 0; k < basisCycles.outerSize(); ++k)
-      for (SparseMatrix<double, Eigen::RowMajor>::InnerIterator it(basisCycles, k); it; ++it)
-      {
-        if (!it.value())
-          continue;
-        rows[it.row()] = 1;
-        columns[it.col()] = 1;
-      }
-    
-    for (int i = 1; i < rows.size(); i++)
-      rows[i] += rows[i - 1];
-    for (int i = 1; i < columns.size(); i++)
-      columns[i] += columns[i - 1];
-    
-    SparseMatrix<double, Eigen::RowMajor> reducedCycles(rows[rows.size() - 1], columns[columns.size() - 1]);
-    VectorXd reducedIndices(rows[rows.size() - 1]);
-    reducedCycles.reserve(VectorXi::Constant(columns[columns.size() - 1], 2));
-    
-    for (int k = 0; k < basisCycles.outerSize(); ++k)
-      for (SparseMatrix<double, Eigen::RowMajor>::InnerIterator it(basisCycles, k); it; ++it)
-        if (it.value())
-          reducedCycles.insert(rows(it.row()) - 1, columns(it.col()) - 1) = it.value();
-    
-    for (int i = 0; i < indices.size(); i++)
-      if((i == 0 && rows(i) == 1) || (i > 0 && rows(i) > rows(i-1)))
-        reducedIndices(rows(i) - 1) = indices(i);
-    
-    VectorXd  reducedcycleCurvature(rows(rows.size()-1));
-    
-    for (int i = 0; i < cycleCurvature.size(); i++)
-      if ((i == 0 && rows(i) == 1) || (i > 0 && rows(i) > rows(i - 1)))
-        reducedcycleCurvature(rows(i) - 1) = cycleCurvature(i);*/
-    
-    
     VectorXd cycleNewCurvature = cycleIndices.cast<double>()*(2.0*igl::PI/(double)N);
     
     //Initialize solver if never before
@@ -96,23 +59,16 @@ namespace directional
       ldltSolver.compute(AAt);
     }
     
-    rotationAngles = basisCycles.transpose()*ldltSolver.solve((-cycleCurvature + cycleNewCurvature));
+    rotationAngles = basisCycles.transpose()*ldltSolver.solve(reduceBoundMat*(-cycleCurvature + cycleNewCurvature));
     
-    /*adjustAngles.resize(columns.size());
-    
-    if (columns[0] == 1)
-      adjustAngles[0] = reducedAngles[0];
-    
-    for (int i = 1; i < columns.size(); i++)
-      if (columns[i] != columns[i - 1])
-        adjustAngles[i] = reducedAngles[columns[i - 1]];*/
     linfError = (basisCycles*rotationAngles - (-cycleCurvature + cycleNewCurvature)).lpNorm<Infinity>();
   }
   
   //Minimal version: no solver or pre-computed cycle curvature
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
-                                     const Eigen::SparseMatrix<double, Eigen::RowMajor>& basisCycles,
+                                     const Eigen::SparseMatrix<double>& basisCycles,
+                                     const Eigen::SparseMatrix<double>& reduceBoundMat,
                                      const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      Eigen::VectorXd& rotationAngles,
@@ -125,7 +81,7 @@ namespace directional
     Eigen::VectorXd cycleCurvature;
     cycle_curvature(V, F, EV, EF, B1, B2, basisCycles, cycleCurvature);
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
-    trivial_connection(V, F, basisCycles, cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
+    trivial_connection(V, F, basisCycles, reduceBoundMat,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
   }
 }
 
