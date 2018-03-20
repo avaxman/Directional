@@ -39,7 +39,6 @@ namespace directional
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::SparseMatrix<double>& basisCycles,
-                                     const Eigen::SparseMatrix<double>& reduceBoundMat,
                                      const Eigen::VectorXd& cycleCurvature,
                                      const Eigen::VectorXi& cycleIndices,
                                      Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
@@ -59,7 +58,7 @@ namespace directional
       ldltSolver.compute(AAt);
     }
     
-    rotationAngles = basisCycles.transpose()*ldltSolver.solve(reduceBoundMat*(-cycleCurvature + cycleNewCurvature));
+    rotationAngles = basisCycles.transpose()*ldltSolver.solve(-cycleCurvature + cycleNewCurvature);
     
     linfError = (basisCycles*rotationAngles - (-cycleCurvature + cycleNewCurvature)).lpNorm<Infinity>();
   }
@@ -68,7 +67,6 @@ namespace directional
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::SparseMatrix<double>& basisCycles,
-                                     const Eigen::SparseMatrix<double>& reduceBoundMat,
                                      const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      Eigen::VectorXd& rotationAngles,
@@ -81,7 +79,7 @@ namespace directional
     Eigen::VectorXd cycleCurvature;
     cycle_curvature(V, F, EV, EF, B1, B2, basisCycles, cycleCurvature);
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
-    trivial_connection(V, F, basisCycles, reduceBoundMat,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
+    trivial_connection(V, F, basisCycles,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
   }
 }
 

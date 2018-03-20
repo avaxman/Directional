@@ -133,11 +133,11 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
     case 'B':
       if (numBoundaries)
       {
-        //Loop through the border cycles.
-        if (currCycle >= V.rows() && currCycle < V.rows() + numBoundaries - 1)
+        //Loop through the boundary cycles.
+        if (currCycle >= basisCycles.rows()-numBoundaries-numGenerators && currCycle < basisCycles.rows()-numBoundaries-numGenerators)
           currCycle++;
         else
-          currCycle = V.rows();
+          currCycle = basisCycles.rows()-numBoundaries-numGenerators;
         update_mesh();
       }
       break;
@@ -190,7 +190,18 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
   {
     Eigen::Vector3d::Index maxCol;
     bc.maxCoeff(&maxCol);
-    currCycle=F(fid, maxCol);
+    int currVertex=F(fid, maxCol);
+    //finding out currCycle
+    Eigen::VectorXd whichVertex(boundReduceMat.cols());
+    whichVertex.setZero();
+    whichVertex(currVertex)=1;
+    Eigen::VectorXd whichCycle=boundReduceMat*whichVertex;
+    currCycle=0;
+    for (int i=0;i<whichCycle.size();i++)
+      if (whichCycle(i)>0.5){
+        currCycle=i;
+        break;
+      }
     update_mesh();
     return true;
   }
@@ -214,8 +225,7 @@ int main()
   igl::readOFF(TUTORIAL_SHARED_PATH "/camelhead.off", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
-  directional::dual_cycles(F,EV, EF, basisCycles, boundReduceMat);
-  directional::cycle_curvature(V, F, basisCycles, cycleCurvature);
+  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, boundReduceMat);
   cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
   
   std::vector<std::vector<int>> boundaryLoops;

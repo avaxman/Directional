@@ -8,6 +8,8 @@
 #include <Eigen/Core>
 #include <igl/boundary_loop.h>
 #include <igl/is_border_vertex.h>
+#include <igl/local_basis.h>
+#include <igl/gaussian_curvature.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
@@ -30,10 +32,13 @@ namespace directional
   //  EF: #E by 2 matrix of oriented adjacent faces.
   //output:
   //  basisCycleMat: #C(=V+bl+gl) by #E basis cycles (summing over edges)
-  IGL_INLINE void dual_cycles(const Eigen::MatrixXi& F,
+  IGL_INLINE void dual_cycles(const Eigen::MatrixXd& V,
+                              const Eigen::MatrixXi& F,
                               const Eigen::MatrixXi& EV,
                               const Eigen::MatrixXi& EF,
-                              Eigen::SparseMatrix<double>& basisCycles)
+                              Eigen::SparseMatrix<double>& basisCycles,
+                              Eigen::VectorXd& cycleCurvature,
+                              Eigen::SparseMatrix<double>& boundReduceMat)
   {
     using namespace Eigen;
     int numV = F.maxCoeff() + 1;
@@ -49,22 +54,31 @@ namespace directional
     
     basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
     
-    //all one ring cycles, including boundaries
+    //all 1-ring cycles, including boundaries
     for (int i = 0; i < EV.rows(); i++) {
       basisCycleTriplets.push_back(Triplet<double>(EV(i, 0), i, -1.0));
       basisCycleTriplets.push_back(Triplet<double>(EV(i, 1), i, 1.0));
     }
-    
     
     //Creating boundary cycles by building a matrix the sums up boundary loops and zeros out boundary vertex cycles - it will be multiplied from the left to basisCyclesMat
     std::vector<bool> isBorder = igl::is_border_vertex(MatrixXi(numV, 0), F);
     
     SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numBoundaries+numGenerators);
     std::vector<Triplet<double>> sumBoundaryLoopsTriplets;
+    std::vector<int> innerVerticesList, innerEdgesList;
+    VectorXi remainRows, remainColumns;
     
-    for (int i=0;i<numV;i++)
+    for (int i=0;i<numV;i++){
       sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,(isBorder[i] ? 0.0 : 1.0)));
+      if (!isBorder[i])
+        innerVerticesList.push_back(i);
+    }
     
+    for (int i=0;i<EV.rows();i++)
+      if ((!isBorder[EV(i,0)])&&(!isBorder[EV(i,1)]))
+        innerEdgesList.push_back(i);
+    
+    //summing up boundary loops
     for (int i=0;i<boundaryLoops.size();i++)
       for (int j=0;j<boundaryLoops[i].size();j++)
         sumBoundaryLoopsTriplets.push_back(Triplet<double>(numV+i, boundaryLoops[i][j],1.0));
@@ -155,18 +169,89 @@ namespace directional
       assert(numCycle==numGenerators);
     }
     
+    
     basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
     basisCycles.setFromTriplets(basisCycleTriplets.begin(), basisCycleTriplets.end());
     basisCycles=sumBoundaryLoops*basisCycles;
     
+    
+    
+    //removing rows and columns
+    remainRows.resize(innerVerticesList.size()+numBoundaries+numGenerators);
+    remainColumns.resize(innerEdgesList.size());
+    for (int i=0;i<innerVerticesList.size();i++)
+      remainRows(i)=innerVerticesList[i];
+    
+    for (int i=0;i<numBoundaries+numGenerators;i++)
+      remainRows(innerVerticesList.size()+i)=numV+i;
+    
+    std::vector<Triplet<double>> reduceBoundTriplets;
+    for (int i=0;i<remainRows.size();i++){
+      reduceBoundTriplets.push_back(Triplet<double>(i,remainRows(i), 1.0));
+    }
+    
+    boundReduceMat.conservativeResize(remainRows.size(), remainRows.maxCoeff()+1);
+    boundReduceMat.setFromTriplets(reduceBoundTriplets.begin(), reduceBoundTriplets.end());
+    
+    for (int i=0;i<innerEdgesList.size();i++)
+      remainColumns(i)=innerEdgesList[i];
+    
+    SparseMatrix<double> temp1=basisCycles, temp2;
+    igl::slice(temp1,remainRows,igl::colon<int>(0,basisCycles.cols()-1), temp2);
+    igl::slice(temp2,igl::colon<int>(0,basisCycles.rows()-1), remainColumns, basisCycles);
+    
+    
+    //computing cycle curvatures
+    Eigen::MatrixXd B1, B2, B3;
+    igl::local_basis(V, F, B1, B2, B3);
+    
+    //SHOULD BE DEPRECATED
+    VectorXd edgeParallelAngleChange(basisCycles.cols());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
+    //MatrixXd edgeVectors(columns(columns.size() - 1), 3);
+    
+    for (int i = 0; i < EF.rows(); i++) {
+      //skip border edges
+      if (EF(i, 0) == -1 || EF(i, 1) == -1)
+        continue;
+      
+      RowVectorXd edgeVectors = (V.row(EV(i, 1)) - V.row(EV(i, 0))).normalized();
+      double x1 = edgeVectors.dot(B1.row(EF(i, 0)));
+      double y1 = edgeVectors.dot(B2.row(EF(i, 0)));
+      double x2 = edgeVectors.dot(B1.row(EF(i, 1)));
+      double y2 = edgeVectors.dot(B2.row(EF(i, 1)));
+      edgeParallelAngleChange(i) = atan2(y2, x2) - atan2(y1, x1);
+    }
+    
+    
+    cycleCurvature = basisCycles*edgeParallelAngleChange;
+    for (int i = 0; i < cycleCurvature.size(); i++) {
+      while (cycleCurvature(i) >= M_PI) cycleCurvature(i) -= 2.0*M_PI;
+      while (cycleCurvature(i) < -M_PI) cycleCurvature(i) += 2.0*M_PI;
+    }
+    
+    // End of "SHOULD BE DEPRECATED""
+    
+    //VectorXd cycleCurvature(reducedCycles.rows());
+    /*VectorXd K;
+     igl::gaussian_curvature(V, F, K);
+     
+     //repairing the PI case for boundary vertices
+     for (int i = 0; i < K.size(); i++)
+     if (!isBorder[i])
+     cycleCurvature(i) = K(i);*/
   }
   
-  IGL_INLINE void dual_cycles(const Eigen::MatrixXi& F,
-                              Eigen::SparseMatrix<double>& basisCycles)
+  
+  
+  IGL_INLINE void dual_cycles(const Eigen::MatrixXd& V,
+                              const Eigen::MatrixXi& F,
+                              Eigen::SparseMatrix<double>& basisCycles,
+                              Eigen::VectorXd& cycleCurvature,
+                              Eigen::SparseMatrix<double>& boundReduceMat)
   {
     Eigen::MatrixXi EV, x, EF;
     igl::edge_topology(Eigen::MatrixXi(F.maxCoeff(), 0), F, EV, x, EF);
-    directional::dual_cycles(F, EV, EF, basisCycles);
+    directional::dual_cycles(V, F, EV, EF, basisCycles,cycleCurvature,boundReduceMat);
   }
   
 }
