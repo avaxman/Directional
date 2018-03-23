@@ -38,6 +38,8 @@ namespace directional
   //  error: gives the total error of the field. If this is not approximately 0 your singularities probably don't add up properly.
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
+                                     const Eigen::MatrixXi& EV,
+                                     const Eigen::VectorXi& innerEdges,
                                      const Eigen::SparseMatrix<double>& basisCycles,
                                      const Eigen::VectorXd& cycleCurvature,
                                      const Eigen::VectorXi& cycleIndices,
@@ -58,15 +60,21 @@ namespace directional
       ldltSolver.compute(AAt);
     }
     
-    rotationAngles = basisCycles.transpose()*ldltSolver.solve(-cycleCurvature + cycleNewCurvature);
+    VectorXd innerRotationAngles = basisCycles.transpose()*ldltSolver.solve(-cycleCurvature + cycleNewCurvature);
+    rotationAngles.conservativeResize(EV.rows());
+    rotationAngles.setZero();
+    for (int i=0;i<innerEdges.rows();i++)
+      rotationAngles(innerEdges(i))=innerRotationAngles(i);
     
-    linfError = (basisCycles*rotationAngles - (-cycleCurvature + cycleNewCurvature)).lpNorm<Infinity>();
+    linfError = (basisCycles*innerRotationAngles - (-cycleCurvature + cycleNewCurvature)).lpNorm<Infinity>();
   }
   
-  //Minimal version: no solver or pre-computed cycle curvature
+  //Minimal version: no solver
   IGL_INLINE void trivial_connection(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
+                                     const Eigen::VectorXi& innerEdges,
                                      const Eigen::SparseMatrix<double>& basisCycles,
+                                     const Eigen::VectorXd& cycleCurvature,
                                      const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      Eigen::VectorXd& rotationAngles,
@@ -76,10 +84,8 @@ namespace directional
     igl::edge_topology(V, F, EV, x, EF);
     Eigen::MatrixXd B1, B2, B3;
     igl::local_basis(V, F, B1, B2, B3);
-    Eigen::VectorXd cycleCurvature;
-    cycle_curvature(V, F, EV, EF, B1, B2, basisCycles, cycleCurvature);
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
-    trivial_connection(V, F, basisCycles,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
+    trivial_connection(V, F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
   }
 }
 

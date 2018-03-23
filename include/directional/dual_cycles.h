@@ -7,7 +7,6 @@
 #define DUAL_CYCLES_H
 #include <Eigen/Core>
 #include <igl/boundary_loop.h>
-#include <igl/is_border_vertex.h>
 #include <igl/local_basis.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/colon.h>
@@ -38,11 +37,14 @@ namespace directional
                               const Eigen::MatrixXi& EF,
                               Eigen::SparseMatrix<double>& basisCycles,
                               Eigen::VectorXd& cycleCurvature,
-                              Eigen::SparseMatrix<double>& boundReduceMat)
+                              Eigen::VectorXi& vertex2cycle,
+                              Eigen::VectorXi& innerEdges)
   {
     using namespace Eigen;
+    using namespace std;
     int numV = F.maxCoeff() + 1;
     int eulerChar = numV - EV.rows() + F.rows();
+    vertex2cycle.conservativeResize(V.rows());
     
     std::vector<std::vector<int>> boundaryLoops;
     
@@ -50,7 +52,7 @@ namespace directional
     int numBoundaries=boundaryLoops.size();
     int numGenerators=2-numBoundaries-eulerChar;
     
-    std::vector<Triplet<double> > basisCycleTriplets(EV.rows() * 2);
+    vector<Triplet<double> > basisCycleTriplets(EV.rows() * 2);
     
     basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
     
@@ -61,27 +63,34 @@ namespace directional
     }
     
     //Creating boundary cycles by building a matrix the sums up boundary loops and zeros out boundary vertex cycles - it will be multiplied from the left to basisCyclesMat
-    std::vector<bool> isBorder = igl::is_border_vertex(MatrixXi(numV, 0), F);
+    VectorXi isBoundary(V.rows()); isBoundary.setZero();
+    for (int i=0;i<boundaryLoops.size();i++)
+      for (int j=0;j<boundaryLoops[i].size();j++)
+        isBoundary(boundaryLoops[i][j])=1;
     
     SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numBoundaries+numGenerators);
-    std::vector<Triplet<double>> sumBoundaryLoopsTriplets;
-    std::vector<int> innerVerticesList, innerEdgesList;
+    vector<Triplet<double>> sumBoundaryLoopsTriplets;
+    vector<int> innerVerticesList, innerEdgesList;
     VectorXi remainRows, remainColumns;
     
     for (int i=0;i<numV;i++){
-      sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,(isBorder[i] ? 0.0 : 1.0)));
-      if (!isBorder[i])
+      sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0-isBoundary[i]));
+      if (!isBoundary(i)){
         innerVerticesList.push_back(i);
+        vertex2cycle(i)=innerVerticesList.size()-1;
+      }
     }
     
     for (int i=0;i<EV.rows();i++)
-      if ((!isBorder[EV(i,0)])&&(!isBorder[EV(i,1)]))
+      if (!((isBoundary(EV(i,0)))&&(isBoundary(EV(i,1)))))
         innerEdgesList.push_back(i);
     
     //summing up boundary loops
     for (int i=0;i<boundaryLoops.size();i++)
-      for (int j=0;j<boundaryLoops[i].size();j++)
+      for (int j=0;j<boundaryLoops[i].size();j++){
         sumBoundaryLoopsTriplets.push_back(Triplet<double>(numV+i, boundaryLoops[i][j],1.0));
+        vertex2cycle(boundaryLoops[i][j])=i;
+      }
     
     //just passing generators through;
     for (int i=numV+numBoundaries;i<numV+numBoundaries+numGenerators;i++)
@@ -92,7 +101,7 @@ namespace directional
     if (numGenerators!=0){
       MatrixXi reducedEV(EV);
       for (int i = 1; i < reducedEV.rows(); i++)
-        if(isBorder[reducedEV(i,0)] || isBorder[reducedEV(i, 1)])
+        if(isBoundary(reducedEV(i,0)) || isBoundary(reducedEV(i, 1)))
           reducedEV(i,0) = -1;
       
       VectorXi primalTreeEdges, primalTreeFathers;
@@ -169,12 +178,9 @@ namespace directional
       assert(numCycle==numGenerators);
     }
     
-    
     basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
     basisCycles.setFromTriplets(basisCycleTriplets.begin(), basisCycleTriplets.end());
     basisCycles=sumBoundaryLoops*basisCycles;
-    
-    
     
     //removing rows and columns
     remainRows.resize(innerVerticesList.size()+numBoundaries+numGenerators);
@@ -185,40 +191,46 @@ namespace directional
     for (int i=0;i<numBoundaries+numGenerators;i++)
       remainRows(innerVerticesList.size()+i)=numV+i;
     
-    std::vector<Triplet<double>> reduceBoundTriplets;
-    for (int i=0;i<remainRows.size();i++){
-      reduceBoundTriplets.push_back(Triplet<double>(i,remainRows(i), 1.0));
-    }
-    
-    boundReduceMat.conservativeResize(remainRows.size(), remainRows.maxCoeff()+1);
-    boundReduceMat.setFromTriplets(reduceBoundTriplets.begin(), reduceBoundTriplets.end());
-    
     for (int i=0;i<innerEdgesList.size();i++)
       remainColumns(i)=innerEdgesList[i];
     
-    SparseMatrix<double> temp1=basisCycles, temp2;
-    igl::slice(temp1,remainRows,igl::colon<int>(0,basisCycles.cols()-1), temp2);
-    igl::slice(temp2,igl::colon<int>(0,basisCycles.rows()-1), remainColumns, basisCycles);
+    //creating slicing matrices
+    std::vector<Triplet<double> > rowSliceTriplets, colSliceTriplets;
+    for (int i=0;i<remainRows.size();i++)
+      rowSliceTriplets.push_back(Triplet<double>(i, remainRows(i), 1.0));
+    for (int i=0;i<remainColumns.size();i++)
+      colSliceTriplets.push_back(Triplet<double>(remainColumns(i), i, 1.0));
     
+    SparseMatrix<double> rowSliceMat(remainRows.rows(), basisCycles.rows());
+    rowSliceMat.setFromTriplets(rowSliceTriplets.begin(), rowSliceTriplets.end());
+    
+    SparseMatrix<double> colSliceMat(basisCycles.cols(), remainColumns.rows());
+    colSliceMat.setFromTriplets(colSliceTriplets.begin(), colSliceTriplets.end());
+    
+    basisCycles=rowSliceMat*basisCycles*colSliceMat;
+    
+    innerEdges.conservativeResize(innerEdgesList.size());
+    for (int i=0;i<innerEdgesList.size();i++)
+      innerEdges(i)=innerEdgesList[i];
     
     //computing cycle curvatures
     Eigen::MatrixXd B1, B2, B3;
     igl::local_basis(V, F, B1, B2, B3);
     
+    
     //SHOULD BE DEPRECATED
     VectorXd edgeParallelAngleChange(basisCycles.cols());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
     //MatrixXd edgeVectors(columns(columns.size() - 1), 3);
     
-    for (int i = 0; i < EF.rows(); i++) {
-      //skip border edges
-      if (EF(i, 0) == -1 || EF(i, 1) == -1)
-        continue;
+    for (int i = 0; i < innerEdges.rows(); i++) {
+    
+      int currEdge=innerEdges(i);
       
-      RowVectorXd edgeVectors = (V.row(EV(i, 1)) - V.row(EV(i, 0))).normalized();
-      double x1 = edgeVectors.dot(B1.row(EF(i, 0)));
-      double y1 = edgeVectors.dot(B2.row(EF(i, 0)));
-      double x2 = edgeVectors.dot(B1.row(EF(i, 1)));
-      double y2 = edgeVectors.dot(B2.row(EF(i, 1)));
+      RowVectorXd edgeVectors = (V.row(EV(currEdge, 1)) - V.row(EV(currEdge, 0))).normalized();
+      double x1 = edgeVectors.dot(B1.row(EF(currEdge, 0)));
+      double y1 = edgeVectors.dot(B2.row(EF(currEdge, 0)));
+      double x2 = edgeVectors.dot(B1.row(EF(currEdge, 1)));
+      double y2 = edgeVectors.dot(B2.row(EF(currEdge, 1)));
       edgeParallelAngleChange(i) = atan2(y2, x2) - atan2(y1, x1);
     }
     
@@ -247,11 +259,12 @@ namespace directional
                               const Eigen::MatrixXi& F,
                               Eigen::SparseMatrix<double>& basisCycles,
                               Eigen::VectorXd& cycleCurvature,
-                              Eigen::SparseMatrix<double>& boundReduceMat)
+                              Eigen::VectorXi& vertex2cycle,
+                              Eigen::VectorXi& innerEdges)
   {
     Eigen::MatrixXi EV, x, EF;
     igl::edge_topology(Eigen::MatrixXi(F.maxCoeff(), 0), F, EV, x, EF);
-    directional::dual_cycles(V, F, EV, EF, basisCycles,cycleCurvature,boundReduceMat);
+    directional::dual_cycles(V, F, EV, EF, basisCycles,cycleCurvature,vertex2cycle,innerEdges);
   }
   
 }

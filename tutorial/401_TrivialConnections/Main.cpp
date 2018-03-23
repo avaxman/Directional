@@ -18,7 +18,8 @@
 
 Eigen::VectorXi cycleIndices;
 Eigen::VectorXd cycleCurvature;
-Eigen::SparseMatrix<double> basisCycles, boundReduceMat;
+Eigen::SparseMatrix<double> basisCycles;
+Eigen::VectorXi vertex2cycle, innerEdges;
 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
 
 Eigen::RowVector3d rawGlyphColor;
@@ -55,7 +56,7 @@ void update_mesh()
     std::cout << "Expected: " << eulerChar*N << std::endl;
   }
   
-  directional::trivial_connection(V,F,basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
+  directional::trivial_connection(V,F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
   std::cout<<"field linfError: "<<linfError<<std::endl;
   
   Eigen::MatrixXd representative;
@@ -78,16 +79,18 @@ void update_mesh()
   Eigen::MatrixXd fullC=C;
   
   Eigen::VectorXi singVertices, singIndices;
-  std::vector<int> singVerticesList;
+  std::vector<int> singVerticesList, singIndicesList;
   for (int i=0;i<V.rows();i++)
-    if (cycleIndices(i))
+    if (cycleIndices(vertex2cycle(i))){
       singVerticesList.push_back(i);
+      singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
+    }
   
   singVertices.resize(singVerticesList.size());
-  singIndices.resize(singVerticesList.size());
+  singIndices.resize(singIndicesList.size());
   for (int i=0;i<singVerticesList.size();i++){
     singVertices(i)=singVerticesList[i];
-    singIndices(i)=cycleIndices(singVerticesList[i]);
+    singIndices(i)=singIndicesList[i];
   }
   
   directional::singularity_spheres(V, F, singVertices, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
@@ -116,7 +119,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
   {
     case '1': select=true; break;
     case '2':
-      globalRotation+=0.1;
+      globalRotation+=0.314;
       update_mesh();
       break;
     case '-':
@@ -177,7 +180,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 
 bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 {
-  if (key != 0)
+  if ((key != 0)||(!select))
     return false;
   int fid;
   Eigen::Vector3d bc;
@@ -191,17 +194,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
     Eigen::Vector3d::Index maxCol;
     bc.maxCoeff(&maxCol);
     int currVertex=F(fid, maxCol);
-    //finding out currCycle
-    Eigen::VectorXd whichVertex(boundReduceMat.cols());
-    whichVertex.setZero();
-    whichVertex(currVertex)=1;
-    Eigen::VectorXd whichCycle=boundReduceMat*whichVertex;
-    currCycle=0;
-    for (int i=0;i<whichCycle.size();i++)
-      if (whichCycle(i)>0.5){
-        currCycle=i;
-        break;
-      }
+    currCycle=vertex2cycle(currVertex);
     update_mesh();
     return true;
   }
@@ -225,15 +218,14 @@ int main()
   igl::readOFF(TUTORIAL_SHARED_PATH "/camelhead.off", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
-  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, boundReduceMat);
+  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
   
   std::vector<std::vector<int>> boundaryLoops;
   igl::boundary_loop(F, boundaryLoops);
   numBoundaries=boundaryLoops.size();
   eulerChar = V.rows() - EV.rows() + F.rows();
-  numGenerators = basisCycles.rows() - V.rows() - boundaryLoops.size();
-  numBoundaries=basisCycles.rows()- (numGenerators + V.rows());
+  numGenerators = 2 - eulerChar - boundaryLoops.size();
   
   std::cout<<"Euler characteristic: "<<eulerChar<<std::endl;
   std::cout<<"#generators: "<<numGenerators<<std::endl;
@@ -244,8 +236,8 @@ int main()
   for (int k=0; k<basisCycles.outerSize(); ++k){
      //std::cout<<"k: "<<k<< std::endl;
     for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it){
-      int f1=EF(it.col(),0);
-      int f2=EF(it.col(),1);
+      int f1=EF(innerEdges(it.col()),0);
+      int f2=EF(innerEdges(it.col()),1);
       //std::cout<<"it.col():"<<it.col()<<std::endl;
       //std::cout<<"it.row():"<<it.row()<<std::endl;
       //std::cout<<"f1, f2: "<<f1<<","<<f2<<std::endl;
