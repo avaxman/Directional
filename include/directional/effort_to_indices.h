@@ -1,0 +1,64 @@
+//This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2017 Amir Vaxman <avaxman@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
+#ifndef EFFORT_TO_INDICES_H
+#define EFFORT_TO_INDICES_H
+#include <igl/igl_inline.h>
+#include <igl/edge_topology.h>
+#include <igl/parallel_transport_angles.h>
+#include <igl/per_face_normals.h>
+#include <igl/parallel_transport_angles.h>
+#include <directional/dual_cycles.h>
+#include <Eigen/Core>
+#include <vector>
+#include <cmath>
+
+
+namespace directional
+{
+  // Computes cycle-based indices from dual-edge-based efforts.
+  // Note: input is effort (sum of rotation angles), and not individual rotation angles
+  // Input:
+  // basisCycles:    #c by #iE (inner edges of the mesh) the oriented basis cycles around which the indices are measured
+  // effort:         #iE the effort (sum of rotation angles) of matched vectors across the dual edge. Equal to N*rotation angles for N-RoSy fields.
+  // cycleCurvature: #c the cycle curvature (for instance, from directional::dual_cycles)
+  // N:              The degree of the field
+  // Output:
+  // indices:     #c the index of the cycle x N (always an integer).
+  IGL_INLINE void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
+                                    const Eigen::VectorXd& effort,
+                                    const Eigen::VectorXd& cycleCurvature,
+                                    const int N,
+                                    Eigen::VectorXi& indices)
+  {
+    
+    Eigen::VectorXd dIndices = ((basisCycleMat * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
+    indices=dIndices.cast<int>();
+    
+  }
+  
+  
+  // minimal version without precomputed cycles
+  IGL_INLINE void effort_to_indices(const Eigen::MatrixXd& V,
+                                    const Eigen::MatrixXi& F,
+                                    const Eigen::MatrixXi& EV,
+                                    const Eigen::MatrixXi& EF,
+                                    const Eigen::VectorXd& effort,
+                                    const int N,
+                                    Eigen::VectorXi& indices)
+  {
+    Eigen::SparseMatrix<double> basisCycles;
+    Eigen::VectorXd cycleCurvature;
+    Eigen::VectorXi vertex2cycle;
+    Eigen::VectorXi innerEdges;
+    directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+    directional::effort_to_indices(basisCycleMat, effort, cycleCurvature, N, indices);
+  }
+}
+
+#endif
+
+

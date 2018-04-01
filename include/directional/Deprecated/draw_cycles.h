@@ -1,3 +1,5 @@
+/****************************THIS FILE IS DEPRECATED************************/
+
 #ifndef DRAW_CYCLES
 #define DRAW_CYCLES
 #include <igl/igl_inline.h>

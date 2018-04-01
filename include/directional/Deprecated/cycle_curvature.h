@@ -1,3 +1,6 @@
+/******************THIS FILE IS DEPRECATED************************/
+
+
 #ifndef CYCLE_CURVATURE_H
 #define CYCLE_CURVATURE_H
 #include <igl/igl_inline.h>
@@ -10,7 +13,6 @@
 #include <Eigen/Core>
 #include <vector>
 #include <cmath>
-
 
 namespace directional
 {

@@ -28,9 +28,6 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 bool zeroPressed=false, showSingularities=false;
 
-
-
-
 void update_mesh()
 {
   
@@ -134,7 +131,7 @@ int main()
   
   //computing
   directional::principal_matching(V, F,rawField, matching, effort);
-  directional::get_indices(V,F,EV, EF, effort,N,prinIndices);
+  directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
   
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;

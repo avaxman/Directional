@@ -62,7 +62,7 @@ endif()
 
 # Chapter 4
 if(TUTORIALS_CHAPTER4)
-  add_subdirectory("401_TrivialConnections")
+  add_subdirectory("401_IndexPrescription")
 endif()
 
 

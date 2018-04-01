@@ -1,4 +1,4 @@
-//This fiel is part of libdirectional, a library for directional field processing.
+// This file is part of libdirectional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -18,29 +18,29 @@ namespace directional
 {
   // creates small spheres to visualize points on the overlay of the mesh
   // Inputs:
-  //  P  eigen double matrix  #P by 3 - coordinates of the centers of spheres
-  //  R  double               radii of the spheres
-  //  C  eigen double matrix  #P by 3 - RBG colors per sphere
-  //  res integer             the resolution of the sphere
-  // colorPerVertex           speaks for its own
-  // extend - whether to extend V,T rather than newly allocate them.
+  //  P       #P by 3 coordinates of the centers of spheres
+  //  radius  double radii of the spheres
+  //  C       #P by 3 - RBG colors per sphere
+  //  res integer   the resolution of the sphere
+  // colorPerVertex of the output mesh
+  // extendMesh if to extend the V,T,TC, or to overwrite them
   // Outputs:
-  //  V   eigen double matrix     spheres' meshes coordinates
-  //  T   eigen int matrix        meshes triangles
-  //  TC  eigen double matrix     #T by 3 colors (allocated from C)
+  //  V   #V by 3 cylinder mesh coordinates
+  //  T   #T by 3 mesh triangles
+  //  TC  #T by 3 colors per triangle
   IGL_INLINE bool point_spheres(const Eigen::MatrixXd& points,
                                 const double& radius,
                                 const Eigen::MatrixXd& colors,
                                 const int res,
                                 const bool colorPerVertex,
-                                const bool extend,
+                                const bool extendMesh,
                                 Eigen::MatrixXd& V,
                                 Eigen::MatrixXi& T,
                                 Eigen::MatrixXd& TC)
   {
     using namespace Eigen;
     int VOffset, TOffset, TCOffset;
-    if (!extend){
+    if (!extendMesh){
       V.resize(res*res*points.rows(),3);
       T.resize(2*(res-1)*res*points.rows(),3);
       TC.resize((colorPerVertex ? V.rows() : T.rows()),3);

@@ -7,7 +7,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
 #include <directional/dual_cycles.h>
-#include <directional/trivial_connection.h>
+#include <directional/index_prescription.h>
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
