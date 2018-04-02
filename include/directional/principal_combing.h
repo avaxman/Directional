@@ -1,11 +1,12 @@
+// This file is part of libdirectional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef PRINCIPAL_COMBING_H
-#define PRINCIPAL_COMBING_H
+#ifndef DIRECTIONAL_PRINCIPAL_COMBING_H
+#define DIRECTIONAL_PRINCIPAL_COMBING_H
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
@@ -23,28 +24,26 @@
 
 namespace directional
 {
-  // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
-  // Note: equals to rotation_angle*N in N-RoSy fields
-  // Important: if the Raw field in not CCW ordered (e.., resulting from all functions X_t_raw() in libdirectional), the result is unpredictable.
+  // Reorders the vectors in a face (preserving CCW) so that the principal matching across most edges, except a small set (called a cut), is an identity, making it ready for cutting and parameterization.
+  // Important: if the Raw field in not CCW ordered, the result is unpredictable.
   // Input:
   //  V:      #V x 3 vertex coordinates
   //  F:      #F x 3 face vertex indices
   //  EV:     #E x 2 edges to vertices indices
   //  EF:     #E x 2 edges to faces indices
-  //  raw:    The directional field, assumed to be ordered CCW, and in xyzxyzxyz...xyz (3*N cols) form. The degree is inferred by the size.
+  //  rawField: #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size.
   // Output:
-  // matching: #E matching function, where vector k in EF(i,0) matches to vector (i+matching(i))%N in EF(i,1). In case of boundary, there is a -1.
-  //  effort: #E principal matching efforts.
-  //TODO: also return matching
+  // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Expect most matching =0 due to the combing.
+  //  effort: #E updated principal-matching efforts.
   IGL_INLINE void principal_combing(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXi& EV,
-                             const Eigen::MatrixXi& EF,
-                             const Eigen::MatrixXi& FE,
-                             const Eigen::MatrixXd& rawField,
-                             Eigen::MatrixXd& combedField,
-                             Eigen::VectorXi& combedMatching,
-                             Eigen::VectorXd& combedEffort)
+                                    const Eigen::MatrixXi& F,
+                                    const Eigen::MatrixXi& EV,
+                                    const Eigen::MatrixXi& EF,
+                                    const Eigen::MatrixXi& FE,
+                                    const Eigen::MatrixXd& rawField,
+                                    Eigen::MatrixXd& combedField,
+                                    Eigen::VectorXi& combedMatching,
+                                    Eigen::VectorXd& combedEffort)
   {
     using namespace Eigen;
     VectorXi matching;
@@ -80,55 +79,27 @@ namespace directional
       
     }while (!faceMatchingQueue.empty());
     
-    //can be produced from the combing, but better kept for sanity check.
+    //can be produced from the combing, but better used directly for sanity check.
     principal_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort);
   }
   
-  //representative version
+  //version for input in representative format (for N-RoSy directionals).
   IGL_INLINE void principal_combing(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXi& EV,
-                             const Eigen::MatrixXi& EF,
-                             const Eigen::MatrixXi& FE,
-                             const Eigen::MatrixXd& representativeField,
-                             const int N,
-                             Eigen::MatrixXd& combedField,
-                             Eigen::VectorXi& combedMatching,
-                             Eigen::VectorXd& combedEffort)
+                                    const Eigen::MatrixXi& F,
+                                    const Eigen::MatrixXi& EV,
+                                    const Eigen::MatrixXi& EF,
+                                    const Eigen::MatrixXi& FE,
+                                    const Eigen::MatrixXd& representativeField,
+                                    const int N,
+                                    Eigen::MatrixXd& combedField,
+                                    Eigen::VectorXi& combedMatching,
+                                    Eigen::VectorXd& combedEffort)
   {
-    Eigen::MatrixXd raw;
-    representative_to_raw(V, F, representativeField, N, raw);
-    principal_combing(V, F, EV, EF, FE, raw, combedField, combedMatching, combedEffort);
+    Eigen::MatrixXd rawField;
+    representative_to_raw(V, F, representativeField, N, rawField);
+    principal_combing(V, F, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   }
   
-  
-  
-  // (V, F) only raw version
-  IGL_INLINE void principal_combing(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXd& raw,
-                             Eigen::MatrixXd& combedField,
-                             Eigen::VectorXi& combedMatching,
-                             Eigen::VectorXd& combedEffort)
-  {
-    Eigen::MatrixXi EV, FE, EF;
-    igl::edge_topology(V, F, EV, FE, EF);
-    principal_combing(V, F, EV, EF, FE, raw, combedField, combedMatching, combedEffort);
-  }
-  
-  // (V,F) only representative version
-  IGL_INLINE void principal_combing(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXd& representativeField,
-                             const int N,
-                             Eigen::MatrixXd& combedField,
-                             Eigen::VectorXi& combedMatching,
-                             Eigen::VectorXd& combedEffort)
-  {
-    Eigen::MatrixXi EV, FE, EF;
-    igl::edge_topology(V, F, EV, FE, EF);
-    principal_combing(V, F, EV, EF, FE, representativeField, N, combedField, combedMatching, combedEffort);
-  }
 }
 
 

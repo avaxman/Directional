@@ -1,14 +1,14 @@
-// Copyright (C) 2017a Amir Vaxman <avaxman@gmail.com>
+// This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef PRINCIPLE_MATCHING_H
-#define PRINCIPLE_MATCHING_H
+#ifndef DIRECTIONAL_PRINCIPAL_MATCHING_H
+#define DIRECTIONAL_PRINCIPAL_MATCHING_H
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
-#include <igl/triangle_triangle_adjacency.h>
 #include <igl/edge_topology.h>
 #include <directional/representative_to_raw.h>
 
@@ -20,8 +20,7 @@
 namespace directional
 {
   // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
-  // Note: equals to rotation_angle*N in N-RoSy fields
-  // Important: if the Raw field in not CCW ordered (e.., resulting from all functions X_t_raw() in libdirectional), the result is unpredictable.
+  // Important: if the Raw field in not CCW ordered, the result is meaningless.
   // Input:
   //  V:      #V x 3 vertex coordinates
   //  F:      #F x 3 face vertex indices
@@ -29,7 +28,7 @@ namespace directional
   //  EF:     #E x 2 edges to faces indices
   //  raw:    The directional field, assumed to be ordered CCW, and in xyzxyzxyz...xyz (3*N cols) form. The degree is inferred by the size.
   // Output:
-  // matching: #E matching function, where vector k in EF(i,0) matches to vector (i+matching(i))%N in EF(i,1). In case of boundary, there is a -1.
+  // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
   //  effort: #E principal matching efforts.
   //TODO: also return matching
   IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
@@ -37,7 +36,7 @@ namespace directional
                                      const Eigen::MatrixXi& EV,
                                      const Eigen::MatrixXi& EF,
                                      const Eigen::MatrixXi& FE,
-                                     const Eigen::MatrixXd& raw,
+                                     const Eigen::MatrixXd& rawField,
                                      Eigen::VectorXi& matching,
                                      Eigen::VectorXd& effort)
   {
@@ -49,7 +48,7 @@ namespace directional
     MatrixXd B1, B2, B3;
     igl::local_basis(V, F, B1, B2, B3);
     
-    int N = raw.cols() / 3;
+    int N = rawField.cols() / 3;
     
     matching.conservativeResize(EF.rows());
     matching.setConstant(-1);
@@ -75,9 +74,9 @@ namespace directional
       int indexMinFromZero=0;
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
       for (int j = 0; j < N; j++) {
-        RowVector3d vec0f = raw.block(EF(i, 0), 0, 1, 3);
+        RowVector3d vec0f = rawField.block(EF(i, 0), 0, 1, 3);
         Complex vec0fc = Complex(vec0f.dot(B1.row(EF(i, 0))), vec0f.dot(B2.row(EF(i, 0))));
-        RowVector3d vecjg = raw.block(EF(i, 1), 3 * j, 1, 3);
+        RowVector3d vecjg = rawField.block(EF(i, 1), 3 * j, 1, 3);
         Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
         Complex transvec0fc = vec0fc*edgeTransport(i);
         double currRotAngle = arg(vecjgc / transvec0fc);
@@ -90,9 +89,9 @@ namespace directional
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
       double currEffort=0;
       for (int j = 0; j < N; j++) {
-        RowVector3d vecjf = raw.block(EF(i, 0), 3*j, 1, 3);
+        RowVector3d vecjf = rawField.block(EF(i, 0), 3*j, 1, 3);
         Complex vecjfc = Complex(vecjf.dot(B1.row(EF(i, 0))), vecjf.dot(B2.row(EF(i, 0))));
-        RowVector3d vecjg = raw.block(EF(i, 1), 3 * ((j+indexMinFromZero+N)%N), 1, 3);
+        RowVector3d vecjg = rawField.block(EF(i, 1), 3 * ((j+indexMinFromZero+N)%N), 1, 3);
         Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
         Complex transvecjfc = vecjfc*edgeTransport(i);
         currEffort+= arg(vecjgc / transvecjfc);
@@ -105,7 +104,7 @@ namespace directional
     
   }
   
-  //representative version
+  //version with representative vector (for N-RoSy) as input.
   IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::MatrixXi& EV,
@@ -116,36 +115,9 @@ namespace directional
                                      Eigen::VectorXi& matching,
                                      Eigen::VectorXd& effort)
   {
-    Eigen::MatrixXd raw;
-    representative_to_raw(V, F, representativeField, N, raw);
-    principal_matching(V, F, EV, EF, FE, raw, matching, effort);
-  }
-  
-  
-  
-  // (V, F) only raw version
-  IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
-                                     const Eigen::MatrixXi& F,
-                                     const Eigen::MatrixXd& raw,
-                                     Eigen::VectorXi& matching,
-                                     Eigen::VectorXd& effort)
-  {
-    Eigen::MatrixXi EV, FE, EF;
-    igl::edge_topology(V, F, EV, FE, EF);
-    principal_matching(V, F, EV, EF, FE, raw, matching, effort);
-  }
-  
-  // (V,F) only representative version
-  IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
-                                     const Eigen::MatrixXi& F,
-                                     const Eigen::MatrixXd& representativeField,
-                                     const int N,
-                                     Eigen::VectorXi& matching,
-                                     Eigen::VectorXd& effort)
-  {
-    Eigen::MatrixXi EV, FE, EF;
-    igl::edge_topology(V, F, EV, FE, EF);
-    principal_matching(V, F, EV, EF, FE, representativeField, N, matching, effort);
+    Eigen::MatrixXd rawField;
+    representative_to_raw(V, F, representativeField, N, rawField);
+    principal_matching(V, F, EV, EF, FE, rawField, matching, effort);
   }
 }
 

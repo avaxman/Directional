@@ -1,10 +1,11 @@
+// This file is part of libdirectional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef POLYVECTOR_TO_RAW_H
-#define POLYVECTOR_TO_RAW_H
+#ifndef DIRECTIONAL_POLYVECTOR_TO_RAW_H
+#define DIRECTIONAL_POLYVECTOR_TO_RAW_H
 
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
@@ -17,17 +18,16 @@
 
 namespace directional
 {
-  // Computes the raw vector field given a complex field.
-  // on a mesh.
+  // Converts a field in PolyVector representation to raw represenation.
   // Inputs:
   //  B1, B2: #F by 3 matrices representing the local base of each face.
-  //  poly: Representation of a poly vector field as complex doubles.
-  //  N: The degree of the field..
+  //  polyVectorField: #F by N complex PolyVectors
+  //  N: The degree of the field.
   // Outputs:
-  //  raw: #F by 3*N matrix with all N explicit vectors of each directional in the order X,Y,Z,X,Y,Z, ...
+  //  raw: #F by 3*N matrix with all N explicit vectors of each directional in raw format xyzxyz
   IGL_INLINE void polyvector_to_raw(const Eigen::MatrixXd& B1,
                                     const Eigen::MatrixXd& B2,
-                                    const Eigen::MatrixXcd& polyvectorField,
+                                    const Eigen::MatrixXcd& polyVectorField,
                                     const int N,
                                     Eigen::MatrixXd& rawField)
   {
@@ -50,23 +50,16 @@ namespace directional
     }
   }
   
-  // Computes the raw vector field given a polyvector field.
-  // Inputs:
-  //  V: #V X 3 vertex coordinates.
-  //  F: #F by 3 face vertex indices.
-  //  poly: Representation of a poly vector field as complex doubles.
-  //  N: The degree of the field.
-  // Outputs:
-  //  raw: #F by 3*N matrix with all N explicit vectors of each directional in the order X,Y,Z,X,Y,Z, ...
+  // version without explicit bases
   IGL_INLINE void polyvector_to_raw(const Eigen::MatrixXd& V,
                                     const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXcd& polyvectorField,
+                                    const Eigen::MatrixXcd& polyVectorField,
                                     const int N,
                                     Eigen::MatrixXd& rawField)
   {
     Eigen::MatrixXd B1, B2, x;
     igl::local_basis(V, F, B1, B2, x);
-    polyvector_to_raw(B1, B2, polyvectorField, N, rawField);
+    polyvector_to_raw(B1, B2, polyVectorField, N, rawField);
   }
 }
 #endif

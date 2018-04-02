@@ -1,3 +1,9 @@
+// This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_READ_RAW_FIELD_H
 #define DIRECTIONAL_READ_RAW_FIELD_H
 #include <cmath>
@@ -11,16 +17,17 @@
 namespace directional
 {
   
-  // Reads a list of singularities from a file
+  // Reads a raw field from a file
   // Inputs:
   //   fileName: The to be loaded file.
   // Outputs:
-  //   singularities: The vector containing the singularities
   //   N: The degree of the field
-  //   globalRotation: The angle of rotation between the vector on the first face and its basis in radians
+  //   rawField: the read field in raw #F by 3*N xyzxyz format
   // Return:
-  //   Whether or not the file was written successfully
-  bool IGL_INLINE read_raw_field(const std::string &fileName, int& N, Eigen::MatrixXd& rawField)
+  //   Whether or not the file was read successfully
+  bool IGL_INLINE read_raw_field(const std::string &fileName,
+                                 int& N,
+                                 Eigen::MatrixXd& rawField)
   {
     try
     {

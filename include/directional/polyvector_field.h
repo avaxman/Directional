@@ -1,10 +1,12 @@
-// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
+// This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2017 Daniele Panozzo <daniele.panozzo@gmail.com>, Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
-#ifndef POLYVECTOR_FIELD_H
-#define POLYVECTOR_FIELD_H
+
+#ifndef DIRECTIONAL_POLYVECTOR_FIELD_H
+#define DIRECTIONAL_POLYVECTOR_FIELD_H
 
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
@@ -17,223 +19,197 @@
 
 namespace directional
 {
-	// Method to precalculate the solvers for a poly_vector field. Must be recalculated whenever 
-	// soft_ids changes or the mesh changes.
-	// Inputs:
-	//  V: #V by 3 vertex coordinates.
-	//  F: #F by 3 face vertex indices.
-	//  TT: #F by 3 Triangle-triangle adjecencies.
-	//  B1, B2: #F by 3 matrices representing the local base of each face.
-	//  soft_id: The face ids of the soft constraints described in soft_value.
-	//  N: The degree of the field.
-	// Outputs:
-	//  solvers: A vecetor of pre-computed solver pointers. Must be recomputed if soft_id changes.
-	//  energy: The energy matrices for the given problem, must be recomputed along with the solvers.
-	IGL_INLINE void poly_vector_prepare_solvers(
-		const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& TT, 
-		const Eigen::MatrixXd& B1,
-		const Eigen::MatrixXd& B2,
-		const Eigen::VectorXi& soft_id,
-		const int N,
-		std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*>& solvers,
-		std::vector<Eigen::SparseMatrix<std::complex<double>>>& energy)
-	{
-		using namespace std;
-		using namespace Eigen;
-
-		for (int n = 0; n < N; n++)
-		{
-			if (solvers.size() <= n)
-				solvers.push_back(new Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>());
-			if (energy.size() <= n)
-				energy.push_back(Eigen::SparseMatrix<std::complex<double>>());
-			// Build the sparse matrix, with an energy term for each edge
-			std::vector< Triplet<std::complex<double> > > t;
-
-			int count = 0;
-			for (int f = 0; f < F.rows(); ++f)
-			{
-				for (int ei = 0; ei < F.cols(); ++ei)
-				{
-					// Look up the opposite face
-					int g = TT(f, ei);
-
-					// If it is a boundary edge, it does not contribute to the energy
-					if (g == -1) continue;
-
-					// Avoid to count every edge twice
-					if (f > g) continue;
-
-					// Compute the complex representation of the common edge
-					Vector3d e = (V.row(F(f, (ei + 1) % 3)) - V.row(F(f, ei)));
-					Vector2d vef = Vector2d(e.dot(B1.row(f)), e.dot(B2.row(f))).normalized();
-					std::complex<double> ef(vef(0), vef(1));
-					Vector2d veg = Vector2d(e.dot(B1.row(g)), e.dot(B2.row(g))).normalized();
-					std::complex<double> eg(veg(0), veg(1));
-
-					// Add the term conj(f)^n*ui - conj(g)^n*uj to the energy matrix
-					t.push_back(Triplet<std::complex<double> >(count, f, std::pow(std::conj(ef), N-n)));
-					t.push_back(Triplet<std::complex<double> >(count, g, -1.*std::pow(std::conj(eg), N-n)));
-
-					++count;
-				}
-			}
-			double lambda = 1000000000000;
-			for (int r = 0; r < soft_id.size(); ++r)
-			{
-				int f = soft_id(r);
-				t.push_back(Triplet<std::complex<double> >(count, f, lambda));
-				++count;
-			}
-
-			// Prepare the solver
-			energy[n].resize(count, F.rows());
-			energy[n].setFromTriplets(t.begin(), t.end());
-			solvers[n]->compute(energy[n].adjoint()*energy[n]);
-		}
-	}
-
-
-	// Version of the poly_vector method that allows reusing the solvers. Note that solvers need to
-	// be recalculated whenever the soft_ids change.
-	// Returns a polyvector field that attempts to make each vector as parallel as possible to the
-	// example directionals given in soft_id and soft_values. Also known as "Globally Optimal" and 
-	// "As Parallel As Possible". The field will be returned in the form of a complex polynomial 
-	// and can be transformed into a raw vector field using the poly_to_raw function.
-	// If no constraints are given the zero field will be returned.
-	// Inputs:
-	//  B1, B2: #F by 3 matrices representing the local base of each face.
-	//  soft_id: The face ids of the soft constraints described in soft_value.
-	//  soft_value: The directionals on the faces indicated by soft_id around which the field is
-	//              generated. Should be in the form X1,Y1,Z1,X2,Y2,Z2,Xn,Yn,Zn.
-	//  solvers: An aray of pre-computed solver pointers from poly_vector_prepare_solvers. 
-	//           Must be recomputed if soft_id changes.
-	//  energy: The energy matrices for the given problem, must be recomputed along with the solvers.
-	//  N: The degree of the field.
-	// Outputs:
-	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& B1,
-		const Eigen::MatrixXd& B2,
-		const Eigen::VectorXi& soft_id,
-		const Eigen::MatrixXd& soft_value,
-		const std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*>& solvers,
-		const std::vector<Eigen::SparseMatrix<std::complex<double>>>& energy,
-		const int N, 
-		Eigen::MatrixXcd& polyvectorField)
-	{
-		using namespace std;
-		using namespace Eigen;
-		if (soft_id.size() == 0)
-		{
-			polyvectorField = MatrixXcd::Constant(B1.rows(), N, std::complex<double>());
-			return;
-		}
-
-		// Build the sparse matrix, with an energy term for each edge
-		std::vector< Triplet<std::complex<double> > > tb;
-
-		int count = energy[0].rows() - soft_id.size();
-
-		// Convert the constraints into the complex polynomial coefficients and add them as soft constraints
-		double lambda = 1000000000000;
-		for (int r = 0; r < soft_id.size(); ++r)
-		{
-			int f = soft_id(r);
-			Eigen::RowVectorXcd roots(N);
-			for (int i = 0; i < N; i++)
-			{
-				Vector3d v = soft_value.block<1, 3>(r, i * 3);
-				std::complex<double> c(v.dot(B1.row(f)), v.dot(B2.row(f)));
-				roots(i) = c;
-			}
-			Eigen::VectorXcd poly;
-			roots_to_monicPolynomial(roots, poly);
-			for (int n = 0; n < N; n++)
-			{
-				tb.push_back(Triplet<std::complex<double> >(count, n, poly(n) * std::complex<double>(lambda, 0)));
-			}
-			++count;
-		}
-
-		polyvectorField.resize(B1.rows(), N);
-		typedef SparseMatrix<std::complex<double>> SparseMatrixXcd;
-		SparseMatrixXcd b(count, N);
-		b.setFromTriplets(tb.begin(), tb.end());
-
-		for (int n = 0; n < N; n++)
-		{
-			// Solve the linear system
-			assert(solvers[n]->info() == Success);
-			polyvectorField.col(n) = solvers[n]->solve(energy[n].adjoint()*MatrixXcd(b).col(n));
-			assert(solvers[n]->info() == Success);
-		}
-	}
-
-	// Returns a polyvector field that attempts to make each vector as parallel as possible to the
-	// example directionals given in soft_id and soft_values. Also known as "Globally Optimal" and 
-	// "As Parallel As Possible". The field will be returned in the form of a complex polynomial 
-	// and can be transformed into a raw vector field using the complex_to_polynomial function.
-	// If no constraints are given the zero field will be returned.
-	// Inputs:
-	//  V: #V by 3 vertex coordinates.
-	//  F: #F by 3 face vertex indices.
-	//  TT: #F by 3 Triangle-triangle adjecencies.
-	//  B1, B2: #F by 3 matrices representing the local base of each face.
-	//  soft_id: The face ids of the soft constraints described in soft_value.
-	//  soft_value: The directionals on the faces indicated by soft_id around which the field is
-	//              generated. Should be in the form X,Y,Z.
-	//  N: The degree of the field.
-	// Outputs:
-	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& TT,
-		const Eigen::MatrixXd& B1,
-		const Eigen::MatrixXd& B2,
-		const Eigen::VectorXi& soft_id,
-		const Eigen::MatrixXd& soft_value,
-		const int N,
-		Eigen::MatrixXcd& polyvectorField)
-	{
-		std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*> solvers;
-		std::vector<Eigen::SparseMatrix<std::complex<double>>> As;
-		poly_vector_prepare_solvers(V, F, TT, B1, B2, soft_id, N, solvers, As);
-		polyvector_field(B1, B2, soft_id, soft_value, solvers, As, N, polyvectorField);
-		for (std::vector< Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>* >::iterator it = solvers.begin(); it != solvers.end(); ++it)
-		{
-			delete (*it);
-		}
-	}
-
-
-	// Returns a polyvector field that attempts to make each vector as parallel as possible to the
-	// example directionals given in soft_id and soft_values. Also known as "Globally Optimal" and 
-	// "As Parallel As Possible". The field will be returned in the form of a complex polynomial 
-	// and can be transformed into a raw vector field using the complex_to_polynomial function.
-	// If no constraints are given the zero field will be returned.
-	// Inputs:
-	//  V: #V X 3 vertex coordinates.
-	//  F: #F by 3 face vertex indices.
-	//  soft_id: The face ids of the soft constraints described in soft_value.
-	//  soft_value: The directionals on the faces indicated by soft_id around which the field is
-	//              generated. Should be in the form X,Y,Z.
-	//  N: The degree of the field.
-	// Outputs:
-	//  poly: Representation of the field as a complex polynomial
-	IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::VectorXi& soft_id,
-		const Eigen::MatrixXd& soft_value,
-		const int N,
-		Eigen::MatrixXcd& polyvectorField)
-	{
-		Eigen::MatrixXi TT;
-		igl::triangle_triangle_adjacency(F, TT);
-		Eigen::MatrixXd B1, B2, x;
-		igl::local_basis(V, F, B1, B2, x);
-		polyvector_field(V, F, TT, B1, B2, soft_id, soft_value, N, polyvectorField);
-	}
+  
+  // Precalculate the polyvector LDLt solvers. Must be recalculated whenever
+  // bc changes or the mesh changes.
+  // Inputs:
+  //  V: #V by 3 vertex coordinates.
+  //  F: #F by 3 face vertex indices.
+  //  EV: #E by 2 matrix of edges (vertex indices)
+  //  EF: #E by 2 matrix of oriented adjacent faces
+  //  B1, B2: #F by 3 matrices representing the local base of each face.
+  //  bc: The face ids where the pv is prescribed.
+  //  N: The degree of the field.
+  // Outputs:
+  //  solver: with prefactorized left-hand side
+  //  AFull, AVar: The resulting left-hand side matrices
+  IGL_INLINE void polyvector_precompute(const Eigen::MatrixXd& V,
+                                        const Eigen::MatrixXi& F,
+                                        const Eigen::MatrixXi& EV,
+                                        const Eigen::MatrixXi& EF,
+                                        const Eigen::MatrixXd& B1,
+                                        const Eigen::MatrixXd& B2,
+                                        const Eigen::VectorXi& bc,
+                                        const int N, Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
+                                        Eigen::SparseMatrix<std::complex<double>>>& Afull,
+                                        Eigen::SparseMatrix<std::complex<double>>>& AVar)
+  {
+    
+    using namespace std;
+    using namespace Eigen;
+    int rowCounter=0;
+    // Build the sparse matrix, with an energy term for each edge and degree
+    std::vector< Triplet<complex<double> > > AfullTriplets;
+    for (int n = 0; n < N; n++)
+    {
+      for (int i=0;i<EF.rows();i++){
+        
+        if ((EF(i,0)==-1)||(Ef(i,1)==-1))
+          continue;  //boundary edge
+        
+        // Compute the complex representation of the common edge
+        RowVector3d e = V.row(EV(i,1)) - V.row(EV(i,0));
+        RowVector2d vef = Vector2d(e.dot(B1.row(EF(i,0))), e.dot(B2.row(EF(i,0)))).normalized();
+        complex<double> ef(vef(0), vef(1));
+        Vector2d veg = Vector2d(e.dot(B1.row(EF(i,1))), e.dot(B2.row(Ef(i,1)))).normalized();
+        complex<double> eg(veg(0), veg(1));
+        
+        // Add the term conj(f)^n*ui - conj(g)^n*uj to the energy matrix
+        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter, EF(i,0), pow(conj(ef), N-n)));
+        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter++, EF(i,1), -1.*pow(conj(eg), N-n)));
+      }
+    }
+    
+    
+    Afull.conservativeResize(rowCounter, N*F.rows());
+    Afull.setFromTriplets(ATriplets.begin(), ATriplets.end());
+    
+    //removing columns pertaining to constant indices
+    VectorXi varMask=VectorXi::Constant(N*F.rows(),1);
+    for (int i=0;i<constIndices.size();i++)
+      varMask(constIndices(i))=0;
+    
+    VectorXi full2var=VectorXi::Constant(N*F.rows(),-1);
+    int varCounter=0;
+    for (int i=0;i<N*F.rows();i++)
+      if (varMask(i))
+        full2var(i)=varCounter++;
+    
+    assert(varCounter==N*(F.rows()-bc.size()));
+    
+    std::vector< Triplet<std::complex<double> > > AVarTriplets;
+    for (int i=0;i<ATriplets.size();i++)
+      if (full2var(ATriplets[i].col())!=-1)
+        AVarTriplets.push_back(Triplet<complex<double>(ATriplets[i].row(), full2var(ATriplets[i].col()), ATriplets[i].value()));
+    
+    AVar.conservativeResize(rowCounter, N*(F.rows()-bc.size()));
+    AVar.setFromTriplets(AVarTriplets.begin(), AVarTriplets.end());
+    solver.compute(AVar.adjoint()*AVar);
+  }
+  
+  
+  // Computes a polyvector on the entire mesh from given values at the prescribed indices.
+  // polyvector_precompute must be called in advance, and "b" must be on the given "bc"
+  // If no constraints are given the zero field will be returned.
+  // Inputs:
+  //  B1, B2: #F by 3 matrices representing the local base of each face.
+  //  bc: the faces on which the polyvector is prescribed.
+  //  b: The directionals on the faces indicated by bc. Should be given in either #bc by N raw format X1,Y1,Z1,X2,Y2,Z2,Xn,Yn,Zn, or representative #bc by 3 format (single xyz), implying N-RoSy
+  //  solver: with prefactorized left-hand side
+  //  Afull, AVar: left-hand side matrices (with and without constraints) of the system
+  //  N: The degree of the field.
+  // Outputs:
+  //  polyVectorField: #F by N The output interpolated field, in polyvector (complex polynomial) format.
+  IGL_INLINE void polyvector_field(const Eigen::MatrixXd& B1,
+                                   const Eigen::MatrixXd& B2,
+                                   const Eigen::VectorXi& bc,
+                                   const Eigen::MatrixXd& b,
+                                   const Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
+                                   const Eigen::SparseMatrix<std::complex<double>>>& Afull,
+                                   const Eigen::SparseMatrix<std::complex<double>>>& AVar,
+                                   const int N,
+                                   Eigen::MatrixXcd& polyVectorField)
+  {
+    using namespace std;
+    using namespace Eigen;
+    
+    assert(bc.size()==b.rows());
+    assert(solver.rows()!=0);
+    
+    if (bc.size() == 0)
+    {
+      polyVectorField = MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      return;
+    }
+    
+    MatrixXcd bFull(b.rows(),N*F.rows());
+    assert((b.cols()==3*N)||(b.cols()==3));
+    if (b.cols()==3)  //N-RoSy constraint
+    {
+      bFull.setZero();
+      bFull.col(0)=b;  //the free coefficient
+    } else {
+      for (int i=0;i<F.rows();i++){
+        RowVectorXcd poly,roots;
+        for (int n=0;n<N;n++){
+          RowVector3d vec=b.block(i,3*n,1,3);
+          roots(i)=complex<double>(vec.dot(B1.row(i)), vec.dot(B2.row(i)));
+        }
+        root_to_monicPolynomial(roots, poly);
+        bFull.row(i)<<poly;
+      }
+    }
+    
+    VectorXi constIndices(N*bc.size());
+    VectorXi constValues(N*b.size());
+    
+    for (int n=0;n<N;n++){
+      constIndices.segment(F.rows()*n,F.rows())=bc.array()+n*N;
+      constValues.segment(F.rows()*n,F.rows())=b.col(n);
+    }
+    
+    VectorXcd torhs(N*F.rows(),1);
+    for (int i=0;i<constIndices.size();i++)
+      torhs(constIndices(i))=constValues(i);
+    
+    VectorXcd rhs=-AVar.adjoint()*A*torhs;
+    VectorXcd varFieldVector=solver.solve(rhs);
+    assert(solver->info() == Success);
+    
+    VectorXcd polyVectorFieldVector(N*B1.rows());
+    VectorXi varMask=VectorXi::Constant(N*F.rows(),1);
+    for (int i=0;i<constIndices.size();i++)
+      varMask(constIndices(i))=0;
+    
+    VectorXi full2var=VectorXi::Constant(N*F.rows(),-1);
+    int varCounter=0;
+    for (int i=0;i<N*F.rows();i++)
+      if (varMask(i))
+        full2var(i)=varCounter++;
+    
+    assert(varCounter==N*(F.rows()-bc.size()));
+    
+    for (int i=0;i<constIndices.size();i++)
+      polyVectorFieldVector(constIndices(i))=constValues(i);
+    
+    for (int i=0;i<N*F.rows();i++)
+      if (full2var(i)!=-1)
+        polyVectorFieldVector(i)=varFieldVector(full2var(i));
+    
+    //converting to matrix form
+    polyVectorField.conservativeResize(F.rows(),N);
+    for (int n=0;n<N;n++)
+      polyVectorField.col(n)=polyVectorFieldVector.segment(n*F.rows(),F.rows());
+    
+  }
+  
+  
+  // minimal version without auxiliary data
+  IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
+                                   const Eigen::MatrixXi& F,
+                                   const Eigen::VectorXi& bc,
+                                   const Eigen::MatrixXd& b,
+                                   const int N,
+                                   Eigen::MatrixXcd& polyVectorField)
+  {
+    Eigen::MatrixXi EV, xi, EF;
+    igl::edge_topology(V, F, EV, xi, EF);
+    Eigen::MatrixXd B1, B2, xd;
+    igl::local_basis(V, F, B1, B2, xd);
+    Eigen::SparseMatrix<std::complex<double>>> Afull, AVar;
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
+    polyvector_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
+    polyvector_field(V, F, EV, EF, B1, B2, bc, b, solver, Afull, AVar, N, polyvectorField);
+  }
 }
 #endif
