@@ -5,6 +5,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+//THIS FILE IS TRIVIALLY MIGRATED TO LIBDIRECTIONAL AND IS LIABLE TO BE DEPRECATED
 
 #ifndef IGL_POLYVECTOR_FIELD_COMB_FROM_MATCHINGS_AND_CUTS
 #define IGL_POLYVECTOR_FIELD_COMB_FROM_MATCHINGS_AND_CUTS

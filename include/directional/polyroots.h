@@ -6,6 +6,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
+//THIS FILE IS TRIVIALLY MIGRATED TO LIBDIRECTIONAL AND IS LIABLE TO BE DEPRECATED
+
 #ifndef IGL_POLYROOTS
 #define IGL_POLYROOTS
 #include <igl/igl_inline.h>
