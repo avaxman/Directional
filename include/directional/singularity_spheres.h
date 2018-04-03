@@ -1,3 +1,9 @@
+// This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_SINGULARITY_SPHERES_H
 #define DIRECTIONAL_SINGULARITY_SPHERES_H
 
@@ -19,11 +25,13 @@ namespace directional
   //  indices:        #V x 1 index (/N) per vertex (must be 0<index<N-1)
   //  positiveColors: N x 3 colos per positive index
   // negativeColors:  N x 3 colos per negative index
-  //  r:              one singularity sphere radius
+  //  radius:              one singularity sphere radius
+  // colorPerVertex in the output mesh
+  // extendMesh   if to extend the singV,singT,singC, or to overwrite them
   // Output:
-  //  V:          The vertices of the singularity spheres.
-  //  F:          The faces of the singularity spheres.
-  //  C:         The colors of the singularity spheres.
+  //  singV:          The vertices of the singularity spheres.
+  //  singF:          The faces of the singularity spheres.
+  //  singC:         The colors of the singularity spheres.
   void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
                                       const Eigen::VectorXi& singPositions,
                                       const Eigen::VectorXi& singIndices,
@@ -53,23 +61,8 @@ namespace directional
   
   }
   
-  void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
-                                      const Eigen::MatrixXi& F,
-                                      const Eigen::VectorXi& singPositions,
-                                      const Eigen::VectorXi& singIndices,
-                                      const Eigen::MatrixXd& positiveColors,
-                                      const Eigen::MatrixXd& negativeColors,
-                                      const bool colorPerVertex,
-                                      const bool extendMesh,
-                                      Eigen::MatrixXd& singV,
-                                      Eigen::MatrixXi& singF,
-                                      Eigen::MatrixXd& singC)
-  
-  {
-    double l = igl::avg_edge_length(V, F);
-    singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,l/10.0,colorPerVertex,extendMesh,singV, singF, singC);
-  }
-  
+
+  //version that provides all vertex indices instead of only singularities
   void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
                                       const Eigen::MatrixXi& F,
                                       const Eigen::VectorXi& fullIndices,

@@ -1,3 +1,9 @@
+// This file is part of libdirectional, a library for directional field processing.
+// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_WRITE_RAW_FIELD_H
 #define DIRECTIONAL_WRITE_RAW_FIELD_H
 
@@ -10,15 +16,11 @@
 namespace directional
 {
 
-	// Writes a list of singularities and the mesh to files. The method will create a folder containing a "mesh.off" file with the mesh and "singularities.sing" file with the singularities.
+	// Writes a a directional field in raw format to file
 	// Inputs:
 	//   filename: The name used for the mesh and singularity file, without extention
-	//   V: List of Vertices
-	//   F: List of faces
-	//   singularities: The vector containing the singularities
-	//   N: The degree of the field
-	//   globalRotation: The angle of rotation between the vector on the first face and its basis in radians
-	// Return:
+  //   rawField: #F by 3*N in xyzxyz format (N is derived)
+  // Returns:
 	//   Whether or not the file was written successfully
 	bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField)
 	{
@@ -28,6 +30,7 @@ namespace directional
     std::ofstream f(fileName);
     
     int N=rawField.cols()/3;
+    assert(3*N==rawField.cols());
     f<<N<<" "<<rawField.rows()<<std::endl;
     for (int i=0;i<rawField.rows();i++){
       for (int j=0;j<rawField.cols();j++)

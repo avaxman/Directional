@@ -26,7 +26,7 @@ namespace directional
   // Outputs:
   //  V   #V by 3 cylinder mesh coordinates
   //  T   #T by 3 mesh triangles
-  //  TC  #T by 3 colors per triangle
+  //  C  #T/#V by 3 colors
   IGL_INLINE bool point_spheres(const Eigen::MatrixXd& points,
                                 const double& radius,
                                 const Eigen::MatrixXd& colors,
@@ -35,14 +35,14 @@ namespace directional
                                 const bool extendMesh,
                                 Eigen::MatrixXd& V,
                                 Eigen::MatrixXi& T,
-                                Eigen::MatrixXd& TC)
+                                Eigen::MatrixXd& C)
   {
     using namespace Eigen;
     int VOffset, TOffset, TCOffset;
     if (!extendMesh){
       V.resize(res*res*points.rows(),3);
       T.resize(2*(res-1)*res*points.rows(),3);
-      TC.resize((colorPerVertex ? V.rows() : T.rows()),3);
+      C.resize((colorPerVertex ? V.rows() : T.rows()),3);
       VOffset=TOffset=TCOffset=0;
     } else{
       VOffset=V.rows();
@@ -50,7 +50,7 @@ namespace directional
       TCOffset=TC.rows();
       V.conservativeResize(V.rows()+res*res*points.rows(),3);
       T.conservativeResize(T.rows()+2*(res-1)*res*points.rows(),3);
-      TC.conservativeResize(TC.rows()+(colorPerVertex ? res*res*points.rows() : 2*(res-1)*res*points.rows()),3);
+      C.conservativeResize(TC.rows()+(colorPerVertex ? res*res*points.rows() : 2*(res-1)*res*points.rows()),3);
     }
     
     for (int i=0;i<points.rows();i++){
@@ -64,7 +64,7 @@ namespace directional
           double y=center(1)+radius*sin(M_PI*(double)j/(double(res-1)))*sin(2*M_PI*(double)k/(double(res-1)));
           V.row(VOffset+(res*res)*i+j*res+k)<<x,y,z;
           if (colorPerVertex)
-            TC.row(TCOffset+(res*res)*i+j*res+k)<<colors.row(i);
+            C.row(TCOffset+(res*res)*i+j*res+k)<<colors.row(i);
         }
       }
       
@@ -79,8 +79,8 @@ namespace directional
           T.row(TOffset+2*(((res-1)*res)*i+res*j+k))<<v1,v2,v3;
           T.row(TOffset+2*(((res-1)*res)*i+res*j+k)+1)<<v4,v1,v3;
           if (!colorPerVertex){
-            TC.row(TCOffset+2*(((res-1)*res)*i+res*j+k))<<colors.row(i);
-            TC.row(TCOffset+2*(((res-1)*res)*i+res*j+k)+1)<<colors.row(i);
+            C.row(TCOffset+2*(((res-1)*res)*i+res*j+k))<<colors.row(i);
+            C.row(TCOffset+2*(((res-1)*res)*i+res*j+k)+1)<<colors.row(i);
           }
         }
       }

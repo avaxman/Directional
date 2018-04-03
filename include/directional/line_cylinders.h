@@ -21,43 +21,43 @@ namespace directional
   // Inputs:
   //  P1,P2   each #P by 3 coordinates of the endpoints of the cylinders
   //  radius  double radii of the cylinders
-  //  C       #P by 3 RBG colors per cylinder
+  //  cyndColors       #P by 3 RBG colors per cylinder
   //  res     integer the resolution of the cylinder (size of base polygon)
   // colorPerVertex in the output mesh
   // extendMesh   if to extend the V,T,TC, or to overwrite them
   // Outputs:
   //  V   #V by 3 cylinder mesh coordinates
   //  T   #T by 3 mesh triangles
-  //  TC  #T by 3 colors per triangle
+  //  C   #T/#V by 3 colors
   
   IGL_INLINE bool line_cylinders(const Eigen::MatrixXd& P1,
                                  const Eigen::MatrixXd& P2,
                                  const double& radius,
-                                 const Eigen::MatrixXd& C,
+                                 const Eigen::MatrixXd& cyndColors,
                                  const int res,
                                  const bool colorPerVertex,
                                  const bool extendMesh,
                                  Eigen::MatrixXd& V,
                                  Eigen::MatrixXi& T,
-                                 Eigen::MatrixXd& TC)
+                                 Eigen::MatrixXd& C)
   {
     using namespace Eigen;
-    int VOffset, TOffset, TCOffset;
+    int VOffset, TOffset, COffset;
     if (!extendMesh){
       V.resize(2*res*P1.rows(),3);
       T.resize(2*res*P1.rows(),3);
       int NewColorSize=(colorPerVertex ? V.rows() : T.rows());
-      TC.resize(NewColorSize,3);
-      VOffset=TOffset=TCOffset=0;
+      C.resize(NewColorSize,3);
+      VOffset=TOffset=COffset=0;
     } else {
       VOffset=V.rows();
       TOffset=T.rows();
-      TCOffset=TC.rows();
+      COffset=C.rows();
       
       V.conservativeResize(VOffset+2*res*P1.rows(),3);
       T.conservativeResize(TOffset+2*res*P1.rows(),3);
       int NewColorSize=(colorPerVertex ? 2*res*P1.rows() : 2*res*P1.rows());
-      TC.conservativeResize(TCOffset+NewColorSize,3);
+      C.conservativeResize(COffset+NewColorSize,3);
       
     }
     RowVector3d ZAxis; ZAxis<<0.0,0.0,1.0;
@@ -87,8 +87,8 @@ namespace directional
         V.row(VOffset+v2)<<P2.row(i)+(PlaneAxis1*PlanePattern(j,0)+PlaneAxis2*PlanePattern(j,1))*radius;
         
         if (colorPerVertex){
-          TC.row(TCOffset+v1)<<C.row(i);
-          TC.row(TCOffset+v2)<<C.row(i);
+          C.row(TCOffset+v1)<<cyndColors.row(i);
+          C.row(TCOffset+v2)<<cyndColors.row(i);
         }
         
         
@@ -96,8 +96,8 @@ namespace directional
         T.row(TOffset+2*res*i+2*j+1)<<VOffset+v4,VOffset+v2,VOffset+v3;
         
         if (!colorPerVertex){
-          TC.row(TCOffset+2*res*i+2*j)<<C.row(i);
-          TC.row(TCOffset+2*res*i+2*j+1)<<C.row(i);
+          TC.row(TCOffset+2*res*i+2*j)<<cyndColors.row(i);
+          TC.row(TCOffset+2*res*i+2*j+1)<<cyndColors.row(i);
         }
       }
     }
