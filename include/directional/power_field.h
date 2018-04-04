@@ -43,7 +43,7 @@ namespace directional
                                         Eigen::SparseMatrix<std::complex<double>>& Afull,
                                         Eigen::SparseMatrix<std::complex<double>>& AVar)
   {
-    polyvector_precompute(V,F,EV,EF,B1,B2,bc,1,solver,Afull,AVar);
+    polyvector_precompute(V,F,EV,EF,B1,B2,bc,N,solver,Afull,AVar);
   }
   
   // Computes a power field on the entire mesh from given values at the prescribed indices.
@@ -68,7 +68,7 @@ namespace directional
                               const int N,
                               Eigen::MatrixXcd& powerField)
   {
-    polyvector_field(B1,B2,bc,b,solver,Afull,AVar,1,powerField);
+    polyvector_field(B1,B2,bc,b,solver,Afull,AVar,N,powerField);
   }
   
   // minimal version without auxiliary data
