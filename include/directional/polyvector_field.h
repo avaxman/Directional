@@ -41,8 +41,8 @@ namespace directional
                                         const Eigen::MatrixXd& B2,
                                         const Eigen::VectorXi& bc,
                                         const int N, Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
-                                        Eigen::SparseMatrix<std::complex<double>>>& Afull,
-                                        Eigen::SparseMatrix<std::complex<double>>>& AVar)
+                                        Eigen::SparseMatrix<std::complex<double>>& Afull,
+                                        Eigen::SparseMatrix<std::complex<double>>& AVar)
   {
     
     using namespace std;
@@ -54,14 +54,14 @@ namespace directional
     {
       for (int i=0;i<EF.rows();i++){
         
-        if ((EF(i,0)==-1)||(Ef(i,1)==-1))
+        if ((EF(i,0)==-1)||(EF(i,1)==-1))
           continue;  //boundary edge
         
         // Compute the complex representation of the common edge
         RowVector3d e = V.row(EV(i,1)) - V.row(EV(i,0));
         RowVector2d vef = Vector2d(e.dot(B1.row(EF(i,0))), e.dot(B2.row(EF(i,0)))).normalized();
         complex<double> ef(vef(0), vef(1));
-        Vector2d veg = Vector2d(e.dot(B1.row(EF(i,1))), e.dot(B2.row(Ef(i,1)))).normalized();
+        Vector2d veg = Vector2d(e.dot(B1.row(EF(i,1))), e.dot(B2.row(EF(i,1)))).normalized();
         complex<double> eg(veg(0), veg(1));
         
         // Add the term conj(f)^n*ui - conj(g)^n*uj to the energy matrix
@@ -72,7 +72,12 @@ namespace directional
     
     
     Afull.conservativeResize(rowCounter, N*F.rows());
-    Afull.setFromTriplets(ATriplets.begin(), ATriplets.end());
+    Afull.setFromTriplets(AfullTriplets.begin(), AfullTriplets.end());
+    
+    VectorXi constIndices(N*bc.size());
+    
+    for (int n=0;n<N;n++)
+      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*N;
     
     //removing columns pertaining to constant indices
     VectorXi varMask=VectorXi::Constant(N*F.rows(),1);
@@ -88,9 +93,9 @@ namespace directional
     assert(varCounter==N*(F.rows()-bc.size()));
     
     std::vector< Triplet<std::complex<double> > > AVarTriplets;
-    for (int i=0;i<ATriplets.size();i++)
-      if (full2var(ATriplets[i].col())!=-1)
-        AVarTriplets.push_back(Triplet<complex<double>(ATriplets[i].row(), full2var(ATriplets[i].col()), ATriplets[i].value()));
+    for (int i=0;i<AfullTriplets.size();i++)
+      if (full2var(AfullTriplets[i].col())!=-1)
+        AVarTriplets.push_back(Triplet<complex<double>>(AfullTriplets[i].row(), full2var(AfullTriplets[i].col()), AfullTriplets[i].value()));
     
     AVar.conservativeResize(rowCounter, N*(F.rows()-bc.size()));
     AVar.setFromTriplets(AVarTriplets.begin(), AVarTriplets.end());
@@ -115,8 +120,8 @@ namespace directional
                                    const Eigen::VectorXi& bc,
                                    const Eigen::MatrixXd& b,
                                    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
-                                   const Eigen::SparseMatrix<std::complex<double>>>& Afull,
-                                   const Eigen::SparseMatrix<std::complex<double>>>& AVar,
+                                   const Eigen::SparseMatrix<std::complex<double>>& Afull,
+                                   const Eigen::SparseMatrix<std::complex<double>>& AVar,
                                    const int N,
                                    Eigen::MatrixXcd& polyVectorField)
   {
@@ -132,64 +137,67 @@ namespace directional
       return;
     }
     
-    MatrixXcd bFull(b.rows(),N*F.rows());
+    MatrixXcd constValuesMat(b.rows(),N);
     assert((b.cols()==3*N)||(b.cols()==3));
     if (b.cols()==3)  //N-RoSy constraint
     {
-      bFull.setZero();
-      bFull.col(0)=b;  //the free coefficient
+      constValuesMat.setZero();
+      for (int i=0;i<b.rows();i++){
+        complex<double> bComplex=complex<double>(b.row(i).dot(B1.row(bc(i))), b.row(i).dot(B2.row(bc(i))));
+        constValuesMat(0,i)=pow(bComplex, N);
+      }
     } else {
-      for (int i=0;i<F.rows();i++){
+      for (int i=0;i<b.rows();i++){
         RowVectorXcd poly,roots;
         for (int n=0;n<N;n++){
           RowVector3d vec=b.block(i,3*n,1,3);
-          roots(i)=complex<double>(vec.dot(B1.row(i)), vec.dot(B2.row(i)));
+          roots(i)=complex<double>(vec.dot(B1.row(bc(i))), vec.dot(B2.row(bc(i))));
         }
-        root_to_monicPolynomial(roots, poly);
-        bFull.row(i)<<poly;
+        roots_to_monicPolynomial(roots, poly);
+        constValuesMat.row(i)<<poly;
       }
     }
     
     VectorXi constIndices(N*bc.size());
-    VectorXi constValues(N*b.size());
+    VectorXcd constValues(N*b.size());
     
     for (int n=0;n<N;n++){
-      constIndices.segment(F.rows()*n,F.rows())=bc.array()+n*N;
-      constValues.segment(F.rows()*n,F.rows())=b.col(n);
+      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*N;
+      constValues.segment(b.rows()*n,b.rows())=constValuesMat.col(n);
     }
     
-    VectorXcd torhs(N*F.rows(),1);
+    VectorXcd torhs(N*B1.rows(),1);
     for (int i=0;i<constIndices.size();i++)
       torhs(constIndices(i))=constValues(i);
     
-    VectorXcd rhs=-AVar.adjoint()*A*torhs;
+    VectorXcd rhs=-AVar.adjoint()*Afull*torhs;
     VectorXcd varFieldVector=solver.solve(rhs);
-    assert(solver->info() == Success);
+    assert(solver.info() == Success);
     
     VectorXcd polyVectorFieldVector(N*B1.rows());
-    VectorXi varMask=VectorXi::Constant(N*F.rows(),1);
+    VectorXi varMask=VectorXi::Constant(N*B1.rows(),1);
     for (int i=0;i<constIndices.size();i++)
       varMask(constIndices(i))=0;
     
-    VectorXi full2var=VectorXi::Constant(N*F.rows(),-1);
+    VectorXi full2var=VectorXi::Constant(N*B1.rows(),-1);
     int varCounter=0;
-    for (int i=0;i<N*F.rows();i++)
+    for (int i=0;i<N*B1.rows();i++)
       if (varMask(i))
         full2var(i)=varCounter++;
     
-    assert(varCounter==N*(F.rows()-bc.size()));
+    assert(varCounter==N*(B1.rows()-bc.size()));
     
     for (int i=0;i<constIndices.size();i++)
       polyVectorFieldVector(constIndices(i))=constValues(i);
     
-    for (int i=0;i<N*F.rows();i++)
+    for (int i=0;i<N*B1.rows();i++)
       if (full2var(i)!=-1)
         polyVectorFieldVector(i)=varFieldVector(full2var(i));
     
     //converting to matrix form
-    polyVectorField.conservativeResize(F.rows(),N);
+    polyVectorField.conservativeResize(B1.rows(),N);
     for (int n=0;n<N;n++)
-      polyVectorField.col(n)=polyVectorFieldVector.segment(n*F.rows(),F.rows());
+      polyVectorField.col(n)=polyVectorFieldVector.segment(n*B1.rows(),B1.rows());
     
   }
   
@@ -206,10 +214,10 @@ namespace directional
     igl::edge_topology(V, F, EV, xi, EF);
     Eigen::MatrixXd B1, B2, xd;
     igl::local_basis(V, F, B1, B2, xd);
-    Eigen::SparseMatrix<std::complex<double>>> Afull, AVar;
+    Eigen::SparseMatrix<std::complex<double>> Afull, AVar;
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
     polyvector_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
-    polyvector_field(V, F, EV, EF, B1, B2, bc, b, solver, Afull, AVar, N, polyvectorField);
+    polyvector_field(B1, B2, bc, b, solver, Afull, AVar, N, polyVectorField);
   }
 }
 #endif

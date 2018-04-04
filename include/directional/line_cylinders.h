@@ -87,8 +87,8 @@ namespace directional
         V.row(VOffset+v2)<<P2.row(i)+(PlaneAxis1*PlanePattern(j,0)+PlaneAxis2*PlanePattern(j,1))*radius;
         
         if (colorPerVertex){
-          C.row(TCOffset+v1)<<cyndColors.row(i);
-          C.row(TCOffset+v2)<<cyndColors.row(i);
+          C.row(COffset+v1)<<cyndColors.row(i);
+          C.row(COffset+v2)<<cyndColors.row(i);
         }
         
         
@@ -96,8 +96,8 @@ namespace directional
         T.row(TOffset+2*res*i+2*j+1)<<VOffset+v4,VOffset+v2,VOffset+v3;
         
         if (!colorPerVertex){
-          TC.row(TCOffset+2*res*i+2*j)<<cyndColors.row(i);
-          TC.row(TCOffset+2*res*i+2*j+1)<<cyndColors.row(i);
+          C.row(COffset+2*res*i+2*j)<<cyndColors.row(i);
+          C.row(COffset+2*res*i+2*j+1)<<cyndColors.row(i);
         }
       }
     }

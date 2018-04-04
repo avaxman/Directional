@@ -13,6 +13,7 @@
 #include <Eigen/Eigenvalues>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/local_basis.h>
+#include <directional/polyvector_field.h>
 #include <iostream>
 
 namespace directional
@@ -31,7 +32,7 @@ namespace directional
   // Outputs:
   //  solver: with prefactorized left-hand side
   //  AFull, AVar: The resulting left-hand side matrices
-  IGL_INLINE void powerfield_precompute(const Eigen::MatrixXd& V,
+  IGL_INLINE void power_field_precompute(const Eigen::MatrixXd& V,
                                         const Eigen::MatrixXi& F,
                                         const Eigen::MatrixXi& EV,
                                         const Eigen::MatrixXi& EF,
@@ -39,8 +40,8 @@ namespace directional
                                         const Eigen::MatrixXd& B2,
                                         const Eigen::VectorXi& bc,
                                         const int N, Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
-                                        Eigen::SparseMatrix<std::complex<double>>>& Afull,
-                                        Eigen::SparseMatrix<std::complex<double>>>& AVar)
+                                        Eigen::SparseMatrix<std::complex<double>>& Afull,
+                                        Eigen::SparseMatrix<std::complex<double>>& AVar)
   {
     polyvector_precompute(V,F,EV,EF,B1,B2,bc,1,solver,Afull,AVar);
   }
@@ -62,12 +63,12 @@ namespace directional
                               const Eigen::VectorXi& bc,
                               const Eigen::MatrixXd& b,
                               const Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
-                              const Eigen::SparseMatrix<std::complex<double>>>& Afull,
-                              const Eigen::SparseMatrix<std::complex<double>>>& AVar,
+                              const Eigen::SparseMatrix<std::complex<double>>& Afull,
+                              const Eigen::SparseMatrix<std::complex<double>>& AVar,
                               const int N,
                               Eigen::MatrixXcd& powerField)
   {
-    polyvector_field(B1,B2,bc,b,solver,Afull,AVar,1,polyVectorField);
+    polyvector_field(B1,B2,bc,b,solver,Afull,AVar,1,powerField);
   }
   
   // minimal version without auxiliary data
@@ -82,10 +83,10 @@ namespace directional
     igl::edge_topology(V, F, EV, xi, EF);
     Eigen::MatrixXd B1, B2, xd;
     igl::local_basis(V, F, B1, B2, xd);
-    Eigen::SparseMatrix<std::complex<double>>> Afull, AVar;
+    Eigen::SparseMatrix<std::complex<double>> Afull, AVar;
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
-    power_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
-    power_field(V, F, EV, EF, B1, B2, bc, b, solver, Afull, AVar, N, polyvectorField);
+    power_field_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
+    power_field(B1, B2, bc, b, solver, Afull, AVar, N, powerField);
   }
 }
 #endif

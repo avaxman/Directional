@@ -12,8 +12,8 @@
 #include <directional/streamlines.h>
 //#include <igl/copyleft/comiso/nrosy.h>
 #include <igl/viewer/Viewer.h>
-#include <directional/complex_field.h>
-#include <directional/complex_to_raw.h>
+#include <directional/power_field.h>
+#include <directional/power_to_raw.h>
 #include <directional/line_cylinders.h>
 
 #include <cstdlib>
@@ -32,7 +32,7 @@ Eigen::MatrixXd fullC;
 
 Eigen::VectorXi cIDs;
 Eigen::MatrixXd cValues;
-Eigen::MatrixXcd complexField;
+Eigen::MatrixXcd powerField;
 Eigen::MatrixXd raw;
 
 igl::StreamlineData sl_data;
@@ -112,10 +112,10 @@ int main(int argc, char *argv[])
   Eigen::MatrixXd temp_field, temp_field2;
   //igl::copyleft::comiso::nrosy(V, F, b, bc, VectorXi(), VectorXd(), MatrixXd(), 1, 0.5, temp_field, S);
   
-  directional::complex_field(V, F, b,  bc , 4, complexField);
+  directional::power_field(V, F, b,  bc , 4, powerField);
   
   // Convert it to raw field
-  directional::complex_to_raw(V,F,complexField,4,raw, true);
+  directional::power_to_raw(V,F,powerField,4,raw, true);
   
   igl::streamlines_init(V, F, raw, false, sl_data, sl_state);
   

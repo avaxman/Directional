@@ -38,19 +38,19 @@ namespace directional
                                 Eigen::MatrixXd& C)
   {
     using namespace Eigen;
-    int VOffset, TOffset, TCOffset;
+    int VOffset, TOffset, COffset;
     if (!extendMesh){
       V.resize(res*res*points.rows(),3);
       T.resize(2*(res-1)*res*points.rows(),3);
       C.resize((colorPerVertex ? V.rows() : T.rows()),3);
-      VOffset=TOffset=TCOffset=0;
+      VOffset=TOffset=COffset=0;
     } else{
       VOffset=V.rows();
       TOffset=T.rows();
-      TCOffset=TC.rows();
+      COffset=C.rows();
       V.conservativeResize(V.rows()+res*res*points.rows(),3);
       T.conservativeResize(T.rows()+2*(res-1)*res*points.rows(),3);
-      C.conservativeResize(TC.rows()+(colorPerVertex ? res*res*points.rows() : 2*(res-1)*res*points.rows()),3);
+      C.conservativeResize(C.rows()+(colorPerVertex ? res*res*points.rows() : 2*(res-1)*res*points.rows()),3);
     }
     
     for (int i=0;i<points.rows();i++){
@@ -64,7 +64,7 @@ namespace directional
           double y=center(1)+radius*sin(M_PI*(double)j/(double(res-1)))*sin(2*M_PI*(double)k/(double(res-1)));
           V.row(VOffset+(res*res)*i+j*res+k)<<x,y,z;
           if (colorPerVertex)
-            C.row(TCOffset+(res*res)*i+j*res+k)<<colors.row(i);
+            C.row(COffset+(res*res)*i+j*res+k)<<colors.row(i);
         }
       }
       
@@ -79,8 +79,8 @@ namespace directional
           T.row(TOffset+2*(((res-1)*res)*i+res*j+k))<<v1,v2,v3;
           T.row(TOffset+2*(((res-1)*res)*i+res*j+k)+1)<<v4,v1,v3;
           if (!colorPerVertex){
-            C.row(TCOffset+2*(((res-1)*res)*i+res*j+k))<<colors.row(i);
-            C.row(TCOffset+2*(((res-1)*res)*i+res*j+k)+1)<<colors.row(i);
+            C.row(COffset+2*(((res-1)*res)*i+res*j+k))<<colors.row(i);
+            C.row(COffset+2*(((res-1)*res)*i+res*j+k)+1)<<colors.row(i);
           }
         }
       }
