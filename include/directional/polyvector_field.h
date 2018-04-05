@@ -40,7 +40,8 @@ namespace directional
                                         const Eigen::MatrixXd& B1,
                                         const Eigen::MatrixXd& B2,
                                         const Eigen::VectorXi& bc,
-                                        const int N, Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
+                                        const int N,
+                                        Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
                                         Eigen::SparseMatrix<std::complex<double>>& Afull,
                                         Eigen::SparseMatrix<std::complex<double>>& AVar)
   {
@@ -65,8 +66,8 @@ namespace directional
         complex<double> eg(veg(0), veg(1));
         
         // Add the term conj(f)^n*ui - conj(g)^n*uj to the energy matrix
-        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter, EF(i,0), pow(conj(ef), N-n)));
-        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter++, EF(i,1), -1.*pow(conj(eg), N-n)));
+        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter, n*F.rows()+EF(i,0), pow(conj(ef), N-n)));
+        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter++, n*F.rows()+EF(i,1), -1.*pow(conj(eg), N-n)));
       }
     }
     
@@ -77,7 +78,7 @@ namespace directional
     VectorXi constIndices(N*bc.size());
     
     for (int n=0;n<N;n++)
-      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*N;
+      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*F.rows();
     
     //removing columns pertaining to constant indices
     VectorXi varMask=VectorXi::Constant(N*F.rows(),1);
@@ -162,7 +163,7 @@ namespace directional
     VectorXcd constValues(N*b.size());
     
     for (int n=0;n<N;n++){
-      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*N;
+      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*B1.rows();
       constValues.segment(b.rows()*n,b.rows())=constValuesMat.col(n);
     }
     
