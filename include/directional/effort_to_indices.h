@@ -35,13 +35,13 @@ namespace directional
                                     Eigen::VectorXi& indices)
   {
     
-    Eigen::VectorXd dIndices = ((basisCycleMat * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
+    Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
     indices=dIndices.cast<int>();
     
   }
   
   
-  // minimal version without precomputed cycles
+  // minimal version without precomputed cycles or inner edges, returning only vertex singularities
   IGL_INLINE void effort_to_indices(const Eigen::MatrixXd& V,
                                     const Eigen::MatrixXi& F,
                                     const Eigen::MatrixXi& EV,
@@ -55,7 +55,14 @@ namespace directional
     Eigen::VectorXi vertex2cycle;
     Eigen::VectorXi innerEdges;
     directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
-    directional::effort_to_indices(basisCycleMat, effort, cycleCurvature, N, indices);
+    Eigen::VectorXd effortInner(innerEdges.size());
+    for (int i=0;i<innerEdges.size();i++)
+      effortInner(i)=effort(innerEdges(i));
+    Eigen::VectorXi fullIndices;
+    directional::effort_to_indices(basisCycles, effortInner, cycleCurvature, N, fullIndices);
+    indices.conservativeResize(V.size());
+    for (int i=0;i<V.rows();i++)
+      indices(i)=fullIndices(vertex2cycle(i));
   }
 }
 
