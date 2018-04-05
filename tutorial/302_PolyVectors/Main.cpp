@@ -5,7 +5,7 @@
 #include <directional/polyvector_to_raw.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
-#include <directional/get_indices.h>
+#include <directional/effort_to_indices.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
 #include <Eigen/Core>
@@ -14,10 +14,11 @@
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
+#include <igl/edge_topology.h>
 
 Eigen::VectorXi cIDs, matching, indices;
 Eigen::VectorXd effort;
-Eigen::MatrixXi F;
+Eigen::MatrixXi F, EV, FE, EF;
 Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd polyvectorField;
 igl::viewer::Viewer viewer;
@@ -54,9 +55,9 @@ void update_mesh()
       rawField.middleCols(n*3, 3).rowwise().normalize();
   
   if (cIDs.rows()!=0){
-    directional::principal_matching(V, F, rawField, matching, effort);
+    directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort);
     
-    directional::get_indices(V,F,effort,N, indices);
+    directional::effort_to_indices(V,F,EV, EF,effort,N, indices);
     std::vector<int> singIndicesList,singPositionsList;
     for (int i=0;i<V.rows();i++)
       if (indices(i)!=0){
@@ -211,6 +212,7 @@ int main()
 
 	// Load mesh
 	igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", V, F);
+  igl::edge_topology(V, F, EV, FE, EF);
 
 	// Set colors for Singularities
 	positiveIndexColors << .25, 0, 0,

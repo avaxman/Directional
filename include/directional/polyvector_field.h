@@ -150,13 +150,13 @@ namespace directional
       }
     } else {
       for (int i=0;i<b.rows();i++){
-        RowVectorXcd poly,roots;
+        RowVectorXcd poly,roots(N);
         for (int n=0;n<N;n++){
           RowVector3d vec=b.block(i,3*n,1,3);
           roots(i)=complex<double>(vec.dot(B1.row(bc(i))), vec.dot(B2.row(bc(i))));
         }
         roots_to_monicPolynomial(roots, poly);
-        constValuesMat.row(i)<<poly;
+        constValuesMat.row(i)<<poly.head(N);
       }
     }
     
@@ -169,6 +169,7 @@ namespace directional
     }
     
     VectorXcd torhs(N*B1.rows(),1);
+    torhs.setZero();
     for (int i=0;i<constIndices.size();i++)
       torhs(constIndices(i))=constValues(i);
     

@@ -39,7 +39,7 @@ namespace directional
       Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(N, N);
       for (int i = 1; i < N; ++i)
         M(i, i - 1) = std::complex<double>(1, 0);
-      M.col(N - 1) = -polyvectorField.row(f).transpose();
+      M.col(N - 1) = -polyVectorField.row(f).transpose();
       Eigen::VectorXcd roots = M.eigenvalues();
       std::sort(roots.data(), roots.data() + roots.size(), [](std::complex<double> a, std::complex<double> b){return a.real() * b.imag() > a.imag() * b.real();});
       for (int i = 0; i < N; i++)
