@@ -4,8 +4,8 @@
 #include <directional/dual_cycles.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
-#include <directional/get_indices.h>
-#include <directional/trivial_connection.h>
+#include <directional/effort_to_indices.h>
+#include <directional/index_prescription.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/euler_characteristic.h>
 #include <directional/rotation_to_representative.h>
@@ -18,7 +18,7 @@
 Eigen::VectorXi singVertices;
 Eigen::VectorXi singIndices;
 
-Eigen::SparseMatrix<double, Eigen::RowMajor> basisCycles;
+Eigen::SparseMatrix<double> basisCycles;
 Eigen::VectorXi prinSingIndices;
 Eigen::RowVector3d rawGlyphColor;
 Eigen::MatrixXi F, EV, FE, EF;
@@ -29,6 +29,10 @@ Eigen::VectorXd effort;
 Eigen::VectorXi constFaces;
 Eigen::MatrixXd constVecMat;
 Eigen::MatrixXd positiveIndexColors(4,3), negativeIndexColors(4,3);
+
+Eigen::VectorXd cycleCurvature;
+Eigen::VectorXi vertex2cycle;
+Eigen::VectorXi innerEdges;
 
 int N=2;
 double vfScale=0.01;
@@ -53,7 +57,7 @@ void update_directional_field()
     prinSingIndices(singVertices[i])=singIndices[i];
   
   double TCError;
-  directional::trivial_connection(V,F,basisCycles,prinSingIndices,N,rotationAngles, TCError);
+  directional::index_prescription(V,F,innerEdges, basisCycles,cycleCurvature,prinSingIndices,N,rotationAngles, TCError);
   
   Eigen::MatrixXd representative;
   directional::rotation_to_representative(V, F,EV,EF,rotationAngles,N,globalRotation, representative);
@@ -61,8 +65,8 @@ void update_directional_field()
   
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING){
     Eigen::VectorXd effort;
-    directional::principal_matching(V, F,rawField, matching, effort);
-    directional::get_indices(V,F,basisCycles,effort,N,prinSingIndices);
+    directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
+    directional::effort_to_indices(V,F,EV, EF, effort,N,prinSingIndices);
   }
   
   if (viewingMode==IMPLICIT_FIELD){
@@ -76,8 +80,8 @@ void update_directional_field()
     directional::power_to_representative(V,F, powerField,N,representative);
     representative.rowwise().normalize();
     directional::representative_to_raw(V,F,representative,N, rawField);
-    directional::principal_matching(V, F,rawField, matching, effort);
-    directional::get_indices(V,F,basisCycles,effort,N,prinSingIndices);
+    directional::principal_matching(V, F,EV,EF,FE,rawField, matching, effort);
+    directional::effort_to_indices(V,F,EV,EF,effort,N,prinSingIndices);
   }
 }
 
@@ -112,14 +116,6 @@ void update_mesh()
   viewer.data.set_mesh(fullV, fullF);
   viewer.data.set_colors(fullC);
 }
-
-
-
-
-
-
-
-
 
 
 bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
@@ -178,7 +174,7 @@ int main()
   igl::barycenter(V,F,BC);
   igl::per_face_normals(V,F,FN);
   
-  directional::dual_cycles(F,EV, EF, basisCycles);
+  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   
   //taking midway faces as constraints for the implicit field interpolation
   vector<int> constFacesList;

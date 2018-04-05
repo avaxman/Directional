@@ -4,7 +4,7 @@
 #include <directional/power_to_raw.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
-#include <directional/get_indices.h>
+#include <directional/effort_to_indices.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
 //#include <directional/write_raw_field.h>
@@ -15,11 +15,12 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
+#include <igl/edge_topology.h>
 
 
 Eigen::VectorXi cIDs, matching, indices;
 Eigen::VectorXd effort;
-Eigen::MatrixXi F;
+Eigen::MatrixXi F, EV, EF, FE;
 Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd powerField;
 igl::viewer::Viewer viewer;
@@ -51,9 +52,9 @@ void update_mesh()
   directional::representative_to_raw(V,F,representative, N, rawField);
   
   if (cIDs.rows()!=0){
-    directional::principal_matching(V, F, representative, N, matching, effort);
+    directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort);
     
-    directional::get_indices(V,F,effort,N, indices);
+    directional::effort_to_indices(V,F,EV, EF, effort,N, indices);
     std::vector<int> singIndicesList,singPositionsList;
     for (int i=0;i<V.rows();i++)
       if (indices(i)!=0){
@@ -186,7 +187,7 @@ int main()
   "  R       Reset the constraints" << std::endl <<
   "  N       Toggle field normalization" << std::endl <<
   "  1+L-bttn  Place constraint pointing from the center of face to the cursor" << std::endl <<
-  "  1+R-bttn  Remove constraint" << std::endl <<
+  "  1+R-bttn  Remove constraint" << std::endl;
   
   // Set colors for Singularities
   positiveIndexColors << .25, 0, 0,
@@ -201,6 +202,7 @@ int main()
   
   // Load mesh
   igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
+  igl::edge_topology(V, F, EV,FE,EF);
   
   cIDs.resize(0);
   cValues.resize(0, 3);

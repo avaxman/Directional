@@ -92,7 +92,7 @@ namespace directional
       singIndices(i)=singIndicesList[i];
     }
     
-    singularity_spheres(V,singPositions,singIndices,positiveColors,negativeColors,colorPerVertex,extendMesh,singV, singF, singC);
+    singularity_spheres(V,F, singPositions,singIndices,positiveColors,negativeColors,colorPerVertex,extendMesh,singV, singF, singC);
   }
   
 }
