@@ -34,9 +34,12 @@ namespace directional
                                     const int N,
                                     Eigen::VectorXi& indices)
   {
-    
+    using namespace std;
     Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
-    indices=dIndices.cast<int>();
+    indices.conservativeResize(dIndices.size());
+    for (int i=0;i<indices.size();i++)
+      indices(i)=std::round(dIndices(i));
+   // std::cout<<"(dIndices-(dIndices.cast<int>()).cast<double>()).lpNorm<Infinity>(): "<<(dIndices-(dIndices.cast<int>()).cast<double>()).lpNorm<Eigen::Infinity>();
     
   }
   

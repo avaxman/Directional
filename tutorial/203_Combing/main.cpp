@@ -8,7 +8,7 @@
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
-#include <directional/get_indices.h>
+#include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_combing.h>
 
@@ -100,9 +100,9 @@ int main()
   igl::edge_topology(V, F, EV, FE, EF);
   
   //computing
-  directional::principal_combing(V,F, rawField, combedField, combedMatching, combedEffort);
-  directional::principal_matching(V, F,rawField, matching, effort);
-  directional::get_indices(V,F,EV, EF, effort,N,prinIndices);
+  directional::principal_combing(V,F, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
+  directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
+  directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
   
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;
