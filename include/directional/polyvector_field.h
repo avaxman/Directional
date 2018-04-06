@@ -153,7 +153,7 @@ namespace directional
         RowVectorXcd poly,roots(N);
         for (int n=0;n<N;n++){
           RowVector3d vec=b.block(i,3*n,1,3);
-          roots(i)=complex<double>(vec.dot(B1.row(bc(i))), vec.dot(B2.row(bc(i))));
+          roots(n)=complex<double>(vec.dot(B1.row(bc(i))), vec.dot(B2.row(bc(i))));
         }
         roots_to_monicPolynomial(roots, poly);
         constValuesMat.row(i)<<poly.head(N);
