@@ -56,7 +56,7 @@ void update_mesh()
     std::cout << "Expected: " << eulerChar*N << std::endl;
   }
   
-  directional::trivial_connection(V,F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
+  directional::index_prescription(V,F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
   std::cout<<"field linfError: "<<linfError<<std::endl;
   
   Eigen::MatrixXd representative;
