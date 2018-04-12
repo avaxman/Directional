@@ -6,7 +6,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 <script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 
-# libdirectional tutorial notes
+# libdirectional Tutorial Notes
 
 
 # Table of contents
@@ -19,9 +19,9 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 * [Chapter 2: Discretization and Representation](#chapter2:discandrep)
     * [Discretization](#discretization)
     * [Representation](#representation)
-    * [201 Principal Matching and combing](#principalmatching)
-    * [202 Conversions](#conversions)
-    * [203 Sampling](#sampling)
+    * [201 Principal Matching](#principalmatching)
+    * [202 Sampling](#sampling)
+    * [203 Combing](#combing)
 * [Chapter 3: Cartesian Methods](#chapter3:cartesian)
     * [Cartesian Fields](#cartesian)
     * [301 Globally Optimal Fields](#globallyoptimal)
@@ -29,17 +29,21 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
     * [303 Integrable PolyVectors](#integrablePVs)
     * [304 Conjugate Fields](#conjugatefields)
 * [Chapter 4: Polar Methods](#chapter4:polar)
-    * [401 Trivial Connection](#trivialconnection)
+    * [401 Index Prescription](#indexprescription)
 * [Outlook for continuing development](#future)
 
 
 ## Introduction
 
+libdirectional is a C++ geometry processing library written as an extension to [libigl](http://libigl.github.io/libigl/), with a  speciality in directional fields. The functionality is based on the definitions and arrangement surveyed theoretically in [#vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
+
+The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.
+
+The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality to the theoretical concepts of directional fields and their capabilities.
+
 ###Installing the tutorial examples
 
-This tutorial follows along examples that concisely details the capabilities of libdirectional. Having followed the installation instructions [here](https://github.com/avaxman/libdirectional).
-
-The tutorial can be installed by going into the `Tutorial` folder, and following the following instructions:
+This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of libdirectional, where every subchapter relates to a single example. The tutorial code can be installed by going into the `Tutorial` folder, and following the following instructions:
 
 
 ```cpp
@@ -49,36 +53,54 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-This will build all tutorials in the `build` folder. To build in windows, use the `cmake-gui .` options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the "startup project". 
+This will build all tutorial examples in the `build` folder. To build in windows, use the `cmake-gui .` options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the "startup project". 
 
+To access a single example, say ``202_Sampling``, go to the ``build`` and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder automatically in each example. 
 
+Most examples contain a component of user interaction; the instruction on what to do will be given in the commandline output immediately after executing the example.
 
 # Chapter 1: I/O and Visualization [chapter1:iovis]
 
-## [101 Basic Glyph Rendering](#glyphrendering)[glyphrendering]
+## [101 Glyph Rendering](#glyphrendering)[glyphrendering]
 
-## Drawing fields
-To draw a vector field first it must be converted into either its representative or raw representation. Then it can be passed to the `drawable_field()` method which will create a list of vertices, colors and faces to represent the field, finally those can be merged with the mesh data and passed to the viewer. If the viewer is set to take colors per vertex the `COLOR_PER_VERTEX` flag should be set.
+The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101](101_GlyphRendering/main.cpp), a field is read from a file as follows:
 
-There are several ways you can set the field color:<br>
-The easiest way is to simply pass one color as a single row matrix. This will create one uniform ly colored field.<br>
-The second option is to pass a matrix with \|F\| rows, each ro representing the color for the matching face.<br>
-It is also possible to pass N\*\|F\| colors to give the color for every single vector on every single directional. In this case colors should be ordered to first give the color for every first vector on each face and only after that the color for every second vertex. e.g. F<sub>1</sub>1, F<sub>2</sub>1 ... F<sub>1</sub>2, F<sub>2</sub>2 ... F<sub>1</sub>N, F<sub>2</sub>N.<br>
-Finally it is possible to pass one color per vertexafter setting the `PER_VECTOR_COLOR` flag.
+```cpp
+directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
+directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singPositions, singIndices);
+```
 
-By default the size of each vector is set to be related to the average edge length, as well as the length of the actual vector. The base length and with can be manually set if needed. If you want all vectors to be equal in size you can scale them by normalizing each vector in the field matrix. 
+The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are then <i>vertex-based</i>. 
 
+The field is then drawn on the mesh as follows:
+
+```cpp
+if (drawSingularities)
+    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+  
+  directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
+```
+
+These two operations in fact do not produce any drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer. 
+
+``directional::singularity_spheres`` creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function. The spheres are only created where the index is different than $0$.
+
+``directional::glyph_lines_raw`` creates lines on the faces that constitute the simple <i>glyph drawing</i>: simply drawing the vectors upon the faces as they are. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header.
+  
+By default, the size of each vector is set to be related to the average edge length, keeping the ratios between the lengths of the actual vectors intact. The base length and with can be manually set by the extended version of the function. 
+
+![([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh.](images/101_GlyphRendering.png)
 
 ## [102 Picking and editing](#pickingediting)[pickingediting]
 ## [103 Streamline Tracing](#streamlinetracing)[streamlinetracing]
 
-Vector fields on surfaces are commonly visualized by tracing [streamlines (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines)]. libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
+Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
 
 ![([Example 103](103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
 
 
 
-# Chapter 2: Discretization and Representation [chapter1:discandrep]
+# Chapter 2: Discretization and Representation [chapter2:discandrep]
 
 ## [Representation](#representation)[Representation]
 
