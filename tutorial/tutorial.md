@@ -92,6 +92,24 @@ By default, the size of each vector is set to be related to the average edge len
 ![([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh.](images/101_GlyphRendering.png)
 
 ## [102 Picking and editing](#pickingediting)[pickingediting]
+
+This is a simple tutorial that demonstrates how libdirectional uses libigl picking to make directional field editing possible. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the ability to set different colors for glyphs, via the following code in [Example 102](101_PickingEditing/main.cpp).
+
+```cpp
+Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
+  for (int i=0;i<F.rows();i++){
+    for (int j=0;j<N;j++){
+      if (i==currF)
+        fullGlyphColor.block(i,3*j,1,3)<<(j==currVec ? selectedVectorGlyphColor : selectedFaceGlyphColor);
+      else
+        fullGlyphColor.block(i,3*j,1,3)<<defaultGlyphColor;
+    }
+  }
+```
+
+The size of ``fullGlyphColor`` can either be one color per vertex, per face, or per the entire mesh, and the intent will be automatically devised from the size.
+
+![([Example 102](102_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/102_PickingEditing.png)
 ## [103 Streamline Tracing](#streamlinetracing)[streamlinetracing]
 
 Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
