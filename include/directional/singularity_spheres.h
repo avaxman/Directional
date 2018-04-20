@@ -8,24 +8,38 @@
 #define DIRECTIONAL_SINGULARITY_SPHERES_H
 
 #include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/barycenter.h>
 #include <igl/per_face_normals.h>
+#include <igl/avg_edge_length.h>
+#include <igl/jet.h>
 #include <directional/representative_to_raw.h>
 #include <directional/point_spheres.h>
-#include <Eigen/Core>
-#include <igl/avg_edge_length.h>
-
 
 namespace directional
 {
+  
+  //returns the default libdirectional colors
+  //supports up to N=6
+  Eigen::MatrixXd IGL_INLINE defaultSingularityColors(int N){
+    assert ((N>=1) && (N<=6));
+    Eigen::MatrixXd fullColors;
+    Eigen::VectorXd NList(2*N);
+    for (int i=0;i<N;i++){
+      NList(i)=-N+i;
+      NList(N+i)=i+1;
+    }
+    igl::jet(-NList,true,fullColors);
+    return fullColors;
+  }
+  
   // Returns a list of faces, vertices and color values that can be used to draw singularities for non-zero index values.
   // Input:
   //  V:              #V X 3 vertex coordinates.
   //  F:              #F X 3 mesh triangles.
   //  indices:        #V x 1 index (/N) per vertex (must be 0<index<N-1)
-  //  positiveColors: N x 3 colos per positive index
-  // negativeColors:  N x 3 colos per negative index
+  //  singularityColors: 2*N x 3 colos per positive index in order [-N,..-1, 1, N]
   // colorPerVertex in the output mesh
   // extendMesh   if to extend the singV,singT,singC, or to overwrite them
   // Output:
@@ -36,8 +50,7 @@ namespace directional
                                       const Eigen::MatrixXi& F,
                                       const Eigen::VectorXi& singPositions,
                                       const Eigen::VectorXi& singIndices,
-                                      const Eigen::MatrixXd& positiveColors,
-                                      const Eigen::MatrixXd& negativeColors,
+                                      const Eigen::MatrixXd& singularityColors,
                                       const bool colorPerVertex,
                                       const bool extendMesh,
                                       Eigen::MatrixXd& singV,
@@ -48,13 +61,17 @@ namespace directional
 
     Eigen::MatrixXd points(singPositions.size(), 3);
     Eigen::MatrixXd colors(singIndices.size(), 3);
+    Eigen::MatrixXd positiveColors=singularityColors.block(singularityColors.rows()/2,0,singularityColors.rows()/2,3);
+    Eigen::MatrixXd negativeColors=singularityColors.block(0,0,singularityColors.rows()/2,3);
     for (int i = 0; i < singIndices.rows(); i++)
     {
       points.row(i) = V.row(singPositions(i));
       if (singIndices(i) > 0)
         colors.row(i) = positiveColors.row((singIndices(i)-1 > positiveColors.rows()-1 ? positiveColors.rows()-1  : singIndices(i)-1) );
+      else if (singIndices(i)<0)
+        colors.row(i) = negativeColors.row((negativeColors.rows()+singIndices(i) > negativeColors.rows()-1 ? negativeColors.rows()-1  : negativeColors.rows()+singIndices(i)));
       else
-        colors.row(i) = negativeColors.row((-singIndices(i)-1 > positiveColors.rows()-1 ? positiveColors.rows()-1  : -singIndices(i)-1));
+        colors.row(i).setZero(); //this shouldn't have been input
       
     }
     double l = igl::avg_edge_length(V, F);
@@ -67,8 +84,7 @@ namespace directional
   void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
                                       const Eigen::MatrixXi& F,
                                       const Eigen::VectorXi& fullIndices,
-                                      const Eigen::MatrixXd& positiveColors,
-                                      const Eigen::MatrixXd& negativeColors,
+                                      const Eigen::MatrixXd& singularityColors,
                                       const bool colorPerVertex,
                                       const bool extendMesh,
                                       Eigen::MatrixXd& singV,
@@ -92,7 +108,7 @@ namespace directional
       singIndices(i)=singIndicesList[i];
     }
     
-    singularity_spheres(V,F, singPositions,singIndices,positiveColors,negativeColors,colorPerVertex,extendMesh,singV, singF, singC);
+    singularity_spheres(V,F, singPositions,singIndices,singularityColors,colorPerVertex,extendMesh,singV, singF, singC);
   }
   
 }

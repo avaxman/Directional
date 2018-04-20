@@ -28,7 +28,6 @@ Eigen::MatrixXd rawField;
 Eigen::VectorXd effort;
 Eigen::VectorXi constFaces;
 Eigen::MatrixXd constVecMat;
-Eigen::MatrixXd positiveIndexColors(4,3), negativeIndexColors(4,3);
 
 Eigen::VectorXd cycleCurvature;
 Eigen::VectorXi vertex2cycle;
@@ -104,10 +103,10 @@ void update_mesh()
   Eigen::VectorXi currIndices;
   
   if (viewingMode==TRIVIAL_ONE_SING)
-      directional::singularity_spheres(V, F, singVertices, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+      directional::singularity_spheres(V, F, singVertices, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    directional::singularity_spheres(V, F, prinSingIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+    directional::singularity_spheres(V, F, prinSingIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
@@ -190,19 +189,6 @@ int main()
     constFaces(i)=constFacesList[i];
   
   rawGlyphColor <<0.0, 0.2, 1.0;
-  
-  // Set colors for Singularities
-  positiveIndexColors.resize(4,3);
-  positiveIndexColors << .25, 0, 0,
-  .5,  0, 0,
-  .75, 0, 0,
-  1,   0, 0;
-  
-  negativeIndexColors.resize(4,3);
-  negativeIndexColors << 0, .25, 0,
-  0, .5,  0,
-  0, .75, 0,
-  0, 1,   0;
   
   singVertices.resize(2);
   singIndices.resize(2);

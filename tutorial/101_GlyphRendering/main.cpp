@@ -29,7 +29,7 @@ void update_mesh()
   Eigen::MatrixXd fullC=C;
   
   if (drawSingularities)
-    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+    directional::singularity_spheres(V, F, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
@@ -61,17 +61,7 @@ int main()
   directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singPositions, singIndices);
   
   // Set colors for Singularities
-  positiveIndexColors.resize(4,3);
-  positiveIndexColors << .25, 0, 0,
-  .5,  0, 0,
-  .75, 0, 0,
-  1,   0, 0;
-  
-  negativeIndexColors.resize(4,3);
-  negativeIndexColors << 0, .25, 0,
-  0, .5,  0,
-  0, .75, 0,
-  0, 1,   0;
+
   
   rawGlyphColor <<0.0, 0.2, 1.0;
   update_mesh();

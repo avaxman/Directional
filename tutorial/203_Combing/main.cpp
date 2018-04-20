@@ -23,8 +23,6 @@ Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singPositions;
-Eigen::MatrixXd positiveIndexColors, negativeIndexColors;
-
 Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 bool showCombedField=false, showSingularities=false;
@@ -52,7 +50,7 @@ void update_mesh()
   directional::glyph_lines_raw(V, F, (showCombedField ? combedField : rawField), fullGlyphColor, false, true, fullV, fullF, fullC);
   
   if (showSingularities)
-    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+    directional::singularity_spheres(V, F, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   
   //drawing seam edges
   if (showCombedField){
@@ -126,19 +124,6 @@ int main()
   1.0,0.5,0.0,
   0.0,0.5,1.0,
   0.5,1.0,0.0;
-  
-  // Set colors for Singularities
-  positiveIndexColors.resize(4,3);
-  positiveIndexColors << .25, 0, 0,
-  .5,  0, 0,
-  .75, 0, 0,
-  1,   0, 0;
-  
-  negativeIndexColors.resize(4,3);
-  negativeIndexColors << 0, .25, 0,
-  0, .5,  0,
-  0, .75, 0,
-  0, 1,   0;
   
   update_mesh();
   viewer.callback_key_down = &key_down;

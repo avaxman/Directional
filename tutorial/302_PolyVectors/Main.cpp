@@ -23,8 +23,6 @@ Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd polyvectorField;
 igl::viewer::Viewer viewer;
 
-Eigen::MatrixXd positiveIndexColors(4, 3), negativeIndexColors(4, 3);
-
 int N = 3;
 
 //User input variables
@@ -72,7 +70,7 @@ void update_mesh()
       singPositions(i)=singPositionsList[i];
     }
     
-    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+    directional::singularity_spheres(V, F, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   }
   directional::glyph_lines_raw(V, F, rawField, Eigen::RowVector3d(0, 0, 1), false, true, fullV, fullF, fullC);
   
@@ -213,17 +211,6 @@ int main()
 	// Load mesh
 	igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", V, F);
   igl::edge_topology(V, F, EV, FE, EF);
-
-	// Set colors for Singularities
-	positiveIndexColors << .25, 0, 0,
-		.5, 0, 0,
-		.75, 0, 0,
-		1, 0, 0;
-
-	negativeIndexColors << 0, .25, 0,
-		0, .5, 0,
-		0, .75, 0,
-		0, 1, 0;
 
 	cIDs.resize(0);
 	cValues.resize(0, 3*N);
