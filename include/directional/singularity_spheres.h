@@ -31,6 +31,8 @@ namespace directional
       NList(N+i)=i+1;
     }
     igl::jet(-NList,true,fullColors);
+    std::cout<<"NList: "<<NList<<std::endl;
+    std::cout<<"fullColors: "<<fullColors<<std::endl;
     return fullColors;
   }
   
@@ -69,7 +71,7 @@ namespace directional
       if (singIndices(i) > 0)
         colors.row(i) = positiveColors.row((singIndices(i)-1 > positiveColors.rows()-1 ? positiveColors.rows()-1  : singIndices(i)-1) );
       else if (singIndices(i)<0)
-        colors.row(i) = negativeColors.row((negativeColors.rows()+singIndices(i) > negativeColors.rows()-1 ? negativeColors.rows()-1  : negativeColors.rows()+singIndices(i)));
+        colors.row(i) = negativeColors.row((negativeColors.rows()+singIndices(i) > 0 ? negativeColors.rows()+singIndices(i) : 0));
       else
         colors.row(i).setZero(); //this shouldn't have been input
       
