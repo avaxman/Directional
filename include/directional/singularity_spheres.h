@@ -31,8 +31,6 @@ namespace directional
       NList(N+i)=i+1;
     }
     igl::jet(-NList,true,fullColors);
-    std::cout<<"NList: "<<NList<<std::endl;
-    std::cout<<"fullColors: "<<fullColors<<std::endl;
     return fullColors;
   }
   
