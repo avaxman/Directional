@@ -157,7 +157,15 @@ The second line devises the <i>indices</i> of each vertex from the effort. The i
 
 ## [202 Sampling](#sampling)[sampling]
 
+This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In the polar mode, the user can control the index of a singularity directly. As such, the rotation angles between faces become arbitrarily large, and appear as noise. In the principal matching mode, the singularities that are computed without knowledge of rotation angles are seen, giving rise to a "singularity party". In the Cartesian mode, the field is interpolated, keeping the red band fixed, showing a field that in smooth in the Cartesian sense.
+
+![([Example 202](202_Sampling/main.cpp)) Left to right: prescribing an arbitarily high-index singularity, principal matching with perceived singularities, and interpolation with red band fixed.](images/202_Sampling.png)
+
 ## [203 Combing](#combing)[combing]
+
+Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching (and then the new matching is a trivial zero). This operation is important in order to preapre a directional field for integration, for instance. In the presence of singulaties, the field can only be combed up to a set of connected paths that connect singularities, also known as cuts. Note that such paths don't cut the mesh to a simply connected mesh, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities. The combing is done through the function `directional::principal_combing()`.
+
+![([Example 203](203_Combing/main.cpp)) Vector indices inside each face are colored. They are uncombed in the left image, and combed, with the cut showing, in the right image.](images/203_Combing.png) 
 
 # Chapter 3: Cartesian Representations [chapter3:cartesian]
 
