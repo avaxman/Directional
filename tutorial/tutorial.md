@@ -170,65 +170,24 @@ Given a matching (in this case, principal matching), it is possible to "comb" th
 # Chapter 3: Cartesian Representations [chapter3:cartesian]
 
 ## [Cartesian Fields](#cartesian)[cartesian]
+
+The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local $2D$ basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields do not automatically contain information about the interpolation of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation. 
+
 ## [301 Globally Optimal Fields](#globallyoptimal)[globallyoptimal]
 
-The algorithm libdirectionl uses to compute such fields is "Globally Optimal"<sup>[6](#fn6)</sup>. The field is defined as a single complex number $y$ (relative to local basis), that represents an $N$-RoSy by its roots. By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates to the rest of the faces $y_I$ by minimizing the Dirichlet energy $y_I=\text{argmin}\ | \nabla y |^2$. Note that $y$ also encodes magnitude in general; however, it is possible to normalize the field  after the computation, as long as it is not identically zero.
+This representation, offered in [#knoppel_2013], establishes a complex basis in each tangent plane (face in our implementation), and represents $N$-RoSy field using a \emph{power field}---a single complex number $y$ per face so that its roots $u^N=y$ are the $N$-RoSy. 
+
+By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy: $$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
+where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and similary for $g$. The field is computed through the function `directional::power_field()`.
+
+It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field, by using the function `directional::power_field_precompute()`, the appropriate version of `directional::power_field()`. That is useful for when the set $B$ doesn't change, but only $y_b$ do (which means a constant left-hand size, and a changing right-hand side). Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
+
+![([Example 201](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
 
 
-### Defining Constraints
-Constraints are defined as a pair of matrices of equal hight, refered to as `soft_ids` and `soft_values`. `Soft_ids` is a 1 wide integer matrix containing the ids of the faces (index in the F matrix) on which the constraints are placed. Meanwhile `soft_values` contains the x, y and z values of the matching vector, representing it in the same way as the representative vectors. Constraints do not need to be of unit length, but their size does matter for how they affect the field.
 
-### Precomputing Solver
-It is possible to speed up computations by precomputing the solver used to compute the complex field. This solver can then be reused to compute changes in the field as long as the mesh and **the ids of the constrained faces** remain the same.
 
-### Examples
-The *complex_field* example contains a small program which allows setting the soft constraints dynamically and see how it affects the field.
 
-The below code creates a field of degree 3 and sets the first face so that its first vector aligns with the first edge. The other vectors are equally spaced to create a 3-rosy. V and F are the Vertices and Faces of the mesh. To see an example that alligns all vectors on the first face with an edge see the polyvector field example.
-
-Without precalculations:
-```cpp
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values << V.row(F(0,0)) - V.row(F(0,1));
-
-// Matrix containing the field
-Eigen::MatrixXcd complex;
-
-//Calculate the field
-directional::complex_field(V, F, soft_ids, soft_values, N, complex);
-```
-
-With precalculations:
-```cpp
-//Degree of the field (number of vectors within each directional)
-int N = 3;
-
-Eigen::MatrixXi TT;
-igl::triangle_triangle_adjacency(F, TT);
-Eigen::MatrixXd B1, B2, x;
-igl::local_basis(V, F, B1, B2, x);
-    
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values << V.row(F(0,0)) - V.row(F(0,1));
-    
-// Prepare the solver, must be recalculated whenever soft_ids changes (optional)
-Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
-Eigen::SparseMatrix<std::complex<double>> energy;
-Complex_field_prepare_solver(V, F, TT, B1, B2, soft_id, N, solver, energy);
-
-// Calculate the field
-complex_field(B1, B2, soft_id, soft_value, solver, energy, N, complex);
-```
 ## [302 PolyVectors](#polyvectors)[polyvectors]
 
 ## Polyvector Field
