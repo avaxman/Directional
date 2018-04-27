@@ -33,6 +33,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
     * [Polar Fields](#polar)
     * [401 Index Prescription](#indexprescription)
 * [Outlook for continuing development](#future)
+* [References](#references)
 
 
 # Introduction [chapter0:introduction]
@@ -116,8 +117,6 @@ The size of ``fullGlyphColor`` can either be one color per vertex, per face, or 
 Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
 
 ![([Example 103](103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
-
-
 
 # Chapter 2: Discretization and Representation [chapter2:discandrep]
 
@@ -238,72 +237,61 @@ closest conjugate field ([Example 304](304_ConjugateField/main.cpp)).
 
 # Chapter 4: Polar Representations [chapter4:polar]
 
-## [401 Trivial Connection](#trivialconnection)[trivialconnection]
+## [Polar Fields](#polar)[polar]
 
-The notation of encoding rotation angles appeared in several formats in the literature (see STAR for details). The formulation and notation we use here is the of Trivial Connections<sup>[4](#fn4)</sup>. Trivial connection solve for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$ that encodes the deviation from parallel transport. The algorithm defines a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ is prescribed. The sum defines the *curvature* of the cycle. The algorithm solves for the smoothest field, or the least-squares 2-norm $\delta$:
+Polar fields are represented using angles. These angles may encode the rotation from some known basis on a tangent plane (and so it is a "logarithmic" representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent planes (in the sense of deviation from parallel transport). The former usually requires integer variables for directional field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, libdirectional supports the latter.
+
+## [401 Index Prescription](#indexprescription)[indexprescription]
+
+The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature. The formulation and notation we use in libdirectional is the of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined in matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as an angle defect, and the index defines a new sum. The algorithm then solves for the smoothest field ($\delta_{ij}$ as zero as possible), in the least-squares 2-norm $\delta$:
 
 $$
 \delta = \text{argmin}\ |\delta_{ij}|^2\ s.t.\ H\delta = -K_0 + K.
 $$
 
-$H$ is the matrix that defines the basis-cycles sum, $-K_0$ is the original curvature of the basis cycle, and $K$ is the prescribed curvature. $K$ defines singularities: for a regular cycles, we set $K=0$, and for a singular cycle with singularity index $\frac{1}{N}$, we set $K=\frac{2\pi}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See paper for exact details. As a consequence, the singularities of the field, and the indices of other basis cycles, are the input. The output is not yet an $N$-RoSy field: there is a global degree of freedom in setting a single direction in a single face.
+$H$ is the matrix that defines the basis-cycles sum, $K_0$ is the original curvature of the basis cycle, and $K$ is the prescribed curvature. $K$ defines singularities: for regular cycles, we prescribe $K=0$, and for a singular cycle with singularity index $\frac{1}{N}$, we set $K=\frac{2\pi}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See [#crane_2010] for exact details. If the input obeys the sum, the result has only the prescribed indices around the cycles, and nothing else. As the representation is differential, there is still a global degree of freedom in setting a single direction in a single arbitrary face.
 
-The algorithm is defined with "cycle holonomy" that is the curvature "modulu $\pi$". They are the same the same for small cycles, but not so for big cycles. However, curvature (specifically, angle defect) is the correct measure needed for the consistency of trivial connection, and we use it.
+Note that the correct definition for "cycle curvature" corresponds to the so-called "cycle holonomy", only up to integer multiples of $\pi$. However, in the discrete setting, the curvature is computed as the exact angle defect, in which for inner vertices we use $2\pi-\sum{\alpha}$, and for boundary vertices we use $\pi - \sum{\alpha}$ ($\alpha$ are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary loop cycle, we add up all the defects. That is requires for exact discrete Poincar&eacute index consistency.
 
 ### Basis Cycles
 
-The basis cycles form the cycles around which curvatures (and singularities) are described on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E|$. Each row in the matrix describes the sum over one cycle, and contains a 1 or -1 depending on the orientation of the dual edge participating in the cycle. There are three types of cycles, according to their order in the rows of $H$: 
+The basis cycles form the cycles around which curvatures (and singularities) are prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_i|$, where $E_i$ is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains a 1 or -1 depending on the (arbitrary) orientation of the dual edge participating in the cycle. There are three types of cycles, according to their order in the rows of $H$: 
 
-1. $1$-ring dual cycles around each vertex, on which vertex-based singularities can be encoded (the relevant part of $H$ is basically $d_0^T$ in discrete exterior calculus).
+1. $1$-ring dual cycles around each inner vertex, on which vertex-based singularities can be encoded (the relevant part of $H$ is basically $d_0^T$ in discrete exterior calculus).
 2. Cycles around mesh boundary loops. 
-3. Cycles around topological generator (independent handles).
+3. Cycles around topological generators (independent handles).
 
-The method `dual_cycles()` computes the proper basis cycles and matrix $H$.
+The method `dual_cycles()` computes the proper basis cycles and matrix $H$. To be able to intuitively prescribe singularities to inner vertices, the method ``directional::dual_cycles()`` also returns a conversion vector ``vertex2cycle``, and the list of indices of inner edges from the list of edges.
 
-### Singularities
+The singularity indices are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle.
 
-The singularity indices are prescribed as an `Eigen::VectorXi` object, containing the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle. In order to create a smooth field it is required that the indices of all singularities add up to $\sum{k}=N *\chi$, where $\chi$ is the Euler characteristic of the mesh. Otherwise, a result will still be computed by least squares, but it will be unpredictable.
+If the prescribed indices do not conform to correct sum, a result will still be computed by least squares, but it will be unpredictable.
 
-###Trivial connection demo
+The algorithm is done through the function ``directional::index_prescription()``, which also accepts a solver for precomputation.
 
-Below is a contraction of code from `examples\trivial_connection` that computes and draws a field from prescribed singularities:
 
-```cpp
-igl::edge_topology(meshV, meshF, EV, FE, EF);
-directional::dual_cycles(meshF, EV, EF, cycles);
-igl::boundary_loop(meshF, boundaryLoops);
-
-directional::trivial_connection(meshV, meshF, cycles, indices, N, rotationField, e);
-directional::rotation_to_representative(meshV, meshF, EV, EF, rotationField, N, globalRotation, representative);
-
-int sum = round(indices.head(indices.size() - generators).sum());
-if (euler*N != sum){
-    std::cout << "Warning: All non-generator singularities should add up to N * the Euler characteristic."<<std::endl;
-    std::cout << "Total indices: " << sum << std::endl;
-    std::cout << "Expected: " << euler *N << std::endl;
-}
-
-// Turn the field into a drawable mesh
-directional::drawable_field(meshV, meshF, representative, Eigen::RowVector3d(0, 0, 1), N, directional::field_draw_flags::NONE, fieldV, fieldF, fieldC);
-
-```
+![([Example 401](401_IndexPrescription/main.cpp)) Indices are prescribed on three singularities, and on the boundary loop, to match the index theorem, and the computed field is smooth and obey these indices exactly.](images/401_IndexPrescription.png) 
 
 
 # Outlook for continuing development [future]
 
-libdirectional is a budding project, and there are many algorithms that we look forward to implement. Prominent examples are:
+libdirectional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:
 
 1. Face-based polar representation, and mixed-integer directional algorithms.
 
-2. Support for 3D *Octahedral* fields, both in tet meshes and with the boundary-element method.
+2. Support for 3D *Octahedral* fields [#solomon_2017], both in tet meshes and with the boundary-element method.
 
-3. Discrete exterior calculus.
+3. A discrete exterior calculus framework.
 
 4. Differential operators and Hodge decomposition.
 
-5. Cutting, integration, and parameterization.
+5. Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from libdirectional, but  they are not entirely compatible.
 
 6. Support for tensor fields.
+
+7. Advanced visualization techniques.
+
+#References [references]
 
 [#bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt.
   [Mixed-integer
@@ -330,6 +318,9 @@ libdirectional is a budding project, and there are many algorithms that we look 
   Wang.  [General Planar Quadrilateral Mesh Design Using Conjugate Direction
   Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf),
   2008.
+[#solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes.  [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf),
+  2017.
+
 [#panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga
   Sorkine-Hornung.  [Frame Fields: Anisotropic and Non-Orthogonal Cross
   Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf),
