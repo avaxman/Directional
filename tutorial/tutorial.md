@@ -182,84 +182,19 @@ where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$,
 
 It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field, by using the function `directional::power_field_precompute()`, the appropriate version of `directional::power_field()`. That is useful for when the set $B$ doesn't change, but only $y_b$ do (which means a constant left-hand size, and a changing right-hand side). Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
 
-![([Example 201](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
-
-
-
+![([Example 301](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
 
 
 ## [302 PolyVectors](#polyvectors)[polyvectors]
 
 ## Polyvector Field
-The Polyvector field is a generalisation of the standard complex field method, which allows defining each vector in a directional individually in both direction and length. Besides that it works largely the same way as the complex field.<sup>[5](#fn5)</sup> 
+A Polyvector field [#diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent planes. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a complex polynomial in the local compex basis:
+$$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N$$
+where the roots $P(z)=0$ are the vectors represented, and the dirichlet energy is individual per $a_i$ (with the right power $i$ in the comparison between adjacent faces). Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
 
-### Defining Constraints
-Just like the Complex Field, the Polyvector Field takes a `soft_ids` matrix defining the face indices and a matching `soft_values` matrix defining the directionals on the faces, however the polyvector `soft_values` matrix is 3\*N wide, containing the X, Y, and Z values for each individual vector.
+The example allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In the case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
 
-### Precomputing Solvers
-It is possible to precompute the solvers for the Polyvector Field. To precompute the solvers one should pass an empty vector of SimplicialLDLT pointers (`std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*>`) into the `poly_vector_prepare_solvers()` function before passing them along with the energy matrix to the `poly_vector()` method.
-
-The Solvers can be reused as long as the `soft_ids` remain the same, and must be properly `deleted` afterwards.
-
-### Examples
-The *poly_vectors* example shows the polyvector field in action, allowing the user to set constraints for each vector on each face individually. 
-
-The below code creates a field of degree 3 and sets the first face so that its vectors each align with one edge of the triangle.  V and F are the Vertices and Faces of the mesh.
-
-Without precalculations:
-```cpp
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values << V.row(F(0,0)) - V.row(F(0,1)), V.row(F(0,1)) - V.row(F(0,2)), V.row(F(0,2)) - V.row(F(0,0));
-
-// Matrix containing the field
-Eigen::MatrixXcd complex;
-
-//Calculate the field
-directional::poly_vector(V, F, soft_ids, soft_values, N, complex);
-```
-
-With precalculations:
-```cpp
-//Degree of the field (number of vectors within each directional)
-int N = 3;
-
-Eigen::MatrixXi TT;
-igl::triangle_triangle_adjacency(F, TT);
-Eigen::MatrixXd B1, B2, x;
-igl::local_basis(V, F, B1, B2, x);
-    
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values << V.row(F(0,0)) - V.row(F(0,1)), V.row(F(0,1)) - V.row(F(0,2)), V.row(F(0,2)) - V.row(F(0,0));
-    
-// Prepare the solvers, must be recalculated whenever soft_ids changes (optional)
-std::vector<Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>*> solvers;
-std::vector<Eigen::SparseMatrix<std::complex<double>>> energy;
-poly_vector_prepare_solvers(V, F, TT, B1, B2, soft_ids, N, solvers, energy);
-
-// Matrix containing the field
-Eigen::MatrixXcd poly;
-
-// Calculate the field
-poly_vector(B1, B2, soft_ids, soft_values, solvers, energy, N, poly);
-
-...
-
-// Make sure to properly dispose of all solvers
-for (std::vector< Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>* >::iterator it = solvers.begin(); it != solvers.end(); ++it)
-{
-    delete (*it);
-}
-```
+![([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces](images/302_PolyVectors.png) 
 
 ## [303 Integrable PolyVectors](#integrablePVs)[integrablePVs]
 
@@ -275,6 +210,10 @@ of the parameterization functions (which are tangent vector fields on the surfac
 This method retains much of the core principles of the polyvector framework - it expresses the condition for zero discrete curl condition (which typically requires integers for the vector matchings) into a condition involving continuous variables only. This is done using coefficients of appropriately defined polynomials. The parameterizations generated by the resulting fields are exactly aligned to the field directions and contain no inverted triangles.
 
 ## [304 Conjugate Fields](#conjugatefields)[conjugatefields]
+
+<span style="color:red">
+This tutorial is a direct migration of the libigl version, as the functionality would reside in libdirectional. It is fully functional, but the syntax is not libdirectional-compatible as of yet.
+</span>
 
 Two tangent vectors lying on a face of a triangle mesh are conjugate if
 
