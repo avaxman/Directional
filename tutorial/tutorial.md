@@ -11,8 +11,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 
 # Table of contents
 
-* [Introduction] 
-(#chapter0:introduction)
+* [Introduction](#chapter0:introduction)
 * [Chapter 1: I/O and Visualization](#chapter1:iovis)
     * [101 Basic Glyph Rendering](#glyphrendering)
     * [102 Picking and editing](#pickingediting)
@@ -128,7 +127,7 @@ The only discretization currently supported by libdirectional is face-based fiel
 2. **Representative**. A $|F| \times 3$ double matrix represents an $N$-vector field, known as an $N$-RoSy. The single vector is the "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$
 3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#levy_2008], [#crane_2010]. The type may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full raw field.
 4. **Power Field** - A $|F|$-sized *complex* vector, representing an $N$ rosy as a single complex number $y=u^N$, where all the possible roots $u$ comprise an $N$-RoSy. The magnitude is also encoded this way, though it may be neglected in some applications.
-5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $X$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{X_iz^i}$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $X_{0},\cdots, X_{N-1}$, where $X_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $X_0$ are zero.
+5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
 
 libdirectional provides a number of conversion functions to switch between different forms of representation. Each of the functions is of the form \<method 1>\_to\_\<method 2>, where \<method 1> and \<method 2> are the representation names in the above list. e.g. `rotation_to_representative()` and `polyvector_to_raw()`. Some possible combinations are given by composing two functions in sequence.
 
@@ -291,8 +290,7 @@ libdirectional is a budding project, and there are many algorithms in the state-
 
 7. Advanced visualization techniques.
 
-#References [references]
-
+# References [references]
 [#bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt.
   [Mixed-integer
   quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf),
@@ -320,7 +318,6 @@ libdirectional is a budding project, and there are many algorithms in the state-
   2008.
 [#solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes.  [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf),
   2017.
-
 [#panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga
   Sorkine-Hornung.  [Frame Fields: Anisotropic and Non-Orthogonal Cross
   Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf),

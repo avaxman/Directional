@@ -9,12 +9,12 @@
 </head>
 <body>
 
-<h1 id="libdirectionaltutorialnotes">libdirectional tutorial notes</h1>
+<h1 id="libdirectionaltutorialnotes">libdirectional Tutorial Notes</h1>
 
 <h1 id="tableofcontents">Table of contents</h1>
 
 <ul>
-<li><a href="#introduction">Introduction</a> (#Introduction)</li>
+<li><a href="#chapter0:introduction">Introduction</a></li>
 <li><a href="#chapter1:iovis">Chapter 1: I/O and Visualization</a>
 
 <ul>
@@ -27,9 +27,9 @@
 <ul>
 <li><a href="#discretization">Discretization</a></li>
 <li><a href="#representation">Representation</a></li>
-<li><a href="#principalmatching">201 Principal Matching and combing</a></li>
-<li><a href="#conversions">202 Conversions</a></li>
-<li><a href="#sampling">203 Sampling</a></li>
+<li><a href="#principalmatching">201 Principal Matching</a></li>
+<li><a href="#sampling">202 Sampling</a></li>
+<li><a href="#combing">203 Combing</a></li>
 </ul></li>
 <li><a href="#chapter3:cartesian">Chapter 3: Cartesian Methods</a>
 
@@ -43,18 +43,24 @@
 <li><a href="#chapter4:polar">Chapter 4: Polar Methods</a>
 
 <ul>
-<li><a href="#trivialconnection">401 Trivial Connection</a></li>
+<li><a href="#polar">Polar Fields</a></li>
+<li><a href="#indexprescription">401 Index Prescription</a></li>
 </ul></li>
 <li><a href="#future">Outlook for continuing development</a></li>
+<li><a href="#references">References</a></li>
 </ul>
 
-<h2 id="introduction">Introduction</h2>
+<h1 id="chapter0:introduction">Introduction </h1>
+
+<p>libdirectional is a C++ geometry processing library written as an extension to <a href="http://libigl.github.io/libigl/">libigl</a>, with a speciality in directional fields. The functionality is based on the definitions and arrangement surveyed theoretically in <a href="#cn:1" id="cnref:1" title="see citation" class="citation">(1)</a>, and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.</p>
+
+<p>The underlying structure extends the general philosophy of <a href="http://libigl.github.io/libigl/">libigl</a>: the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in <a href="http://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a>, and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.</p>
+
+<p>The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality to the theoretical concepts of directional fields and their capabilities.</p>
 
 <p>###Installing the tutorial examples</p>
 
-<p>This tutorial follows along examples that concisely details the capabilities of libdirectional. Having followed the installation instructions <a href="https://github.com/avaxman/libdirectional">here</a>.</p>
-
-<p>The tutorial can be installed by going into the <code>Tutorial</code> folder, and following the following instructions:</p>
+<p>This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of libdirectional, where every subchapter relates to a single example. The tutorial code can be installed by going into the <code>Tutorial</code> folder, and following the following instructions:</p>
 
 <pre><code class="cpp">mkdir build
 cd build
@@ -62,200 +68,168 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 </code></pre>
 
-<p>This will build all tutorials in the <code>build</code> folder. To build in windows, use the <code>cmake-gui .</code> options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the &#8220;startup project&#8221;.</p>
+<p>This will build all tutorial examples in the <code>build</code> folder. To build in windows, use the <code>cmake-gui .</code> options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the &#8220;startup project&#8221;.</p>
+
+<p>To access a single example, say <code>202_Sampling</code>, go to the <code>build</code> and the executable will be there. Command-line arguments are never required; the data is read from the <code>shared</code> folder automatically in each example.</p>
+
+<p>Most examples contain a component of user interaction; the instruction on what to do will be given in the commandline output immediately after executing the example.</p>
 
 <h1 id="chapter1:iovis">Chapter 1: I/O and Visualization </h1>
 
-<h2 id="glyphrendering"><a href="#glyphrendering">101 Basic Glyph Rendering</a></h2>
+<h2 id="glyphrendering"><a href="#glyphrendering">101 Glyph Rendering</a></h2>
 
-<h2 id="drawingfields">Drawing fields</h2>
+<p>The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In <a href="101_GlyphRendering/main.cpp">Example 101</a>, a field is read from a file as follows:</p>
 
-<p>To draw a vector field first it must be converted into either its representative or raw representation. Then it can be passed to the <code>drawable_field()</code> method which will create a list of vertices, colors and faces to represent the field, finally those can be merged with the mesh data and passed to the viewer. If the viewer is set to take colors per vertex the <code>COLOR_PER_VERTEX</code> flag should be set.</p>
+<pre><code class="cpp">directional::read_raw_field(TUTORIAL_SHARED_PATH &quot;/bumpy.rawfield&quot;, N, rawField);
+directional::read_singularities(TUTORIAL_SHARED_PATH &quot;/bumpy.sings&quot;, N, singPositions, singIndices);
+</code></pre>
 
-<p>There are several ways you can set the field color:<br>
-The easiest way is to simply pass one color as a single row matrix. This will create one uniform ly colored field.<br>
-The second option is to pass a matrix with |F| rows, each ro representing the color for the matching face.<br>
-It is also possible to pass N*|F| colors to give the color for every single vector on every single directional. In this case colors should be ordered to first give the color for every first vector on each face and only after that the color for every second vertex. e.g. F<sub>1</sub>1, F<sub>2</sub>1 &#8230; F<sub>1</sub>2, F<sub>2</sub>2 &#8230; F<sub>1</sub>N, F<sub>2</sub>N.<br>
-Finally it is possible to pass one color per vertexafter setting the <code>PER_VECTOR_COLOR</code> flag.</p>
+<p>The field is read in <i>raw</i> format, which is detailed in <a href="#chapter2:discandrep">Chapter 2: Discretization and Representation</a>. The field is <i>face-based</i>, and the singularities are then <i>vertex-based</i>.</p>
 
-<p>By default the size of each vector is set to be related to the average edge length, as well as the length of the actual vector. The base length and with can be manually set if needed. If you want all vectors to be equal in size you can scale them by normalizing each vector in the field matrix.</p>
+<p>The field is then drawn on the mesh as follows:</p>
+
+<pre><code class="cpp">if (drawSingularities)
+    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
+  
+  directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
+</code></pre>
+
+<p>These two operations in fact do not produce any drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer.</p>
+
+<p><code>directional::singularity_spheres</code> creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function. The spheres are only created where the index is different than <span class="math">\(0\)</span>.</p>
+
+<p><code>directional::glyph_lines_raw</code> creates lines on the faces that constitute the simple <i>glyph drawing</i>: simply drawing the vectors upon the faces as they are. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header.</p>
+
+<p>By default, the size of each vector is set to be related to the average edge length, keeping the ratios between the lengths of the actual vectors intact. The base length and with can be manually set by the extended version of the function.</p>
+
+<figure>
+<img src="images/101_GlyphRendering.png" alt="([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh." />
+<figcaption>(<a href="101_GlyphRendering/main.cpp">Example 101</a>) Glyph Rendering on a mesh.</figcaption>
+</figure>
 
 <h2 id="pickingediting"><a href="#pickingediting">102 Picking and editing</a></h2>
 
+<p>This is a simple tutorial that demonstrates how libdirectional uses libigl picking to make directional field editing possible. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the ability to set different colors for glyphs, via the following code in <a href="101_PickingEditing/main.cpp">Example 102</a>.</p>
+
+<pre><code class="cpp">Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
+  for (int i=0;i&lt;F.rows();i++){
+    for (int j=0;j&lt;N;j++){
+      if (i==currF)
+        fullGlyphColor.block(i,3*j,1,3)&lt;&lt;(j==currVec ? selectedVectorGlyphColor : selectedFaceGlyphColor);
+      else
+        fullGlyphColor.block(i,3*j,1,3)&lt;&lt;defaultGlyphColor;
+    }
+  }
+</code></pre>
+
+<p>The size of <code>fullGlyphColor</code> can either be one color per vertex, per face, or per the entire mesh, and the intent will be automatically devised from the size.</p>
+
+<figure>
+<img src="images/102_PickingEditing.png" alt="([Example 102](102_PickingEditing/main.cpp)) Editing several vectors on a single face." />
+<figcaption>(<a href="102_PickingEditing/main.cpp">Example 102</a>) Editing several vectors on a single face.</figcaption>
+</figure>
+
 <h2 id="streamlinetracing"><a href="#streamlinetracing">103 Streamline Tracing</a></h2>
 
-<h1 id="chapter1:discandrep">Chapter 2: Discretization and Representation </h1>
+<p>Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using <code>streamlines_init</code>, and the lines are traced using <code>streamlines_next</code>. Each call to <code>streamlines_next</code> extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in <a href="103_StreamlineTracing/main.cpp">Example 103</a>.</p>
+
+<figure>
+<img src="images/103_StreamlineTracing.png" alt="([Example 103](103_StreamlineTracing/main.cpp)) Interactive streamlines tracing." />
+<figcaption>(<a href="103_StreamlineTracing/main.cpp">Example 103</a>) Interactive streamlines tracing.</figcaption>
+</figure>
+
+<h1 id="chapter2:discandrep">Chapter 2: Discretization and Representation </h1>
 
 <h2 id="representation"><a href="#representation">Representation</a></h2>
 
-<p>libdirectional uses several different representations to describe directional fields. However, it currently only supports tangent face-based representations, where each face is a single discrete tangent plane. <span class="math">\(|F|\)</span> is the number of faces in the mesh, where for each face one of the following is given. <span class="math">\(E_I\)</span> is the set of inner edges (adjacent to two triangles). We further use <span class="math">\(N\)</span> to describe the degree of the field (must be fixed for the entire field). The representations are as follows:</p>
+<p>The only discretization currently supported by libdirectional is face-based fields, where the discrete tangent plane is considered as the supporting plane to each (naturally flat) face. Nevertheless, libdirectional uses several different representations to describe directional fields. We denote <span class="math">\(|F|\)</span> as the number of faces in the mesh, <span class="math">\(E_I\)</span> as the set of inner edges (adjacent to two triangles), and <span class="math">\(N\)</span> as the degree of the field (must be fixed for the entire field). The supported representations are as follows, where the taxonomy is based on that of the directional field course <a href="#cn:1" title="see citation" class="citation">(1)</a>:</p>
 
 <ol>
-<li><strong>Raw</strong> - A <span class="math">\(|F|\times 3N\)</span> double matrix, representing an <span class="math">\(1^N\)</span>-vector field (a directional with <span class="math">\(N\)</span> independent vectors in each face) in the form <span class="math">\(X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N\)</span>. Vectors are assumed to be ordered in counter clockwise order in most libdirectional functions.|</li>
-<li><strong>Representative</strong>. A <span class="math">\(|F| \times 3\)</span> double matrix representing the first vector in a directional. Represents an <span class="math">\(N\)</span>-vector field, known as an <span class="math">\(N\)</span>-RoSy.</li>
-<li><strong>Rotation Angles</strong>. A <span class="math">\(|E_I|\)</span>-sized double vector representing the rotation angle between directions (without magnitude information) on two neighbouring triangles, used in combination with a global rotation to uniquely define the field. The rotation represents the deviation from the Levi-Civita parallel transport. The type may only encode <span class="math">\(N\)</span>-direction fields.</li>
-<li><strong>Complex Cartesian</strong> - A <span class="math">\(|F|\)</span>-sized <em>complex</em> vector, representing an <span class="math">\(N\)</span> rosy as a single complex number <span class="math">\(y=u^N\)</span>, where all the possible roots <span class="math">\(u\)</span> comprise an <span class="math">\(N\)</span>-RoSy. The magnitude is also encoded this way, though it may be neglected.</li>
-<li><strong>PolyVector</strong> - A <span class="math">\(|F| \times N\)</span> complex double matrix, encoding the coefficients <span class="math">\(X\)</span> of a complex polynomial <span class="math">\(f(z)=\sum_{i=0}^{N-1}{X_iz^i}\)</span>, which roots <span class="math">\(u\)</span> are an <span class="math">\(1^N\)</span>-vector field. Every row is encoded as <span class="math">\(X_{N-1},\cdots, X_0\)</span>, where <span class="math">\(X_0\)</span> is the free coefficient. In case where the field is an <span class="math">\(N\)</span>-RoSy, all coefficients but <span class="math">\(X_0\)</span> are zero.</li>
+<li><strong>Raw</strong> - A <span class="math">\(|F|\times 3N\)</span> double matrix, representing an <span class="math">\(1^N\)</span>-vector field (a directional with <span class="math">\(N\)</span> independent vectors in each face) in the form <span class="math">\(X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N\)</span> per face. Vectors are assumed to be ordered in counter clockwise order in most libdirectional functions that process raw fields.</li>
+<li><strong>Representative</strong>. A <span class="math">\(|F| \times 3\)</span> double matrix represents an <span class="math">\(N\)</span>-vector field, known as an <span class="math">\(N\)</span>-RoSy. The single vector is the &#8220;first&#8221; vector in the face, and the rest of the vectors are deduced by rotations of <span class="math">\(\frac{2\cdot\pi}{N}\)</span></li>
+<li><strong>Rotation Angles</strong>. A <span class="math">\(|E_I|\)</span>-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport <a href="#cn:2" id="cnref:2" title="see citation" class="citation">(2)</a>, <a href="#cn:3" id="cnref:3" title="see citation" class="citation">(3)</a>. The type may only encode <span class="math">\(N\)</span>-direction fields. Note that the <i>effort</i> (sum of all rotations) is then <span class="math">\(N\)</span> times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full raw field.</li>
+<li><strong>Power Field</strong> - A <span class="math">\(|F|\)</span>-sized <em>complex</em> vector, representing an <span class="math">\(N\)</span> rosy as a single complex number <span class="math">\(y=u^N\)</span>, where all the possible roots <span class="math">\(u\)</span> comprise an <span class="math">\(N\)</span>-RoSy. The magnitude is also encoded this way, though it may be neglected in some applications.</li>
+<li><strong>PolyVector</strong> - A <span class="math">\(|F| \times N\)</span> complex double matrix, encoding the coefficients <span class="math">\(a\)</span> of a complex polynomial <span class="math">\(f(z)=\sum_{i=0}^{N-1}{a_iz^i}\)</span>, which roots <span class="math">\(u\)</span> are an <span class="math">\(1^N\)</span>-vector field. Every row is encoded as <span class="math">\(a_{0},\cdots, a_{N-1}\)</span>, where <span class="math">\(a_0\)</span> is the free coefficient. In case where the field is an <span class="math">\(N\)</span>-RoSy, all coefficients but <span class="math">\(a_0\)</span> are zero.</li>
 </ol>
 
-<p>libdirectional provides a number of conversion functions to switch between different forms of representation. Each of the functions is of the form &lt;method 1&gt;_to_&lt;method 2&gt;, where &lt;method 1&gt; and &lt;method 2&gt; are the bold parts of the method name in the above table in lower cacse. e.g. <code>rotation_to_representative()</code>. Some possible combinations are given by composing two functions in sequence.</p>
+<p>libdirectional provides a number of conversion functions to switch between different forms of representation. Each of the functions is of the form &lt;method 1&gt;_to_&lt;method 2&gt;, where &lt;method 1&gt; and &lt;method 2&gt; are the representation names in the above list. e.g. <code>rotation_to_representative()</code> and <code>polyvector_to_raw()</code>. Some possible combinations are given by composing two functions in sequence.</p>
 
-<p>Not every combination is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, which do not represent the same generality of directional fields. For <span class="math">\(N\)</span>-RoSy fields, for instance, you will most likely work primarily with the Complex Cartesian, Representative, and Rotation Angles representation. Using the more explicit raw representation is done mostly for output (or drawing).</p>
+<p>However, note that every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not represent the same generality of directional fields (with current state-of-the-art&#8230;). For <span class="math">\(N\)</span>-RoSy fields, for instance, you will most likely work primarily with the power field, representative, and rotation-angle representation. converting into the more explicit raw representation is done mostly for I\O and visualization.</p>
 
-<h2 id="principalmatching"><a href="#principalmatching">201 Principal Matching and combing</a></h2>
+<p>In the following subchapter, we show some effects of working with different representations and converting between them.</p>
 
-<p>When given a field in representative form, it is possible to devise the rotation angles <span class="math">\(\delta_{ij}\)</span> by the process of <em>principal matching</em>. Principal matching finds which vectors in face <span class="math">\(f_i\)</span> match those of face <span class="math">\(f_j\)</span>, in order-preserving manner. The sum of rotation angles that each matching induces is known as the <em>effort</em> of the matching. Assuming only</p>
+<h2 id="principalmatching"><a href="#principalmatching">201 Principal Matching</a></h2>
 
-<p>This is done by passing a representative or raw field into the <code>matching_energy()</code> function.</p>
+<p>One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face <span class="math">\(f_i\)</span> correspond to those in adjacent face <span class="math">\(f_j\)</span>. In libdirectional we only treat order-preserving matching: if vector <span class="math">\(k\)</span> in face <span class="math">\(f_i\)</span> is matched to vector <span class="math">\(m\)</span> in face <span class="math">\(f_j\)</span>, then for any <span class="math">\(l\)</span>, <span class="math">\(k+l\)</span> is matched to <span class="math">\(m+l\)</span> (modulu <span class="math">\(N\)</span>). Suppose that the orientation of the dual edge is <span class="math">\(f_i \rightarrow f_j\)</span>, then the matching is encoded as <span class="math">\(m-k\)</span>. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.</p>
 
-<p>With the given rotation angles, it is also possible to devise the singularities on <span class="math">\(1\)</span>-rings, using the <code>singularities()</code> method. Singularities can be calculated using either the principal matching or the adjustment angles. Singularity calculation from principal matching is subject to aliasing, so unless calculated using the original adjustment angles you will most likely not obtain the same singularities as used to create the field.</p>
+<p>Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles <span class="math">\(\delta_{ij}\)</span> by the process of <em>principal matching</em> <a href="#cn:4" id="cnref:4" title="see citation" class="citation">(4)</a>. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of <span class="math">\([-\pi, \pi)\)</span> (and therefore denoted as &#8220;principal&#8221;). It corresponds to the &#8220;smallest angle&#8221; matching.</p>
 
-<p>An illustration of the sampling problem is visualized in the <em>Singularities</em> example, which allows you to toggle between prescribed singularities, on which a trivial connection is computed, and the calculated singularities from a (blind) principal matching of the resulting field. It is possible to save fields generated with the <em>trivial_connection</em> example and load them in the <em>singularities</em> example.</p>
+<p>principal matching is done through this function (from in <a href="201_PrincipalMatching/main.cpp">Example 201</a>:</p>
 
-<h2 id="sampling"><a href="#sampling">203 Sampling</a></h2>
+<pre><code class="cpp">directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
+directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
+</code></pre>
+
+<p>The second line devises the <i>indices</i> of each vertex from the effort. The index of a vertex is the amount of rotations a directional undergoes along a cycle around the vertex. It must return to itself, and therefore the index is an integer <span class="math">\(I\)</span> when a vector <span class="math">\(m\)</span> in the face ended up in vector <span class="math">\(m+I\)</span> (modulu <span class="math">\(N\)</span>). Note that this can also include multiple full rotation, and therefore the index is unbounded. The <i>fractional</i> part of the index is encoded by the matching; however, matching alone cannot encode indices (for instance, a single vector field has trivial matching anywhere, but can have singularities).</p>
+
+<figure>
+<img src="images/201_PrincipalMatching.png" alt="([Example 201](201_PrincipalMatching/main.cpp)) Field is shown with singularities, and a single face with principal matching to its neighbors (in multiple colors). Manually follow the (natural) principal matching to see that the singularities are indeed correct." />
+<figcaption>(<a href="201_PrincipalMatching/main.cpp">Example 201</a>) Field is shown with singularities, and a single face with principal matching to its neighbors (in multiple colors). Manually follow the (natural) principal matching to see that the singularities are indeed correct.</figcaption>
+</figure>
+
+<h2 id="sampling"><a href="#sampling">202 Sampling</a></h2>
+
+<p>This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In the polar mode, the user can control the index of a singularity directly. As such, the rotation angles between faces become arbitrarily large, and appear as noise. In the principal matching mode, the singularities that are computed without knowledge of rotation angles are seen, giving rise to a &#8220;singularity party&#8221;. In the Cartesian mode, the field is interpolated, keeping the red band fixed, showing a field that in smooth in the Cartesian sense.</p>
+
+<figure>
+<img src="images/202_Sampling.png" alt="([Example 202](202_Sampling/main.cpp)) Left to right: prescribing an arbitarily high-index singularity, principal matching with perceived singularities, and interpolation with red band fixed." />
+<figcaption>(<a href="202_Sampling/main.cpp">Example 202</a>) Left to right: prescribing an arbitarily high-index singularity, principal matching with perceived singularities, and interpolation with red band fixed.</figcaption>
+</figure>
+
+<h2 id="combing"><a href="#combing">203 Combing</a></h2>
+
+<p>Given a matching (in this case, principal matching), it is possible to &#8220;comb&#8221; the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching (and then the new matching is a trivial zero). This operation is important in order to preapre a directional field for integration, for instance. In the presence of singulaties, the field can only be combed up to a set of connected paths that connect singularities, also known as cuts. Note that such paths don&#8217;t cut the mesh to a simply connected mesh, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities. The combing is done through the function <code>directional::principal_combing()</code>.</p>
+
+<figure>
+<img src="images/203_Combing.png" alt="([Example 203](203_Combing/main.cpp)) Vector indices inside each face are colored. They are uncombed in the left image, and combed, with the cut showing, in the right image." />
+<figcaption>(<a href="203_Combing/main.cpp">Example 203</a>) Vector indices inside each face are colored. They are uncombed in the left image, and combed, with the cut showing, in the right image.</figcaption>
+</figure>
 
 <h1 id="chapter3:cartesian">Chapter 3: Cartesian Representations </h1>
 
 <h2 id="cartesian"><a href="#cartesian">Cartesian Fields</a></h2>
 
+<p>The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either <span class="math">\(\left(x,y\right)\)</span> in some local <span class="math">\(2D\)</span> basis on a tangent plane, or <span class="math">\(\left(x,y,z\right)\)</span> in the ambient coordinates of space. The raw, representative (of an <span class="math">\(N\)</span>-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields do not automatically contain information about the interpolation of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation.</p>
+
 <h2 id="globallyoptimal"><a href="#globallyoptimal">301 Globally Optimal Fields</a></h2>
 
-<p>The algorithm libdirectionl uses to compute such fields is &#8220;Globally Optimal&#8221;<sup><a href="#fn6">6</a></sup>. The field is defined as a single complex number <span class="math">\(y\)</span> (relative to local basis), that represents an <span class="math">\(N\)</span>-RoSy by its roots. By prescribing constraints <span class="math">\(y_B\)</span> on a set of faces <span class="math">\(B\)</span>, the algorithm interpolates to the rest of the faces <span class="math">\(y_I\)</span> by minimizing the Dirichlet energy <span class="math">\(y_I=\text{argmin}\ | \nabla y |^2\)</span>. Note that <span class="math">\(y\)</span> also encodes magnitude in general; however, it is possible to normalize the field after the computation, as long as it is not identically zero.</p>
+<p>This representation, offered in <a href="#cn:5" id="cnref:5" title="see citation" class="citation">(5)</a>, establishes a complex basis in each tangent plane (face in our implementation), and represents <span class="math">\(N\)</span>-RoSy field using a \emph{power field}&#8212;a single complex number <span class="math">\(y\)</span> per face so that its roots <span class="math">\(u^N=y\)</span> are the <span class="math">\(N\)</span>-RoSy.</p>
 
-<h3 id="definingconstraints">Defining Constraints</h3>
+<p>By prescribing constraints <span class="math">\(y_B\)</span> on a set of faces <span class="math">\(B\)</span>, the algorithm interpolates the field to the rest of the faces <span class="math">\(y_I\)</span> by minimizing the face-based Dirichlet energy: <span class="math">\[y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},\]</span></p>
 
-<p>Constraints are defined as a pair of matrices of equal hight, refered to as <code>soft_ids</code> and <code>soft_values</code>. <code>Soft_ids</code> is a 1 wide integer matrix containing the ids of the faces (index in the F matrix) on which the constraints are placed. Meanwhile <code>soft_values</code> contains the x, y and z values of the matching vector, representing it in the same way as the representative vectors. Constraints do not need to be of unit length, but their size does matter for how they affect the field.</p>
+<p>where <span class="math">\(e_f\)</span> is the representation of the vector of edge <span class="math">\(e\)</span> in the basis of <span class="math">\(f\)</span>, and similary for <span class="math">\(g\)</span>. The field is computed through the function <code>directional::power_field()</code>.</p>
 
-<h3 id="precomputingsolver">Precomputing Solver</h3>
+<p>It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field, by using the function <code>directional::power_field_precompute()</code>, the appropriate version of <code>directional::power_field()</code>. That is useful for when the set <span class="math">\(B\)</span> doesn&#8217;t change, but only <span class="math">\(y_b\)</span> do (which means a constant left-hand size, and a changing right-hand side). Note that field can be converted to representative and raw forms using the appropriate <code>power_to_X</code> functions.</p>
 
-<p>It is possible to speed up computations by precomputing the solver used to compute the complex field. This solver can then be reused to compute changes in the field as long as the mesh and <strong>the ids of the constrained faces</strong> remain the same.</p>
-
-<h3 id="examples">Examples</h3>
-
-<p>The <em>complex_field</em> example contains a small program which allows setting the soft constraints dynamically and see how it affects the field.</p>
-
-<p>The below code creates a field of degree 3 and sets the first face so that its first vector aligns with the first edge. The other vectors are equally spaced to create a 3-rosy. V and F are the Vertices and Faces of the mesh. To see an example that alligns all vectors on the first face with an edge see the polyvector field example.</p>
-
-<p>Without precalculations:</p>
-
-<pre><code class="cpp">// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values &lt;&lt; V.row(F(0,0)) - V.row(F(0,1));
-
-// Matrix containing the field
-Eigen::MatrixXcd complex;
-
-//Calculate the field
-directional::complex_field(V, F, soft_ids, soft_values, N, complex);
-</code></pre>
-
-<p>With precalculations:</p>
-
-<pre><code class="cpp">//Degree of the field (number of vectors within each directional)
-int N = 3;
-
-Eigen::MatrixXi TT;
-igl::triangle_triangle_adjacency(F, TT);
-Eigen::MatrixXd B1, B2, x;
-igl::local_basis(V, F, B1, B2, x);
-    
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values &lt;&lt; V.row(F(0,0)) - V.row(F(0,1));
-    
-// Prepare the solver, must be recalculated whenever soft_ids changes (optional)
-Eigen::SimplicialLDLT&lt;Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt;&gt; solver;
-Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt; energy;
-Complex_field_prepare_solver(V, F, TT, B1, B2, soft_id, N, solver, energy);
-
-// Calculate the field
-complex_field(B1, B2, soft_id, soft_value, solver, energy, N, complex);
-</code></pre>
+<figure>
+<img src="images/301_GloballyOptimal.png" alt="([Example 301](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching." />
+<figcaption>(<a href="301_GloballyOptimal/main.cpp">Example 301</a>) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching.</figcaption>
+</figure>
 
 <h2 id="polyvectors"><a href="#polyvectors">302 PolyVectors</a></h2>
 
 <h2 id="polyvectorfield">Polyvector Field</h2>
 
-<p>The Polyvector field is a generalisation of the standard complex field method, which allows defining each vector in a directional individually in both direction and length. Besides that it works largely the same way as the complex field.<sup><a href="#fn5">5</a></sup></p>
+<p>A Polyvector field <a href="#cn:4" title="see citation" class="citation">(4)</a> is a generalization of power fields that allows to represent independent vectors in each tangent planes. The representation is as the coefficient set <span class="math">\(a_{0 \cdots N-1}\)</span> of a complex polynomial in the local compex basis:
+<span class="math">\[P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N\]</span>
+where the roots <span class="math">\(P(z)=0\)</span> are the vectors represented, and the dirichlet energy is individual per <span class="math">\(a_i\)</span> (with the right power <span class="math">\(i\)</span> in the comparison between adjacent faces). Note that an <span class="math">\(N\)</span>-RoSy is represented as a polynomial where all <span class="math">\(a\)</span> are zero except <span class="math">\(a_0\)</span>. Principal matching, combing, and effort are well-defined on PolyVectors as well.</p>
 
-<h3 id="definingconstraints">Defining Constraints</h3>
+<p>The example allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is <code>directional::polyvector_field()</code>. In the case as well, the solver can be prefactored in advance using <code>directional::polyvector_precompute()</code>.</p>
 
-<p>Just like the Complex Field, the Polyvector Field takes a <code>soft_ids</code> matrix defining the face indices and a matching <code>soft_values</code> matrix defining the directionals on the faces, however the polyvector <code>soft_values</code> matrix is 3*N wide, containing the X, Y, and Z values for each individual vector.</p>
-
-<h3 id="precomputingsolvers">Precomputing Solvers</h3>
-
-<p>It is possible to precompute the solvers for the Polyvector Field. To precompute the solvers one should pass an empty vector of SimplicialLDLT pointers (<code>std::vector&lt;Eigen::SimplicialLDLT&lt;Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt;&gt;*&gt;</code>) into the <code>poly_vector_prepare_solvers()</code> function before passing them along with the energy matrix to the <code>poly_vector()</code> method.</p>
-
-<p>The Solvers can be reused as long as the <code>soft_ids</code> remain the same, and must be properly <code>deleted</code> afterwards.</p>
-
-<h3 id="examples">Examples</h3>
-
-<p>The <em>poly_vectors</em> example shows the polyvector field in action, allowing the user to set constraints for each vector on each face individually.</p>
-
-<p>The below code creates a field of degree 3 and sets the first face so that its vectors each align with one edge of the triangle. V and F are the Vertices and Faces of the mesh.</p>
-
-<p>Without precalculations:</p>
-
-<pre><code class="cpp">// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values &lt;&lt; V.row(F(0,0)) - V.row(F(0,1)), V.row(F(0,1)) - V.row(F(0,2)), V.row(F(0,2)) - V.row(F(0,0));
-
-// Matrix containing the field
-Eigen::MatrixXcd complex;
-
-//Calculate the field
-directional::poly_vector(V, F, soft_ids, soft_values, N, complex);
-</code></pre>
-
-<p>With precalculations:</p>
-
-<pre><code class="cpp">//Degree of the field (number of vectors within each directional)
-int N = 3;
-
-Eigen::MatrixXi TT;
-igl::triangle_triangle_adjacency(F, TT);
-Eigen::MatrixXd B1, B2, x;
-igl::local_basis(V, F, B1, B2, x);
-    
-// Set constraints
-Eigen::VectorXi soft_ids(1);
-Eigen::MatrixXd soft_values(1, N*3);
-// Set to all faces that should be constrained
-soft_ids(0) = 0;
-// Set each matching row to the N vectors on that face
-soft_values &lt;&lt; V.row(F(0,0)) - V.row(F(0,1)), V.row(F(0,1)) - V.row(F(0,2)), V.row(F(0,2)) - V.row(F(0,0));
-    
-// Prepare the solvers, must be recalculated whenever soft_ids changes (optional)
-std::vector&lt;Eigen::SimplicialLDLT&lt;Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt;&gt;*&gt; solvers;
-std::vector&lt;Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt;&gt; energy;
-poly_vector_prepare_solvers(V, F, TT, B1, B2, soft_ids, N, solvers, energy);
-
-// Matrix containing the field
-Eigen::MatrixXcd poly;
-
-// Calculate the field
-poly_vector(B1, B2, soft_ids, soft_values, solvers, energy, N, poly);
-
-...
-
-// Make sure to properly dispose of all solvers
-for (std::vector&lt; Eigen::SimplicialLDLT&lt;Eigen::SparseMatrix&lt;std::complex&lt;double&gt;&gt;&gt;* &gt;::iterator it = solvers.begin(); it != solvers.end(); ++it)
-{
-    delete (*it);
-}
-</code></pre>
+<figure>
+<img src="images/302_PolyVectors.png" alt="([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces" />
+<figcaption>(<a href="302_PolyVectors/main.cpp">Example 302</a>) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces</figcaption>
+</figure>
 
 <h2 id="integrablepvs"><a href="#integrablePVs">303 Integrable PolyVectors</a></h2>
 
@@ -264,7 +238,7 @@ This tutorial is a direct migration of the libigl version, as the functionality 
 </span>
 
 <p>Vector-field guided surface parameterization is based on the idea of designing the gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields (N-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be integrable: it must be possible to break them down into individual vector fields that are gradients of scalar functions. Fields obtained by most smoothness-based design methods (eg. <a href="#cn:1" id="cnref:1" title="see citation" class="citation">(1)</a>[], <a href="#cn:2" id="cnref:2" title="see citation" class="citation">(2)</a>[], <a href="#cn:3" id="cnref:3" title="see citation" class="citation">(3)</a>[], <a href="#cn:4" id="cnref:4" title="see citation" class="citation">(4)</a>[], <a href="#cn:5" id="cnref:5" title="see citation" class="citation">(5)</a>[]) do not have this property. In <a href="#cn:6" id="cnref:6" title="see citation" class="citation">(6)</a>[], a method for creating integrable polyvector fields was introduced. This method takes as input a given field and improves its integrability by removing the vector field curl, thus turning it into a gradient of a function (<a href="303_IntegrablePVs/main.cpp">Example 303</a>).</p>
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields (N-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be integrable: it must be possible to break them down into individual vector fields that are gradients of scalar functions. Fields obtained by most smoothness-based design methods (eg. <a href="#cn:2" title="see citation" class="citation">(2)</a>[], <a href="#cn:5" title="see citation" class="citation">(5)</a>[], <a href="#cn:4" title="see citation" class="citation">(4)</a>[], <a href="#cn:6" id="cnref:6" title="see citation" class="citation">(6)</a>[], <a href="#cn:7" id="cnref:7" title="see citation" class="citation">(7)</a>[]) do not have this property. In <a href="#cn:8" id="cnref:8" title="see citation" class="citation">(8)</a>[], a method for creating integrable polyvector fields was introduced. This method takes as input a given field and improves its integrability by removing the vector field curl, thus turning it into a gradient of a function (<a href="303_IntegrablePVs/main.cpp">Example 303</a>).</p>
 
 <figure>
 <img src="images/303_IntegrablePVs.png" alt="Integration error is removed from a frame field to produce a field aligned parameterization free of triangle flips." />
@@ -275,6 +249,10 @@ of the parameterization functions (which are tangent vector fields on the surfac
 
 <h2 id="conjugatefields"><a href="#conjugatefields">304 Conjugate Fields</a></h2>
 
+<span style="color:red">
+This tutorial is a direct migration of the libigl version, as the functionality would reside in libdirectional. It is fully functional, but the syntax is not libdirectional-compatible as of yet.
+</span>
+
 <p>Two tangent vectors lying on a face of a triangle mesh are conjugate if</p>
 
 <p><span class="math">\[ k_1 (u^T d_1)(v^T d_1) + k_2(u^T d_2)(v^T d_2) = 0. \]</span></p>
@@ -282,13 +260,13 @@ of the parameterization functions (which are tangent vector fields on the surfac
 <p>This condition is very important in architectural geometry: The faces of an
 infinitely dense quad mesh whose edges are aligned with a conjugate field are
 planar. Thus, a quad mesh whose edges follow a conjugate field are easier to
-planarize <a href="#cn:7" id="cnref:7" title="see citation" class="citation">(7)</a>.</p>
+planarize <a href="#cn:9" id="cnref:9" title="see citation" class="citation">(9)</a>.</p>
 
 <p>Finding a conjugate vector field that satisfies given directional constraints
 is a standard problem in architectural geometry, which can be tackled by
 deforming a Poly-Vector field to the closest conjugate field.</p>
 
-<p>This algorithm <a href="#cn:3" title="see citation" class="citation">(3)</a> alternates a global step, which enforces
+<p>This algorithm <a href="#cn:4" title="see citation" class="citation">(4)</a> alternates a global step, which enforces
 smoothness, with a local step, that projects the field on every face to the
 closest conjugate field (<a href="304_ConjugateField/main.cpp">Example 304</a>).</p>
 
@@ -301,118 +279,127 @@ closest conjugate field (<a href="304_ConjugateField/main.cpp">Example 304</a>).
 
 <h1 id="chapter4:polar">Chapter 4: Polar Representations </h1>
 
-<h2 id="trivialconnection"><a href="#trivialconnection">401 Trivial Connection</a></h2>
+<h2 id="polar"><a href="#polar">Polar Fields</a></h2>
 
-<p>The notation of encoding rotation angles appeared in several formats in the literature (see STAR for details). The formulation and notation we use here is the of Trivial Connections<sup><a href="#fn4">4</a></sup>. Trivial connection solve for a single rotation angle <span class="math">\(\delta_{ij}\)</span> per (dual) edge <span class="math">\(e_{ij}\)</span> between two faces <span class="math">\(f_i,f_j\)</span> that encodes the deviation from parallel transport. The algorithm defines a spanning set of basis cycles (see next section), around which the sum of <span class="math">\(\delta_{ij}\)</span> is prescribed. The sum defines the <em>curvature</em> of the cycle. The algorithm solves for the smoothest field, or the least-squares 2-norm <span class="math">\(\delta\)</span>:</p>
+<p>Polar fields are represented using angles. These angles may encode the rotation from some known basis on a tangent plane (and so it is a &#8220;logarithmic&#8221; representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent planes (in the sense of deviation from parallel transport). The former usually requires integer variables for directional field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, libdirectional supports the latter.</p>
+
+<h2 id="indexprescription"><a href="#indexprescription">401 Index Prescription</a></h2>
+
+<p>The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature. The formulation and notation we use in libdirectional is the of Trivial Connections <a href="#cn:3" title="see citation" class="citation">(3)</a>. Trivial connection solves for a single rotation angle <span class="math">\(\delta_{ij}\)</span> per (dual) edge <span class="math">\(e_{ij}\)</span> between two faces <span class="math">\(f_i,f_j\)</span>, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of <span class="math">\(\delta_{ij}\)</span> has to be prescribed. The summation is defined in matrix <span class="math">\(H\)</span>. Every such cycle (row in the matrix) has a curvature, defined as an angle defect, and the index defines a new sum. The algorithm then solves for the smoothest field (<span class="math">\(\delta_{ij}\)</span> as zero as possible), in the least-squares 2-norm <span class="math">\(\delta\)</span>:</p>
 
 <p>$$
 \delta = \text{argmin}&nbsp;|\delta_{ij}|^2&nbsp;s.t.&nbsp;H\delta = -K_0 + K.
 $$</p>
 
-<p><span class="math">\(H\)</span> is the matrix that defines the basis-cycles sum, <span class="math">\(-K_0\)</span> is the original curvature of the basis cycle, and <span class="math">\(K\)</span> is the prescribed curvature. <span class="math">\(K\)</span> defines singularities: for a regular cycles, we set <span class="math">\(K=0\)</span>, and for a singular cycle with singularity index <span class="math">\(\frac{1}{N}\)</span>, we set <span class="math">\(K=\frac{2\pi}{N}\)</span>. the sum of <span class="math">\(K\)</span> has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See paper for exact details. As a consequence, the singularities of the field, and the indices of other basis cycles, are the input. The output is not yet an <span class="math">\(N\)</span>-RoSy field: there is a global degree of freedom in setting a single direction in a single face.</p>
+<p><span class="math">\(H\)</span> is the matrix that defines the basis-cycles sum, <span class="math">\(K_0\)</span> is the original curvature of the basis cycle, and <span class="math">\(K\)</span> is the prescribed curvature. <span class="math">\(K\)</span> defines singularities: for regular cycles, we prescribe <span class="math">\(K=0\)</span>, and for a singular cycle with singularity index <span class="math">\(\frac{1}{N}\)</span>, we set <span class="math">\(K=\frac{2\pi}{N}\)</span>. the sum of <span class="math">\(K\)</span> has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See <a href="#cn:3" title="see citation" class="citation">(3)</a> for exact details. If the input obeys the sum, the result has only the prescribed indices around the cycles, and nothing else. As the representation is differential, there is still a global degree of freedom in setting a single direction in a single arbitrary face.</p>
 
-<p>The algorithm is defined with &#8220;cycle holonomy&#8221; that is the curvature &#8220;modulu <span class="math">\(\pi\)</span>&#8221;. They are the same the same for small cycles, but not so for big cycles. However, curvature (specifically, angle defect) is the correct measure needed for the consistency of trivial connection, and we use it.</p>
+<p>Note that the correct definition for &#8220;cycle curvature&#8221; corresponds to the so-called &#8220;cycle holonomy&#8221;, only up to integer multiples of <span class="math">\(\pi\)</span>. However, in the discrete setting, the curvature is computed as the exact angle defect, in which for inner vertices we use <span class="math">\(2\pi-\sum{\alpha}\)</span>, and for boundary vertices we use <span class="math">\(\pi - \sum{\alpha}\)</span> (<span class="math">\(\alpha\)</span> are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary loop cycle, we add up all the defects. That is requires for exact discrete Poincar&amp;eacute index consistency.</p>
 
 <h3 id="basiscycles">Basis Cycles</h3>
 
-<p>The basis cycles form the cycles around which curvatures (and singularities) are described on the mesh. The sum on basis cycles is described in a sparse matrix <span class="math">\(H\)</span> of size <span class="math">\(|cycles|\times |E|\)</span>. Each row in the matrix describes the sum over one cycle, and contains a 1 or -1 depending on the orientation of the dual edge participating in the cycle. There are three types of cycles, according to their order in the rows of <span class="math">\(H\)</span>:</p>
+<p>The basis cycles form the cycles around which curvatures (and singularities) are prescribed on the mesh. The sum on basis cycles is described in a sparse matrix <span class="math">\(H\)</span> of size <span class="math">\(|cycles|\times |E_i|\)</span>, where <span class="math">\(E_i\)</span> is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains a 1 or -1 depending on the (arbitrary) orientation of the dual edge participating in the cycle. There are three types of cycles, according to their order in the rows of <span class="math">\(H\)</span>:</p>
 
 <ol>
-<li><span class="math">\(1\)</span>-ring dual cycles around each vertex, on which vertex-based singularities can be encoded (the relevant part of <span class="math">\(H\)</span> is basically <span class="math">\(d_0^T\)</span> in discrete exterior calculus).</li>
+<li><span class="math">\(1\)</span>-ring dual cycles around each inner vertex, on which vertex-based singularities can be encoded (the relevant part of <span class="math">\(H\)</span> is basically <span class="math">\(d_0^T\)</span> in discrete exterior calculus).</li>
 <li>Cycles around mesh boundary loops.</li>
-<li>Cycles around topological generator (independent handles).</li>
+<li>Cycles around topological generators (independent handles).</li>
 </ol>
 
-<p>The method <code>dual_cycles()</code> computes the proper basis cycles and matrix <span class="math">\(H\)</span>.</p>
+<p>The method <code>dual_cycles()</code> computes the proper basis cycles and matrix <span class="math">\(H\)</span>. To be able to intuitively prescribe singularities to inner vertices, the method <code>directional::dual_cycles()</code> also returns a conversion vector <code>vertex2cycle</code>, and the list of indices of inner edges from the list of edges.</p>
 
-<h3 id="singularities">Singularities</h3>
+<p>The singularity indices are prescribed contain the singularity index corresponding to each basis cycle. A value of <span class="math">\(k \in \mathbb{Z}\)</span> represents an <span class="math">\(\frac{2\pi k}{N}\)</span> rotation around the respective cycle.</p>
 
-<p>The singularity indices are prescribed as an <code>Eigen::VectorXi</code> object, containing the singularity index corresponding to each basis cycle. A value of <span class="math">\(k \in \mathbb{Z}\)</span> represents an <span class="math">\(\frac{2\pi k}{N}\)</span> rotation around the respective cycle. In order to create a smooth field it is required that the indices of all singularities add up to <span class="math">\(\sum{k}=N *\chi\)</span>, where <span class="math">\(\chi\)</span> is the Euler characteristic of the mesh. Otherwise, a result will still be computed by least squares, but it will be unpredictable.</p>
+<p>If the prescribed indices do not conform to correct sum, a result will still be computed by least squares, but it will be unpredictable.</p>
 
-<p>###Trivial connection demo</p>
+<p>The algorithm is done through the function <code>directional::index_prescription()</code>, which also accepts a solver for precomputation.</p>
 
-<p>Below is a contraction of code from <code>examples\trivial_connection</code> that computes and draws a field from prescribed singularities:</p>
-
-<pre><code class="cpp">igl::edge_topology(meshV, meshF, EV, FE, EF);
-directional::dual_cycles(meshF, EV, EF, cycles);
-igl::boundary_loop(meshF, boundaryLoops);
-
-directional::trivial_connection(meshV, meshF, cycles, indices, N, rotationField, e);
-directional::rotation_to_representative(meshV, meshF, EV, EF, rotationField, N, globalRotation, representative);
-
-int sum = round(indices.head(indices.size() - generators).sum());
-if (euler*N != sum){
-    std::cout &lt;&lt; &quot;Warning: All non-generator singularities should add up to N * the Euler characteristic.&quot;&lt;&lt;std::endl;
-    std::cout &lt;&lt; &quot;Total indices: &quot; &lt;&lt; sum &lt;&lt; std::endl;
-    std::cout &lt;&lt; &quot;Expected: &quot; &lt;&lt; euler *N &lt;&lt; std::endl;
-}
-
-// Turn the field into a drawable mesh
-directional::drawable_field(meshV, meshF, representative, Eigen::RowVector3d(0, 0, 1), N, directional::field_draw_flags::NONE, fieldV, fieldF, fieldC);
-
-</code></pre>
+<figure>
+<img src="images/401_IndexPrescription.png" alt="([Example 401](401_IndexPrescription/main.cpp)) Indices are prescribed on three singularities, and on the boundary loop, to match the index theorem, and the computed field is smooth and obey these indices exactly." />
+<figcaption>(<a href="401_IndexPrescription/main.cpp">Example 401</a>) Indices are prescribed on three singularities, and on the boundary loop, to match the index theorem, and the computed field is smooth and obey these indices exactly.</figcaption>
+</figure>
 
 <h1 id="future">Outlook for continuing development </h1>
 
-<p>libdirectional is a budding project, and there are many algorithms that we look forward to implement. Prominent examples are:</p>
+<p>libdirectional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:</p>
 
 <ol>
 <li><p>Face-based polar representation, and mixed-integer directional algorithms.</p></li>
-<li><p>Support for 3D <em>Octahedral</em> fields, both in tet meshes and with the boundary-element method.</p></li>
-<li><p>Discrete exterior calculus.</p></li>
+<li><p>Support for 3D <em>Octahedral</em> fields <a href="#cn:10" id="cnref:10" title="see citation" class="citation">(10)</a>, both in tet meshes and with the boundary-element method.</p></li>
+<li><p>A discrete exterior calculus framework.</p></li>
 <li><p>Differential operators and Hodge decomposition.</p></li>
-<li><p>Cutting, integration, and parameterization.</p></li>
+<li><p>Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from libdirectional, but they are not entirely compatible.</p></li>
 <li><p>Support for tensor fields.</p></li>
+<li><p>Advanced visualization techniques.</p></li>
 </ol>
+
+<h1 id="references">References </h1>
 
 <div class="citations">
 <hr />
 <ol>
 
 <li id="cn:1">
-<p>Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy.
-<a href="http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf">N&#8211;Symmetry Direction Field
-Design</a>,
-2008. <a href="#cnref:1" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+<p>Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo,
+David Bommes, Klaus Hildebrandt, Mirela Ben&#8211;Chen. <a href="https://www.google.com/search?q=Directional+Field+Synthesis+Design+and+Processing">Directional Field
+Synthesis, Design, and
+Processing</a>,
+2016
+ <a href="#cnref:1" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:2">
-<p>Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter
-Schröder. <a href="http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf">Globally Optimal Direction
-Fields</a>,
-2013. <a href="#cnref:2" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+<p>Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy.
+<a href="http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf">N&#8211;Symmetry Direction Field
+Design</a>,
+2008. <a href="#cnref:2" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:3">
-<p>Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
-Sorkine&#8211;Hornung. <a href="http://igl.ethz.ch/projects/complex-roots/">Designing N&#8211;PolyVector Fields with Complex
-Polynomials</a>, 2014 <a href="#cnref:3" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+<p>Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, <a href="https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/">Trivial Connections on Discrete Surfaces</a>, 2010.<br> <a href="#cnref:3" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:4">
-<p>David Bommes, Henrik Zimmer, Leif Kobbelt.
-<a href="http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf">Mixed&#8211;integer
-quadrangulation</a>,
-2009. <a href="#cnref:4" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+<p>Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
+Sorkine&#8211;Hornung. <a href="http://igl.ethz.ch/projects/complex-roots/">Designing N&#8211;PolyVector Fields with Complex
+Polynomials</a>, 2014 <a href="#cnref:4" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:5">
-<p>Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga
-Sorkine&#8211;Hornung. <a href="http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf">Frame Fields: Anisotropic and Non&#8211;Orthogonal Cross
+<p>Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter
+Schröder. <a href="http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf">Globally Optimal Direction
 Fields</a>,
-2014. <a href="#cnref:5" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+2013. <a href="#cnref:5" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:6">
-<p>Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
-Sorkine&#8211;Hornung. <a href="http://igl.ethz.ch/projects/integrable/">Integrable PolyVector Fields</a>, 2015 <a href="#cnref:6" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+<p>David Bommes, Henrik Zimmer, Leif Kobbelt.
+<a href="http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf">Mixed&#8211;integer
+quadrangulation</a>,
+2009. <a href="#cnref:6" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 <li id="cn:7">
+<p>Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga
+Sorkine&#8211;Hornung. <a href="http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf">Frame Fields: Anisotropic and Non&#8211;Orthogonal Cross
+Fields</a>,
+2014. <a href="#cnref:7" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+</li>
+
+<li id="cn:8">
+<p>Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
+Sorkine&#8211;Hornung. <a href="http://igl.ethz.ch/projects/integrable/">Integrable PolyVector Fields</a>, 2015 <a href="#cnref:8" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+</li>
+
+<li id="cn:9">
 <p>Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping
 Wang. <a href="http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf">General Planar Quadrilateral Mesh Design Using Conjugate Direction
 Field</a>,
-2008. <a href="#cnref:7" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+2008. <a href="#cnref:9" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
+</li>
+
+<li id="cn:10">
+<p>Justin Solomon, Amir Vaxman, David Bommes. <a href="http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf">Boundary Element Octahedral Fields in Volumes</a>,
+2017. <a href="#cnref:10" title="return to body" class="reversecitation">&#160;&#8617;</a></p>
 </li>
 
 </ol>
