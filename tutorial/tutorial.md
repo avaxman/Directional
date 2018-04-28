@@ -119,49 +119,58 @@ Vector fields on surfaces are commonly visualized by tracing [streamlines] (http
 
 # Chapter 2: Discretization and Representation [chapter2:discandrep]
 
+## [discretization](#discretization)[discretization]
+
+There are several ways to discretize directional fields, although not all of them fit for all representations. They roughly divide into face-based, edge-based, and vertex-basex discretization (see [#degoes_2016] for an in-depth analysis). The only discretization currently supported by libdirectional is face-based fields, where the discrete tangent plane is considered as the supporting plane to each (naturally flat) face. We also use a local basis (mostly provide by `igl::local_basis()`) to parameterize each tangent plane. Notions like connection, parallel transport, and consequently smoothness, are measured through dual edges between adjacent faces.
+
 ## [Representation](#representation)[Representation]
 
-The only discretization currently supported by libdirectional is face-based fields, where the discrete tangent plane is considered as the supporting plane to each (naturally flat) face. Nevertheless, libdirectional uses several different representations to describe directional fields. We denote $|F|$ as the number of faces in the mesh, $E_I$ as the set of inner edges (adjacent to two triangles), and $N$ as the degree of the field (must be fixed for the entire field). The supported  representations are as follows, where the taxonomy is based on that of the directional field course [#vaxman_2016]:
+libdirectional uses several different representations to describe directional fields. We denote the number of faces in the mesh as $|F|$, the set of inner edges (adjacent to two triangles) as $E_I$, and the degree of the field (must be fixed for the entire field) as $N$. The supported  representations are as follows, where the taxonomy is based on that of the directional field course [#vaxman_2016]:
 
-1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counter clockwise order in most libdirectional functions that process raw fields.
-2. **Representative**. A $|F| \times 3$ double matrix represents an $N$-vector field, known as an $N$-RoSy. The single vector is the "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$
-3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#levy_2008], [#crane_2010]. The type may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full raw field.
-4. **Power Field** - A $|F|$-sized *complex* vector, representing an $N$ rosy as a single complex number $y=u^N$, where all the possible roots $u$ comprise an $N$-RoSy. The magnitude is also encoded this way, though it may be neglected in some applications.
-5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
+1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counterclockwise order in most libdirectional functions that process raw fields.
+2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$
+3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#levy_2008], [#crane_2010]. This representation may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full face-based field.
+4. **Power Field** - An $|F|$-sized *complex* vector, representing an $N$-RoSy as a single complex number $y=u^N$, where the $N$-RoSy is the set of roots $u$. The magnitude is also encoded this way, though it may be neglected in some applications.
+5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{a_iz^i}+z^N$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
 
-libdirectional provides a number of conversion functions to switch between different forms of representation. Each of the functions is of the form \<method 1>\_to\_\<method 2>, where \<method 1> and \<method 2> are the representation names in the above list. e.g. `rotation_to_representative()` and `polyvector_to_raw()`. Some possible combinations are given by composing two functions in sequence.
+libdirectional provides a number of conversion functions to switch between different representations. Each of the functions is of the form \<method 1>\_to\_\<method 2>, where \<method 1> and \<method 2> are the representation names in the above list. e.g., `rotation_to_representative()` and `polyvector_to_raw()`. Some possible combinations are given by composing two functions in sequence.
 
-However, note that every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not represent the same generality of directional fields (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, and rotation-angle representation. converting into the more explicit raw representation is done mostly for I\O and visualization.
+However, note that every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not possess the same generality of directional fields (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, or rotation-angle representation. converting into the more explicit raw representation is done mostly for I/O and visualization.
 
-In the following subchapter, we show some effects of working with different representations and converting between them.
+In the following sections, we show some effects of working with different representations and converting between them.
 
 ## [201 Principal Matching](#principalmatching)[principalmatching]
 
-One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In libdirectional we only treat order-preserving matching: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$). Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
+One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In libdirectional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
 
-Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [#diamanti_2014]. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching.
+Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [#diamanti_2014]. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
 
-principal matching is done through this function (from in [Example 201](201_PrincipalMatching/main.cpp):
+principal matching is done through this function (from in [Example 201](201_PrincipalMatching/main.cpp)):
 
 ```cpp
 directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
 directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
 ```
+`directional::effort_to_indices()` computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional undergoes along a cycle around the vertex. a directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$ (modulu $N$). Note that this can also include multiple full rotations, and therefore the index is unbounded. The <i>fractional</i> part of the index is encoded by the matching; however, matching alone cannot encode <i>integral</i> indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities).
 
-The second line devises the <i>indices</i> of each vertex from the effort. The index of a vertex is the amount of rotations a directional undergoes along a cycle around the vertex. It must return to itself, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$ (modulu $N$). Note that this can also include multiple full rotation, and therefore the index is unbounded. The <i>fractional</i> part of the index is encoded by the matching; however, matching alone cannot encode indices (for instance, a single vector field has trivial matching anywhere, but can have singularities).
-
-![([Example 201](201_PrincipalMatching/main.cpp)) Field is shown with singularities, and a single face with principal matching to its neighbors (in multiple colors). Manually follow the (natural) principal matching to see that the singularities are indeed correct.](images/201_PrincipalMatching.png)
+![([Example 201](201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
 
 
 ## [202 Sampling](#sampling)[sampling]
 
-This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In the polar mode, the user can control the index of a singularity directly. As such, the rotation angles between faces become arbitrarily large, and appear as noise. In the principal matching mode, the singularities that are computed without knowledge of rotation angles are seen, giving rise to a "singularity party". In the Cartesian mode, the field is interpolated, keeping the red band fixed, showing a field that in smooth in the Cartesian sense.
+This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a Cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. There are three modes seen in the example:
 
-![([Example 202](202_Sampling/main.cpp)) Left to right: prescribing an arbitarily high-index singularity, principal matching with perceived singularities, and interpolation with red band fixed.](images/202_Sampling.png)
+1. In the polar mode, the user can control the index of a singularity directly. As such, the rotation angles between faces become arbitrarily large, and appear as noise in the low valence cycles. 
+
+2. In the principal matching mode, the rotations are computed from the field, without prior knowledge of the polar prescribed rotations from the previous mode. The noise of the field then gives rise to a "singularity party". 
+
+3. In the Cartesian mode, the field is interpolated on the white faces, keeping the red band fixed from the polar mode. We see a field that in smooth in the Cartesian sense, with more uniformly dispersed singularities.
+
+![([Example 202](202_Sampling/main.cpp)) Left to right: the polar mode, the principal matching mode, and the Cartesian mode.](images/202_Sampling.png)
 
 ## [203 Combing](#combing)[combing]
 
-Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching (and then the new matching is a trivial zero). This operation is important in order to preapre a directional field for integration, for instance. In the presence of singulaties, the field can only be combed up to a set of connected paths that connect singularities, also known as cuts. Note that such paths don't cut the mesh to a simply connected mesh, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities. The combing is done through the function `directional::principal_combing()`.
+Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to preapre a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a set of connected paths that connect between singularities, also known as <i>cuts</i>. Note that such paths do not cut the mesh to a simply-connected patch, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities, and nothing happens. The combing is done through the function `directional::principal_combing()`.
 
 ![([Example 203](203_Combing/main.cpp)) Vector indices inside each face are colored. They are uncombed in the left image, and combed, with the cut showing, in the right image.](images/203_Combing.png) 
 
@@ -304,6 +313,7 @@ libdirectional is a budding project, and there are many algorithms in the state-
   Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014
 [#diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
   Sorkine-Hornung. [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015
+[#degoes_2016]: Fernando de Goes, Mathieu Desbrun, Yiying Tong. [Vector Field Processing on Triangle Meshes](http://geometry.caltech.edu/pubs/dGDT16.pdf), 2016.
 [#knoppel_2013]: Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter
   Schröder. [Globally Optimal Direction
   Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf),
