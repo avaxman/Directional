@@ -129,7 +129,7 @@ libdirectional uses several different representations to describe directional fi
 
 1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counterclockwise order in most libdirectional functions that process raw fields.
 2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$
-3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#levy_2008], [#crane_2010]. This representation may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full face-based field.
+3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#ray_2008], [#crane_2010]. This representation may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full face-based field.
 4. **Power Field** - An $|F|$-sized *complex* vector, representing an $N$-RoSy as a single complex number $y=u^N$, where the $N$-RoSy is the set of roots $u$. The magnitude is also encoded this way, though it may be neglected in some applications.
 5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{a_iz^i}+z^N$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
 
@@ -178,26 +178,28 @@ Given a matching (in this case, principal matching), it is possible to "comb" th
 
 ## [Cartesian Fields](#cartesian)[cartesian]
 
-The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local $2D$ basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields do not automatically contain information about the interpolation of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation. 
+The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local $2D$ basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation. 
 
-## [301 Globally Optimal Fields](#globallyoptimal)[globallyoptimal]
+## [301 Power Fields](#powerfields)[powerfields]
 
-This representation, offered in [#knoppel_2013], establishes a complex basis in each tangent plane (face in our implementation), and represents $N$-RoSy field using a \emph{power field}---a single complex number $y$ per face so that its roots $u^N=y$ are the $N$-RoSy. 
+This representation is offered in [#knoppel_2013], but they did not give it a specific name---we use the name given in [#azencot_2017].
+
+A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a <i>power vector</i>---a single complex number $y$ per face so that its root set $y=u^N$ comprise the $N$-RoSy. 
 
 By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy: $$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
-where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and similary for $g$. The field is computed through the function `directional::power_field()`.
+where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and similarly for $g$. The field is computed through the function `directional::power_field()`.
 
-It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field, by using the function `directional::power_field_precompute()`, the appropriate version of `directional::power_field()`. That is useful for when the set $B$ doesn't change, but only $y_b$ do (which means a constant left-hand size, and a changing right-hand side). Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
+For fixed set $B$ and changing $y_B$, It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field. This is done by using the function `directional::power_field_precompute()`, coupled with the appropriate version of `directional::power_field()`. Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
 
-![([Example 301](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating the power field to the rest. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
+![([Example 301](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mes. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
 
 
 ## [302 PolyVectors](#polyvectors)[polyvectors]
 
 ## Polyvector Field
-A Polyvector field [#diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent planes. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a complex polynomial in the local compex basis:
+A Polyvector field [#diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent plane. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a complex polynomial in the local compex basis:
 $$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N$$
-where the roots $P(z)=0$ are the vectors represented, and the dirichlet energy is individual per $a_i$ (with the right power $i$ in the comparison between adjacent faces). Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
+where the roots $P(z)=0$ are the vectors represented as complex numbers. The Dirichlet energy is as before, but there is a term for each $a_i$, with the right power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
 
 The example allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In the case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
 
@@ -210,7 +212,7 @@ This tutorial is a direct migration of the libigl version, as the functionality 
 </span>
 
 Vector-field guided surface parameterization is based on the idea of designing the gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields (N-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be integrable: it must be possible to break them down into individual vector fields that are gradients of scalar functions. Fields obtained by most smoothness-based design methods (eg. [#levy_2008][], [#knoppel_2013][], [#diamanti_2014][], [#bommes_2009][], [#panozzo_2014][]) do not have this property. In [#diamanti_2015][], a method for creating integrable polyvector fields was introduced. This method takes as input a given field and improves its integrability by removing the vector field curl, thus turning it into a gradient of a function ([Example 303](303_IntegrablePVs/main.cpp)).
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields (N-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be integrable: it must be possible to break them down into individual vector fields that are gradients of scalar functions. Fields obtained by most smoothness-based design methods (eg. [#ray_2008][], [#knoppel_2013][], [#diamanti_2014][], [#bommes_2009][], [#panozzo_2014][]) do not have this property. In [#diamanti_2015][], a method for creating integrable polyvector fields was introduced. This method takes as input a given field and improves its integrability by removing the vector field curl, thus turning it into a gradient of a function ([Example 303](303_IntegrablePVs/main.cpp)).
 
 ![Integration error is removed from a frame field to produce a field aligned parameterization free of triangle flips.](images/303_IntegrablePVs.png)
 
@@ -251,7 +253,7 @@ Polar fields are represented using angles. These angles may encode the rotation 
 
 ## [401 Index Prescription](#indexprescription)[indexprescription]
 
-The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature. The formulation and notation we use in libdirectional is the of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined in matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as an angle defect, and the index defines a new sum. The algorithm then solves for the smoothest field ($\delta_{ij}$ as zero as possible), in the least-squares 2-norm $\delta$:
+The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in libdirectional is the of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined in matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as an angle defect, and the index defines a new sum. The algorithm then solves for the smoothest field ($\delta_{ij}$ as zero as possible), in the least-squares 2-norm $\delta$:
 
 $$
 \delta = \text{argmin}\ |\delta_{ij}|^2\ s.t.\ H\delta = -K_0 + K.
@@ -300,6 +302,7 @@ libdirectional is a budding project, and there are many algorithms in the state-
 7. Advanced visualization techniques.
 
 # References [references]
+[#azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov.[Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
 [#bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt.
   [Mixed-integer
   quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf),
@@ -318,10 +321,7 @@ libdirectional is a budding project, and there are many algorithms in the state-
   Schröder. [Globally Optimal Direction
   Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf),
   2013.
-[#levy_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy.
-  [N-Symmetry Direction Field
-  Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf),
-  2008.
+[#ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy. [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
 [#liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping
   Wang.  [General Planar Quadrilateral Mesh Design Using Conjugate Direction
   Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf),
