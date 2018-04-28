@@ -107,9 +107,10 @@ Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
   }
 ```
 
-The size of ``fullGlyphColor`` can either be one color per vertex, per face, or per the entire mesh, and the intent will be automatically devised from the size.
+The size of ``fullGlyphColor`` can either be one color per vector, per face, or uniform for all vetors in the entire mesh; the intent will automatically be devised from the size of the matrix.
 
 ![([Example 102](102_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/102_PickingEditing.png)
+
 ## [103 Streamline Tracing](#streamlinetracing)[streamlinetracing]
 
 Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
