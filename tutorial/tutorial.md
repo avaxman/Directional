@@ -13,7 +13,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 
 * [Introduction](#chapter0:introduction)
 * [Chapter 1: I/O and Visualization](#chapter1:iovis)
-    * [101 Basic glyph rendering](#glyphrendering)
+    * [101 Glyph rendering](#glyphrendering)
     * [102 Picking and editing](#pickingediting)
     * [103 Streamline tracing](#streamlinetracing)
 * [Chapter 2: Discretization and representation](#chapter2:discandrep)
@@ -35,7 +35,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 * [References](#references)
 
 
-# Introduction [chapter0:introduction]
+# <a name="chapter0:introduction">Introduction</a>
 libdirectional is a C++ geometry processing library written as an extension to [libigl](http://libigl.github.io/libigl/), with a  speciality in directional fields. The functionality is based on the definitions and taxonomy surveyed theoretically in [#vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
 
 The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.
@@ -60,9 +60,9 @@ To access a single example, say ``202_Sampling``, go to the ``build`` subfolder,
 
 Most examples contain a component of user interaction; the instructions of what to do will be given in the command-line output upon execution.
 
-# Chapter 1: I/O and Visualization [chapter1:iovis]
+# <a name="chapter1:iovis">Chapter 1: I/O and Visualization</a>
 
-## [101 Glyph Rendering](#glyphrendering)[glyphrendering]
+## <a name="glyphrendering">101 Glyph Rendering</a>
 
 The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101](101_GlyphRendering/main.cpp), a field is read from a file as follows:
 
@@ -71,18 +71,17 @@ directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField)
 directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singPositions, singIndices);
 ```
 
-The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are consequently <i>vertex-based</i>. 
+The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are consequently <i>vertex-based</i>.
 
 The field is drawn on the mesh as follows:
 
 ```cpp
 if (drawSingularities)
     directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
-  
-  directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
+directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
 ```
 
-These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer. 
+These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer.
 
 ``directional::singularity_spheres()`` creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function). The spheres are only created where the index is different than $0$.
 
