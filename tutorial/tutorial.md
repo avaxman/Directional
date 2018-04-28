@@ -253,34 +253,34 @@ Polar fields are represented using angles. These angles may encode the rotation 
 
 ## [401 Index Prescription](#indexprescription)[indexprescription]
 
-The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in libdirectional is the of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined in matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as an angle defect, and the index defines a new sum. The algorithm then solves for the smoothest field ($\delta_{ij}$ as zero as possible), in the least-squares 2-norm $\delta$:
+The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in libdirectional is that of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
 
 $$
 \delta = \text{argmin}\ |\delta_{ij}|^2\ s.t.\ H\delta = -K_0 + K.
 $$
 
-$H$ is the matrix that defines the basis-cycles sum, $K_0$ is the original curvature of the basis cycle, and $K$ is the prescribed curvature. $K$ defines singularities: for regular cycles, we prescribe $K=0$, and for a singular cycle with singularity index $\frac{1}{N}$, we set $K=\frac{2\pi}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See [#crane_2010] for exact details. If the input obeys the sum, the result has only the prescribed indices around the cycles, and nothing else. As the representation is differential, there is still a global degree of freedom in setting a single direction in a single arbitrary face.
+$H$ is the matrix that defines the basis-cycles sum, $K_0$ is the original curvature of the basis cycle, and $K$ is the prescribed curvature. $K$ defines singularities: for regular cycles, we prescribe $K=0$, and for a singular cycle with prescribed singularity index $\frac{1}{N}$, we set $K=\frac{2\pi}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See [#crane_2010] for exact details. If the input obeys the sum, the result obeys the prescribed indices around the cycles, and nothing else. As the representation is differential, there is still a global degree of freedom in setting a single direction in a single arbitrary face.
 
-Note that the correct definition for "cycle curvature" corresponds to the so-called "cycle holonomy", only up to integer multiples of $\pi$. However, in the discrete setting, the curvature is computed as the exact angle defect, in which for inner vertices we use $2\pi-\sum{\alpha}$, and for boundary vertices we use $\pi - \sum{\alpha}$ ($\alpha$ are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary loop cycle, we add up all the defects. That is requires for exact discrete Poincar&eacute index consistency.
+Note that the correct definition for "cycle curvature" corresponds to the so-called "cycle holonomy", only up to integer multiples of $2\pi$. However, in the discrete setting, the curvature should theoretically be computed as the exact angle defect, in which for inner vertices we use $2\pi-\sum{\alpha}$, and for boundary vertices we use $\pi - \sum{\alpha}$ ($\alpha$ are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary loop cycle, we add up all the defects. That is requires for exact discrete Poincar&eacute; index consistency.
 
 ### Basis Cycles
 
-The basis cycles form the cycles around which curvatures (and singularities) are prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_i|$, where $E_i$ is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains a 1 or -1 depending on the (arbitrary) orientation of the dual edge participating in the cycle. There are three types of cycles, according to their order in the rows of $H$: 
+The basis cycles form the cycles around which curvatures (and singularities) are prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_I|$, where $E_I$ is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains 1 or -1 values depending on the (arbitrary) orientation of the dual edge participating in the cycle to the respective face. There are three types of cycles, so ordered in the rows of $H$: 
 
-1. $1$-ring dual cycles around each inner vertex, on which vertex-based singularities can be encoded (the relevant part of $H$ is basically $d_0^T$ in discrete exterior calculus).
+1. $1$-ring dual cycles around each inner vertex, on which vertex-based singularities can be encoded (the relevant part of $H$ is basically $\left(d_0\right)^T$ in discrete exterior calculus, restricted to inner edges).
 2. Cycles around mesh boundary loops. 
 3. Cycles around topological generators (independent handles).
 
-The method `dual_cycles()` computes the proper basis cycles and matrix $H$. To be able to intuitively prescribe singularities to inner vertices, the method ``directional::dual_cycles()`` also returns a conversion vector ``vertex2cycle``, and the list of indices of inner edges from the list of edges.
+The method `directional::dual_cycles()` computes the proper basis cycles and matrix $H$. To be able to intuitively prescribe singularities to inner vertices, the method also returns a conversion vector ``vertex2cycle``, and the list of indices of inner edges from the list of edges.
 
-The singularity indices are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle.
+The singularity indices that are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle.
 
 If the prescribed indices do not conform to correct sum, a result will still be computed by least squares, but it will be unpredictable.
 
-The algorithm is done through the function ``directional::index_prescription()``, which also accepts a solver for precomputation.
+The algorithm is performed through the function ``directional::index_prescription()``, which also accepts a solver for precomputation.
 
 
-![([Example 401](401_IndexPrescription/main.cpp)) Indices are prescribed on three singularities, and on the boundary loop, to match the index theorem, and the computed field is smooth and obey these indices exactly.](images/401_IndexPrescription.png) 
+![([Example 401](401_IndexPrescription/main.cpp)) Indices are prescribed on three vertex singularities, and on the boundary loop, to match the index theorem. The computed field is smooth and obeys these indices exactly.](images/401_IndexPrescription.png) 
 
 
 # Outlook for continuing development [future]
@@ -295,46 +295,24 @@ libdirectional is a budding project, and there are many algorithms in the state-
 
 4. Differential operators and Hodge decomposition.
 
-5. Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from libdirectional, but  they are not entirely compatible.
+5. Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from libdirectional, but they are not entirely compatible.
 
 6. Support for tensor fields.
 
-7. Advanced visualization techniques.
+7. Advanced and better visualization techniques.
 
 # References [references]
-[#azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov.[Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
-[#bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt.
-  [Mixed-integer
-  quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf),
-  2009.
-[#bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly
-  [Shape-Up: Shaping Discrete Geometry with
-  Projections](http://lgg.epfl.ch/publications/2012/shapeup.pdf), 2012
-[#crane_2010]: Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, [Trivial Connections on Discrete Surfaces](https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/), 2010.<br>
-[#diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
-  Sorkine-Hornung. [Designing N-PolyVector Fields with Complex
-  Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014
-[#diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga
-  Sorkine-Hornung. [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015
-[#degoes_2016]: Fernando de Goes, Mathieu Desbrun, Yiying Tong. [Vector Field Processing on Triangle Meshes](http://geometry.caltech.edu/pubs/dGDT16.pdf), 2016.
-[#knoppel_2013]: Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter
-  Schröder. [Globally Optimal Direction
-  Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf),
-  2013.
-[#ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy. [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
-[#liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping
-  Wang.  [General Planar Quadrilateral Mesh Design Using Conjugate Direction
-  Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf),
-  2008.
-[#solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes.  [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf),
-  2017.
-[#panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga
-  Sorkine-Hornung.  [Frame Fields: Anisotropic and Non-Orthogonal Cross
-  Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf),
-  2014.
-[#vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo,
-  David Bommes, Klaus Hildebrandt, Mirela Ben-Chen. [Directional Field
-  Synthesis, Design, and
-  Processing](https://www.google.com/search?q=Directional+Field+Synthesis+Design+and+Processing),
-  2016
+[#azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
+[#bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Mixed-integer quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf), 2009.
+[#bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly, [Shape-Up: Shaping Discrete Geometry with Projections](http://lgg.epfl.ch/publications/2012/shapeup.pdf), 2012.
+[#crane_2010]: Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, [Trivial Connections on Discrete Surfaces](https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/), 2010.
+[#diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Designing N-PolyVector Fields with Complex Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014.
+[#diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015.
+[#degoes_2016]: Fernando de Goes, Mathieu Desbrun, Yiying Tong, [Vector Field Processing on Triangle Meshes](http://geometry.caltech.edu/pubs/dGDT16.pdf), 2016.
+[#knoppel_2013]: Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
+[#ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy, [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
+[#liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, [General Planar Quadrilateral Mesh Design Using Conjugate Direction Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf), 2008.
+[#solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf), 2017.
+[#panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
+[#vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
 
