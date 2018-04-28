@@ -196,7 +196,6 @@ For fixed set $B$ and changing $y_B$, It is possible to speed up computations by
 
 ## [302 PolyVectors](#polyvectors)[polyvectors]
 
-## Polyvector Field
 A Polyvector field [#diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent plane. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a complex polynomial in the local compex basis:
 $$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N$$
 where the roots $P(z)=0$ are the vectors represented as complex numbers. The Dirichlet energy is as before, but there is a term for each $a_i$, with the right power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
