@@ -42,7 +42,7 @@ The underlying structure extends the general philosophy of [libigl](http://libig
 
 The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality to the theoretical concepts of directional fields and their capabilities.
 
-##Installing the tutorial examples
+### Installing the tutorial examples
 
 This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of libdirectional, where every subchapter relates to a single example. The tutorial code can be installed by going into the `Tutorial` folder, and following the following instructions:
 
