@@ -54,7 +54,7 @@ endif()
 
 # Chapter 3
 if(TUTORIALS_CHAPTER3)
-  add_subdirectory("301_GloballyOptimal")
+  add_subdirectory("301_PowerFields")
   add_subdirectory("302_PolyVectors")
   add_subdirectory("303_IntegrablePVs")
   add_subdirectory("304_ConjugateFields")

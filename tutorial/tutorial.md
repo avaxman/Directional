@@ -13,18 +13,18 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 
 * [Introduction](#chapter0:introduction)
 * [Chapter 1: I/O and Visualization](#chapter1:iovis)
-    * [101 Basic Glyph Rendering](#glyphrendering)
+    * [101 Basic glyph rendering](#glyphrendering)
     * [102 Picking and editing](#pickingediting)
-    * [103 Streamline Tracing](#streamlinetracing)
-* [Chapter 2: Discretization and Representation](#chapter2:discandrep)
+    * [103 Streamline tracing](#streamlinetracing)
+* [Chapter 2: Discretization and representation](#chapter2:discandrep)
     * [Discretization](#discretization)
     * [Representation](#representation)
-    * [201 Principal Matching](#principalmatching)
+    * [201 Principal matching](#principalmatching)
     * [202 Sampling](#sampling)
     * [203 Combing](#combing)
-* [Chapter 3: Cartesian Methods](#chapter3:cartesian)
-    * [Cartesian Fields](#cartesian)
-    * [301 Globally Optimal Fields](#globallyoptimal)
+* [Chapter 3: Cartesian methods](#chapter3:cartesian)
+    * [Cartesian fields](#cartesian)
+    * [301 Power fields](#powerfields)
     * [302 PolyVectors](#polyvectors)
     * [303 Integrable PolyVectors](#integrablePVs)
     * [304 Conjugate Fields](#conjugatefields)
@@ -36,7 +36,7 @@ html header:   <script type="text/javascript" src="http://cdn.mathjax.org/mathja
 
 
 # Introduction [chapter0:introduction]
-libdirectional is a C++ geometry processing library written as an extension to [libigl](http://libigl.github.io/libigl/), with a  speciality in directional fields. The functionality is based on the definitions and arrangement surveyed theoretically in [#vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
+libdirectional is a C++ geometry processing library written as an extension to [libigl](http://libigl.github.io/libigl/), with a  speciality in directional fields. The functionality is based on the definitions and taxonomy surveyed theoretically in [#vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
 
 The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.
 
@@ -56,9 +56,9 @@ make
 
 This will build all tutorial examples in the `build` folder. To build in windows, use the `cmake-gui .` options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the "startup project". 
 
-To access a single example, say ``202_Sampling``, go to the ``build`` and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder automatically in each example. 
+To access a single example, say ``202_Sampling``, go to the ``build`` subfolder, and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder directly for each example. 
 
-Most examples contain a component of user interaction; the instruction on what to do will be given in the commandline output immediately after executing the example.
+Most examples contain a component of user interaction; the instructions of what to do will be given in the command-line output upon execution.
 
 # Chapter 1: I/O and Visualization [chapter1:iovis]
 
@@ -71,9 +71,9 @@ directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField)
 directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singPositions, singIndices);
 ```
 
-The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are then <i>vertex-based</i>. 
+The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are consequently <i>vertex-based</i>. 
 
-The field is then drawn on the mesh as follows:
+The field is drawn on the mesh as follows:
 
 ```cpp
 if (drawSingularities)
@@ -82,15 +82,15 @@ if (drawSingularities)
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
 ```
 
-These two operations in fact do not produce any drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer. 
+These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer. 
 
-``directional::singularity_spheres`` creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function. The spheres are only created where the index is different than $0$.
+``directional::singularity_spheres()`` creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function). The spheres are only created where the index is different than $0$.
 
-``directional::glyph_lines_raw`` creates lines on the faces that constitute the simple <i>glyph drawing</i>: simply drawing the vectors upon the faces as they are. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header.
+``directional::glyph_lines_raw()`` creates lines on the faces that constitute the <i>glyph drawing</i>: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header.
   
-By default, the size of each vector is set to be related to the average edge length, keeping the ratios between the lengths of the actual vectors intact. The base length and with can be manually set by the extended version of the function. 
+Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by the extended version of the function. 
 
-![([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh.](images/101_GlyphRendering.png)
+![([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png) 
 
 ## [102 Picking and editing](#pickingediting)[pickingediting]
 
