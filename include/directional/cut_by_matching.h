@@ -47,7 +47,8 @@ namespace directional
                                   Eigen::MatrixXi& cutF,
                                   Eigen::VectorXi& cut2wholeIndices,
                                   Eigen::VectorXi& edge2TransitionIndices,
-                                  Eigen::SparseMatrix<double> vt2cMat)
+                                  Eigen::SparseMatrix<double>& vt2cMat,
+                                  Eigen::SparseMatrix<double>& constraintMat)
   {
     
     using namespace Eigen;
@@ -132,7 +133,8 @@ namespace directional
     }
     
     //m2v is minimal amount of variables after constraint factorization
-    vector<Triplet<double> > v2cTriplets, m2vTriplets;
+    vector<Triplet<double> > v2cTriplets, m2vTriplets, constTriplets;
+    int currConst=0;
     for (int i=0;i<VH.rows();i++){
       std::vector<MatrixXi> permMatrices;
       std::vector<int> permIndices;  //in the space #V + #transitions
@@ -189,19 +191,64 @@ namespace directional
         for (int k=0;k<permIndices.size();k++)
           if (cleanPermIndices[j]==permIndices[k])
             cleanPermMatrices[j]+=permMatrices[k];
+        if (cleanPermIndices[j]==i)
+          cleanPermMatrices[j]-=MatrixXd::Identity(N,N);
       }
       
       //if not all matrices are zero, there is a constraint
-      //TODO: constaint
+      bool isConstraint=false;
+      for (int j=0;j<cleanPermMatrices.size();j++)
+        if (cleanPermMatrices[j].abs().maxCoeff()!=0)
+          isConstraint=true;
       
+      if (isConstraint){
+        for (int j=0;j<cleanPermMatrices.size();j++)
+          for (int k=0;k<N;k++)
+            for (int l=0;l<N;l++)
+              constraintTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
+        currConst++;
+            
+      }
     }
     
     vt2cMat.conservativeResize(3*N*wholeF.rows(), wholeV.rows()+currTransition);
     vt2cMat.setFromTriplets(v2cTriplets.begin(), v2cTriplets.end());
+    
+    constraintMat.conservativeResize(N*currConst, wholeV.rows()+currTransition);
+    constraintMat.setFromTriplets(v2cTriplets.begin(), v2cTriplets.end());
+    
+    //cutting the mesh
+    vector<int> cut2whole;
+    vector<RowVector3d> cutVlist;
+    cutF.conservativeResize(F.rows(),3);
+    for (int i=0;i<VH.rows();i++){
+      //creating corners whereever we have non-trivial matching
+      int beginH=VH(i);
+      int currH=beginH;
+      
+      do{
+        if (matching(HE(currH))!=0){
+          cut2Whole.push_back(i);
+          cutVlist.push_back(wholeV.row(i));
+        }
+        
+        for (int j=0;j<3;j++)
+          if (wholeF(HF(currH),j)==i)
+            cutF(HF(currH),j)=cut2Whole.size()-1;
+        
+        currH=twinH(prevH(currH));
+      }while (beginH!=currH);
+    }
+    
+    cut2wholeIndices.conservativeResize(cut2Whole.size());
+    for (int i=0;i<cut2WholeIndices.size();i++)
+      cut2WholeIndices(i)=cut2Whole[i];
+    
+    cutV.conservativeResize(cutVlist.size());
+    for (int i=0;i<cutVlist.size();i++)
+      cutV.row(i)=cutVlist[i];
+    
   }
-  
-  //
-  
 }
 
 

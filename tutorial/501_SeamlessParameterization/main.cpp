@@ -31,7 +31,9 @@ Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
 Eigen::MatrixXd cutUV;
 
-Eigen::SparseMatrix<double> vertex2CornerMat;   //between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
+Eigen::SparseMatrix<double> vt2cMat;
+Eigen::SparseMatrix<double> constraintMat;
+//between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
 Eigen::VectorXd edgeWeights;
 
 bool showCombedField=false, showSingularities=false;
@@ -126,11 +128,6 @@ int main()
   
   //cutting and parameterizing
   
-  //Uniform weights for now
-  edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
-  directional::cut_by_matching(wholeV, wholeF, combedMatching, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vertex2CornerMat);
-  directional::parameterize(cutV, cutF, edgeWeights, vertex2CornerMat, cutUV);
-  
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;
   for (int i=0;i<wholeV.rows();i++)
@@ -147,6 +144,13 @@ int main()
   }
   
   igl::barycenter(wholeV, wholeF, barycenters);
+  
+  //Uniform weights for now
+  edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
+  directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singIndices, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat);
+  
+  directional::parameterize(wholeV, wholeF, edgeWeights, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, cutUV);
+  
   
   glyphPrincipalColors<<1.0,0.0,0.5,
   0.0,1.0,0.5,
