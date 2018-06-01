@@ -29,7 +29,7 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
-Eigen::MatrixXd cutUV;
+Eigen::MatrixXd cornerUV;
 
 Eigen::SparseMatrix<double> vt2cMat;
 Eigen::SparseMatrix<double> constraintMat;
@@ -90,7 +90,7 @@ void update_mesh()
     viewer.data.clear();
     viewer.data.set_face_based(true);
     viewer.data.set_mesh(fullV, fullF);
-    viewer.data.set_uv(cutUV);
+    viewer.data.set_uv(cornerUV);
     
   }
   
@@ -149,16 +149,13 @@ int main()
   edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
   directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singIndices, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat);
   
-  directional::parameterize(wholeV, wholeF, edgeWeights, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, cutUV);
-  
+  directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, vt2cMat, constraintMat, cornerUV);
   
   glyphPrincipalColors<<1.0,0.0,0.5,
   0.0,1.0,0.5,
   1.0,0.5,0.0,
   0.0,0.5,1.0,
   0.5,1.0,0.0;
-  
-
   
   update_mesh();
   viewer.callback_key_down = &key_down;

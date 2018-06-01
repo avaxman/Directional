@@ -40,11 +40,9 @@ namespace directional
                                const Eigen::MatrixXi& FE,
                                const Eigen::MatrixXd rawField,
                                const Eigen::VectorXd& edgeWeights,
-                               const Eigen::VectorXi& cut2wholeIndices,
-                               const Eigen::VectorXi& edge2TransitionIndices,
                                const Eigen::SparseMatrix<double> vt2cMat,
                                const Eigen::SparseMatrix<double> constraintMat,
-                               Eigen::MatrixXd& cutUV)
+                               Eigen::MatrixXd& cornerUV)
   
 
   {
@@ -54,16 +52,16 @@ namespace directional
     //TODO: in vertex sapce, not corner...
     int N = rawField.cols()/3;
     //constructing face differentials
-    Triplet<double> d0Triplets;
-    Triplet<double> M1Triplets;
-    VectorXd gamma(3*N*wholeF.rows());;
+    vector<Triplet<double>> d0Triplets;
+    vector<Triplet<double>> M1Triplets;
+    VectorXd gamma(3*N*wholeF.rows());
     for (int i=0;i<wholeF.rows();i++){
       for (int j=0;j<3;j++){
         for (int k=0;k<N;k++){
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, -1.0));
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*(j+1)%3+k, 1.0));
-          Rowvector3d edgeVector=wholeV.row(F(i,(j+1)%3))-wholeV.row(F(i,j));
-          gamma(3*N*i+N*j+k)=rawField.block(i, 3*k, 1,3).dot(edgeVector);
+          Vector3d edgeVector=(wholeV.row(wholeF(i,(j+1)%3))-wholeV.row(wholeF(i,j))).transpose();
+          gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0);
           M1Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, edgeWeights(FE(i,j))));
         }
       }
@@ -74,9 +72,11 @@ namespace directional
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     
     SparseMatrix<double> d0T=d0.transpose();
-    EtE=d0T*M1*d0;
+    SparseMatrix<double> vt2cMatTranspose=vt2cMat.transpose();
+
+    SparseMatrix<double> EtE=vt2cMatTranspose*d0T*M1*d0*vt2cMat;
     
-    SparseMatrix A(3*N*wholeF.rows()+constraintMat.rows());
+    SparseMatrix<double> A(3*N*wholeF.rows()+constraintMat.rows(),3*N*wholeF.rows()+constraintMat.rows() );
     
     vector<Triplet<double>> ATriplets;
     for (int k=0; k<EtE.outerSize(); ++k)
@@ -84,18 +84,29 @@ namespace directional
         ATriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
     
     for (int k=0; k<constraintMat.outerSize(); ++k){
-      for (SparseMatrix<double>::InnerIterator constraintMat(EtE,k); it; ++it){
+      for (SparseMatrix<double>::InnerIterator it(constraintMat,k); it; ++it){
         ATriplets.push_back(Triplet<double>(it.row()+3*N*wholeF.rows(), it.col(), it.value()));
         ATriplets.push_back(Triplet<double>(it.col(), it.row()+3*N*wholeF.rows(), it.value()));
       }
     }
     
-    VectorXd b=VectorXd::Zero(3*N*wholeF.rows()+constraintMat.rows());
-    b.segment(0,3*N*wholeF.rows())=d0T*gamma;
+    VectorXd b=VectorXd::Zero(vt2cMatTranspose.rows()+constraintMat.rows());
+    b.segment(0,3*N*wholeF.rows())=vt2cMatTranspose*d0T*gamma;
     
-    VectorXd x = A.ldlt().solve(b);
-    
-    
+    SimplicialLDLT<SparseMatrix<double> > solver;
+    solver.compute(A);
+    if(solver.info()!=Success) {
+      cout<<"Compute failed!!!"<<endl;
+      return;
+    }
+    VectorXd x = solver.solve(b);
+    if(solver.info()!=Success) {
+      cout<<"Solving failed!!!"<<endl;
+      return;
+    }
+
+    //the results are packets of N functions for each vertex, and need to be allocated for corners
+    cornerUV=vt2cMat*x;
   }
 }
 

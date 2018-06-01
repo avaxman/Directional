@@ -64,11 +64,11 @@ namespace directional
     hedra::dcel(D,wholeF,EV,EF,EFi,innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH, twinH);
     
     vector<MatrixXi> constParmMatrices(N);
-    MatrixXd unitPermMatrix=MatrixXd::Zero(N,N);
+    MatrixXi unitPermMatrix=MatrixXi::Zero(N,N);
     for (int i=0;i<N;i++)
       unitPermMatrix((i+1)%N,i)=1.0;
     
-    constParmMatrices[0]=MatrixXd::Identity(N,N);
+    constParmMatrices[0]=MatrixXi::Identity(N,N);
     for (int i=1;i<N;i++)
       constParmMatrices[i]=unitPermMatrix*constParmMatrices[i-1];
     
@@ -158,18 +158,18 @@ namespace directional
         
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
-        MatrixXd nextPermMatrix = constParmMatrices[(Halfedge2Matching(nextHalfedge)+N)%N];
+        MatrixXi nextPermMatrix = constParmMatrices[(Halfedge2Matching(nextHalfedge)+N)%N];
         int nextTransition = Halfedge2TransitionIndices(nextHalfedge);
         if (nextTransition >=0){  //Pe*f + Je
           for (int j=0;j<permMatrices.size();j++)
             permMatrices[j]=nextPermMatrix*permMatrices[j];
           
           //and identity on the fresh transition
-          permMatrices.push_back(MatrixXd::Identity(N,N));
+          permMatrices.push_back(MatrixXi::Identity(N,N));
           permIndices.push_back(nextTransition);
         } else { // (Pe*(f-Je)) (Pe is alreay inverse since matching is signed on halfedges
           //reverse order
-          permMatrices.push_back(-MatrixXd::Identity(N,N));
+          permMatrices.push_back(-MatrixXi::Identity(N,N));
           permIndices.push_back(-nextTransition);
           
           for (int j=0;j<permMatrices.size();j++)
@@ -184,28 +184,28 @@ namespace directional
       
       std::set<int> cleanPermIndicesSet(permIndices.begin(), permIndices.end());
       std::vector<int> cleanPermIndices(cleanPermIndicesSet.begin(), cleanPermIndicesSet.end());
-      std::vector<MatrixXd> cleanPermMatrices(cleanPermIndices.size());
+      std::vector<MatrixXi> cleanPermMatrices(cleanPermIndices.size());
       
       for (int j=0;j<cleanPermIndices.size();j++){
-        cleanPermMatrices[j]=MatrixXd::Zero(N,N);
+        cleanPermMatrices[j]=MatrixXi::Zero(N,N);
         for (int k=0;k<permIndices.size();k++)
           if (cleanPermIndices[j]==permIndices[k])
             cleanPermMatrices[j]+=permMatrices[k];
         if (cleanPermIndices[j]==i)
-          cleanPermMatrices[j]-=MatrixXd::Identity(N,N);
+          cleanPermMatrices[j]-=MatrixXi::Identity(N,N);
       }
       
       //if not all matrices are zero, there is a constraint
       bool isConstraint=false;
       for (int j=0;j<cleanPermMatrices.size();j++)
-        if (cleanPermMatrices[j].abs().maxCoeff()!=0)
+        if (cleanPermMatrices[j].cwiseAbs().maxCoeff()!=0)
           isConstraint=true;
       
       if (isConstraint){
         for (int j=0;j<cleanPermMatrices.size();j++)
           for (int k=0;k<N;k++)
             for (int l=0;l<N;l++)
-              constraintTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
+              constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
         currConst++;
             
       }
@@ -215,12 +215,12 @@ namespace directional
     vt2cMat.setFromTriplets(v2cTriplets.begin(), v2cTriplets.end());
     
     constraintMat.conservativeResize(N*currConst, wholeV.rows()+currTransition);
-    constraintMat.setFromTriplets(v2cTriplets.begin(), v2cTriplets.end());
+    constraintMat.setFromTriplets(constTriplets.begin(), constTriplets.end());
     
     //cutting the mesh
     vector<int> cut2whole;
     vector<RowVector3d> cutVlist;
-    cutF.conservativeResize(F.rows(),3);
+    cutF.conservativeResize(wholeF.rows(),3);
     for (int i=0;i<VH.rows();i++){
       //creating corners whereever we have non-trivial matching
       int beginH=VH(i);
@@ -228,23 +228,23 @@ namespace directional
       
       do{
         if (matching(HE(currH))!=0){
-          cut2Whole.push_back(i);
+          cut2whole.push_back(i);
           cutVlist.push_back(wholeV.row(i));
         }
         
         for (int j=0;j<3;j++)
           if (wholeF(HF(currH),j)==i)
-            cutF(HF(currH),j)=cut2Whole.size()-1;
+            cutF(HF(currH),j)=cut2whole.size()-1;
         
         currH=twinH(prevH(currH));
       }while (beginH!=currH);
     }
     
-    cut2wholeIndices.conservativeResize(cut2Whole.size());
-    for (int i=0;i<cut2WholeIndices.size();i++)
-      cut2WholeIndices(i)=cut2Whole[i];
+    cut2wholeIndices.conservativeResize(cut2whole.size());
+    for (int i=0;i<cut2wholeIndices.size();i++)
+      cut2wholeIndices(i)=cut2whole[i];
     
-    cutV.conservativeResize(cutVlist.size());
+    cutV.conservativeResize(cutVlist.size(),3);
     for (int i=0;i<cutVlist.size();i++)
       cutV.row(i)=cutVlist[i];
     
