@@ -77,7 +77,22 @@ namespace directional
 
     SparseMatrix<double> EtE=vt2cMatTranspose*d0T*M1*d0*vt2cMat;
     
-    SparseMatrix<double> A(3*N*wholeF.rows()+constraintMat.rows(),3*N*wholeF.rows()+constraintMat.rows() );
+    //filtering out symmetry - only for N=4!
+    SparseMatrix<double> SymmMat(vt2cMat.cols(), vt2cMat.cols()/2);
+    vector<Triplet<double>> SymmMatTriplets;
+    for (int i=0;i<vt2cMat.cols();i+=4){
+      SymmMatTriplets.push_back(Triplet<double>(i, i/2, 1.0));
+      SymmMatTriplets.push_back(Triplet<double>(i+1, i/2+1, 1.0));
+      SymmMatTriplets.push_back(Triplet<double>(i+2, i/2, -1.0));
+      SymmMatTriplets.push_back(Triplet<double>(i+3, i/2+1, -1.0));
+    }
+    
+    SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
+    
+    EtE = SymmMat.transpose()*EtE*SymmMat;
+    SparseMatrix<double> C = constraintMat*SymmMat;
+    
+    SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
     
     vector<Triplet<double>> ATriplets;
     for (int k=0; k<EtE.outerSize(); ++k)
@@ -86,13 +101,13 @@ namespace directional
     
     for (int k=0; k<constraintMat.outerSize(); ++k){
       for (SparseMatrix<double>::InnerIterator it(constraintMat,k); it; ++it){
-        ATriplets.push_back(Triplet<double>(it.row()+3*N*wholeF.rows(), it.col(), it.value()));
-        ATriplets.push_back(Triplet<double>(it.col(), it.row()+3*N*wholeF.rows(), it.value()));
+        ATriplets.push_back(Triplet<double>(it.row()+EtE.rows(), it.col(), it.value()));
+        ATriplets.push_back(Triplet<double>(it.col(), it.row()+EtE.rows(), it.value()));
       }
     }
     
-    VectorXd b=VectorXd::Zero(vt2cMatTranspose.rows()+constraintMat.rows());
-    b.segment(0,vt2cMatTranspose.rows())=vt2cMatTranspose*d0T*gamma;
+    VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
+    b.segment(0,EtE.rows())=SymmMat.transpose()*vt2cMatTranspose*d0T*M1*gamma;
     
     SparseLU<SparseMatrix<double> > solver;
     cout<<"Computing A..."<<endl;
@@ -110,7 +125,7 @@ namespace directional
     
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    cornerUV=vt2cMat*x;
+    cornerUV=vt2cMat*SymmMat*x;
   }
 }
 
