@@ -15,6 +15,7 @@
 #include <directional/tree.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
+#include <igl/min_quad_with_fixed.h>
 
 #include <Eigen/Core>
 #include <queue>
@@ -91,19 +92,22 @@ namespace directional
     }
     
     VectorXd b=VectorXd::Zero(vt2cMatTranspose.rows()+constraintMat.rows());
-    b.segment(0,3*N*wholeF.rows())=vt2cMatTranspose*d0T*gamma;
+    b.segment(0,vt2cMatTranspose.rows())=vt2cMatTranspose*d0T*gamma;
     
-    SimplicialLDLT<SparseMatrix<double> > solver;
+    SparseLU<SparseMatrix<double> > solver;
+    cout<<"Computing A..."<<endl;
     solver.compute(A);
     if(solver.info()!=Success) {
       cout<<"Compute failed!!!"<<endl;
       return;
     }
+     cout<<"Computing A done!"<<endl;
     VectorXd x = solver.solve(b);
     if(solver.info()!=Success) {
       cout<<"Solving failed!!!"<<endl;
       return;
     }
+    
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     cornerUV=vt2cMat*x;

@@ -13,9 +13,10 @@
 #include <directional/principal_combing.h>
 #include <directional/cut_by_matching.h>
 #include <directional/parameterize.h>
+#include <directional/polyvector_field_cut_mesh_with_singularities.h>
 
 
-int currF=0, N;
+int N=4;
 Eigen::MatrixXi wholeF, cutF;
 Eigen::MatrixXd wholeV, cutV, rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
@@ -25,16 +26,20 @@ Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singPositions;
+Eigen::MatrixXd constPositions;
 Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
 Eigen::MatrixXd cornerUV;
+Eigen::MatrixXi faceIsCut;
 
 Eigen::SparseMatrix<double> vt2cMat;
 Eigen::SparseMatrix<double> constraintMat;
 //between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
 Eigen::VectorXd edgeWeights;
+
+Eigen::VectorXi constrainedVertices;
 
 bool showCombedField=false, showSingularities=false;
 
@@ -48,8 +53,6 @@ void update_mesh()
   
   if (!viewer.core.show_texture){
     fullC=Eigen::MatrixXd::Constant(cutF.rows(),3, 1.0);
-    fullC.row(currF)<<0.5,0.1,0.1;
-    
     fullV=wholeV;
     fullF=wholeF;
     
@@ -63,13 +66,23 @@ void update_mesh()
     if (showSingularities)
       directional::singularity_spheres(wholeV, wholeF, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
     
+    double l = igl::avg_edge_length(wholeV, wholeF);
+    Eigen::MatrixXd constColors(constPositions.rows(),3);
+    constColors.setConstant(0.5);
+    directional::point_spheres(constPositions, l/5.0, constColors, 8,  false, true, fullV, fullF, fullC);
+    
     //drawing seam edges
     if (showCombedField){
       double l = igl::avg_edge_length(wholeV, wholeF);
       std::vector<int> seamEdges;
-      for (int i=0;i<EV.rows();i++)
+      /*for (int i=0;i<EV.rows();i++)
         if (combedMatching(i)!=0)
-          seamEdges.push_back(i);
+          seamEdges.push_back(i);*/
+      
+      for (int i=0;i<wholeF.rows();i++)
+        for (int j=0;j<3;j++)
+          if (faceIsCut(i,j))
+            seamEdges.push_back(FE(i,j));
       
       Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
       for (int i=0;i<seamEdges.size();i++){
@@ -121,8 +134,10 @@ int main()
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere_param.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
+  
+
+  
   //computing
-  directional::principal_combing(wholeV,wholeF, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,N,prinIndices);
   
@@ -143,11 +158,35 @@ int main()
     singIndices(i)=singIndicesList[i];
   }
   
+  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
+  directional::principal_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
+  
   igl::barycenter(wholeV, wholeF, barycenters);
   
   //Uniform weights for now
   edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
-  directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singIndices, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat);
+  cutF=wholeF;
+  cutV=wholeV;
+
+  //setting combed matching in cut edges without matching to matching = 4 to be compatible with cutting
+  for (int i=0;i<wholeF.rows();i++)
+    for (int j=0;j<3;j++)
+      if ((faceIsCut(i,j))&&(combedMatching(FE(i,j))==0))
+        combedMatching(FE(i,j))=N;
+  directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singPositions, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
+  
+  
+  std::vector<int> constPositionsList;
+  for (int i=0;i<wholeV.rows();i++)
+    if (constrainedVertices(i)!=0){
+      constPositionsList.push_back(i);
+    }
+  
+  constPositions.resize(constPositionsList.size(),3);
+  for (int i=0;i<constPositionsList.size();i++){
+    constPositions.row(i)=wholeV.row(constPositionsList[i]);
+  }
   
   directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, vt2cMat, constraintMat, cornerUV);
   

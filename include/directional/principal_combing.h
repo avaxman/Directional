@@ -100,6 +100,56 @@ namespace directional
     principal_combing(V, F, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   }
   
+  //version with prescribed cuts from faces
+  IGL_INLINE void principal_combing(const Eigen::MatrixXd& V,
+                                    const Eigen::MatrixXi& F,
+                                    const Eigen::MatrixXi& EV,
+                                    const Eigen::MatrixXi& EF,
+                                    const Eigen::MatrixXi& FE,
+                                    const Eigen::MatrixXi& faceIsCut,
+                                    const Eigen::MatrixXd& rawField,
+                                    Eigen::MatrixXd& combedField, 
+                                    Eigen::VectorXi& combedMatching,
+                                    Eigen::VectorXd& combedEffort)
+  {
+    using namespace Eigen;
+    VectorXi matching;
+    VectorXd effort;
+    principal_matching(V,F,EV, EF,FE,rawField,matching,effort);
+    //flood-filling through the matching to comb field
+    combedField.conservativeResize(rawField.rows(), rawField.cols());
+    int N=rawField.cols()/3;
+    //dual tree to find combing routes
+    VectorXi visitedFaces=VectorXi::Constant(F.rows(),1,0);
+    std::queue<std::pair<int,int> > faceMatchingQueue;
+    faceMatchingQueue.push(std::pair<int,int>(0,0));
+    do{
+      std::pair<int,int> currFaceMatching=faceMatchingQueue.front();
+      faceMatchingQueue.pop();
+      if (visitedFaces(currFaceMatching.first))
+        continue;
+      visitedFaces(currFaceMatching.first)=1;
+      
+      //combing field to start from the matching index
+      combedField.block(currFaceMatching.first, 0, 1, 3*(N-currFaceMatching.second))=rawField.block(currFaceMatching.first, 3*currFaceMatching.second, 1, 3*(N-currFaceMatching.second));
+      combedField.block(currFaceMatching.first, 3*(N-currFaceMatching.second), 1, 3*currFaceMatching.second)=rawField.block(currFaceMatching.first, 0, 1, 3*currFaceMatching.second);
+      
+      for (int i=0;i<3;i++){
+        int nextMatching=(matching(FE(currFaceMatching.first,i)));
+        int nextFace=(EF(FE(currFaceMatching.first,i),0)==currFaceMatching.first ? EF(FE(currFaceMatching.first,i),1) : EF(FE(currFaceMatching.first,i),0));
+        nextMatching*=(EF(FE(currFaceMatching.first,i),0)==currFaceMatching.first ? 1.0 : -1.0);
+        nextMatching=(nextMatching+currFaceMatching.second+10*N)%N;  //killing negatives
+        if ((nextFace!=-1)&&(!visitedFaces(nextFace))&&(!faceIsCut(currFaceMatching.first,i)))
+          faceMatchingQueue.push(std::pair<int,int>(nextFace, nextMatching));
+        
+      }
+      
+    }while (!faceMatchingQueue.empty());
+    
+    //can be produced from the combing, but better used directly for sanity check.
+    principal_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort);
+  }
+  
 }
 
 

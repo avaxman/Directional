@@ -68,7 +68,7 @@ namespace directional
     for (int i = 0; i < EF.rows(); i++) {
       if (EF(i, 0) == -1 || EF(i, 1) == -1)
         continue;
-      //computing free coefficient effort (a.k.a. Diamanti et al. 2014]
+      //computing free coefficient effort (a.k.a. [Diamanti et al. 2014])
       Complex freeCoeffEffort(1.0, 0.0);
       double minRotAngle=10000.0;
       int indexMinFromZero=0;
