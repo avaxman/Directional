@@ -130,13 +130,11 @@ int main()
   "  0  Toggle raw field/Combed field" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/sphere.obj", wholeV, wholeF);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere_param.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
-  
-
-  
+    
   //computing
   directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,N,prinIndices);
@@ -176,7 +174,6 @@ int main()
         combedMatching(FE(i,j))=N;
   directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singPositions, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
   
-  
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
     if (constrainedVertices(i)!=0){
@@ -188,7 +185,7 @@ int main()
     constPositions.row(i)=wholeV.row(constPositionsList[i]);
   }
   
-  directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, vt2cMat, constraintMat, cornerUV);
+  //directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, vt2cMat, constraintMat, cornerUV);
   
   glyphPrincipalColors<<1.0,0.0,0.5,
   0.0,1.0,0.5,
