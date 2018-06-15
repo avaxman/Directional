@@ -168,11 +168,11 @@ int main()
   cutV=wholeV;
 
   //setting combed matching in cut edges without matching to matching = 4 to be compatible with cutting
-  for (int i=0;i<wholeF.rows();i++)
+  /*for (int i=0;i<wholeF.rows();i++)
     for (int j=0;j<3;j++)
       if ((faceIsCut(i,j))&&(combedMatching(FE(i,j))==0))
-        combedMatching(FE(i,j))=N;
-  directional::cut_by_matching(N, wholeV, wholeF, combedMatching, singPositions, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
+        combedMatching(FE(i,j))=N;*/
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
