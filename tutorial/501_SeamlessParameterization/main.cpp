@@ -11,7 +11,7 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_combing.h>
-#include <directional/cut_by_matching.h>
+#include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
 
@@ -172,7 +172,7 @@ int main()
     for (int j=0;j<3;j++)
       if ((faceIsCut(i,j))&&(combedMatching(FE(i,j))==0))
         combedMatching(FE(i,j))=N;*/
-  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, cutV, cutF, cut2wholeIndices, edge2TransitionIndices, vt2cMat, constraintMat, constrainedVertices);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)

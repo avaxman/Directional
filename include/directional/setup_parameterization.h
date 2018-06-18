@@ -5,8 +5,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef DIRECTIONAL_CUT_BY_MATCHING_H
-#define DIRECTIONAL_CUT_BY_MATCHING_H
+#ifndef DIRECTIONAL_SETUP_PARAMETERIZATION_H
+#define DIRECTIONAL_SETUP_PARAMETERIZATION_H
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
@@ -36,25 +36,26 @@ namespace directional
   //  EF:     #E x 2 edges to faces indices
   // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Expect most matching =0 due to the combing.
   // Output:
-
+  
   //
-  IGL_INLINE void cut_by_matching(const int N,
-                                  const Eigen::MatrixXd& wholeV,
-                                  const Eigen::MatrixXi& wholeF,
-                                  const Eigen::VectorXi& matching,
-                                  const Eigen::VectorXi& singPositions,
-                                  Eigen::MatrixXd& cutV,
-                                  Eigen::MatrixXi& cutF,
-                                  Eigen::VectorXi& cut2wholeIndices,
-                                  Eigen::VectorXi& edge2TransitionIndices,
-                                  Eigen::SparseMatrix<double>& vt2cMat,
-                                  Eigen::SparseMatrix<double>& constraintMat,
-                                  Eigen::VectorXi& constrainedVertices)
+  IGL_INLINE void setup_parameterization(const int N,
+                                         const Eigen::MatrixXd& wholeV,
+                                         const Eigen::MatrixXi& wholeF,
+                                         const Eigen::VectorXi& matching,
+                                         const Eigen::VectorXi& singPositions,
+                                         const Eigen::MatrixXi& face2cut,
+                                         Eigen::MatrixXd& cutV,
+                                         Eigen::MatrixXi& cutF,
+                                         Eigen::VectorXi& cut2wholeIndices,
+                                         Eigen::VectorXi& edge2TransitionIndices,
+                                         Eigen::SparseMatrix<double>& vt2cMat,
+                                         Eigen::SparseMatrix<double>& constraintMat,
+                                         Eigen::VectorXi& constrainedVertices)
   {
     
     using namespace Eigen;
     using namespace std;
-
+    
     MatrixXi EV, FE, EF, EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH,prevH,twinH,innerEdges;
@@ -77,61 +78,61 @@ namespace directional
     for (int i=1;i<N;i++)
       constParmMatrices[i]=unitPermMatrix*constParmMatrices[i-1];
     
+    VectorXi isHEcut=VectorXi::Zero(HE.rows());
     VectorXi cutValence=VectorXi::Zero(wholeV.rows());
-    for (int i=0;i<EV.rows();i++){
-      if (matching(i)!=0){
-        cutValence(EV(i,0))++;
-        cutValence(EV(i,1))++;
-      }
-    }
+    for (int i=0;i<wholeF.rows();i++)
+      for (int j=0;j<3;j++)
+        if (face2cut(i,j)){
+          cutValence(wholeF(i,j))++;
+          isHEcut(FH(i,j))=1;
+        }
     
-    //cout<<"cutValence:" <<cutValence<<endl;
     
     //establishing transition variables by tracing cut curves
     VectorXi Halfedge2TransitionIndices=VectorXi::Constant(HE.rows(),32767);
     VectorXi Halfedge2Matching(HE.rows());
     VectorXi isHEClaimed=VectorXi::Zero(HE.rows());
     //matching: EF(i,0)->EF(i,1), halfedge on i get the incoming matching, and so opposite.
+    
     for (int i=0;i<HE.rows();i++){
       Halfedge2Matching(i)=(EH(HE(i),0)==i ? -matching(HE(i)) : matching(HE(i)));
-      while (Halfedge2Matching(i)<-N/2) Halfedge2Matching(i)+=N;
-      while (Halfedge2Matching(i)>=N/2) Halfedge2Matching(i)-=N;
+      while (Halfedge2Matching(i)<0) Halfedge2Matching(i)+=N;
+      //while (Halfedge2Matching(i)>=N/2) Halfedge2Matching(i)-=N;
     }
     
-    int currTransition=0;
+    int currTransition=1;
     
-    //starting from each node, we trace unclaimed curves
+    //starting from each node, we trace cut curves
     cout<<"wholeV.rows(): "<<wholeV.rows()<<endl;
     cout<<"wholeF.rows(): "<<wholeF.rows()<<endl;
     for (int i=0;i<wholeV.rows();i++){
       if (((cutValence(i)==2)&&(!isSingular(i)))||(cutValence(i)==0))
         continue;  //either mid-cut curve or non at all
       
-      //cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
-      //cout<<"currTransition: "<<currTransition<<endl;
+      cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
+      cout<<"currTransition: "<<currTransition<<endl;
       //tracing curves until next node, if not already filled
       int beginH=VH(i);
       int currH=beginH;
       int nextHalfedgeInCut=-1;
       do{
-        if ((matching(HE(currH))!=0)&&(isHEClaimed(currH)==0)) { //unclaimed halfedge
+        if ((isHEcut(currH)!=0)&&(isHEClaimed(currH)==0)) { //unclaimed halfedge
           nextHalfedgeInCut=currH;
           Halfedge2TransitionIndices(nextHalfedgeInCut)=currTransition;
-          Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=currTransition;
+          Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=-currTransition;
           isHEClaimed(nextHalfedgeInCut)=1;
           isHEClaimed(twinH(nextHalfedgeInCut))=1;
           int nextCutVertex=HV(nextH(nextHalfedgeInCut));
-          //cout<<"nextCutVertex: "<<nextCutVertex<<endl;
-          //cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
-          //cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
+          cout<<"nextCutVertex: "<<nextCutVertex<<endl;
+          cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
+          cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
           //advancing on the cut until next node
           while ((cutValence(nextCutVertex)==2)&&(!isSingular(nextCutVertex))){
-            
             int beginH=VH(nextCutVertex);
             int currH=beginH;
             int nextHalfedgeInCut=-1;
             do{
-              if ((matching(HE(currH))!=0)&&(isHEClaimed(currH)==0)) { //unclaimed cut halfedge
+              if ((isHEcut(currH)!=0)&&(isHEClaimed(currH)==0)) { //unclaimed cut halfedge
                 nextHalfedgeInCut=currH;
                 break;
               }
@@ -139,13 +140,13 @@ namespace directional
             }while (beginH!=currH);
             //cout<<"nextHalfedgeInCut: "<<nextHalfedgeInCut<<endl;
             Halfedge2TransitionIndices(nextHalfedgeInCut)=currTransition;
-            Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=currTransition;
+            Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=-currTransition;
             isHEClaimed(nextHalfedgeInCut)=1;
             isHEClaimed(twinH(nextHalfedgeInCut))=1;
             nextCutVertex=HV(nextH(nextHalfedgeInCut));
-            //cout<<"nextCutVertex: "<<nextCutVertex<<endl;
-            //cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
-            //cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
+            cout<<"nextCutVertex: "<<nextCutVertex<<endl;
+            cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
+            cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
           }
           
           currTransition++;
@@ -155,11 +156,11 @@ namespace directional
     }
     
     //checking
-    for (int i=0;i<HE.rows();i++)
+    /*for (int i=0;i<HE.rows();i++)
       if ((matching(HE(i))!=0)&&(Halfedge2TransitionIndices(i)==32767)){
         cout<<"HV(i), cutValence(HV(i)): "<<HV(i)<<","<<cutValence(HV(i))<<endl;
         cout<<"HV(nextH(i)), cutValence(HV(nextH(i))): "<<HV(nextH(i))<<","<<cutValence(HV(nextH(i)))<<endl;
-      }
+      }*/
     
     
     vector<Triplet<double> > v2cTriplets, constTriplets;
@@ -172,6 +173,8 @@ namespace directional
       permIndices.push_back(i);
       int beginH=VH(i);
       int currH=beginH;
+       if (cutValence(i)==2)
+         cout<<"tracking a 2-valence vertex"<<endl;
       do{
         int currFace=HF(currH);
         int currCorner=-1;
@@ -187,34 +190,40 @@ namespace directional
         
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
-        MatrixXi nextPermMatrix = constParmMatrices[abs(Halfedge2Matching(nextHalfedge))%N];
-        if (Halfedge2Matching(nextHalfedge)<0) nextPermMatrix.transposeInPlace();
+        MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge)%N];
         //cout<<"Halfedge2Matching(nextHalfedge): "<<Halfedge2Matching(nextHalfedge)<<endl;
-        if (abs(Halfedge2Matching(nextHalfedge))%N==0) { //no update needed
+        if (isHEcut(nextHalfedge)==0) { //no update needed
           currH=nextHalfedge;
           continue;
         }
         
         //otherwise, updating matrices with transition
         int nextTransition = Halfedge2TransitionIndices(nextHalfedge);
-       // cout<<"nextTransition: "<<nextTransition<<endl;
-        if (Halfedge2Matching(nextHalfedge) >=0){  //Pe*f + Je
+        // cout<<"nextTransition: "<<nextTransition<<endl;
+        if (nextTransition>0){  //Pe*f + Je
           for (int j=0;j<permMatrices.size();j++)
             permMatrices[j]=nextPermMatrix*permMatrices[j];
           
           //and identity on the fresh transition
           permMatrices.push_back(MatrixXi::Identity(N,N));
-          permIndices.push_back(wholeV.rows()+nextTransition);
-        } else { // (Pe*(f-Je)) (Pe is alreay inverse since matching is signed on halfedges
+          permIndices.push_back(wholeV.rows()+nextTransition-1);
+        } else { // (Pe*(f-Je))  matrix is already inverse since halfedge matching is minused
           //reverse order
           permMatrices.push_back(-MatrixXi::Identity(N,N));
-          permIndices.push_back(wholeV.rows()+nextTransition);
+          permIndices.push_back(wholeV.rows()-nextTransition-1);
           
           for (int j=0;j<permMatrices.size();j++)
             permMatrices[j]=nextPermMatrix*permMatrices[j];
           
         }
-
+        if (cutValence(i)==2){
+          cout<<"nextTransition: "<<nextTransition<<endl;
+          cout<<"nextPermMatrix: "<<nextPermMatrix<<endl;
+          for (int j=0;j<permIndices.size();j++){
+            cout<<"permIndices[j]: "<<permIndices[j]<<endl;
+            cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
+          }
+        }
         currH=nextHalfedge;
       }while(currH!=beginH);
       
@@ -246,7 +255,8 @@ namespace directional
               constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
         currConst++;
         cout<<"found constraint with: "<<endl;
-         cout<<"cutValence(i): "<<cutValence(i)<<endl;
+        cout<<"cutValence(i): "<<cutValence(i)<<endl;
+        cout<<"isSingular(i): "<<isSingular(i)<<endl;
         for (int j=0;j<permIndices.size();j++){
           cout<<"permIndices[j]: "<<permIndices[j]<<endl;
           cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
