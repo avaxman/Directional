@@ -38,16 +38,16 @@ namespace directional
   // Output:
   
   //
+  //Eigen::MatrixXd& cutV,
+  // Eigen::MatrixXi& cutF,
+  //Eigen::VectorXi& cut2wholeIndices,
+  //Eigen::VectorXi& edge2TransitionIndices,
   IGL_INLINE void setup_parameterization(const int N,
                                          const Eigen::MatrixXd& wholeV,
                                          const Eigen::MatrixXi& wholeF,
                                          const Eigen::VectorXi& matching,
                                          const Eigen::VectorXi& singPositions,
                                          const Eigen::MatrixXi& face2cut,
-                                         Eigen::MatrixXd& cutV,
-                                         Eigen::MatrixXi& cutF,
-                                         Eigen::VectorXi& cut2wholeIndices,
-                                         Eigen::VectorXi& edge2TransitionIndices,
                                          Eigen::SparseMatrix<double>& vt2cMat,
                                          Eigen::SparseMatrix<double>& constraintMat,
                                          Eigen::VectorXi& constrainedVertices)
@@ -109,8 +109,8 @@ namespace directional
       if (((cutValence(i)==2)&&(!isSingular(i)))||(cutValence(i)==0))
         continue;  //either mid-cut curve or non at all
       
-      cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
-      cout<<"currTransition: "<<currTransition<<endl;
+      //cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
+      //cout<<"currTransition: "<<currTransition<<endl;
       //tracing curves until next node, if not already filled
       int beginH=VH(i);
       int currH=beginH;
@@ -123,9 +123,9 @@ namespace directional
           isHEClaimed(nextHalfedgeInCut)=1;
           isHEClaimed(twinH(nextHalfedgeInCut))=1;
           int nextCutVertex=HV(nextH(nextHalfedgeInCut));
-          cout<<"nextCutVertex: "<<nextCutVertex<<endl;
-          cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
-          cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
+          //cout<<"nextCutVertex: "<<nextCutVertex<<endl;
+          //cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
+          //cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
           //advancing on the cut until next node
           while ((cutValence(nextCutVertex)==2)&&(!isSingular(nextCutVertex))){
             int beginH=VH(nextCutVertex);
@@ -144,9 +144,9 @@ namespace directional
             isHEClaimed(nextHalfedgeInCut)=1;
             isHEClaimed(twinH(nextHalfedgeInCut))=1;
             nextCutVertex=HV(nextH(nextHalfedgeInCut));
-            cout<<"nextCutVertex: "<<nextCutVertex<<endl;
-            cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
-            cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
+            //cout<<"nextCutVertex: "<<nextCutVertex<<endl;
+            //cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
+            //cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
           }
           
           currTransition++;
@@ -173,8 +173,8 @@ namespace directional
       permIndices.push_back(i);
       int beginH=VH(i);
       int currH=beginH;
-       if (cutValence(i)==2)
-         cout<<"tracking a 2-valence vertex"<<endl;
+       //if (cutValence(i)==2)
+        // cout<<"tracking a 2-valence vertex"<<endl;
       do{
         int currFace=HF(currH);
         int currCorner=-1;
@@ -186,7 +186,7 @@ namespace directional
         for (int i=0;i<permIndices.size();i++)
           for (int j=0;j<N;j++)
             for (int k=0;k<N;k++)
-              v2cTriplets.push_back(Triplet<double>(N*permIndices[i]+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
+              v2cTriplets.push_back(Triplet<double>(N*currCorner+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
         
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
@@ -216,14 +216,14 @@ namespace directional
             permMatrices[j]=nextPermMatrix*permMatrices[j];
           
         }
-        if (cutValence(i)==2){
+        /*if (cutValence(i)==2){
           cout<<"nextTransition: "<<nextTransition<<endl;
           cout<<"nextPermMatrix: "<<nextPermMatrix<<endl;
           for (int j=0;j<permIndices.size();j++){
             cout<<"permIndices[j]: "<<permIndices[j]<<endl;
             cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
           }
-        }
+        }*/
         currH=nextHalfedge;
       }while(currH!=beginH);
       
@@ -271,7 +271,7 @@ namespace directional
     
     cout<<"currConst: "<<currConst<<endl;
     
-    vt2cMat.conservativeResize(3*N*wholeF.rows(), N*(wholeV.rows()+currTransition));
+    vt2cMat.conservativeResize(3*N*wholeF.rows(), N*(wholeV.rows()+currTransition-1));
     
     vector<Triplet<double>> cleanTriplets;
     for (int i=0;i<v2cTriplets.size();i++)
@@ -279,7 +279,7 @@ namespace directional
         cleanTriplets.push_back(v2cTriplets[i]);
     vt2cMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
-    constraintMat.conservativeResize(N*currConst, N*(wholeV.rows()+currTransition));
+    constraintMat.conservativeResize(N*currConst, N*(wholeV.rows()+currTransition-1));
     cleanTriplets.clear();
     for (int i=0;i<constTriplets.size();i++)
       if (constTriplets[i].value()!=0.0)
@@ -287,7 +287,7 @@ namespace directional
     constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
     //cutting the mesh
-    vector<int> cut2whole;
+    /*vector<int> cut2whole;
     vector<RowVector3d> cutVlist;
     cutF.conservativeResize(wholeF.rows(),3);
     for (int i=0;i<VH.rows();i++){
@@ -315,7 +315,7 @@ namespace directional
     
     cutV.conservativeResize(cutVlist.size(),3);
     for (int i=0;i<cutVlist.size();i++)
-      cutV.row(i)=cutVlist[i];
+      cutV.row(i)=cutVlist[i];*/
     
   }
 }

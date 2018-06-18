@@ -16,6 +16,7 @@
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <igl/min_quad_with_fixed.h>
+#include <igl/matlab/MatlabWorkspace.h>
 
 #include <Eigen/Core>
 #include <queue>
@@ -50,7 +51,7 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    //TODO: in vertex sapce, not corner...
+    //TODO: in vertex space, not corner...
     int N = rawField.cols()/3;
     //constructing face differentials
     vector<Triplet<double>> d0Triplets;
@@ -75,7 +76,12 @@ namespace directional
     SparseMatrix<double> d0T=d0.transpose();
     SparseMatrix<double> vt2cMatTranspose=vt2cMat.transpose();
 
-    SparseMatrix<double> EtE=vt2cMatTranspose*d0T*M1*d0*vt2cMat;
+    SparseMatrix<double> removeFirstVertexMat(vt2cMat.cols()/2, (vt2cMat.cols()-N)/2);
+    vector<Triplet<double> > removeFirstVertexMatTriplets;
+    for (int i=0;i<(vt2cMat.cols()-N)/2;i++)
+      removeFirstVertexMatTriplets.push_back(Triplet<double>(i+N/2, i, 1.0));
+    removeFirstVertexMat.setFromTriplets(removeFirstVertexMatTriplets.begin(), removeFirstVertexMatTriplets.end());
+    SparseMatrix<double> EtE=d0T*M1*d0;
     
     //filtering out symmetry - only for N=4!
     SparseMatrix<double> SymmMat(vt2cMat.cols(), vt2cMat.cols()/2);
@@ -89,8 +95,8 @@ namespace directional
     
     SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
     
-    EtE = SymmMat.transpose()*EtE*SymmMat;
-    SparseMatrix<double> C = constraintMat*SymmMat;
+    EtE = removeFirstVertexMat.transpose()*SymmMat.transpose()*vt2cMat.transpose()*EtE*vt2cMat*SymmMat*removeFirstVertexMat;
+    SparseMatrix<double> C = constraintMat*SymmMat*removeFirstVertexMat;
     
     SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
     
@@ -107,9 +113,14 @@ namespace directional
     }
     
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
-    b.segment(0,EtE.rows())=SymmMat.transpose()*vt2cMatTranspose*d0T*M1*gamma;
+    b.segment(0,EtE.rows())=removeFirstVertexMat.transpose()*SymmMat.transpose()*vt2cMatTranspose*d0T*M1*gamma;
     
-    SparseLU<SparseMatrix<double> > solver;
+    igl::matlab::MatlabWorkspace mw;
+    mw.save(A,"A");
+    mw.save_index(b,"b");
+    mw.write("sphere.mat");
+    
+    SimplicialLDLT<SparseMatrix<double> > solver;
     cout<<"Computing A..."<<endl;
     solver.compute(A);
     if(solver.info()!=Success) {
@@ -125,7 +136,8 @@ namespace directional
     
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    cornerUV=vt2cMat*SymmMat*x;
+    VectorXd cornerUVVec=VectorXd::Zero(N*3*wholeF.rows(),1);
+    cornerUVVec.tail(3*N*wholeF.rows()-N)=(vt2cMat*SymmMat*x);
   }
 }
 
