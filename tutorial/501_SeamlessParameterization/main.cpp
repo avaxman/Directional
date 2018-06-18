@@ -14,8 +14,7 @@
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
-#include "MatlabEngine.hpp"
-#include "MatlabDataArray.hpp"
+
 
 
 int N=4;

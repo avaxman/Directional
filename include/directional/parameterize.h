@@ -16,7 +16,7 @@
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <igl/min_quad_with_fixed.h>
-#include <igl/matlab/MatlabWorkspace.h>
+#include <igl/matlab_format.h>
 
 #include <Eigen/Core>
 #include <queue>
@@ -105,20 +105,19 @@ namespace directional
       for (SparseMatrix<double>::InnerIterator it(EtE,k); it; ++it)
         ATriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
     
-    for (int k=0; k<constraintMat.outerSize(); ++k){
-      for (SparseMatrix<double>::InnerIterator it(constraintMat,k); it; ++it){
+    for (int k=0; k<C.outerSize(); ++k){
+      for (SparseMatrix<double>::InnerIterator it(C,k); it; ++it){
         ATriplets.push_back(Triplet<double>(it.row()+EtE.rows(), it.col(), it.value()));
         ATriplets.push_back(Triplet<double>(it.col(), it.row()+EtE.rows(), it.value()));
       }
     }
     
+    A.setFromTriplets(ATriplets.begin(), ATriplets.end());
+    
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
     b.segment(0,EtE.rows())=removeFirstVertexMat.transpose()*SymmMat.transpose()*vt2cMatTranspose*d0T*M1*gamma;
     
-    igl::matlab::MatlabWorkspace mw;
-    mw.save(A,"A");
-    mw.save_index(b,"b");
-    mw.write("sphere.mat");
+    std::cout<<igl::matlab_format(A,"A")<<std::endl;
     
     SimplicialLDLT<SparseMatrix<double> > solver;
     cout<<"Computing A..."<<endl;
