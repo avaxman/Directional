@@ -51,7 +51,7 @@ namespace directional
                                const Eigen::MatrixXi& cutF,
                                Eigen::MatrixXd& cutUV)
   
-
+  
   {
     using namespace Eigen;
     using namespace std;
@@ -113,6 +113,31 @@ namespace directional
     SparseMatrix<double> EtE = (vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*cutEtE*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat);
     SparseMatrix<double> C = constraintMat*(i2vtMat*firstVertexZeroMat*SymmMat);
     
+    myfile<<igl::matlab_format(EtE,"EtE")<<std::endl;
+  
+    //reducing constraintMat
+    SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
+    qrsolver.compute(C.transpose());
+    int CRank=qrsolver.rank();
+    cout<<"CRank: "<<CRank<<endl;
+    
+    //creating sliced permutation matrix
+    VectorXi PIndices=qrsolver.colsPermutation().indices();
+    cout<<"PIndices: "<<PIndices<<endl;
+    
+    vector<Triplet<double> > CTriplets;
+    for (int k=0; k<C.outerSize(); ++k)
+      for (SparseMatrix<double>::InnerIterator it(C,k); it; ++it)
+      {
+        for (int j=0;j<CRank;j++)
+          if (it.row()==PIndices(j))
+            CTriplets.push_back(Triplet<double>(j, it.col(), it.value()));
+        
+      }
+    
+    C.resize(CRank, C.cols());
+    C.setFromTriplets(CTriplets.begin(), CTriplets.end());
+     myfile<<igl::matlab_format(C,"C")<<std::endl;
     SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
     
     vector<Triplet<double>> ATriplets;
@@ -131,36 +156,45 @@ namespace directional
     
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
     b.segment(0,EtE.rows())=(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*d0T*M1*gamma;
-    cout<<"gamma: "<<gamma<<endl;
+    //cout<<"gamma: "<<gamma<<endl;
     
-    std::cout<<igl::matlab_format(A,"A")<<std::endl;
+    myfile<<igl::matlab_format(A,"A")<<std::endl;
+    myfile<<igl::matlab_format(b,"b")<<std::endl;
     myfile.close();
     
-    SimplicialLDLT<SparseMatrix<double> > solver;
+    SimplicialLDLT<SparseMatrix<double> > ldltsolver;
     cout<<"Computing A..."<<endl;
-    solver.compute(A);
-    if(solver.info()!=Success) {
-      cout<<"Compute failed!!!"<<endl;
-      return;
-    }
-     cout<<"Computing A done!"<<endl;
-    VectorXd x = solver.solve(b);
-    if(solver.info()!=Success) {
-      cout<<"Solving failed!!!"<<endl;
-      return;
+    VectorXd x;
+    ldltsolver.compute(EtE);
+    if(ldltsolver.info()!=Success) {
+      cout<<"LDLT failed, trying LU"<<endl;
+      SparseLU<SparseMatrix<double> > lusolver;
+      lusolver.compute(A);
+      if(lusolver.info()!=Success) {
+        cout<<"LU failed as well!"<<endl;
+        return;
+      }
+      x = lusolver.solve(b.segment(0,EtE.rows()));
+    } else{
+      cout<<"Computing A done!"<<endl;
+      x = ldltsolver.solve(b.segment(0,EtE.rows()));
+      if(ldltsolver.info()!=Success) {
+        cout<<"Solving failed!!!"<<endl;
+        return;
+      }
     }
     
     //cout<<"d0*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat)*x.head(SymmMat.cols())-gamma: "<<gamma<<endl;
     
-
+    
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cutUVVec=vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat*x.head(SymmMat.cols());
+    VectorXd cutUVVec=vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat*x.head(EtE.cols());
     cutUV.conservativeResize(cutV.rows(),2);
     for (int i=0;i<cutV.rows();i++)
       cutUV.row(i)<<cutUVVec.segment(4*i,2).transpose();
   }
-
-
+  
+  
 }
 
 #endif

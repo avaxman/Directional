@@ -138,7 +138,7 @@ namespace directional
       }while (beginH!=currH);
     }
     
-    //cout<<"cutF: "<<cutF<<endl;
+    cout<<"cutF: "<<cutF<<endl;
     /*cut2wholeIndices.conservativeResize(cut2whole.size());
     for (int i=0;i<cut2wholeIndices.size();i++)
       cut2wholeIndices(i)=cut2whole[i];*/
@@ -240,19 +240,23 @@ namespace directional
       int currH=beginH;
        //if (cutValence(i)==2)
         // cout<<"tracking a 2-valence vertex"<<endl;
+      int currCutVertex=-1;
       do{
         int currFace=HF(currH);
-        int currCutVertex=-1;
+        int newCutVertex=-1;
         for (int j=0;j<3;j++)
           if (wholeF(currFace,j)==i)
-            currCutVertex=cutF(currFace,j);
+            newCutVertex=cutF(currFace,j);
         
         //currCorner gets the permutations so far
-        for (int i=0;i<permIndices.size();i++)
-          for (int j=0;j<N;j++)
-            for (int k=0;k<N;k++)
-              vertexTrans2CutTriplets.push_back(Triplet<double>(N*currCutVertex+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
-        
+        if (newCutVertex!=currCutVertex){
+          currCutVertex=newCutVertex;
+          
+          for (int i=0;i<permIndices.size();i++)
+            for (int j=0;j<N;j++)
+              for (int k=0;k<N;k++)
+                vertexTrans2CutTriplets.push_back(Triplet<double>(N*currCutVertex+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
+        }
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
         MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge)%N];
@@ -357,8 +361,6 @@ namespace directional
       if (constTriplets[i].value()!=0.0)
         cleanTriplets.push_back(constTriplets[i]);
     constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
-    
-    
     
   }
 }
