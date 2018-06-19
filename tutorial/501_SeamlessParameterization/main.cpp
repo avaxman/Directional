@@ -5,6 +5,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
+#include <igl/cut_mesh.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
@@ -32,10 +33,10 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
-Eigen::MatrixXd cornerUV;
+Eigen::MatrixXd cutUV;
 Eigen::MatrixXi faceIsCut;
 
-Eigen::SparseMatrix<double> vt2cMat;
+Eigen::SparseMatrix<double> vt2cMat, i2vtMat;
 Eigen::SparseMatrix<double> constraintMat;
 //between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
 Eigen::VectorXd edgeWeights;
@@ -101,10 +102,12 @@ void update_mesh()
     fullV=cutV;
     fullF=cutF;
     
+    
+    
     viewer.data.clear();
     viewer.data.set_face_based(true);
     viewer.data.set_mesh(fullV, fullF);
-    viewer.data.set_uv(cornerUV);
+    viewer.data.set_uv(cutUV);
     
   }
   
@@ -173,7 +176,7 @@ int main()
     for (int j=0;j<3;j++)
       if ((faceIsCut(i,j))&&(combedMatching(FE(i,j))==0))
         combedMatching(FE(i,j))=N;*/
-  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, vt2cMat, constraintMat, constrainedVertices);
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, i2vtMat,vt2cMat, constraintMat, constrainedVertices, cutV, cutF);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
@@ -186,7 +189,9 @@ int main()
     constPositions.row(i)=wholeV.row(constPositionsList[i]);
   }
   
-  directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, vt2cMat, constraintMat, cornerUV);
+  directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, i2vtMat, vt2cMat, constraintMat, cutV, cutF, cutUV);
+  
+  std::cout<<"cutUV: "<<cutUV<<std::endl;
   
   glyphPrincipalColors<<1.0,0.0,0.5,
   0.0,1.0,0.5,

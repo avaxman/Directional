@@ -48,9 +48,12 @@ namespace directional
                                          const Eigen::VectorXi& matching,
                                          const Eigen::VectorXi& singPositions,
                                          const Eigen::MatrixXi& face2cut,
-                                         Eigen::SparseMatrix<double>& vt2cMat,
+                                         Eigen::SparseMatrix<double>& ind2vertexTransMat,
+                                         Eigen::SparseMatrix<double>& vertexTrans2CutMat,
                                          Eigen::SparseMatrix<double>& constraintMat,
-                                         Eigen::VectorXi& constrainedVertices)
+                                         Eigen::VectorXi& constrainedVertices,
+                                         Eigen::MatrixXd& cutV,
+                                         Eigen::MatrixXi& cutF)
   {
     
     using namespace Eigen;
@@ -102,7 +105,49 @@ namespace directional
     
     int currTransition=1;
     
-    //starting from each node, we trace cut curves
+    //cutting mesh and creating map between wholeF and cutF
+    //cutting the mesh
+    vector<int> cut2whole;
+    vector<RowVector3d> cutVlist;
+    cutF.conservativeResize(wholeF.rows(),3);
+    for (int i=0;i<VH.rows();i++){
+      //creating corners whereever we have non-trivial matching
+      int beginH=VH(i);
+      int currH=beginH;
+      
+      //reseting to first cut, if exists
+      do{
+        if (isHEcut(currH)!=0)
+          break;
+        currH=twinH(prevH(currH));
+      }while (beginH!=currH);
+      
+      beginH=currH;
+
+      do{
+        if ((isHEcut(currH)!=0)||(beginH==currH)){
+          cut2whole.push_back(i);
+          cutVlist.push_back(wholeV.row(i));
+        }
+        
+        for (int j=0;j<3;j++)
+          if (wholeF(HF(currH),j)==i)
+            cutF(HF(currH),j)=cut2whole.size()-1;
+        
+        currH=twinH(prevH(currH));
+      }while (beginH!=currH);
+    }
+    
+    cout<<"cutF: "<<cutF<<endl;
+    /*cut2wholeIndices.conservativeResize(cut2whole.size());
+    for (int i=0;i<cut2wholeIndices.size();i++)
+      cut2wholeIndices(i)=cut2whole[i];*/
+    
+    cutV.conservativeResize(cutVlist.size(),3);
+    for (int i=0;i<cutVlist.size();i++)
+      cutV.row(i)=cutVlist[i];
+    
+    //starting from each cut-graph node, we trace cut curves
     cout<<"wholeV.rows(): "<<wholeV.rows()<<endl;
     cout<<"wholeF.rows(): "<<wholeF.rows()<<endl;
     for (int i=0;i<wholeV.rows();i++){
@@ -155,6 +200,8 @@ namespace directional
       }while (beginH!=currH);
     }
     
+    int numTransitions=currTransition-1;
+    
     //checking
     /*for (int i=0;i<HE.rows();i++)
       if ((matching(HE(i))!=0)&&(Halfedge2TransitionIndices(i)==32767)){
@@ -162,8 +209,26 @@ namespace directional
         cout<<"HV(nextH(i)), cutValence(HV(nextH(i))): "<<HV(nextH(i))<<","<<cutValence(HV(nextH(i)))<<endl;
       }*/
     
+    //establishing independent variables
+    //all singularity positions are dependent of transition variables, and the number of independent variables is therefore regular vertices + transitions - 1
+    VectorXi independentVars(wholeV.rows()+numTransitions-singPositions.rows());
+    int currIndVar=0;
+    for (int i=0;i<wholeV.rows();i++){
+      if (!isSingular(i))
+          independentVars(currIndVar++)=i;
+    }
     
-    vector<Triplet<double> > v2cTriplets, constTriplets;
+    for (int i=0;i<numTransitions;i++)
+      independentVars(currIndVar++)=wholeV.rows()+i;
+    
+    vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets,  ind2vertexTransTriplets;
+    
+    //the identity parts of ind2vertexTranMat
+    for (int i=0;i<wholeV.rows()-singPositions.rows()+numTransitions;i++)
+      for (int k=0;k<N;k++)
+        ind2vertexTransTriplets.push_back(Triplet<double>(N*independentVars(i)+k, N*i+k, 1.0));
+    
+    //forming the constraints and the singularity positions
     int currConst=0;
     for (int i=0;i<VH.rows();i++){
       std::vector<MatrixXi> permMatrices;
@@ -177,16 +242,16 @@ namespace directional
         // cout<<"tracking a 2-valence vertex"<<endl;
       do{
         int currFace=HF(currH);
-        int currCorner=-1;
+        int currCutVertex=-1;
         for (int j=0;j<3;j++)
           if (wholeF(currFace,j)==i)
-            currCorner=3*currFace+j;
+            currCutVertex=cutF(currFace,j);
         
         //currCorner gets the permutations so far
         for (int i=0;i<permIndices.size();i++)
           for (int j=0;j<N;j++)
             for (int k=0;k<N;k++)
-              v2cTriplets.push_back(Triplet<double>(N*currCorner+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
+              vertexTrans2CutTriplets.push_back(Triplet<double>(N*currCutVertex+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
         
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
@@ -216,19 +281,10 @@ namespace directional
             permMatrices[j]=nextPermMatrix*permMatrices[j];
           
         }
-        /*if (cutValence(i)==2){
-          cout<<"nextTransition: "<<nextTransition<<endl;
-          cout<<"nextPermMatrix: "<<nextPermMatrix<<endl;
-          for (int j=0;j<permIndices.size();j++){
-            cout<<"permIndices[j]: "<<permIndices[j]<<endl;
-            cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
-          }
-        }*/
         currH=nextHalfedge;
       }while(currH!=beginH);
       
-      //cleaning parmMatrices and permIndices to see if there is a constraint
-      
+      //cleaning parmMatrices and permIndices to see if there is a constraint or reveal singularity-from-ransition
       std::set<int> cleanPermIndicesSet(permIndices.begin(), permIndices.end());
       std::vector<int> cleanPermIndices(cleanPermIndicesSet.begin(), cleanPermIndicesSet.end());
       std::vector<MatrixXi> cleanPermMatrices(cleanPermIndices.size());
@@ -249,73 +305,60 @@ namespace directional
           isConstraint=true;
       
       if (isConstraint){
-        for (int j=0;j<cleanPermMatrices.size();j++)
-          for (int k=0;k<N;k++)
-            for (int l=0;l<N;l++)
-              constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
-        currConst++;
-        cout<<"found constraint with: "<<endl;
+        if (isSingular(i)){  //the position of the singularity depends on a combination of transition variables
+          MatrixXi singMatrix=cleanPermMatrices[0];  //assuming that's the first vertex
+          for (int j=1;j<cleanPermMatrices.size();j++){
+            MatrixXi currMatrix=-singMatrix.transpose()*cleanPermMatrices[j];
+            for (int k=0;k<N;k++)
+              for (int l=0;l<N;l++)
+                ind2vertexTransTriplets.push_back(Triplet<double>(N*i+k, N*(cleanPermIndices[j]-singPositions.rows())+l, (double)currMatrix(k,l)));
+          }
+        }else{  //non-singular node ties between transition variables
+          for (int j=0;j<cleanPermMatrices.size();j++)
+            for (int k=0;k<N;k++)
+              for (int l=0;l<N;l++)
+                constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
+          currConst++;
+        }
+        /*cout<<"found constraint with: "<<endl;
         cout<<"cutValence(i): "<<cutValence(i)<<endl;
         cout<<"isSingular(i): "<<isSingular(i)<<endl;
-        for (int j=0;j<permIndices.size();j++){
+        /*for (int j=0;j<permIndices.size();j++){
           cout<<"permIndices[j]: "<<permIndices[j]<<endl;
           cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
         }
         for (int j=0;j<cleanPermIndices.size();j++){
           cout<<"cleanPermIndices[j]: "<<cleanPermIndices[j]<<endl;
           cout<<"cleanPermMatrices[j]: "<<cleanPermMatrices[j]<<endl;
-        }
+        }*/
         constrainedVertices(i)=1;
       }
     }
     
     cout<<"currConst: "<<currConst<<endl;
     
-    vt2cMat.conservativeResize(3*N*wholeF.rows(), N*(wholeV.rows()+currTransition-1));
-    
+    ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()-singPositions.rows()+numTransitions));
     vector<Triplet<double>> cleanTriplets;
-    for (int i=0;i<v2cTriplets.size();i++)
-      if (v2cTriplets[i].value()!=0.0)
-        cleanTriplets.push_back(v2cTriplets[i]);
-    vt2cMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
+    for (int i=0;i<ind2vertexTransTriplets.size();i++)
+      if (ind2vertexTransTriplets[i].value()!=0.0)
+        cleanTriplets.push_back(ind2vertexTransTriplets[i]);
+    ind2vertexTransMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
-    constraintMat.conservativeResize(N*currConst, N*(wholeV.rows()+currTransition-1));
+    vertexTrans2CutMat.conservativeResize(N*cutV.rows(), N*(wholeV.rows()+numTransitions));
+    cleanTriplets.clear();
+    for (int i=0;i<vertexTrans2CutTriplets.size();i++)
+      if (vertexTrans2CutTriplets[i].value()!=0.0)
+        cleanTriplets.push_back(vertexTrans2CutTriplets[i]);
+    vertexTrans2CutMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
+    
+    constraintMat.conservativeResize(N*currConst, N*(wholeV.rows()+numTransitions));
     cleanTriplets.clear();
     for (int i=0;i<constTriplets.size();i++)
       if (constTriplets[i].value()!=0.0)
         cleanTriplets.push_back(constTriplets[i]);
     constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
-    //cutting the mesh
-    /*vector<int> cut2whole;
-    vector<RowVector3d> cutVlist;
-    cutF.conservativeResize(wholeF.rows(),3);
-    for (int i=0;i<VH.rows();i++){
-      //creating corners whereever we have non-trivial matching
-      int beginH=VH(i);
-      int currH=beginH;
-      
-      do{
-        if (matching(HE(currH))!=0){
-          cut2whole.push_back(i);
-          cutVlist.push_back(wholeV.row(i));
-        }
-        
-        for (int j=0;j<3;j++)
-          if (wholeF(HF(currH),j)==i)
-            cutF(HF(currH),j)=cut2whole.size()-1;
-        
-        currH=twinH(prevH(currH));
-      }while (beginH!=currH);
-    }
     
-    cut2wholeIndices.conservativeResize(cut2whole.size());
-    for (int i=0;i<cut2wholeIndices.size();i++)
-      cut2wholeIndices(i)=cut2whole[i];
-    
-    cutV.conservativeResize(cutVlist.size(),3);
-    for (int i=0;i<cutVlist.size();i++)
-      cutV.row(i)=cutVlist[i];*/
     
   }
 }

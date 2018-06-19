@@ -17,6 +17,8 @@
 #include <directional/principal_matching.h>
 #include <igl/min_quad_with_fixed.h>
 #include <igl/matlab_format.h>
+#include <iostream>
+#include <fstream>
 
 #include <Eigen/Core>
 #include <queue>
@@ -42,51 +44,59 @@ namespace directional
                                const Eigen::MatrixXi& FE,
                                const Eigen::MatrixXd rawField,
                                const Eigen::VectorXd& edgeWeights,
+                               const Eigen::SparseMatrix<double> i2vtMat,
                                const Eigen::SparseMatrix<double> vt2cMat,
                                const Eigen::SparseMatrix<double> constraintMat,
-                               Eigen::MatrixXd& cornerUV)
+                               const Eigen::MatrixXd& cutV,
+                               const Eigen::MatrixXi& cutF,
+                               Eigen::MatrixXd& cutUV)
   
 
   {
     using namespace Eigen;
     using namespace std;
     
+    ofstream myfile;
+    myfile.open ("parameterize.m");
     //TODO: in vertex space, not corner...
     int N = rawField.cols()/3;
     //constructing face differentials
     vector<Triplet<double>> d0Triplets;
     vector<Triplet<double>> M1Triplets;
     VectorXd gamma(3*N*wholeF.rows());
-    for (int i=0;i<wholeF.rows();i++){
+    for (int i=0;i<cutF.rows();i++){
       for (int j=0;j<3;j++){
         for (int k=0;k<N;k++){
-          d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, -1.0));
-          d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*(j+1)%3+k, 1.0));
+          d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,j)+k, -1.0));
+          d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,(j+1)%3)+k, 1.0));
           Vector3d edgeVector=(wholeV.row(wholeF(i,(j+1)%3))-wholeV.row(wholeF(i,j))).transpose();
           gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0);
           M1Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, edgeWeights(FE(i,j))));
         }
       }
     }
-    SparseMatrix<double> d0(3*N*wholeF.rows(), 3*N*wholeF.rows());
+    SparseMatrix<double> d0(3*N*wholeF.rows(), N*cutV.rows());
     d0.setFromTriplets(d0Triplets.begin(), d0Triplets.end());
     SparseMatrix<double> M1(3*N*wholeF.rows(), 3*N*wholeF.rows());
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     
     SparseMatrix<double> d0T=d0.transpose();
-    SparseMatrix<double> vt2cMatTranspose=vt2cMat.transpose();
-
-    SparseMatrix<double> removeFirstVertexMat(vt2cMat.cols()/2, (vt2cMat.cols()-N)/2);
-    vector<Triplet<double> > removeFirstVertexMatTriplets;
-    for (int i=0;i<(vt2cMat.cols()-N)/2;i++)
-      removeFirstVertexMatTriplets.push_back(Triplet<double>(i+N/2, i, 1.0));
-    removeFirstVertexMat.setFromTriplets(removeFirstVertexMatTriplets.begin(), removeFirstVertexMatTriplets.end());
-    SparseMatrix<double> EtE=d0T*M1*d0;
+    SparseMatrix<double> cornerEtE=d0T*M1*d0;
+    
+    //setting the first variables to zero to resolve translation amiguity
+    SparseMatrix<double> firstVertexZeroMat(i2vtMat.cols(), i2vtMat.cols()-N);
+    vector<Triplet<double> > firstVertexZeroTriplets;
+    for (int i=0;i<i2vtMat.cols()-N;i++)
+      firstVertexZeroTriplets.push_back(Triplet<double>(i+N, i, 1.0));
+    firstVertexZeroMat.setFromTriplets(firstVertexZeroTriplets.begin(), firstVertexZeroTriplets.end());
+    
+    
+    myfile<<igl::matlab_format(firstVertexZeroMat,"firstVertexZeroMat")<<std::endl;
     
     //filtering out symmetry - only for N=4!
-    SparseMatrix<double> SymmMat(vt2cMat.cols(), vt2cMat.cols()/2);
+    SparseMatrix<double> SymmMat(firstVertexZeroMat.cols(), firstVertexZeroMat.cols()/2);
     vector<Triplet<double>> SymmMatTriplets;
-    for (int i=0;i<vt2cMat.cols();i+=4){
+    for (int i=0;i<firstVertexZeroMat.cols();i+=4){
       SymmMatTriplets.push_back(Triplet<double>(i, i/2, 1.0));
       SymmMatTriplets.push_back(Triplet<double>(i+1, i/2+1, 1.0));
       SymmMatTriplets.push_back(Triplet<double>(i+2, i/2, -1.0));
@@ -94,9 +104,14 @@ namespace directional
     }
     
     SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
+    myfile<<igl::matlab_format(SymmMat,"SymmMat")<<std::endl;
+    myfile<<igl::matlab_format(cornerEtE,"cornerEtE")<<std::endl;
+    myfile<<igl::matlab_format(constraintMat,"constraintMat")<<std::endl;
+    myfile<<igl::matlab_format(vt2cMat,"vt2cMat")<<std::endl;
+    myfile<<igl::matlab_format(vt2cMat,"i2vtMat")<<std::endl;
     
-    EtE = removeFirstVertexMat.transpose()*SymmMat.transpose()*vt2cMat.transpose()*EtE*vt2cMat*SymmMat*removeFirstVertexMat;
-    SparseMatrix<double> C = constraintMat*SymmMat*removeFirstVertexMat;
+    SparseMatrix<double> EtE = (vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*cornerEtE*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat);
+    SparseMatrix<double> C = constraintMat*(i2vtMat*firstVertexZeroMat*SymmMat);
     
     SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
     
@@ -115,9 +130,10 @@ namespace directional
     A.setFromTriplets(ATriplets.begin(), ATriplets.end());
     
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
-    b.segment(0,EtE.rows())=removeFirstVertexMat.transpose()*SymmMat.transpose()*vt2cMatTranspose*d0T*M1*gamma;
+    b.segment(0,EtE.rows())=(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*d0T*M1*gamma;
     
     std::cout<<igl::matlab_format(A,"A")<<std::endl;
+    myfile.close();
     
     SimplicialLDLT<SparseMatrix<double> > solver;
     cout<<"Computing A..."<<endl;
@@ -135,13 +151,14 @@ namespace directional
     
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cornerUVVec=VectorXd::Zero(N*3*wholeF.rows(),1);
-    cornerUVVec.tail(3*N*wholeF.rows()-N)=(vt2cMat*SymmMat*x);
+    VectorXd cutUVVec=vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat*x.head(SymmMat.cols());
+    cutUV.conservativeResize(cutV.rows(),2);
+    for (int i=0;i<cutV.rows();i++)
+      cutUV.row(i)<<cutUVVec.segment(4*i,2).transpose();
   }
+
+
 }
-
-
-
 
 #endif
 
