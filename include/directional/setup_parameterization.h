@@ -138,7 +138,7 @@ namespace directional
       }while (beginH!=currH);
     }
     
-    cout<<"cutF: "<<cutF<<endl;
+    //cout<<"cutF: "<<cutF<<endl;
     /*cut2wholeIndices.conservativeResize(cut2whole.size());
     for (int i=0;i<cut2wholeIndices.size();i++)
       cut2wholeIndices(i)=cut2whole[i];*/
@@ -320,17 +320,17 @@ namespace directional
                 constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
           currConst++;
         }
-        /*cout<<"found constraint with: "<<endl;
+        cout<<"found constraint with: "<<endl;
         cout<<"cutValence(i): "<<cutValence(i)<<endl;
         cout<<"isSingular(i): "<<isSingular(i)<<endl;
-        /*for (int j=0;j<permIndices.size();j++){
+        for (int j=0;j<permIndices.size();j++){
           cout<<"permIndices[j]: "<<permIndices[j]<<endl;
           cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
         }
         for (int j=0;j<cleanPermIndices.size();j++){
           cout<<"cleanPermIndices[j]: "<<cleanPermIndices[j]<<endl;
           cout<<"cleanPermMatrices[j]: "<<cleanPermMatrices[j]<<endl;
-        }*/
+        }
         constrainedVertices(i)=1;
       }
     }

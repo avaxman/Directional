@@ -69,7 +69,7 @@ namespace directional
         for (int k=0;k<N;k++){
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,j)+k, -1.0));
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,(j+1)%3)+k, 1.0));
-          Vector3d edgeVector=(wholeV.row(wholeF(i,(j+1)%3))-wholeV.row(wholeF(i,j))).transpose();
+          Vector3d edgeVector=(cutV.row(cutF(i,(j+1)%3))-cutV.row(cutF(i,j))).transpose();
           gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0);
           M1Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, edgeWeights(FE(i,j))));
         }
@@ -81,7 +81,7 @@ namespace directional
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     
     SparseMatrix<double> d0T=d0.transpose();
-    SparseMatrix<double> cornerEtE=d0T*M1*d0;
+    SparseMatrix<double> cutEtE=d0T*M1*d0;
     
     //setting the first variables to zero to resolve translation amiguity
     SparseMatrix<double> firstVertexZeroMat(i2vtMat.cols(), i2vtMat.cols()-N);
@@ -105,12 +105,12 @@ namespace directional
     
     SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
     myfile<<igl::matlab_format(SymmMat,"SymmMat")<<std::endl;
-    myfile<<igl::matlab_format(cornerEtE,"cornerEtE")<<std::endl;
+    myfile<<igl::matlab_format(cutEtE,"cutEtE")<<std::endl;
     myfile<<igl::matlab_format(constraintMat,"constraintMat")<<std::endl;
     myfile<<igl::matlab_format(vt2cMat,"vt2cMat")<<std::endl;
     myfile<<igl::matlab_format(vt2cMat,"i2vtMat")<<std::endl;
     
-    SparseMatrix<double> EtE = (vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*cornerEtE*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat);
+    SparseMatrix<double> EtE = (vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*cutEtE*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat);
     SparseMatrix<double> C = constraintMat*(i2vtMat*firstVertexZeroMat*SymmMat);
     
     SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
@@ -131,6 +131,7 @@ namespace directional
     
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
     b.segment(0,EtE.rows())=(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*d0T*M1*gamma;
+    cout<<"gamma: "<<gamma<<endl;
     
     std::cout<<igl::matlab_format(A,"A")<<std::endl;
     myfile.close();
@@ -148,6 +149,8 @@ namespace directional
       cout<<"Solving failed!!!"<<endl;
       return;
     }
+    
+    //cout<<"d0*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat)*x.head(SymmMat.cols())-gamma: "<<gamma<<endl;
     
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
