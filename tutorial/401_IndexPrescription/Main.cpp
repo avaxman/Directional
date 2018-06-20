@@ -14,7 +14,6 @@
 #include <directional/power_field.h>
 #include <directional/singularity_spheres.h>
 #include <directional/glyph_lines_raw.h>
-#include <directional/write_raw_field.h>
 
 
 Eigen::VectorXi cycleIndices;
@@ -36,7 +35,7 @@ igl::viewer::Viewer viewer;
 
 int eulerChar, numGenerators, numBoundaries;
 
-int N = 4;
+int N = 3;
 
 bool drag = false;
 bool select = false;
@@ -156,13 +155,13 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
         update_mesh();
       }
       break;
-    case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", rawField))
+    /*case 'W':
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
       
-      /*if (directional::write_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singIndices, singPositions))
+      if (directional::write_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singIndices, singPositions))
         std::cout << "Saved singularities" << std::endl;
       else
         std::cout << "Unable to save singularities. Error: " << errno << std::endl;
@@ -216,7 +215,7 @@ int main()
   "  -          Decrease index  of current cycle" << std::endl <<
   "  2          rotate field globally" << std::endl;
   
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/camelhead.off", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
   directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);

@@ -90,7 +90,6 @@ namespace directional
           isHEcut(FH(i,j))=1;
         }
     
-    
     //establishing transition variables by tracing cut curves
     VectorXi Halfedge2TransitionIndices=VectorXi::Constant(HE.rows(),32767);
     VectorXi Halfedge2Matching(HE.rows());
@@ -138,7 +137,7 @@ namespace directional
       }while (beginH!=currH);
     }
     
-    cout<<"cutF: "<<cutF<<endl;
+    //cout<<"cutF: "<<cutF<<endl;
     /*cut2wholeIndices.conservativeResize(cut2whole.size());
     for (int i=0;i<cut2wholeIndices.size();i++)
       cut2wholeIndices(i)=cut2whole[i];*/
@@ -211,10 +210,10 @@ namespace directional
     
     //establishing independent variables
     //all singularity positions are dependent of transition variables, and the number of independent variables is therefore regular vertices + transitions - 1
-    VectorXi independentVars(wholeV.rows()+numTransitions-singPositions.rows());
+    VectorXi independentVars(wholeV.rows()+numTransitions/*-singPositions.rows()*/);
     int currIndVar=0;
     for (int i=0;i<wholeV.rows();i++){
-      if (!isSingular(i))
+      //if (!isSingular(i))
           independentVars(currIndVar++)=i;
     }
     
@@ -224,7 +223,7 @@ namespace directional
     vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets,  ind2vertexTransTriplets;
     
     //the identity parts of ind2vertexTranMat
-    for (int i=0;i<wholeV.rows()-singPositions.rows()+numTransitions;i++)
+    for (int i=0;i<wholeV.rows()/*-singPositions.rows()*/+numTransitions;i++)
       for (int k=0;k<N;k++)
         ind2vertexTransTriplets.push_back(Triplet<double>(N*independentVars(i)+k, N*i+k, 1.0));
     
@@ -238,8 +237,16 @@ namespace directional
       permIndices.push_back(i);
       int beginH=VH(i);
       int currH=beginH;
-       //if (cutValence(i)==2)
-        // cout<<"tracking a 2-valence vertex"<<endl;
+      
+      //reseting to first cut, if exists
+      do{
+        if (isHEcut(currH)!=0)
+          break;
+        currH=twinH(prevH(currH));
+      }while (beginH!=currH);
+      
+      beginH=currH;
+      
       int currCutVertex=-1;
       do{
         int currFace=HF(currH);
@@ -256,6 +263,12 @@ namespace directional
             for (int j=0;j<N;j++)
               for (int k=0;k<N;k++)
                 vertexTrans2CutTriplets.push_back(Triplet<double>(N*currCutVertex+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
+          
+          /*cout<<"currCutVertex: "<<currCutVertex<<endl;
+          for (int j=0;j<permIndices.size();j++){
+            cout<<"permIndices[j]: "<<permIndices[j]<<endl;
+            cout<<"permMatrices[j]: "<<permMatrices[j]<<endl;
+          }*/
         }
         //updating the matrices for the next corner
         int nextHalfedge=twinH(prevH(currH));
@@ -300,6 +313,8 @@ namespace directional
             cleanPermMatrices[j]+=permMatrices[k];
         if (cleanPermIndices[j]==i)
           cleanPermMatrices[j]-=MatrixXi::Identity(N,N);
+        //else
+        //  cleanPermMatrices[j]=-cleanPermMatrices[j];
       }
       
       //if not all matrices are zero, there is a constraint
@@ -309,21 +324,21 @@ namespace directional
           isConstraint=true;
       
       if (isConstraint){
-        if (isSingular(i)){  //the position of the singularity depends on a combination of transition variables
-          MatrixXi singMatrix=cleanPermMatrices[0];  //assuming that's the first vertex
+        /*if (isSingular(i)){  //the position of the singularity depends on a combination of transition variables
+          MatrixXd singMatrixInv=cleanPermMatrices[0].cast<double>().inverse();  //assuming that's the first vertex
           for (int j=1;j<cleanPermMatrices.size();j++){
-            MatrixXi currMatrix=-singMatrix.transpose()*cleanPermMatrices[j];
+            MatrixXd currMatrix=-singMatrixInv*cleanPermMatrices[j].cast<double>();
             for (int k=0;k<N;k++)
               for (int l=0;l<N;l++)
-                ind2vertexTransTriplets.push_back(Triplet<double>(N*i+k, N*(cleanPermIndices[j]-singPositions.rows())+l, (double)currMatrix(k,l)));
+                ind2vertexTransTriplets.push_back(Triplet<double>(N*i+k, N*(cleanPermIndices[j]-singPositions.rows())+l, currMatrix(k,l)));
           }
-        }else{  //non-singular node ties between transition variables
+        }else{  //non-singular node ties between transition variables*/
           for (int j=0;j<cleanPermMatrices.size();j++)
             for (int k=0;k<N;k++)
               for (int l=0;l<N;l++)
                 constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
           currConst++;
-        }
+        //}
         cout<<"found constraint with: "<<endl;
         cout<<"cutValence(i): "<<cutValence(i)<<endl;
         cout<<"isSingular(i): "<<isSingular(i)<<endl;
@@ -341,7 +356,7 @@ namespace directional
     
     cout<<"currConst: "<<currConst<<endl;
     
-    ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()-singPositions.rows()+numTransitions));
+    ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()/*-singPositions.rows()*/+numTransitions));
     vector<Triplet<double>> cleanTriplets;
     for (int i=0;i<ind2vertexTransTriplets.size();i++)
       if (ind2vertexTransTriplets[i].value()!=0.0)
@@ -361,7 +376,7 @@ namespace directional
       if (constTriplets[i].value()!=0.0)
         cleanTriplets.push_back(constTriplets[i]);
     constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
-    
+ 
   }
 }
 

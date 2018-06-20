@@ -44,6 +44,7 @@ namespace directional
                                const Eigen::MatrixXi& FE,
                                const Eigen::MatrixXd rawField,
                                const Eigen::VectorXd& edgeWeights,
+                               const double edgeLength,
                                const Eigen::SparseMatrix<double> i2vtMat,
                                const Eigen::SparseMatrix<double> vt2cMat,
                                const Eigen::SparseMatrix<double> constraintMat,
@@ -70,7 +71,7 @@ namespace directional
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,j)+k, -1.0));
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,(j+1)%3)+k, 1.0));
           Vector3d edgeVector=(cutV.row(cutF(i,(j+1)%3))-cutV.row(cutF(i,j))).transpose();
-          gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0);
+          gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0)*edgeLength;
           M1Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, edgeWeights(FE(i,j))));
         }
       }
@@ -93,14 +94,14 @@ namespace directional
     
     myfile<<igl::matlab_format(firstVertexZeroMat,"firstVertexZeroMat")<<std::endl;
     
-    //filtering out symmetry - only for N=4!
+    //filtering out sign symmetry
     SparseMatrix<double> SymmMat(firstVertexZeroMat.cols(), firstVertexZeroMat.cols()/2);
     vector<Triplet<double>> SymmMatTriplets;
-    for (int i=0;i<firstVertexZeroMat.cols();i+=4){
-      SymmMatTriplets.push_back(Triplet<double>(i, i/2, 1.0));
-      SymmMatTriplets.push_back(Triplet<double>(i+1, i/2+1, 1.0));
-      SymmMatTriplets.push_back(Triplet<double>(i+2, i/2, -1.0));
-      SymmMatTriplets.push_back(Triplet<double>(i+3, i/2+1, -1.0));
+    for (int i=0;i<firstVertexZeroMat.cols();i+=N){
+      for (int j=0;j<N/2;j++){
+        SymmMatTriplets.push_back(Triplet<double>(i+j, i/2+j, 1.0));
+        SymmMatTriplets.push_back(Triplet<double>(i+j+N/2, i/2+j, -1.0));
+      }
     }
     
     SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
@@ -110,8 +111,8 @@ namespace directional
     myfile<<igl::matlab_format(vt2cMat,"vt2cMat")<<std::endl;
     myfile<<igl::matlab_format(vt2cMat,"i2vtMat")<<std::endl;
     
-    SparseMatrix<double> EtE = (vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*cutEtE*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat);
-    SparseMatrix<double> C = constraintMat*(i2vtMat*firstVertexZeroMat*SymmMat);
+    SparseMatrix<double> EtE = (vt2cMat/**i2vtMat*/*firstVertexZeroMat*SymmMat).transpose()*cutEtE*(vt2cMat/**i2vtMat*/*firstVertexZeroMat*SymmMat);
+    SparseMatrix<double> C = constraintMat*(/**i2vtMat*/firstVertexZeroMat*SymmMat);
     
     myfile<<igl::matlab_format(EtE,"EtE")<<std::endl;
   
@@ -155,7 +156,7 @@ namespace directional
     A.setFromTriplets(ATriplets.begin(), ATriplets.end());
     
     VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
-    b.segment(0,EtE.rows())=(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat).transpose()*d0T*M1*gamma;
+    b.segment(0,EtE.rows())=(vt2cMat/**i2vtMat*/*firstVertexZeroMat*SymmMat).transpose()*d0T*M1*gamma;
     //cout<<"gamma: "<<gamma<<endl;
     
     myfile<<igl::matlab_format(A,"A")<<std::endl;
@@ -165,7 +166,7 @@ namespace directional
     SimplicialLDLT<SparseMatrix<double> > ldltsolver;
     cout<<"Computing A..."<<endl;
     VectorXd x;
-    ldltsolver.compute(EtE);
+    ldltsolver.compute(A);
     if(ldltsolver.info()!=Success) {
       cout<<"LDLT failed, trying LU"<<endl;
       SparseLU<SparseMatrix<double> > lusolver;
@@ -174,24 +175,26 @@ namespace directional
         cout<<"LU failed as well!"<<endl;
         return;
       }
-      x = lusolver.solve(b.segment(0,EtE.rows()));
+      x = lusolver.solve(b);
     } else{
       cout<<"Computing A done!"<<endl;
-      x = ldltsolver.solve(b.segment(0,EtE.rows()));
+      x = ldltsolver.solve(b);
       if(ldltsolver.info()!=Success) {
         cout<<"Solving failed!!!"<<endl;
         return;
       }
     }
     
+    cout<<"C*x.head(C.cols()): "<<C*x.head(C.cols())<<endl;
+    
     //cout<<"d0*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat)*x.head(SymmMat.cols())-gamma: "<<gamma<<endl;
     
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cutUVVec=vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat*x.head(EtE.cols());
-    cutUV.conservativeResize(cutV.rows(),2);
+    VectorXd cutUVVec=vt2cMat*/*i2vtMat**/firstVertexZeroMat*SymmMat*x.head(EtE.cols());
+    cutUV.conservativeResize(cutV.rows(),N/2);
     for (int i=0;i<cutV.rows();i++)
-      cutUV.row(i)<<cutUVVec.segment(4*i,2).transpose();
+      cutUV.row(i)<<cutUVVec.segment(N*i,N/2).transpose();
   }
   
   

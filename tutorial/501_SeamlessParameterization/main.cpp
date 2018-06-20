@@ -134,8 +134,8 @@ int main()
   "  0  Toggle raw field/Combed field" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", wholeV, wholeF);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus_param.rawfield", N, rawField);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere_param.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
     
@@ -189,7 +189,11 @@ int main()
     constPositions.row(i)=wholeV.row(constPositionsList[i]);
   }
   
-  directional::parameterize(wholeV, wholeF, FE, rawField, edgeWeights, i2vtMat, vt2cMat, constraintMat, cutV, cutF, cutUV);
+  double edgeLength=50.0;
+  directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, i2vtMat, vt2cMat, constraintMat, cutV, cutF, cutUV);
+  
+  //testing vt2cMat
+  
   
   std::cout<<"cutUV: "<<cutUV<<std::endl;
   
