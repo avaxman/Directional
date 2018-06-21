@@ -139,6 +139,8 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
     //Remove constraint
     if (key == 2)
     {
+      if (cIDs.size()==0)  //nothing to remove
+        return false;
       int i;
       for (i = 0; i < cIDs.rows(); i++)
         if (cIDs(i) == fid)
