@@ -147,8 +147,8 @@ namespace directional
       cutV.row(i)=cutVlist[i];
     
     //starting from each cut-graph node, we trace cut curves
-    cout<<"wholeV.rows(): "<<wholeV.rows()<<endl;
-    cout<<"wholeF.rows(): "<<wholeF.rows()<<endl;
+    //cout<<"wholeV.rows(): "<<wholeV.rows()<<endl;
+    //cout<<"wholeF.rows(): "<<wholeF.rows()<<endl;
     for (int i=0;i<wholeV.rows();i++){
       if (((cutValence(i)==2)&&(!isSingular(i)))||(cutValence(i)==0))
         continue;  //either mid-cut curve or non at all
@@ -339,7 +339,7 @@ namespace directional
                 constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
           currConst++;
         //}
-        cout<<"found constraint with: "<<endl;
+        /*cout<<"found constraint with: "<<endl;
         cout<<"cutValence(i): "<<cutValence(i)<<endl;
         cout<<"isSingular(i): "<<isSingular(i)<<endl;
         for (int j=0;j<permIndices.size();j++){
@@ -349,12 +349,12 @@ namespace directional
         for (int j=0;j<cleanPermIndices.size();j++){
           cout<<"cleanPermIndices[j]: "<<cleanPermIndices[j]<<endl;
           cout<<"cleanPermMatrices[j]: "<<cleanPermMatrices[j]<<endl;
-        }
+        }*/
         constrainedVertices(i)=1;
       }
     }
     
-    cout<<"currConst: "<<currConst<<endl;
+    //cout<<"currConst: "<<currConst<<endl;
     
     ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()/*-singPositions.rows()*/+numTransitions));
     vector<Triplet<double>> cleanTriplets;

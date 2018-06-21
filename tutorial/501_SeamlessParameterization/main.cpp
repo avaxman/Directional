@@ -9,12 +9,22 @@
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
+#include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_combing.h>
+#include <directional/curl_combing.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
+#include <directional/integrable_polyvector_fields.h>
+
+
+#include <directional/polyvector_field_matchings.h>
+#include <directional/polyvector_field_singularities_from_matchings.h>
+#include <directional/polyvector_field_cut_mesh_with_singularities.h>
+#include <directional/polyvector_field_comb_from_matchings_and_cuts.h>
+#include <directional/polyvector_field_poisson_reconstruction.h>
 
 
 
@@ -138,9 +148,52 @@ int main()
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere_param.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
+  /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
+  Eigen::VectorXi b; b.resize(1); b<<0;
+  Eigen::MatrixXd bc; bc.resize(1,6); bc<<two_pv.row(0);
+  double constraint_percentage = 0.002;
+  double rand_factor = 5;
+  int iter = 0;
+  Eigen::VectorXi blevel; blevel.resize(1); b<<1;
+  igl::integrable_polyvector_fields_parameters params;
+  igl::IntegrableFieldSolverData<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::MatrixXd, Eigen::MatrixXd> ipfdata;
+  igl::integrable_polyvector_fields_precompute(wholeV, wholeF, b, bc, blevel, two_pv, ipfdata);
+  for (int bi = 0; bi<50; ++bi)
+  {
+    printf("\n\n **** Batch %d ****\n", iter);
+    igl::integrable_polyvector_fields_solve(ipfdata, params, two_pv, iter ==0);
+    iter++;
+    params.wSmooth *= params.redFactor_wsmooth;
+  }
+  
+  printf("--Matchings and curl--\n");
+  Eigen::MatrixXi match_ab, match_ba;  // matchings across interior edges
+  Eigen::VectorXd curl; // curl per edge
+  double avgCurl = igl::polyvector_field_matchings(two_pv, wholeV, wholeF, true, true, match_ab, match_ba, curl);
+  double maxCurl = curl.maxCoeff();
+  printf("curl -- max: %.5g, avg: %.5g\n", maxCurl,  avgCurl);
+  // Compute singularities
+  /*printf("--Singularities--\n");
+  igl::polyvector_field_singularities_from_matchings(wholeV, wholeF, match_ab, match_ba, singPositions);
+  printf("#singularities: %ld\n", singPositions.rows());
+  // Get mesh cuts based on singularities
+  printf("--Cuts--\n");
+  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
+  // Comb field
+  printf("--Combing--\n");
+  Eigen::MatrixXd combed;
+  igl::polyvector_field_comb_from_matchings_and_cuts(wholeV, wholeF, two_pv, match_ab, match_ba, faceIsCut, combed);*/
+  
+  /*rawField.block(0,0,rawField.rows(),6)=two_pv;
+  rawField.block(0,6,rawField.rows(),6)=-two_pv;*/
+  
+  singIndices.resize(singPositions.size());
+  singIndices.setZero();
+  
     
   //computing
-  directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  //directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,N,prinIndices);
   
   //cutting and parameterizing
@@ -161,7 +214,7 @@ int main()
   }
   
   igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
-  directional::principal_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
   //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
   
   igl::barycenter(wholeV, wholeF, barycenters);
@@ -170,12 +223,6 @@ int main()
   edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
   cutF=wholeF;
   cutV=wholeV;
-
-  //setting combed matching in cut edges without matching to matching = 4 to be compatible with cutting
-  /*for (int i=0;i<wholeF.rows();i++)
-    for (int j=0;j<3;j++)
-      if ((faceIsCut(i,j))&&(combedMatching(FE(i,j))==0))
-        combedMatching(FE(i,j))=N;*/
   directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, i2vtMat,vt2cMat, constraintMat, constrainedVertices, cutV, cutF);
   
   std::vector<int> constPositionsList;
@@ -195,7 +242,7 @@ int main()
   //testing vt2cMat
   
   
-  std::cout<<"cutUV: "<<cutUV<<std::endl;
+  //std::cout<<"cutUV: "<<cutUV<<std::endl;
   
   glyphPrincipalColors<<1.0,0.0,0.5,
   0.0,1.0,0.5,

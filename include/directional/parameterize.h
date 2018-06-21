@@ -124,7 +124,7 @@ namespace directional
     
     //creating sliced permutation matrix
     VectorXi PIndices=qrsolver.colsPermutation().indices();
-    cout<<"PIndices: "<<PIndices<<endl;
+    //cout<<"PIndices: "<<PIndices<<endl;
     
     vector<Triplet<double> > CTriplets;
     for (int k=0; k<C.outerSize(); ++k)
@@ -186,6 +186,7 @@ namespace directional
     }
     
     cout<<"C*x.head(C.cols()): "<<C*x.head(C.cols())<<endl;
+    cout<<"(d0*(vt2cMat*firstVertexZeroMat*SymmMat)*x.head(C.cols())-gamma).lpNorm<Infinity>(): "<<(d0*(vt2cMat*firstVertexZeroMat*SymmMat)*x.head(C.cols())-gamma).lpNorm<Infinity>()<<endl;
     
     //cout<<"d0*(vt2cMat*i2vtMat*firstVertexZeroMat*SymmMat)*x.head(SymmMat.cols())-gamma: "<<gamma<<endl;
     
