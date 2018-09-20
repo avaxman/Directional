@@ -144,11 +144,11 @@ int main()
   "  0  Toggle raw field/Combed field" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere_param.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/decimated-knight.off", wholeV, wholeF);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
-  /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
+  Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
   Eigen::VectorXi b; b.resize(1); b<<0;
   Eigen::MatrixXd bc; bc.resize(1,6); bc<<two_pv.row(0);
   double constraint_percentage = 0.002;
@@ -173,7 +173,7 @@ int main()
   double maxCurl = curl.maxCoeff();
   printf("curl -- max: %.5g, avg: %.5g\n", maxCurl,  avgCurl);
   // Compute singularities
-  /*printf("--Singularities--\n");
+  printf("--Singularities--\n");
   igl::polyvector_field_singularities_from_matchings(wholeV, wholeF, match_ab, match_ba, singPositions);
   printf("#singularities: %ld\n", singPositions.rows());
   // Get mesh cuts based on singularities
@@ -182,10 +182,10 @@ int main()
   // Comb field
   printf("--Combing--\n");
   Eigen::MatrixXd combed;
-  igl::polyvector_field_comb_from_matchings_and_cuts(wholeV, wholeF, two_pv, match_ab, match_ba, faceIsCut, combed);*/
+  igl::polyvector_field_comb_from_matchings_and_cuts(wholeV, wholeF, two_pv, match_ab, match_ba, faceIsCut, combed);
   
-  /*rawField.block(0,0,rawField.rows(),6)=two_pv;
-  rawField.block(0,6,rawField.rows(),6)=-two_pv;*/
+  rawField.block(0,0,rawField.rows(),6)=two_pv;
+  rawField.block(0,6,rawField.rows(),6)=-two_pv;
   
   singIndices.resize(singPositions.size());
   singIndices.setZero();
