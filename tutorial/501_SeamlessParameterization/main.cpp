@@ -239,6 +239,10 @@ int main()
   double edgeLength=50.0;
   directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, i2vtMat, vt2cMat, constraintMat, cutV, cutF, cutUV);
   
+  Eigen::MatrixXd emptyMat;
+  igl::writeOBJ(TUTORIAL_SHARED_PATH "/decimated-knight-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
+
+  
   //testing vt2cMat
   
   
