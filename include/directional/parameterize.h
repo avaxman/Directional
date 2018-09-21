@@ -51,8 +51,8 @@ namespace directional
                                const double edgeLength,
                                //const Eigen::SparseMatrix<double> i2vtMat,
                                const Eigen::SparseMatrix<double> vt2cMat,
+                              const Eigen::SparseMatrix<double> constraintMat,
                                const Eigen::SparseMatrix<double> symmMat,
-                               const Eigen::SparseMatrix<double> constraintMat,
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
                                const Eigen::VectorXi& integerVars,
@@ -87,17 +87,19 @@ namespace directional
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     
     SparseMatrix<double> d0T=d0.transpose();
-    SparseMatrix<double> cutEtE=d0T*M1*d0;
+    //SparseMatrix<double> cutEtE=d0T*M1*d0;
     
     //the variables that should be fixed in the end
     VectorXi fixedMask(numVars);
+    fixedMask.setZero();
     for (int i=0;i<N/2;i++)
       fixedMask(i)=1;  //first vertex is always (0,0)
     for (int i=0;i<integerVars.size();i++)
-      fixedMask(i)=1;
+      fixedMask(integerVars(i))=1;
     
     //the variables that were already fixed in the next iteration
     VectorXi alreadyFixed(numVars);
+    alreadyFixed.setZero();
     for (int i=0;i<N/2;i++)
       alreadyFixed(i)=1;  //first vertex is always (0,0)
     
@@ -106,9 +108,11 @@ namespace directional
     fixedValues.setZero();
     
     SparseMatrix<double> Efull=d0*vt2cMat*symmMat;
+    SparseMatrix<double> var2AllMat(numVars, numVars-alreadyFixed.sum());
+    VectorXd x;
     do{
       //the non-fixed variables to all variables
-      SparseMatrix<double> var2AllMat(numVars, numVars-alreadyFixed.sum());
+      var2AllMat.resize(numVars, numVars-alreadyFixed.sum());
       int varCounter=0;
       vector<Triplet<double> > var2AllTriplets;
       for (int i=0;i<numVars;i++)
@@ -117,7 +121,7 @@ namespace directional
       var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
       
       SparseMatrix<double> Epart = Efull*var2AllMat;
-      VectorXd torhs = Efull*fixedValues;
+      VectorXd torhs = -Efull*fixedValues;
       SparseMatrix<double> EtE = Epart.transpose()*M1*Epart;
       SparseMatrix<double> C = constraintMat*(symmMat*var2AllMat);
       
@@ -166,7 +170,6 @@ namespace directional
       
       SimplicialLDLT<SparseMatrix<double> > ldltsolver;
       //cout<<"Computing A..."<<endl;
-      VectorXd x;
       ldltsolver.compute(A);
       if(ldltsolver.info()!=Success) {
         cout<<"LDLT failed, trying LU"<<endl;
@@ -187,18 +190,16 @@ namespace directional
       }
       
       cout<<"(C*x.head(C.cols())).lpNorm<Infinity>(): "<<(C*x.head(C.cols())).lpNorm<Infinity>()<<endl;
-      cout<<"(d0*(vt2cMat*firstVertexZeroMat*SymmMat)*x.head(C.cols())-gamma).lpNorm<Infinity>(): "<<(d0*(vt2cMat*firstVertexZeroMat*SymmMat)*x.head(C.cols())-gamma).lpNorm<Infinity>()<<endl;
-    }while(!sum(alreadyFixed-fixedMask)!=0);
+      cout<<"(Epart*x.head(C.cols())-gamma-torhs).lpNorm<Infinity>(): "<<(Epart*x.head(C.cols())-gamma-torhs).lpNorm<Infinity>()<<endl;
+    }while((alreadyFixed-fixedMask).sum()!=0);
     
    
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cutUVVec=vt2cMat*firstVertexZeroMat*SymmMat*x.head(EtE.cols());
+    VectorXd cutUVVec=vt2cMat*symmMat*(var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues);
     cutUV.conservativeResize(cutV.rows(),N/2);
     for (int i=0;i<cutV.rows();i++)
       cutUV.row(i)<<cutUVVec.segment(N*i,N/2).transpose();
   }
-  
-  
 }
 
 #endif

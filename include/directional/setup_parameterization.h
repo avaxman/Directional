@@ -381,16 +381,16 @@ namespace directional
     
     
     //filtering out sign symmetry
-    SparseMatrix<double> SymmMat(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()+numTransitions)/2);
-    vector<Triplet<double>> SymmMatTriplets;
+    symmMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()+numTransitions)/2);
+    vector<Triplet<double>> symmMatTriplets;
     for (int i=0;i<N*(wholeV.rows()+numTransitions);i+=N){
       for (int j=0;j<N/2;j++){
-        SymmMatTriplets.push_back(Triplet<double>(i+j, i/2+j, 1.0));
-        SymmMatTriplets.push_back(Triplet<double>(i+j+N/2, i/2+j, -1.0));
+        symmMatTriplets.push_back(Triplet<double>(i+j, i/2+j, 1.0));
+        symmMatTriplets.push_back(Triplet<double>(i+j+N/2, i/2+j, -1.0));
       }
     }
     
-    SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
+    symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
     
     integerVars.conservativeResize(N*numTransitions/2);
     integerVars.setZero();
