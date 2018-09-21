@@ -7,7 +7,7 @@
 #include <directional/effort_to_indices.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
-//#include <directional/write_raw_field.h>
+#include <directional/write_raw_field.h>
 #include <Eigen/Core>
 #include <igl/viewer/Viewer.h>
 #include <igl/read_triangle_mesh.h>
@@ -25,7 +25,7 @@ Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd powerField;
 igl::viewer::Viewer viewer;
 
-int N = 5;
+int N = 4;
 bool normalized = false;
 bool onePressed = false;
 
@@ -116,6 +116,13 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
        std::cout << "Unable to save raw field. Error: " << errno << std::endl;
        break;*/
       
+      
+    case 'W':
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight.rawfield", rawField))
+        std::cout << "Saved raw field" << std::endl;
+      else
+        std::cout << "Unable to save raw field. Error: " << errno << std::endl;
+      
   }
   
   
@@ -190,7 +197,7 @@ int main()
   "  1+R-bttn  Remove constraint" << std::endl;
   
   // Load mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/decimated-knight.off", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
   cIDs.resize(0);

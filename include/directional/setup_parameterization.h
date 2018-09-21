@@ -48,12 +48,14 @@ namespace directional
                                          const Eigen::VectorXi& matching,
                                          const Eigen::VectorXi& singPositions,
                                          const Eigen::MatrixXi& face2cut,
-                                         Eigen::SparseMatrix<double>& ind2vertexTransMat,
+                                         //Eigen::SparseMatrix<double>& ind2vertexTransMat,
                                          Eigen::SparseMatrix<double>& vertexTrans2CutMat,
                                          Eigen::SparseMatrix<double>& constraintMat,
+                                         Eigen::SparseMatrix<double>& symmMat,
                                          Eigen::VectorXi& constrainedVertices,
                                          Eigen::MatrixXd& cutV,
-                                         Eigen::MatrixXi& cutF)
+                                         Eigen::MatrixXi& cutF,
+                                         Eigen::VectorXi& integerVars)
   {
     
     using namespace Eigen;
@@ -356,12 +358,12 @@ namespace directional
     
     //cout<<"currConst: "<<currConst<<endl;
     
-    ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()/*-singPositions.rows()*/+numTransitions));
+    //ind2vertexTransMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()/*-singPositions.rows()*/+numTransitions));
     vector<Triplet<double>> cleanTriplets;
-    for (int i=0;i<ind2vertexTransTriplets.size();i++)
-      if (ind2vertexTransTriplets[i].value()!=0.0)
-        cleanTriplets.push_back(ind2vertexTransTriplets[i]);
-    ind2vertexTransMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
+   // for (int i=0;i<ind2vertexTransTriplets.size();i++)
+    //  if (ind2vertexTransTriplets[i].value()!=0.0)
+    //    cleanTriplets.push_back(ind2vertexTransTriplets[i]);
+    //ind2vertexTransMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
     vertexTrans2CutMat.conservativeResize(N*cutV.rows(), N*(wholeV.rows()+numTransitions));
     cleanTriplets.clear();
@@ -376,7 +378,24 @@ namespace directional
       if (constTriplets[i].value()!=0.0)
         cleanTriplets.push_back(constTriplets[i]);
     constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
- 
+    
+    
+    //filtering out sign symmetry
+    SparseMatrix<double> SymmMat(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()+numTransitions)/2);
+    vector<Triplet<double>> SymmMatTriplets;
+    for (int i=0;i<N*(wholeV.rows()+numTransitions);i+=N){
+      for (int j=0;j<N/2;j++){
+        SymmMatTriplets.push_back(Triplet<double>(i+j, i/2+j, 1.0));
+        SymmMatTriplets.push_back(Triplet<double>(i+j+N/2, i/2+j, -1.0));
+      }
+    }
+    
+    SymmMat.setFromTriplets(SymmMatTriplets.begin(), SymmMatTriplets.end());
+    
+    integerVars.conservativeResize(N*numTransitions/2);
+    integerVars.setZero();
+    for (int i=0;i<N*numTransitions/2;i++)
+      integerVars(i) = N*wholeV.rows()/2+i;
   }
 }
 

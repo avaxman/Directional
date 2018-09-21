@@ -46,8 +46,8 @@ Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition v
 Eigen::MatrixXd cutUV;
 Eigen::MatrixXi faceIsCut;
 
-Eigen::SparseMatrix<double> vt2cMat, i2vtMat;
-Eigen::SparseMatrix<double> constraintMat;
+Eigen::SparseMatrix<double> vt2cMat;
+Eigen::SparseMatrix<double> constraintMat, symmMat;
 //between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
 Eigen::VectorXd edgeWeights;
 
@@ -213,6 +213,7 @@ int main()
     singIndices(i)=singIndicesList[i];
   }
   
+  
   igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
   directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
   //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
@@ -223,7 +224,8 @@ int main()
   edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
   cutF=wholeF;
   cutV=wholeV;
-  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, i2vtMat,vt2cMat, constraintMat, constrainedVertices, cutV, cutF);
+  Eigen::VectorXi integerVars;
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, vt2cMat, constraintMat, symmMat, constrainedVertices, cutV, cutF, integerVars);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
@@ -237,7 +239,7 @@ int main()
   }
   
   double edgeLength=50.0;
-  directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, i2vtMat, vt2cMat, constraintMat, cutV, cutF, cutUV);
+  directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, integerVars, cutUV);
   
   Eigen::MatrixXd emptyMat;
   igl::writeOBJ(TUTORIAL_SHARED_PATH "/decimated-knight-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
