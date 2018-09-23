@@ -239,7 +239,7 @@ int main()
   }
   
   double edgeLength=50.0;
-  //integerVars.setZero();
+  integerVars.setZero();
   directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, integerVars, cutUV);
   
   Eigen::MatrixXd emptyMat;
