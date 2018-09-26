@@ -97,7 +97,7 @@ namespace directional
     for (int i=0;i<integerVars.size();i++)
       fixedMask(integerVars(i))=1;
     
-    //the variables that were already fixed in the next iteration
+    //the variables that were already fixed in the previous iteration
     VectorXi alreadyFixed(numVars);
     alreadyFixed.setZero();
     for (int i=0;i<N/2;i++)
@@ -108,55 +108,59 @@ namespace directional
     fixedValues.setZero();
     
     SparseMatrix<double> Efull=d0*vt2cMat*symmMat;
-    SparseMatrix<double> var2AllMat(numVars, numVars-alreadyFixed.sum());
-    VectorXd x;
-    do{
+    VectorXd x, xprev;
+    
+    //reducing constraintMat
+    SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
+    SparseMatrix<double> Cfull = constraintMat*symmMat;
+    qrsolver.compute(Cfull.transpose());
+    int CRank=qrsolver.rank();
+    //cout<<"CRank: "<<CRank<<endl;
+    
+    //creating sliced permutation matrix
+    VectorXi PIndices=qrsolver.colsPermutation().indices();
+    //cout<<"PIndices: "<<PIndices<<endl;
+    
+    vector<Triplet<double> > CTriplets;
+    for (int k=0; k<Cfull.outerSize(); ++k)
+      for (SparseMatrix<double>::InnerIterator it(Cfull,k); it; ++it)
+      {
+        for (int j=0;j<CRank;j++)
+          if (it.row()==PIndices(j))
+            CTriplets.push_back(Triplet<double>(j, it.col(), it.value()));
+        
+      }
+    
+    Cfull.resize(CRank, Cfull.cols());
+    Cfull.setFromTriplets(CTriplets.begin(), CTriplets.end());
+    SparseMatrix<double> var2AllMat;
+    VectorXd fullx(numVars); fullx.setZero();
+    for (int intIter =0; intIter<fixedMask.sum() ; intIter++){
       //the non-fixed variables to all variables
-      var2AllMat.resize(numVars, numVars-alreadyFixed.sum());
+     var2AllMat.resize(numVars, numVars-alreadyFixed.sum());
       int varCounter=0;
       vector<Triplet<double> > var2AllTriplets;
       for (int i=0;i<numVars;i++)
-        if (!fixedMask(i))
+        if (!alreadyFixed(i))
           var2AllTriplets.push_back(Triplet<double>(i, varCounter++, 1.0));
       var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
       
       SparseMatrix<double> Epart = Efull*var2AllMat;
       VectorXd torhs = -Efull*fixedValues;
       SparseMatrix<double> EtE = Epart.transpose()*M1*Epart;
-      SparseMatrix<double> C = constraintMat*(symmMat*var2AllMat);
+      SparseMatrix<double> Cpart = Cfull*var2AllMat;
       
-      //reducing constraintMat
-      SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
-      qrsolver.compute(C.transpose());
-      int CRank=qrsolver.rank();
-      //cout<<"CRank: "<<CRank<<endl;
       
-      //creating sliced permutation matrix
-      VectorXi PIndices=qrsolver.colsPermutation().indices();
-      //cout<<"PIndices: "<<PIndices<<endl;
-      
-      vector<Triplet<double> > CTriplets;
-      for (int k=0; k<C.outerSize(); ++k)
-        for (SparseMatrix<double>::InnerIterator it(C,k); it; ++it)
-        {
-          for (int j=0;j<CRank;j++)
-            if (it.row()==PIndices(j))
-              CTriplets.push_back(Triplet<double>(j, it.col(), it.value()));
-          
-        }
-      
-      C.resize(CRank, C.cols());
-      C.setFromTriplets(CTriplets.begin(), CTriplets.end());
       //myfile<<igl::matlab_format(C,"C")<<std::endl;
-      SparseMatrix<double> A(EtE.rows()+C.rows(),EtE.rows()+C.rows());
+      SparseMatrix<double> A(EtE.rows()+Cpart.rows(),EtE.rows()+Cpart.rows());
       
       vector<Triplet<double>> ATriplets;
       for (int k=0; k<EtE.outerSize(); ++k)
         for (SparseMatrix<double>::InnerIterator it(EtE,k); it; ++it)
           ATriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
       
-      for (int k=0; k<C.outerSize(); ++k){
-        for (SparseMatrix<double>::InnerIterator it(C,k); it; ++it){
+      for (int k=0; k<Cpart.outerSize(); ++k){
+        for (SparseMatrix<double>::InnerIterator it(Cpart,k); it; ++it){
           ATriplets.push_back(Triplet<double>(it.row()+EtE.rows(), it.col(), it.value()));
           ATriplets.push_back(Triplet<double>(it.col(), it.row()+EtE.rows(), it.value()));
         }
@@ -164,9 +168,12 @@ namespace directional
       
       A.setFromTriplets(ATriplets.begin(), ATriplets.end());
       
-      VectorXd b=VectorXd::Zero(EtE.rows()+C.rows());
+      VectorXd b=VectorXd::Zero(EtE.rows()+Cpart.rows());
       b.segment(0,EtE.rows())=Epart.transpose()*M1*(gamma+torhs);
-      //cout<<"gamma: "<<gamma<<endl;
+      b.segment(EtE.rows(), Cpart.rows()) = -Cfull*fixedValues;
+      //cout<<"fixedValues: "<<fixedValues<<endl;
+      
+      if (intIter==0){  //first solution{
       
       SimplicialLDLT<SparseMatrix<double> > ldltsolver;
       //cout<<"Computing A..."<<endl;
@@ -188,14 +195,54 @@ namespace directional
           return;
         }
       }
+    } else { //conjugate gradients with warm solution
       
-      cout<<"(C*x.head(C.cols())).lpNorm<Infinity>(): "<<(C*x.head(C.cols())).lpNorm<Infinity>()<<endl;
-      cout<<"(Epart*x.head(C.cols())-gamma-torhs).lpNorm<Infinity>(): "<<(Epart*x.head(C.cols())-gamma-torhs).lpNorm<Infinity>()<<endl;
-    }while((alreadyFixed-fixedMask).sum()!=0);
+      ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
+      cg.compute(A);
+      x = cg.solveWithGuess(b,xprev);
+      std::cout << "#iterations:     " << cg.iterations() << std::endl;
+      std::cout << "estimated error: " << cg.error()      << std::endl;
+      // update b, and solve again
+     // x = cg.solve(b);
+    }
+      
+      fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
+      cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
+      cout<<"(Efull*fullx-gamma).lpNorm<Infinity>(): "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
+      
+      if ((alreadyFixed-fixedMask).sum()==0)
+        break;
+      
+      double minIntDiff=5000.0;
+      int minIntDiffIndex=-1;
+      for (int i=0;i<numVars;i++){
+        if ((fixedMask(i))&&(!alreadyFixed(i))) {
+          double currIntDiff = std::abs(0.5*fullx(i) - std::round(0.5*fullx(i)));
+          if (currIntDiff < minIntDiff){
+            minIntDiff = currIntDiff;
+            minIntDiffIndex = i;
+          }
+        }
+      }
+      
+      cout<<"minIntDiffIndex : "<<minIntDiffIndex<<endl;
+      cout<<"minIntDiff : "<<minIntDiff<<endl;
+
+      if (minIntDiffIndex!=-1){
+        alreadyFixed(minIntDiffIndex) = 1;
+        fixedValues(minIntDiffIndex) =std::round(0.5*fullx(minIntDiffIndex))*2;
+      }
+      
+      xprev.resize(numVars-1);
+      varCounter=0;
+      for (int i=0;i<numVars;i++)
+        if (!alreadyFixed(i))
+          xprev(varCounter++)=fullx(i);
+    }
     
-   
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cutUVVec=vt2cMat*symmMat*(var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues);
+    cout<<"fullx: "<<fullx<<endl;
+    VectorXd cutUVVec=vt2cMat*symmMat*fullx;
     cutUV.conservativeResize(cutV.rows(),N/2);
     for (int i=0;i<cutV.rows();i++)
       cutUV.row(i)<<cutUVVec.segment(N*i,N/2).transpose();

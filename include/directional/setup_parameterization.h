@@ -394,8 +394,11 @@ namespace directional
     
     integerVars.conservativeResize(N*numTransitions/2);
     integerVars.setZero();
-    for (int i=0;i<N*numTransitions/2;i++)
-      integerVars(i) = N*wholeV.rows()/2+i;
+    for (int i=0;i<numTransitions;i++)
+      for (int j=0;j<N/2;j++)
+        integerVars(N*i/2+j) = N/2*(wholeV.rows()+i)+j;
+    
+    cout<<"integerVars: "<<integerVars<<endl;
   }
 }
 
