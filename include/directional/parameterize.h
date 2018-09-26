@@ -51,7 +51,7 @@ namespace directional
                                const double edgeLength,
                                //const Eigen::SparseMatrix<double> i2vtMat,
                                const Eigen::SparseMatrix<double> vt2cMat,
-                              const Eigen::SparseMatrix<double> constraintMat,
+                               const Eigen::SparseMatrix<double> constraintMat,
                                const Eigen::SparseMatrix<double> symmMat,
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
@@ -137,7 +137,7 @@ namespace directional
     VectorXd fullx(numVars); fullx.setZero();
     for (int intIter =0; intIter<fixedMask.sum() ; intIter++){
       //the non-fixed variables to all variables
-     var2AllMat.resize(numVars, numVars-alreadyFixed.sum());
+      var2AllMat.resize(numVars, numVars-alreadyFixed.sum());
       int varCounter=0;
       vector<Triplet<double> > var2AllTriplets;
       for (int i=0;i<numVars;i++)
@@ -149,6 +149,29 @@ namespace directional
       VectorXd torhs = -Efull*fixedValues;
       SparseMatrix<double> EtE = Epart.transpose()*M1*Epart;
       SparseMatrix<double> Cpart = Cfull*var2AllMat;
+      
+      //reducing rank on Cpart
+      qrsolver.compute(Cpart.transpose());
+      int CpartRank=qrsolver.rank();
+      //cout<<"CRank: "<<CRank<<endl;
+      
+      //creating sliced permutation matrix
+      VectorXi PIndices=qrsolver.colsPermutation().indices();
+      //cout<<"PIndices: "<<PIndices<<endl;
+      
+      vector<Triplet<double> > CPartTriplets;
+      VectorXd bpart(CpartRank);
+      for (int k=0; k<Cpart.outerSize(); ++k)
+        for (SparseMatrix<double>::InnerIterator it(Cpart,k); it; ++it)
+        {
+          for (int j=0;j<CpartRank;j++)
+            if (it.row()==PIndices(j))
+              CPartTriplets.push_back(Triplet<double>(j, it.col(), it.value()));
+          
+        }
+      
+      Cpart.resize(CpartRank, Cpart.cols());
+      Cpart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
       
       
       //myfile<<igl::matlab_format(C,"C")<<std::endl;
@@ -170,41 +193,46 @@ namespace directional
       
       VectorXd b=VectorXd::Zero(EtE.rows()+Cpart.rows());
       b.segment(0,EtE.rows())=Epart.transpose()*M1*(gamma+torhs);
-      b.segment(EtE.rows(), Cpart.rows()) = -Cfull*fixedValues;
+      VectorXd bfull =-Cfull*fixedValues;
+      for (int k=0;k<CpartRank;k++)
+        bpart(k)=bfull(PIndices(k));
+      b.segment(EtE.rows(), Cpart.rows()) = bpart;
       //cout<<"fixedValues: "<<fixedValues<<endl;
       
+      
       if (intIter==0){  //first solution{
-      
-      SimplicialLDLT<SparseMatrix<double> > ldltsolver;
-      //cout<<"Computing A..."<<endl;
-      ldltsolver.compute(A);
-      if(ldltsolver.info()!=Success) {
-        cout<<"LDLT failed, trying LU"<<endl;
-        SparseLU<SparseMatrix<double> > lusolver;
-        lusolver.compute(A);
-        if(lusolver.info()!=Success) {
-          cout<<"LU failed as well!"<<endl;
-          return;
-        }
-        x = lusolver.solve(b);
-      } else{
-        cout<<"Computing A done!"<<endl;
-        x = ldltsolver.solve(b);
+        
+        SimplicialLDLT<SparseMatrix<double> > ldltsolver;
+        //cout<<"Computing A..."<<endl;
+        ldltsolver.compute(A);
         if(ldltsolver.info()!=Success) {
-          cout<<"Solving failed!!!"<<endl;
-          return;
+          cout<<"LDLT failed, trying LU"<<endl;
+          SparseLU<SparseMatrix<double> > lusolver;
+          lusolver.compute(A);
+          if(lusolver.info()!=Success) {
+            cout<<"LU failed as well!"<<endl;
+            return;
+          }
+          x = lusolver.solve(b);
+        } else{
+          cout<<"Computing A done!"<<endl;
+          x = ldltsolver.solve(b);
+          if(ldltsolver.info()!=Success) {
+            cout<<"Solving failed!!!"<<endl;
+            return;
+          }
         }
+      } else { //conjugate gradients with warm solution
+        
+        ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
+        cg.compute(A);
+        //x = cg.solveWithGuess(b,xprev);
+        x = cg.solve(b);
+        std::cout << "#iterations:     " << cg.iterations() << std::endl;
+        std::cout << "estimated error: " << cg.error()      << std::endl;
+        // update b, and solve again
+        // x = cg.solve(b);
       }
-    } else { //conjugate gradients with warm solution
-      
-      ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
-      cg.compute(A);
-      x = cg.solveWithGuess(b,xprev);
-      std::cout << "#iterations:     " << cg.iterations() << std::endl;
-      std::cout << "estimated error: " << cg.error()      << std::endl;
-      // update b, and solve again
-     // x = cg.solve(b);
-    }
       
       fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
       cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
@@ -227,17 +255,19 @@ namespace directional
       
       cout<<"minIntDiffIndex : "<<minIntDiffIndex<<endl;
       cout<<"minIntDiff : "<<minIntDiff<<endl;
-
+      
       if (minIntDiffIndex!=-1){
         alreadyFixed(minIntDiffIndex) = 1;
         fixedValues(minIntDiffIndex) =std::round(0.5*fullx(minIntDiffIndex))*2;
       }
       
-      xprev.resize(numVars-1);
+      xprev.resize(x.rows()-1);
       varCounter=0;
       for (int i=0;i<numVars;i++)
         if (!alreadyFixed(i))
           xprev(varCounter++)=fullx(i);
+      
+      xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());
     }
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
