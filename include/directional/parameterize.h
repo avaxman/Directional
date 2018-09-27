@@ -55,7 +55,9 @@ namespace directional
                                const Eigen::SparseMatrix<double> symmMat,
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
+                               const bool isInteger,
                                const Eigen::VectorXi& integerVars,
+                               Eigen::MatrixXd& cutUVW,
                                Eigen::MatrixXd& cutUV)
   
   
@@ -272,13 +274,23 @@ namespace directional
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     cout<<"fullx: "<<fullx<<endl;
-    VectorXd cutUVVec=vt2cMat*symmMat*fullx;
-    cutUV.conservativeResize(cutV.rows(),N/2);
+    VectorXd cutUVWVec=vt2cMat*symmMat*fullx;
+    cutUVW.conservativeResize(cutV.rows(),N/2);
+    cutUV.conservativeResize(cutV.rows(),2);
     for (int i=0;i<cutV.rows();i++)
-      cutUV.row(i)<<cutUVVec.segment(N*i,N/2).transpose();
+      cutUVW.row(i)<<cutUVWVec.segment(N*i,N/2).transpose();
+    if (N==4){
+      cutUV = cutUVW.block(0,0,cutUVW.rows(),2);
+    }else {
+      RowVector3d UAxis; UAxis<<1, -1,0; UAxis.normalize();
+      RowVector3d VAxis; VAxis<<-1 ,-1,-2; VAxis.normalize();
+      for (int i=0;i<cutV.rows();i++)
+        cutUV.row(i)<<cutUVWVec.segment(N*i,N/2).transpose().dot(UAxis),cutUVWVec.segment(N*i,N/2).transpose().dot(VAxis);
+      
+    }
   }
 }
-
+  
 #endif
-
-
+  
+  

@@ -230,25 +230,8 @@ namespace directional
      cout<<"HV(nextH(i)), cutValence(HV(nextH(i))): "<<HV(nextH(i))<<","<<cutValence(HV(nextH(i)))<<endl;
      }*/
     
-    //establishing independent variables
-    //all singularity positions are dependent of transition variables, and the number of independent variables is therefore regular vertices + transitions - 1
-    VectorXi independentVars(wholeV.rows()+numTransitions/*-singPositions.rows()*/);
-    int currIndVar=0;
-    for (int i=0;i<wholeV.rows();i++){
-      //if (!isSingular(i))
-      independentVars(currIndVar++)=i;
-    }
-    
-    for (int i=0;i<numTransitions;i++)
-      independentVars(currIndVar++)=wholeV.rows()+i;
-    
-    vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets,  ind2vertexTransTriplets;
-    
-    //the identity parts of ind2vertexTranMat
-    for (int i=0;i<wholeV.rows()/*-singPositions.rows()*/+numTransitions;i++)
-      for (int k=0;k<N;k++)
-        ind2vertexTransTriplets.push_back(Triplet<double>(N*independentVars(i)+k, N*i+k, 1.0));
-    
+    vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets;
+  
     //forming the constraints and the singularity positions
     int currConst=0;
     for (int i=0;i<VH.rows();i++){
@@ -424,13 +407,36 @@ namespace directional
     
     symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
     
-    integerVars.conservativeResize(N*numTransitions/2);
-    integerVars.setZero();
-    for (int i=0;i<numTransitions;i++)
-      for (int j=0;j<N/2;j++)
-        integerVars(N*i/2+j) = N/2*(wholeV.rows()+i)+j;
     
-    cout<<"integerVars: "<<integerVars<<endl;
+    
+    //cout<<"integerVars: "<<integerVars<<endl;
+    
+    
+    //in this case, also doing UV->UVW packing. This only works for N=6.
+    if (N==6){
+      SparseMatrix<double> baryMat(N*(wholeV.rows()+numTransitions)/2, N*(wholeV.rows()+numTransitions)/3);
+      vector<Triplet<double>> baryMatTriplets;
+      for (int i=0;i<N*(wholeV.rows()+numTransitions)/2;i+=N/2){
+        baryMatTriplets.push_back(Triplet<double>(i, i*2/3, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+1, i*2/3+1, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+2, i*2/3, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+2, i*2/3+1, 1.0));
+      }
+      baryMat.setFromTriplets(baryMatTriplets.begin(), baryMatTriplets.end());
+      symmMat = symmMat*baryMat;
+      
+      integerVars.conservativeResize(N*numTransitions/3);
+      integerVars.setZero();
+      for (int i=0;i<numTransitions;i++)
+        for (int j=0;j<N/3;j++)
+          integerVars(N*i/3+j) = N/3*(wholeV.rows()+i)+j;
+    } else {
+      integerVars.conservativeResize(N*numTransitions/2);
+      integerVars.setZero();
+      for (int i=0;i<numTransitions;i++)
+        for (int j=0;j<N/2;j++)
+          integerVars(N*i/2+j) = N/2*(wholeV.rows()+i)+j;
+    }
   }
 }
 

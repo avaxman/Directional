@@ -29,7 +29,7 @@
 
 
 
-int N=4;
+int N=6;
 Eigen::MatrixXi wholeF, cutF;
 Eigen::MatrixXd wholeV, cutV, rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
@@ -40,11 +40,11 @@ Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singPositions;
 Eigen::MatrixXd constPositions;
-Eigen::MatrixXd glyphPrincipalColors(5,3);
+Eigen::MatrixXd glyphPrincipalColors(6,3);
 
 Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
-Eigen::MatrixXd cutUV;
+Eigen::MatrixXd cutUV, cutUVW;
 Eigen::MatrixXi faceIsCut;
 
 Eigen::SparseMatrix<double> vt2cMat;
@@ -190,7 +190,7 @@ int main()
   rawField.block(0,0,rawField.rows(),6)=two_pv;
   rawField.block(0,6,rawField.rows(),6)=-two_pv;
   
-  directional::write_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield",  rawField);
+  directional::write_raw_field(TUTORIAL_SHARED_PATH "/lilium-hex-curl-free.rawfield",  rawField);
   return;*/
   
   //singIndices.resize(singPositions.size());
@@ -198,8 +198,8 @@ int main()
   
     
   //computing
-  //directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
-  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  //directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,N,prinIndices);
   
   //cutting and parameterizing
@@ -221,7 +221,8 @@ int main()
   
   
   igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
-  directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  //directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  directional::principal_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
   //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
   
   igl::barycenter(wholeV, wholeF, barycenters);
@@ -231,7 +232,8 @@ int main()
   cutF=wholeF;
   cutV=wholeV;
   Eigen::VectorXi integerVars;
-  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut, vt2cMat, constraintMat, symmMat, constrainedVertices, cutV, cutF, integerVars);
+  bool isBarycentric =true;  //to constrain u+v+w=1
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut,  vt2cMat, constraintMat, symmMat, constrainedVertices, cutV, cutF, integerVars);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
@@ -245,8 +247,8 @@ int main()
   }
   
   double edgeLength=50.0;
-  //integerVars.setZero();
-  directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, integerVars, cutUV);
+  bool isInteger = false;  //do not do translational seamless.
+  directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, isInteger, integerVars, cutUVW, cutUV);
   
   Eigen::MatrixXd emptyMat;
   igl::writeOBJ(TUTORIAL_SHARED_PATH "/lilium-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
@@ -261,7 +263,8 @@ int main()
   0.0,1.0,0.5,
   1.0,0.5,0.0,
   0.0,0.5,1.0,
-  0.5,1.0,0.0;
+  0.5,1.0,0.0,
+  0.5,0.0,1.0;
   
   update_mesh();
   viewer.callback_key_down = &key_down;
