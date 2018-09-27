@@ -273,19 +273,23 @@ namespace directional
     }
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    cout<<"fullx: "<<fullx<<endl;
+    //cout<<"fullx: "<<fullx<<endl;
     VectorXd cutUVWVec=vt2cMat*symmMat*fullx;
     cutUVW.conservativeResize(cutV.rows(),N/2);
     cutUV.conservativeResize(cutV.rows(),2);
     for (int i=0;i<cutV.rows();i++)
       cutUVW.row(i)<<cutUVWVec.segment(N*i,N/2).transpose();
+    
+    //cout<<"symmMat*fullx: "<<symmMat*fullx<<endl;
+    //cout<<"cutUVWVec: "<<cutUVWVec<<endl;
+    //cout<<"cutUVW: "<<cutUVW<<endl;
     if (N==4){
       cutUV = cutUVW.block(0,0,cutUVW.rows(),2);
     }else {
-      RowVector3d UAxis; UAxis<<1, -1,0; UAxis.normalize();
-      RowVector3d VAxis; VAxis<<-1 ,-1,-2; VAxis.normalize();
+      RowVector3d UAxis; UAxis<<1, 1,0; UAxis.normalize();
+      RowVector3d VAxis; VAxis<<-1, 1, 2; VAxis.normalize();
       for (int i=0;i<cutV.rows();i++)
-        cutUV.row(i)<<cutUVWVec.segment(N*i,N/2).transpose().dot(UAxis),cutUVWVec.segment(N*i,N/2).transpose().dot(VAxis);
+        cutUV.row(i)<<cutUVWVec.segment(N*i,N/2).transpose().dot(UAxis)/3.0,cutUVWVec.segment(N*i,N/2).transpose().dot(VAxis)/sqrt(3.0);
       
     }
   }

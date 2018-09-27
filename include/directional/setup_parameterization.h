@@ -417,13 +417,15 @@ namespace directional
       SparseMatrix<double> baryMat(N*(wholeV.rows()+numTransitions)/2, N*(wholeV.rows()+numTransitions)/3);
       vector<Triplet<double>> baryMatTriplets;
       for (int i=0;i<N*(wholeV.rows()+numTransitions)/2;i+=N/2){
-        baryMatTriplets.push_back(Triplet<double>(i, i*2/3, 1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+1, i*2/3+1, 1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+2, i*2/3, 1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+2, i*2/3+1, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i, (i*2)/3, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+1, (i*2)/3+1, 1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+2, (i*2)/3, -1.0));
+        baryMatTriplets.push_back(Triplet<double>(i+2, (i*2)/3+1, 1.0));
       }
       baryMat.setFromTriplets(baryMatTriplets.begin(), baryMatTriplets.end());
       symmMat = symmMat*baryMat;
+      
+      //cout<<"symmMat*VectorXd::Constant(symmMat.cols(),1.0): "<<symmMat*VectorXd::Constant(symmMat.cols(),1.0)<<endl;
       
       integerVars.conservativeResize(N*numTransitions/3);
       integerVars.setZero();
