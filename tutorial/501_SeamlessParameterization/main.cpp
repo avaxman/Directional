@@ -8,6 +8,7 @@
 #include <igl/cut_mesh.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
+#include <directional/write_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
@@ -144,11 +145,13 @@ int main()
   "  0  Toggle raw field/Combed field" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
-  igl::readOFF(TUTORIAL_SHARED_PATH "/decimated-knight.off", wholeV, wholeF);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight.rawfield", N, rawField);
+   igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", wholeV, wholeF);
+  //igl::readOFF(TUTORIAL_SHARED_PATH "/decimated-knight.off", wholeV, wholeF);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium-curl-free.rawfield", N, rawField);
+  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
-  Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
+  /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
   Eigen::VectorXi b; b.resize(1); b<<0;
   Eigen::MatrixXd bc; bc.resize(1,6); bc<<two_pv.row(0);
   double constraint_percentage = 0.002;
@@ -187,8 +190,11 @@ int main()
   rawField.block(0,0,rawField.rows(),6)=two_pv;
   rawField.block(0,6,rawField.rows(),6)=-two_pv;
   
-  singIndices.resize(singPositions.size());
-  singIndices.setZero();
+  directional::write_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield",  rawField);
+  return;*/
+  
+  //singIndices.resize(singPositions.size());
+  //singIndices.setZero();
   
     
   //computing
@@ -243,7 +249,7 @@ int main()
   directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, integerVars, cutUV);
   
   Eigen::MatrixXd emptyMat;
-  igl::writeOBJ(TUTORIAL_SHARED_PATH "/decimated-knight-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
+  igl::writeOBJ(TUTORIAL_SHARED_PATH "/lilium-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
 
   
   //testing vt2cMat
