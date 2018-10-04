@@ -146,11 +146,11 @@ int main()
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
    //igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", wholeV, wholeF);
- igl::readOFF(TUTORIAL_SHARED_PATH "/decimated-knight.off", wholeV, wholeF);
+ igl::readOFF(TUTORIAL_SHARED_PATH "/spherers-K.off", wholeV, wholeF);
   //igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium-hex.rawfield", N, rawField);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield", N, rawField);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curlfree0.rawfield", N, rawField);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/spherers-curlfreeK.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
   /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
@@ -248,7 +248,7 @@ int main()
     constPositions.row(i)=wholeV.row(constPositionsList[i]);
   }
   
-  double edgeLength=50.0;
+  double edgeLength=25.0;
   bool isInteger = true;  //do not do translational seamless.
   integerVars.setZero();
   directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, isInteger, integerVars, cutUVW, cutUV);
@@ -256,7 +256,7 @@ int main()
   //std::cout<<"cutUVW.col(0)-cutUVW.col(1)+cutUVW.col(2): "<<cutUVW.col(0)-cutUVW.col(1)+cutUVW.col(2)<<std::endl;
   
   Eigen::MatrixXd emptyMat;
-  igl::writeOBJ(TUTORIAL_SHARED_PATH "/decimated-knight-0-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
+  igl::writeOBJ(TUTORIAL_SHARED_PATH "/torus-twosings-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
 
   
   //testing vt2cMat
