@@ -70,21 +70,23 @@ namespace directional
         continue;
       //computing free coefficient effort (a.k.a. [Diamanti et al. 2014])
       Complex freeCoeffEffort(1.0, 0.0);
-      double minRotAngle=10000.0;
       int indexMinFromZero=0;
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
+      double minCurl = 32767000.0;
       for (int j = 0; j < N; j++) {
-        RowVector3d vec0f = rawField.block(EF(i, 0), 0, 1, 3);
-        Complex vec0fc = Complex(vec0f.dot(B1.row(EF(i, 0))), vec0f.dot(B2.row(EF(i, 0))));
-        RowVector3d vecjg = rawField.block(EF(i, 1), 3 * j, 1, 3);
-        Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
-        Complex transvec0fc = vec0fc*edgeTransport(i);
-        double currRotAngle = arg(vecjgc / transvec0fc);
-        if (abs(currRotAngle)<abs(minRotAngle)){
+        double currCurl = 0;
+        for (int k=0;k<N;k++){
+          RowVector3d vecDiff =rawField.block(EF(i, 1), 3 * ((j+k)%N), 1, 3)-rawField.block(EF(i, 0), 3*k, 1, 3);
+          currCurl +=std::abs(edgeVectors.row(i).dot(vecDiff));
+        }
+        
+        if (currCurl < minCurl){
           indexMinFromZero=j;
-          minRotAngle=currRotAngle;
+          minCurl=currCurl;
         }
       }
+      
+      std::cout<<"minCurl: "<<minCurl<<endl;
       
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
       double currEffort=0;
@@ -117,7 +119,7 @@ namespace directional
   {
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
-    principal_matching(V, F, EV, EF, FE, rawField, matching, effort);
+    curl_matching(V, F, EV, EF, FE, rawField, matching, effort);
   }
 }
 
