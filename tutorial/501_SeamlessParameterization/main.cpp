@@ -146,11 +146,11 @@ int main()
   "  1  Show/hide singularities" << std::endl <<
   "  2  Show textured mesh/original mesh" << std::endl <<
    //igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", wholeV, wholeF);
- igl::readOFF(TUTORIAL_SHARED_PATH "/spherers-K.off", wholeV, wholeF);
+ igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka-red.off", wholeV, wholeF);
   //igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium-hex.rawfield", N, rawField);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield", N, rawField);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/spherers-curlfreeK.rawfield", N, rawField);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-red-cf.rawfield", N, rawField);
   igl::edge_topology(wholeV, wholeF, EV, FE, EF);
   
   /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
@@ -192,7 +192,7 @@ int main()
   rawField.block(0,0,rawField.rows(),6)=two_pv;
   rawField.block(0,6,rawField.rows(),6)=-two_pv;
   
-  directional::write_raw_field(TUTORIAL_SHARED_PATH "/lilium-hex-curl-free.rawfield",  rawField);
+  directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield",  rawField);
   return;*/
   
   //singIndices.resize(singPositions.size());
@@ -202,7 +202,7 @@ int main()
   //computing
   //directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
   directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,N,prinIndices);
+  directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,matching, N,prinIndices);
   
   //cutting and parameterizing
   
@@ -221,9 +221,10 @@ int main()
     singIndices(i)=singIndicesList[i];
   }
   
-  
   igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
   directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  
+
   //directional::principal_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
   //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
   
@@ -248,7 +249,7 @@ int main()
     constPositions.row(i)=wholeV.row(constPositionsList[i]);
   }
   
-  double edgeLength=25.0;
+  double edgeLength=200.0;
   bool isInteger = true;  //do not do translational seamless.
   integerVars.setZero();
   directional::parameterize(wholeV, wholeF, FE, combedField, edgeWeights, edgeLength, vt2cMat, constraintMat, symmMat, cutV, cutF, isInteger, integerVars, cutUVW, cutUV);
@@ -256,7 +257,7 @@ int main()
   //std::cout<<"cutUVW.col(0)-cutUVW.col(1)+cutUVW.col(2): "<<cutUVW.col(0)-cutUVW.col(1)+cutUVW.col(2)<<std::endl;
   
   Eigen::MatrixXd emptyMat;
-  igl::writeOBJ(TUTORIAL_SHARED_PATH "/torus-twosings-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
+  //igl::writeOBJ(TUTORIAL_SHARED_PATH "/torus-twosings-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
 
   
   //testing vt2cMat
