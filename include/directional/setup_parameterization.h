@@ -172,8 +172,8 @@ namespace directional
       if (isBoundary(i))
         continue;  //there is never a need to start with boundary vertices, and boundary curves don't get a transition variable
       
-      cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
-      cout<<"currTransition: "<<currTransition<<endl;
+     // cout<<"Starting to trace from vertex "<<i<<" cut valence "<<cutValence(i)<<endl;
+      //cout<<"currTransition: "<<currTransition<<endl;
       //tracing curves until next node, if not already filled
       int beginH=VH(i);
       int currH=beginH;
@@ -186,10 +186,10 @@ namespace directional
           isHEClaimed(nextHalfedgeInCut)=1;
           isHEClaimed(twinH(nextHalfedgeInCut))=1;
           int nextCutVertex=HV(nextH(nextHalfedgeInCut));
-          cout<<"nextCutVertex: "<<nextCutVertex<<endl;
-          cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
-          cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
-          cout<<"isBoundary(nextCutVertex)"<<isBoundary(nextCutVertex)<<endl;
+          //cout<<"nextCutVertex: "<<nextCutVertex<<endl;
+          //cout<<"cutValence(nextCutVertex): "<<cutValence(nextCutVertex)<<endl;
+          //cout<<"isSingular(nextCutVertex)"<<isSingular(nextCutVertex)<<endl;
+          //cout<<"isBoundary(nextCutVertex)"<<isBoundary(nextCutVertex)<<endl;
           //advancing on the cut until next node
           while ((cutValence(nextCutVertex)==2)&&(!isSingular(nextCutVertex))&&(!isBoundary(nextCutVertex))){
             int beginH=VH(nextCutVertex);

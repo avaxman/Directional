@@ -30,16 +30,29 @@ namespace directional
   // indices:     #c the index of the cycle x N (always an integer).
   IGL_INLINE void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
                                     const Eigen::VectorXd& effort,
+                                    const Eigen::VectorXi& matching,
                                     const Eigen::VectorXd& cycleCurvature,
                                     const int N,
                                     Eigen::VectorXi& indices)
   {
     using namespace std;
     Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
+    
+    Eigen::VectorXd matchingIndices = basisCycles*matching.cast<double>();
+    
+    //cout<<"dIndices - matchingIndices: "<<dIndices-matchingIndices<<endl;
+    
+    for (int i=0;i<dIndices.size();i++){
+      int diff = (int)(std::round((dIndices(i) - matchingIndices(i))))%4;
+      if (diff!=0)
+        cout<<"index of difference: "<<i<<" and difference: "<<(dIndices(i) - matchingIndices(i))<<endl;
+    }
+    
     indices.conservativeResize(dIndices.size());
     for (int i=0;i<indices.size();i++)
       indices(i)=std::round(dIndices(i));
-   // std::cout<<"(dIndices-(dIndices.cast<int>()).cast<double>()).lpNorm<Infinity>(): "<<(dIndices-(dIndices.cast<int>()).cast<double>()).lpNorm<Eigen::Infinity>();
+    //std::cout<<"dIndices: "<<dIndices<<endl;
+    //std::cout<<"(dIndices-indices.cast<double>()).lpNorm<Eigen::Infinity>(): "<<(dIndices-indices.cast<double>()).lpNorm<Eigen::Infinity>()<<std::endl;
     
   }
   
@@ -50,6 +63,7 @@ namespace directional
                                     const Eigen::MatrixXi& EV,
                                     const Eigen::MatrixXi& EF,
                                     const Eigen::VectorXd& effort,
+                                    const Eigen::VectorXi& matching,
                                     const int N,
                                     Eigen::VectorXi& indices)
   {
@@ -62,7 +76,7 @@ namespace directional
     for (int i=0;i<innerEdges.size();i++)
       effortInner(i)=effort(innerEdges(i));
     Eigen::VectorXi fullIndices;
-    directional::effort_to_indices(basisCycles, effortInner, cycleCurvature, N, fullIndices);
+    directional::effort_to_indices(basisCycles, effortInner, matching, cycleCurvature, N, fullIndices);
     indices.conservativeResize(V.size());
     for (int i=0;i<V.rows();i++)
       indices(i)=fullIndices(vertex2cycle(i));

@@ -273,7 +273,7 @@ namespace directional
     }
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    cout<<"fullx: "<<fullx<<endl;
+    //cout<<"fullx: "<<fullx<<endl;
     VectorXd cutUVWVec=vt2cMat*symmMat*fullx;
     cutUVW.conservativeResize(cutV.rows(),N/2);
     cutUV.conservativeResize(cutV.rows(),2);
