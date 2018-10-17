@@ -1,4 +1,4 @@
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/readOFF.h>
 #include <igl/edge_topology.h>
 #include <directional/dual_cycles.h>
@@ -42,7 +42,7 @@ double globalRotation=0.0;
 typedef enum {TRIVIAL_ONE_SING, TRIVIAL_PRINCIPAL_MATCHING, IMPLICIT_FIELD} ViewingModes;
 ViewingModes viewingMode=TRIVIAL_ONE_SING;
 
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 
 
 void update_directional_field()
@@ -65,7 +65,7 @@ void update_directional_field()
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING){
     Eigen::VectorXd effort;
     directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
-    directional::effort_to_indices(V,F,EV, EF, effort,N,prinSingIndices);
+    directional::effort_to_indices(V,F,EV, EF, effort,matching,N,prinSingIndices);
   }
   
   if (viewingMode==IMPLICIT_FIELD){
@@ -80,7 +80,7 @@ void update_directional_field()
     representative.rowwise().normalize();
     directional::representative_to_raw(V,F,representative,N, rawField);
     directional::principal_matching(V, F,EV,EF,FE,rawField, matching, effort);
-    directional::effort_to_indices(V,F,EV,EF,effort,N,prinSingIndices);
+    directional::effort_to_indices(V,F,EV,EF,effort,matching,N,prinSingIndices);
   }
 }
 
@@ -110,14 +110,14 @@ void update_mesh()
   
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
 
-bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifiers)
 {
   using namespace std;
   switch(key)

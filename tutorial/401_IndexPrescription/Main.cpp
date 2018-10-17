@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
@@ -31,7 +31,7 @@ Eigen::VectorXd rotationField;
 std::vector<std::vector<int>> cycleFaces;
 int currCycle=0;
 
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 
 int eulerChar, numGenerators, numBoundaries;
 
@@ -97,15 +97,15 @@ void update_mesh()
   
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
   
 }
 
 
-bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -113,7 +113,7 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
   }
   return true;
 }
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -178,7 +178,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 
-bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   if ((key != 0)||(!select))
     return false;
@@ -188,7 +188,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
   double y = viewer.core.viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view * viewer.core.model,
+  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
                                viewer.core.proj, viewer.core.viewport, V, F, fid, bc))
   {
     Eigen::Vector3d::Index maxCol;

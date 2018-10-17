@@ -9,7 +9,7 @@
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
@@ -21,7 +21,7 @@ Eigen::VectorXd effort;
 Eigen::MatrixXi F, EV, FE, EF;
 Eigen::MatrixXd V, rawField,representative, cValues;
 Eigen::MatrixXcd polyvectorField;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 
 int N = 3;
 
@@ -55,7 +55,7 @@ void update_mesh()
   if (cIDs.rows()!=0){
     directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort);
     
-    directional::effort_to_indices(V,F,EV, EF,effort,N, indices);
+    directional::effort_to_indices(V,F,EV, EF,effort,matching, N, indices);
     std::vector<int> singIndicesList,singPositionsList;
     for (int i=0;i<V.rows();i++)
       if (indices(i)!=0){
@@ -75,15 +75,15 @@ void update_mesh()
   directional::glyph_lines_raw(V, F, rawField, Eigen::RowVector3d(0, 0, 1), false, true, fullV, fullF, fullC);
   
   // Update the viewer
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
 
 
-bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
     int borders;
     switch (key)
@@ -95,7 +95,7 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 // Handle keyboard input
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
 	int borders;
 	switch (key)
@@ -122,7 +122,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   if ((key != 0 && key != 2) || !onePressed)
 		return false;
@@ -132,7 +132,7 @@ bool mouse_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 	// Cast a ray in the view direction starting from the mouse position
 	double x = viewer.current_mouse_x;
 	double y = viewer.core.viewport(3) - viewer.current_mouse_y;
-	if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view * viewer.core.model,
+	if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view ,
 		viewer.core.proj, viewer.core.viewport, V, F, fid, bc))
 	{
 		//Remove constraint

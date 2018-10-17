@@ -11,7 +11,7 @@
 #include <igl/sort_vectors_ccw.h>
 #include <directional/streamlines.h>
 //#include <igl/copyleft/comiso/nrosy.h>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/line_cylinders.h>
@@ -46,7 +46,7 @@ int anim_t = 0;
 int anim_t_dir = 1;
 
 
-bool pre_draw(igl::viewer::Viewer &viewer)
+bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
   using namespace Eigen;
   using namespace std;
@@ -67,15 +67,15 @@ bool pre_draw(igl::viewer::Viewer &viewer)
   directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0), 4, true, true, fullV, fullF, fullC);
   //viewer.data.add_edges(sl_state.start_point, sl_state.end_point, color);
   
-  viewer.data.clear();
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
   anim_t += anim_t_dir;
   
   return false;
 }
 
-bool key_down(igl::viewer::Viewer &viewer, unsigned char key, int modifier)
+bool key_down(igl::opengl::glfw::Viewer &viewer, unsigned char key, int modifier)
 {
   if (key == ' ')
   {
@@ -120,10 +120,10 @@ int main(int argc, char *argv[])
   igl::streamlines_init(V, F, raw, false, sl_data, sl_state);
   
   // Viewer Settings
-  igl::viewer::Viewer viewer;
+  igl::opengl::glfw::Viewer viewer;
   viewer.callback_pre_draw = &pre_draw;
   viewer.callback_key_down = &key_down;
-  viewer.core.show_lines = false;
+  viewer.data().show_lines = false;
   viewer.core.is_animating = false;
   viewer.core.animation_max_fps = 30.;
   
@@ -139,9 +139,9 @@ int main(int argc, char *argv[])
   
   directional::line_cylinders(sl_state0.start_point, sl_state0.start_point + 0.0005 * v, 0.0005, Eigen::MatrixXd::Constant(sl_state0.start_point.rows(),3,1.0), 4, true, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
   
   cout <<
   "Press [space] to toggle animation" << endl;

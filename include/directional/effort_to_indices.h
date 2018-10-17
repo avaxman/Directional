@@ -38,15 +38,15 @@ namespace directional
     using namespace std;
     Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
     
-    Eigen::VectorXd matchingIndices = basisCycles*matching.cast<double>();
+    //Eigen::VectorXd matchingIndices = basisCycles*matching.cast<double>();
     
     //cout<<"dIndices - matchingIndices: "<<dIndices-matchingIndices<<endl;
     
-    for (int i=0;i<dIndices.size();i++){
+    /*for (int i=0;i<dIndices.size();i++){
       int diff = (int)(std::round((dIndices(i) - matchingIndices(i))))%4;
       if (diff!=0)
         cout<<"index of difference: "<<i<<" and difference: "<<(dIndices(i) - matchingIndices(i))<<endl;
-    }
+    }*/
     
     indices.conservativeResize(dIndices.size());
     for (int i=0;i<indices.size();i++)

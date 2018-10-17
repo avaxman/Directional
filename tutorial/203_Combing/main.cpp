@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
@@ -18,7 +18,7 @@ Eigen::MatrixXi F;
 Eigen::MatrixXd V, rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
 Eigen::RowVector3d rawGlyphColor;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
@@ -69,14 +69,14 @@ void update_mesh()
     directional::line_cylinders(P1, P2, l/50.0, Eigen::MatrixXd::Constant(F.rows(), 3, 0.0), 6, false, true, fullV, fullF, fullC);
   }
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
 // Handle keyboard input
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -100,7 +100,7 @@ int main()
   //computing
   directional::principal_combing(V,F, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
+  directional::effort_to_indices(V,F,EV, EF, effort,matching, N,prinIndices);
   
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;

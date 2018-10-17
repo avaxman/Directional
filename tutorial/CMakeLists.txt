@@ -4,16 +4,17 @@ message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
 ### conditionally compile certain modules depending on libraries found on the system
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../shared/cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
-### libIGL options: choose between header only and compiled static library
-option(LIBIGL_USE_STATIC_LIBRARY "Use LibIGL as static library" OFF)
-option(LIBDIRECTIONAL_USE_STATIC_LIBRARY "Use Libdirectional as static library" OFF)
+### libIGL options:
 option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
-option(LIBIGL_WITH_NANOGUI     "Use Nanogui menu"   OFF)
+option(LIBIGL_WITH_OPENGL      "Use OpenGL"         ON)
+option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
+
 ### Adding libIGL and libdirectional: choose the path to your local copy
+find_package(LIBIGL REQUIRED QUIET)
 include(libdirectional)
 
 ### Output directories

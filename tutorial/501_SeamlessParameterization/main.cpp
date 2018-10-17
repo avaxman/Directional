@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
@@ -34,7 +34,7 @@ Eigen::MatrixXi wholeF, cutF;
 Eigen::MatrixXd wholeV, cutV, rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
 Eigen::RowVector3d rawGlyphColor;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
@@ -64,7 +64,7 @@ void update_mesh()
   Eigen::MatrixXi fullF;
   Eigen::MatrixXd fullC;
   
-  if (!viewer.core.show_texture){
+  if (!viewer.data().show_texture){
     fullC=Eigen::MatrixXd::Constant(cutF.rows(),3, 1.0);
     fullV=wholeV;
     fullF=wholeF;
@@ -105,20 +105,20 @@ void update_mesh()
       
       directional::line_cylinders(P1, P2, l/50.0, Eigen::MatrixXd::Constant(wholeF.rows(), 3, 0.0), 6, false, true, fullV, fullF, fullC);
     }
-    viewer.data.clear();
-    viewer.data.set_face_based(true);
-    viewer.data.set_mesh(fullV, fullF);
-    viewer.data.set_colors(fullC);
+    viewer.data().clear();
+    viewer.data().set_face_based(true);
+    viewer.data().set_mesh(fullV, fullF);
+    viewer.data().set_colors(fullC);
   } else {
     fullV=cutV;
     fullF=cutF;
     
     
     
-    viewer.data.clear();
-    viewer.data.set_face_based(true);
-    viewer.data.set_mesh(fullV, fullF);
-    viewer.data.set_uv(cutUV);
+    viewer.data().clear();
+    viewer.data().set_face_based(true);
+    viewer.data().set_mesh(fullV, fullF);
+    viewer.data().set_uv(cutUV);
     
   }
   
@@ -126,14 +126,14 @@ void update_mesh()
 }
 
 // Handle keyboard input
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
       // Select vector
     case '0': showCombedField=!showCombedField; update_mesh(); break;
     case '1': showSingularities=!showSingularities; update_mesh(); break;
-    case '2': viewer.core.show_texture=!viewer.core.show_texture; update_mesh(); break;
+    case '2': viewer.data().show_texture=!viewer.data().show_texture; update_mesh(); break;
   }
   return true;
 }

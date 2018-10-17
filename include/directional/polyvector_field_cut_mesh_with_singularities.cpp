@@ -6,7 +6,7 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can 
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
-#include <igl/dijkstra.h>
+#include <directional/dijkstra.h>
 #include <igl/vertex_triangle_adjacency.h>
 #include <igl/adjacency_list.h>
 #include <igl/triangle_triangle_adjacency.h>

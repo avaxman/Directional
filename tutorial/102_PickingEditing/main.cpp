@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
@@ -14,7 +14,7 @@ Eigen::MatrixXd V, rawField, barycenters;
 Eigen::RowVector3d defaultGlyphColor;
 Eigen::RowVector3d selectedFaceGlyphColor;
 Eigen::RowVector3d selectedVectorGlyphColor;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 
 //User input variables
 bool drag = false;
@@ -45,13 +45,13 @@ void update_mesh()
   
   directional::glyph_lines_raw(V, F, rawField, fullGlyphColor, false, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
-bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -62,7 +62,7 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 // Handle keyboard input
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   int borders;
   switch (key)
@@ -97,7 +97,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
 {
   if (!zeroPressed)
     return false;
@@ -107,18 +107,18 @@ bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
   double y = viewer.core.viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view * viewer.core.model,
+  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
                                viewer.core.proj, viewer.core.viewport, V, F, fid, bc))
   {
     
     //choosing face
-    if ((igl::viewer::Viewer::MouseButton)button==igl::viewer::Viewer::MouseButton::Left){
+    if ((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Left){
       currF=fid;
       update_mesh();
       return true;
     }
     //choosing face
-    if (((igl::viewer::Viewer::MouseButton)button==igl::viewer::Viewer::MouseButton::Right)&&(fid==currF)){
+    if (((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Right)&&(fid==currF)){
       // Calculate direction from the center of the face to the mouse
       Eigen::RowVector3d newVec =(V.row(F(fid, 0)) * bc(0) +
                                   V.row(F(fid, 1)) * bc(1) +

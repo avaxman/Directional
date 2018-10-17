@@ -1,4 +1,4 @@
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/singularity_spheres.h>
@@ -9,7 +9,7 @@ Eigen::MatrixXi F, EV, FE, EF;
 Eigen::MatrixXd V, C;
 Eigen::MatrixXd rawField;
 Eigen::VectorXi singIndices, singPositions;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 
 Eigen::MatrixXd positiveIndexColors, negativeIndexColors;
 Eigen::RowVector3d rawGlyphColor;
@@ -33,14 +33,14 @@ void update_mesh()
   
   directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
 
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
  
   switch (key)

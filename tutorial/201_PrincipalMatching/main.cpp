@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/viewer/Viewer.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
@@ -17,7 +17,7 @@ Eigen::MatrixXi F;
 Eigen::MatrixXd V, rawField, barycenters;
 Eigen::VectorXd effort;
 Eigen::RowVector3d rawGlyphColor;
-igl::viewer::Viewer viewer;
+igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, indices;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
@@ -66,13 +66,13 @@ void update_mesh()
   if (showSingularities)
     directional::singularity_spheres(V, F, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
   
-  viewer.data.clear();
-  viewer.data.set_face_based(true);
-  viewer.data.set_mesh(fullV, fullF);
-  viewer.data.set_colors(fullC);
+  viewer.data().clear();
+  viewer.data().set_face_based(true);
+  viewer.data().set_mesh(fullV, fullF);
+  viewer.data().set_colors(fullC);
 }
 
-bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -83,7 +83,7 @@ bool key_up(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 // Handle keyboard input
-bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -95,7 +95,7 @@ bool key_down(igl::viewer::Viewer& viewer, int key, int modifiers)
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
 {
   if (!zeroPressed)
     return false;
@@ -105,12 +105,12 @@ bool mouse_down(igl::viewer::Viewer& viewer, int button, int modifiers)
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
   double y = viewer.core.viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view * viewer.core.model,
+  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
                                viewer.core.proj, viewer.core.viewport, V, F, fid, bc))
   {
     
     //choosing face
-    if ((igl::viewer::Viewer::MouseButton)button==igl::viewer::Viewer::MouseButton::Left){
+    if ((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Left){
       currF=fid;
       update_mesh();
       return true;
@@ -130,7 +130,7 @@ int main()
   
   //computing
   directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
+  directional::effort_to_indices(V,F,EV, EF, effort,matching,N,prinIndices);
   
   std::vector<int> singPositionsList;
   std::vector<int> singIndicesList;
