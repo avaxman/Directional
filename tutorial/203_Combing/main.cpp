@@ -11,6 +11,7 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_combing.h>
+#include <directional/line_cylinders.h>
 
 
 int currF=0, N;

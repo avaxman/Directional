@@ -12,7 +12,7 @@
 #include <igl/avg_edge_length.h>
 #include <directional/representative_to_raw.h>
 #include <directional/point_spheres.h>
-#include <directional/line_cylinders.h>
+#include <directional/line_boxes.h>
 #include <Eigen/Core>
 
 
@@ -26,7 +26,7 @@ namespace directional
   //  color: An array of either 1 by 3 color values for each vector, #F by 3 colors for each
   //         individual directional or #F*N by 3 colours for each individual vector, ordered
   //         by #F times vector 1, followed by #F times vector 2 etc.
-  //  width, length: of the vectors in the directionals
+  //  width, length, height: of the vectors in the directionals
   //  colorPerVertex: in the resulting mesh
   //  extendMesh: whether to extend an existing mesh in fieldV/F/C with the glyphs, or overwrite them.
   //  N: The degree of the field.
@@ -42,6 +42,7 @@ namespace directional
                                   const Eigen::MatrixXd &glyphColor,
                                   double width,
                                   double length,
+                                  double height,
                                   const bool colorPerVertex,
                                   const bool extendMesh,
                                   Eigen::MatrixXd &fieldV,
@@ -51,6 +52,8 @@ namespace directional
     Eigen::MatrixXd normals;
     igl::per_face_normals(V, F, normals);
     int N=rawField.cols()/3;
+    
+    Eigen::MatrixXd vectNormals = normals.replicate(N,1);
     
     Eigen::MatrixXd barycenters, vectorColors, P1, P2;
     igl::barycenter(V, F, barycenters);
@@ -98,11 +101,11 @@ namespace directional
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
-    // Draw cylinders
-    directional::line_cylinders(P1, P2, width, vectorColors, 4, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
+    // Draw boxes
+    directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
     
     // Draw sphere over intersection
-    directional::point_spheres(barycenters, width*2, vectorColors.topRows(barycenters.rows()), 4, colorPerVertex, extendMesh,  fieldV, fieldF, fieldC);
+    //directional::point_spheres(barycenters, width*2, vectorColors.topRows(barycenters.rows()), 4, colorPerVertex, extendMesh,  fieldV, fieldF, fieldC);
     
   }
   
@@ -118,7 +121,7 @@ namespace directional
                                   Eigen::MatrixXd &fieldC)
   {
     double l = igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColor, l/50, l/5, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
+    glyph_lines_raw(V, F, rawField, glyphColor, l/30, l/6, l/50,colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
   }
   
 }
