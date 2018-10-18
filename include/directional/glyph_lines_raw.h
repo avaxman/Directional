@@ -63,7 +63,7 @@ namespace directional
     vectorColors.resize(F.rows() * N, 3);
     
     normals.array() *= width;
-    barycenters += normals;
+    //barycenters += normals;
     P1 = barycenters.replicate(N, 1);
     
     for (int i = 0; i < N; i++)
