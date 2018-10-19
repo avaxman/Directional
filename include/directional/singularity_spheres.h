@@ -40,8 +40,6 @@ namespace directional
   //  F:              #F X 3 mesh triangles.
   //  indices:        #V x 1 index (/N) per vertex (must be 0<index<N-1)
   //  singularityColors: 2*N x 3 colos per positive index in order [-N,..-1, 1, N]
-  // colorPerVertex in the output mesh
-  // extendMesh   if to extend the singV,singT,singC, or to overwrite them
   // Output:
   //  singV:          The vertices of the singularity spheres.
   //  singF:          The faces of the singularity spheres.
@@ -51,8 +49,6 @@ namespace directional
                                       const Eigen::VectorXi& singPositions,
                                       const Eigen::VectorXi& singIndices,
                                       const Eigen::MatrixXd& singularityColors,
-                                      const bool colorPerVertex,
-                                      const bool extendMesh,
                                       Eigen::MatrixXd& singV,
                                       Eigen::MatrixXi& singF,
                                       Eigen::MatrixXd& singC)
@@ -75,7 +71,7 @@ namespace directional
       
     }
     double l = igl::avg_edge_length(V, F);
-    directional::point_spheres(points, l/5.0, colors, 8, colorPerVertex, extendMesh, singV, singF, singC);
+    directional::point_spheres(points, l/5.0, colors, 8, singV, singF, singC);
   
   }
   
@@ -85,8 +81,6 @@ namespace directional
                                       const Eigen::MatrixXi& F,
                                       const Eigen::VectorXi& fullIndices,
                                       const Eigen::MatrixXd& singularityColors,
-                                      const bool colorPerVertex,
-                                      const bool extendMesh,
                                       Eigen::MatrixXd& singV,
                                       Eigen::MatrixXi& singF,
                                       Eigen::MatrixXd& singC)
@@ -108,7 +102,7 @@ namespace directional
       singIndices(i)=singIndicesList[i];
     }
     
-    singularity_spheres(V,F, singPositions,singIndices,singularityColors,colorPerVertex,extendMesh,singV, singF, singC);
+    singularity_spheres(V,F, singPositions,singIndices,singularityColors,singV, singF, singC);
   }
   
 }

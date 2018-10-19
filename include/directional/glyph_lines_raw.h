@@ -27,8 +27,6 @@ namespace directional
   //         individual directional or #F*N by 3 colours for each individual vector, ordered
   //         by #F times vector 1, followed by #F times vector 2 etc.
   //  width, length, height: of the vectors in the directionals
-  //  colorPerVertex: in the resulting mesh
-  //  extendMesh: whether to extend an existing mesh in fieldV/F/C with the glyphs, or overwrite them.
   //  N: The degree of the field.
   
   // Outputs:
@@ -43,8 +41,6 @@ namespace directional
                                   double width,
                                   double length,
                                   double height,
-                                  const bool colorPerVertex,
-                                  const bool extendMesh,
                                   Eigen::MatrixXd &fieldV,
                                   Eigen::MatrixXi &fieldF,
                                   Eigen::MatrixXd &fieldC)
@@ -73,36 +69,19 @@ namespace directional
     P2 += P1;
     
     // Duplicate colors so each cylinder gets the proper color
-    if (colorPerVertex)
-    {
-      vectorColors.resize(F.rows()*N, glyphColor.cols());
-      
-      for (int n = 0; n < N; n++)
-      {
-        if (n >= glyphColor.rows())
-        {
-          vectorColors.block(F.rows()*n, 0, F.rows()*N - glyphColor.rows(), vectorColors.cols()) = Eigen::MatrixXd::Zero(F.rows()*N - glyphColor.rows(), vectorColors.cols());
-          break;
-        }
-        vectorColors.block(F.rows()*n, 0, F.rows(), vectorColors.cols()) = glyphColor.row(n).replicate(0, F.rows());
-      }
-    }
-    else
-    {
-      if (glyphColor.rows() == 1)
-        vectorColors = glyphColor.replicate(P1.rows(), 1);
-      else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
-        vectorColors = glyphColor.replicate(N, 1);
-      else{
-        for (int i=0;i<N;i++)
-          vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
-      }
+    if (glyphColor.rows() == 1)
+      vectorColors = glyphColor.replicate(P1.rows(), 1);
+    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
+      vectorColors = glyphColor.replicate(N, 1);
+    else{
+      for (int i=0;i<N;i++)
+        vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
     }
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
     // Draw boxes
-    directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
+    directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, fieldV, fieldF, fieldC);
     
     // Draw sphere over intersection
     //directional::point_spheres(barycenters, width*2, vectorColors.topRows(barycenters.rows()), 4, colorPerVertex, extendMesh,  fieldV, fieldF, fieldC);
@@ -114,14 +93,12 @@ namespace directional
                                   const Eigen::MatrixXi &F,
                                   const Eigen::MatrixXd &rawField,
                                   const Eigen::MatrixXd &glyphColor,
-                                  const bool colorPerVertex,
-                                  const bool extendMesh,
                                   Eigen::MatrixXd &fieldV,
                                   Eigen::MatrixXi &fieldF,
                                   Eigen::MatrixXd &fieldC)
   {
     double l = igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColor, l/30, l/6, l/50,colorPerVertex, extendMesh, fieldV, fieldF, fieldC);
+    glyph_lines_raw(V, F, rawField, glyphColor, l/30, l/6, l/50, fieldV, fieldF, fieldC);
   }
   
 }

@@ -24,8 +24,6 @@ namespace directional
   //  width, height box dimensions
   //  cyndColors    #P by 3 RBG colors per cylinder
   //  res           the resolution of the cylinder (size of base polygon)
-  // colorPerVertex in the output mesh
-  // extendMesh     if to extend the V,T,TC, or to overwrite them
   // Outputs:
   //  V             #V by 3 cylinder mesh coordinates
   //  T             #T by 3 mesh triangles
@@ -37,8 +35,6 @@ namespace directional
                              const double& width,
                              const double& height,
                              const Eigen::MatrixXd& boxColors,
-                             const bool colorPerVertex,
-                             const bool extendMesh,
                              Eigen::MatrixXd& V,
                              Eigen::MatrixXi& T,
                              Eigen::MatrixXd& C)
@@ -71,25 +67,11 @@ namespace directional
     3,2,6,
     6,7,3;
     
-    int VOffset, TOffset, COffset;
-    if (!extendMesh){
-      V.resize(VBox.rows()*P1.rows(),3);
-      T.resize(TBox.rows()*P1.rows(),3);
-      int NewColorSize=(colorPerVertex ? V.rows() : T.rows());
-      C.resize(NewColorSize,3);
-      VOffset=TOffset=COffset=0;
-    } else {
-      VOffset=V.rows();
-      TOffset=T.rows();
-      COffset=C.rows();
-      
-      V.conservativeResize(VOffset+VBox.rows()*P1.rows(),3);
-      T.conservativeResize(TOffset+TBox.rows()*P1.rows(),3);
-      int NewColorSize=(colorPerVertex ? VBox.rows()*P1.rows() : TBox.rows()*P1.rows());
-      C.conservativeResize(COffset+NewColorSize,3);
-      
-    }
-   
+    V.resize(VBox.rows()*P1.rows(),3);
+    T.resize(TBox.rows()*P1.rows(),3);
+    int NewColorSize=T.rows();
+    C.resize(NewColorSize,3);
+ 
     for (int i=0;i<P1.rows();i++){
       RowVector3d YAxis=(P2.row(i)-P1.row(i));
       RowVector3d ZAxis=normals.row(i);
@@ -103,40 +85,11 @@ namespace directional
       RowVector3d P1onBox; P1onBox<<0.5, 0, 0.5;
       RowVector3d translation = P1.row(i) - P1onBox*R;
      
-      V.block(VOffset+VBox.rows()*i,0,VBox.rows(),3)=VBox*R+translation.replicate(VBox.rows(),1);
-      T.block(TOffset+TBox.rows()*i,0,TBox.rows(),3)=TBox.array()+VOffset+VBox.rows()*i;
-      if (colorPerVertex)
-        C.block(COffset+VBox.rows()*i,0,VBox.rows(),3)=boxColors.row(i).replicate(VBox.rows(),1);
-      else
-        C.block(TOffset+TBox.rows()*i,0,TBox.rows(),3)=boxColors.row(i).replicate(TBox.rows(),1);
+      V.block(VBox.rows()*i,0,VBox.rows(),3)=VBox*R+translation.replicate(VBox.rows(),1);
+      T.block(TBox.rows()*i,0,TBox.rows(),3)=TBox.array()+VBox.rows()*i;
+      C.block(TBox.rows()*i,0,TBox.rows(),3)=boxColors.row(i).replicate(TBox.rows(),1);
     }
     
-    
-      
-      
-      /*for (int j=0;j<res;j++){
-        int v1=2*res*i+2*j;
-        int v2=2*res*i+2*j+1;
-        int v3=2*res*i+2*((j+1)%res);
-        int v4=2*res*i+2*((j+1)%res)+1;
-        V.row(VOffset+v1)<<P1.row(i)+(PlaneAxis1*PlanePattern(j,0)+PlaneAxis2*PlanePattern(j,1))*radius;
-        V.row(VOffset+v2)<<P2.row(i)+(PlaneAxis1*PlanePattern(j,0)+PlaneAxis2*PlanePattern(j,1))*radius;
-        
-        if (colorPerVertex){
-          C.row(COffset+v1)<<cyndColors.row(i);
-          C.row(COffset+v2)<<cyndColors.row(i);
-        }
-        
-        
-        T.row(TOffset+2*res*i+2*j)<<VOffset+v3,VOffset+v2,VOffset+v1;
-        T.row(TOffset+2*res*i+2*j+1)<<VOffset+v4,VOffset+v2,VOffset+v3;
-        
-        if (!colorPerVertex){
-          C.row(COffset+2*res*i+2*j)<<cyndColors.row(i);
-          C.row(COffset+2*res*i+2*j+1)<<cyndColors.row(i);
-        }
-      }
-    }*/
     return true;
   }
   
