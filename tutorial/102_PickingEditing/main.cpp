@@ -50,36 +50,6 @@ void update_raw_field_mesh()
   viewer.data_list[1].show_lines=false;
 }
 
-/*void update_mesh()
-{
-  
-  Eigen::MatrixXd fullC(F.rows(),3);
-  fullC.col(0)=Eigen::VectorXd::Constant(F.rows(),1.0);
-  fullC.col(1)=Eigen::VectorXd::Constant(F.rows(),1.0);
-  fullC.col(2)=Eigen::VectorXd::Constant(F.rows(),1.0);
-  
-  fullC.row(currF)<<0.5,0.1,0.1;
-  
-  Eigen::MatrixXd fullV=V;
-  Eigen::MatrixXi fullF=F;
-  
-  Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
-  for (int i=0;i<F.rows();i++){
-    for (int j=0;j<N;j++){
-      if (i==currF)
-        fullGlyphColor.block(i,3*j,1,3)<<(j==currVec ? selectedVectorGlyphColor : selectedFaceGlyphColor);
-      else
-        fullGlyphColor.block(i,3*j,1,3)<<defaultGlyphColor;
-    }
-  }
-  
-  directional::glyph_lines_raw(V, F, rawField, fullGlyphColor, false, true, fullV, fullF, fullC);
-  
-  viewer.data().clear();
-  viewer.data().set_face_based(true);
-  viewer.data().set_mesh(fullV, fullF);
-  viewer.data().set_colors(fullC);
-}*/
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
