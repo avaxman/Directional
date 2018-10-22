@@ -140,7 +140,19 @@ namespace directional
       //extracting Fiedler eigenvector into the field
       //Have to use reals bc libigl does not support complex at the moment...
       SparseMatrix<double> M; igl::speye(2*B1.rows(), 2*B1.rows(), M);
-      SparseMatrix<std::complex<double>> LComplex =Afull.adjoint()*Afull;
+      //creating a matrix of only the N-rosy interpolation
+      SparseMatrix<std::complex<double> > AfullNRosy(Afull.rows()/N,Afull.cols()/N);
+      std::vector<Triplet<std::complex<double> > > AfullNRosyTriplets;
+      for (int k=0; k<Afull.outerSize(); ++k)
+        for (SparseMatrix<std::complex<double> >::InnerIterator it(Afull,k); it; ++it)
+        {
+          if ((it.row()<Afull.rows()/N)&&(it.col()<Afull.cols()/N))
+            AfullNRosyTriplets.push_back(Triplet<std::complex<double> > (it.row(), it.col(), it.value()));
+        }
+      
+      AfullNRosy.setFromTriplets(AfullNRosyTriplets.begin(), AfullNRosyTriplets.end());
+      
+      SparseMatrix<std::complex<double>> LComplex =AfullNRosy.adjoint()*AfullNRosy;
       SparseMatrix<double> L(2*B1.rows(),2*B1.rows());
       std::vector<Triplet<double> > LTriplets;
       for (int k=0; k<LComplex.outerSize(); ++k)
@@ -158,7 +170,9 @@ namespace directional
       
       cout<<"S: "<<S<<endl;
       
-      polyVectorField = U.block(0,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+      polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      
+      polyVectorField.col(0) = U.block(0,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
      U.block(U.rows()/2,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); //MatrixXcd::Constant(B1.rows(), N, complex<double>());
       return;
     }
