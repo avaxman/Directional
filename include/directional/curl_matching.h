@@ -54,6 +54,7 @@ namespace directional
     
     matching.conservativeResize(EF.rows());
     matching.setConstant(-1);
+    curlNorm.conservativeResize(EF.rows());
     
     VectorXcd edgeTransport(EF.rows());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
     MatrixXd edgeVectors(EF.rows(), 3);

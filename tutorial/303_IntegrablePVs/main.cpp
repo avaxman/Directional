@@ -97,8 +97,6 @@ Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G,
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
 ViewingModes viewingMode=ORIGINAL_FIELD;
 
-int display_mode = 1;
-
 int iter = 0;
 
 // Create a texture that hides the integer translation in the parametrization
@@ -308,12 +306,13 @@ bc<<
 
 void update_triangle_mesh()
 {
-
   if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD))
     viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
   else{  //curl viewing - currently averaged to the face
-    igl::jet(AE2F*(viewingMode==ORIGINAL_CURL ? rawFieldOrig: rawFieldCF), 0,curlMax, CMesh);
+    Eigen::VectorXd currCurl = AE2F*(viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
+    igl::jet(currCurl, 0.0,curlMax, CMesh);
     viewer.data_list[0].set_colors(CMesh);
+    //std::cout<<"currCurl: "<<currCurl<<std::endl;
   }
 }
 
@@ -380,7 +379,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 {
 
   if ((key >= '1') && (key <='4'))
-    display_mode = key - '1';
+    viewingMode = (ViewingModes)(key - '1');
   
   if (key == 'A')
   {
@@ -439,6 +438,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
   }
 
+  update_triangle_mesh();
   update_raw_field_mesh();
   return false;
 }
@@ -446,7 +446,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 int main(int argc, char *argv[])
 {
 
-   cerr<<"Press keys 1-0 for various visualizations, 'A' to optimize for less curl." <<endl;
+   cerr<<"Press keys 1-4 for various visualizations, 'A' to optimize for curl reduction." <<endl;
   
   // Load a mesh
   igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", VMesh, FMesh);
@@ -472,6 +472,7 @@ int main(int argc, char *argv[])
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,prinIndices);
   
   curlMax= curlOrig.maxCoeff();
+  cout<<"curlMax: "<<curlMax<<endl;
   
   std::vector<int> singVerticesList;
   std::vector<int> singIndicesList;
@@ -533,6 +534,15 @@ int main(int argc, char *argv[])
   1.0,0.5,0.0,
   0.0,0.5,1.0,
   0.5,1.0,0.0;
+  
+  //creating the AE2F operator
+  std::vector<Eigen::Triplet<double> > AE2FTriplets;
+  for (int i=0;i<EF.rows();i++){
+    AE2FTriplets.push_back(Eigen::Triplet<double>(EF(i,0), i,1.0));
+    AE2FTriplets.push_back(Eigen::Triplet<double>(EF(i,1), i,1.0));
+  }
+  AE2F.resize(FMesh.rows(), EF.rows());
+  AE2F.setFromTriplets(AE2FTriplets.begin(), AE2FTriplets.end());
   
   viewer.callback_key_down = &key_down;
   viewer.data().show_lines = false;
