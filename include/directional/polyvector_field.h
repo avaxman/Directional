@@ -168,12 +168,12 @@ namespace directional
       Eigen::VectorXd S;
       igl::eigs(L,M,5,igl::EIGS_TYPE_SM,U,S);
       
-      cout<<"S: "<<S<<endl;
+      //cout<<"S: "<<S<<endl;
       
       polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
       
-      polyVectorField.col(0) = U.block(0,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
-     U.block(U.rows()/2,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); //MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      polyVectorField.col(0) = U.block(0,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+     U.block(U.rows()/2,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); //MatrixXcd::Constant(B1.rows(), N, complex<double>());
       return;
     }
     
