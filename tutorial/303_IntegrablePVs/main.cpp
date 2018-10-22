@@ -37,23 +37,21 @@ Eigen::MatrixXi E, E2F, F2E;
 
 Eigen::VectorXi cIDs, matching, indices;
 Eigen::VectorXd effort;
-Eigen::MatrixXi FMesh, FField, FSings;
+Eigen::MatrixXi FMesh, FField, FSings, FMeshCutOrig, FMeshCutCF;
 Eigen::MatrixXi EV, EF, FE;
-Eigen::MatrixXd VMesh, VField, VSings;
+Eigen::MatrixXd VMesh, VFieldOrig, VFieldCF, VSingsOrig, VSingsCF, VMeshCutOrig, VMeshCutCF;
 Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField,representative, cValues;
-Eigen::MatrixXcd pvOrigField, poissonOrigField;
+Eigen::MatrixXd rawFieldOrig, rawFieldCF, cValues;
+Eigen::MatrixXcd pvFieldOrig, poissonOrigField;
 igl::opengl::glfw::Viewer viewer;
 
-// Per face bases (only needed to generate constraints)
-Eigen::MatrixXd B1,B2,B3;
+Eigen::VectorXi singVerticesOrig, singVerticesCF;
+Eigen::VectorXi singIndicesOrig, singIndicesCF;
+
 
 // "Subdivided" mesh obtained by splitting each triangle into 3 (only needed for display)
 Eigen::MatrixXd Vbs;
 Eigen::MatrixXi Fbs;
-
-// Scale for visualizing the fields
-double global_scale;
 
 // Scale for visualizing textures
 double uv_scale;
@@ -133,7 +131,7 @@ void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &te
 }
 
 // Create a random set of tangent vectors
-void generate_constraints()
+/*void generate_constraints()
 {
   b.resize(42,1);
   b<<
@@ -226,9 +224,9 @@ bc<<
 -0.95240414686152941,-0.02752900142620229,0.30359264668538755,0.15128346580527452,-0.9073021943457209,0.39232134929083828,
 -0.94070423353276911,-0.31552769387286655,0.12457053990729766,0.22959741970407915,-0.86253407908715607,-0.45091017650802745;
 
-}
+}*/
 
-void drawCuts(igl::opengl::glfw::Viewer& viewer,
+/*void drawCuts(igl::opengl::glfw::Viewer& viewer,
               const Eigen::MatrixXi &cuts)
 {
   int maxCutNum = cuts.sum();
@@ -244,9 +242,9 @@ void drawCuts(igl::opengl::glfw::Viewer& viewer,
         ind++;
       }
   viewer.data().add_edges(start, end , Eigen::RowVector3d(1.,0,1.));
-}
+}*/
 
-void drawField(igl::opengl::glfw::Viewer &viewer,
+/*void drawField(igl::opengl::glfw::Viewer &viewer,
                const Eigen::MatrixXd &field,
                const Eigen::RowVector3d &color)
 {
@@ -256,9 +254,9 @@ void drawField(igl::opengl::glfw::Viewer &viewer,
     Eigen::VectorXd c = VF.rowwise().norm();
     viewer.data().add_edges(B - global_scale*VF, B + global_scale*VF , color);
   }
-}
+}*/
 
-void drawConstraints(igl::opengl::glfw::Viewer &viewer)
+/*void drawConstraints(igl::opengl::glfw::Viewer &viewer)
 {
   for (int n=0; n<2; ++n)
   {
@@ -273,7 +271,7 @@ void drawConstraints(igl::opengl::glfw::Viewer &viewer)
     viewer.data().add_edges(Bc - global_scale*bc.block(0,n*3,bc.rows(),3), Bc + global_scale*bc.block(0,n*3,bc.rows(),3) , color);
   }
 
-}
+}*/
 
 
 void colorEdgeMeshFaces(const Eigen::VectorXd &values,
@@ -660,36 +658,31 @@ int main(int argc, char *argv[])
   //Generate random vectors for constraints
   generate_constraints();
 
-  // Interpolate a 2-PolyVector field to be used as the original field
+  // Create an initial smooth 2^2-PolyVector field
   printf("--Initial solution--\n");
 
-  
- 
-  directional::polyvector_field(VMesh, FMesh, cIDs, cValues, N, pvField);
-  directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawField);
-  
-  directional
-  
-  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  directional::polyvector_field(VMesh, FMesh, cIDs, cValues, N, pvOrigField);
+  directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawOrigField);
+  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawOrigField, matching, effort);
   directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,matching, N,prinIndices);
   
 
-  std::vector<int> singPositionsList;
+  std::vector<int> singVerticesList;
   std::vector<int> singIndicesList;
   for (int i=0;i<wholeV.rows();i++)
     if (prinIndices(i)!=0){
-      singPositionsList.push_back(i);
+      singOrigPositionsList.push_back(i);
       singIndicesList.push_back(prinIndices(i));
     }
   
-  singPositions.resize(singPositionsList.size());
+  singVertices.resize(singVerticesList.size());
   singIndices.resize(singIndicesList.size());
-  for (int i=0;i<singPositionsList.size();i++){
-    singPositions(i)=singPositionsList[i];
+  for (int i=0;i<singVerticesList.size();i++){
+    singVertices(i)=singVerticesList[i];
     singIndices(i)=singIndicesList[i];
   }
   
-  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
+  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singVertices, faceIsCut);
   directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
 
   // Post process original field
@@ -741,14 +734,56 @@ int main(int argc, char *argv[])
 
   cerr<<"Done. Press keys 1-0 for various visualizations, 'A' to improve integrability." <<endl;
 
-  igl::opengl::glfw::Viewer viewer;
-  viewer.callback_key_down = &key_down;
-  viewer.data().show_lines = false;
-  key_down(viewer,'2',0);
+ 
+  
 
   // Replace the standard texture with an integer shift invariant texture
   line_texture(texture_R, texture_G, texture_B);
 
+  //triangle mesh setup
+  viewer.data().set_mesh(VMesh, FMesh);
+  viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  
+  //apending and updating raw field mesh
+  viewer.append_mesh();
+  update_raw_field_mesh();
+  
+  //singularity mesh
+  viewer.append_mesh();
+  directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+  viewer.data().set_mesh(VSings, FSings);
+  viewer.data().set_colors(CSings);
+  viewer.data_list[2].show_faces = true;
+  viewer.data_list[2].show_lines = false;
+  
+  
+  //seam mesh
+  double l = igl::avg_edge_length(VMesh, FMesh);
+  std::vector<int> seamEdges;
+  for (int i=0;i<EV.rows();i++)
+    if (combedMatching(i)!=0)
+      seamEdges.push_back(i);
+  
+  Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
+  for (int i=0;i<seamEdges.size();i++){
+    P1.row(i)=VMesh.row(EV(seamEdges[i],0));
+    P2.row(i)=VMesh.row(EV(seamEdges[i],1));
+  }
+  
+  Eigen::MatrixXd VSeam, CSeam;
+  Eigen::MatrixXi FSeam;
+  directional::line_cylinders(P1, P2, l/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeam, FSeam, CSeam);
+  
+  viewer.append_mesh();
+  viewer.data().set_mesh(VSeam, FSeam);
+  viewer.data().set_colors(CSeam);
+  viewer.data_list[3].show_faces = false;
+  viewer.data_list[3].show_lines = false;
+  
+  viewer.selected_data_index=0;
+  viewer.callback_key_down = &key_down;
+  viewer.data().show_lines = false;
+  key_down(viewer,'2',0);
   viewer.launch();
 
   return 0;
