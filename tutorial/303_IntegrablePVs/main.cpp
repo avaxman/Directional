@@ -10,11 +10,19 @@
 #include <igl/edge_topology.h>
 #include <igl/jet.h>
 #include <igl/barycenter.h>
-#include <directional/polyvector_field_matchings.h>
-#include <directional/polyvector_field_singularities_from_matchings.h>
-#include <directional/polyvector_field_cut_mesh_with_singularities.h>
-#include <directional/polyvector_field_comb_from_matchings_and_cuts.h>
-#include <directional/polyvector_field_poisson_reconstruction.h>
+//#include <directional/polyvector_field_matchings.h>
+//#include <directional/polyvector_field_singularities_from_matchings.h>
+//#include <directional/polyvector_field_cut_mesh_with_singularities.h>
+//#include <directional/polyvector_field_comb_from_matchings_and_cuts.h>
+#//include <directional/polyvector_field_poisson_reconstruction.h>
+//#include <directional/integrable_polyvector_fields.h>
+#include <directional/glyph_lines_raw.h>
+#include <directional/line_cylinders.h>
+#include <directional/read_raw_field.h>
+#include <directional/curl_matching.h>
+#include <directional/effort_to_indices.h>
+#include <directional/singularity_spheres.h>
+#include <directional/curl_combing.h>
 #include <directional/integrable_polyvector_fields.h>
 #include <igl/cut_mesh.h>
 #include <igl/slice.h>
@@ -29,67 +37,46 @@
 using namespace std;
 
 // Input mesh
-std::vector<bool> V_border;
-std::vector<std::vector<int> > VF, VFi;
-std::vector<std::vector<int> > VV;
-Eigen::MatrixXi TT, TTi;
-Eigen::MatrixXi E, E2F, F2E;
+//std::vector<bool> V_border;
+//std::vector<std::vector<int> > VF, VFi;
+//std::vector<std::vector<int> > VV;
+//Eigen::MatrixXi TT, TTi;
+//Eigen::MatrixXi E, E2F, F2E;
 
-Eigen::VectorXi cIDs, matching, indices;
-Eigen::VectorXd effort;
-Eigen::MatrixXi FMesh, FField, FSings, FMeshCutOrig, FMeshCutCF;
+Eigen::VectorXi matchingOrig, matchingCF, combedMatchingOrig, combedMatchingCF;
+Eigen::VectorXd effortOrig, effortCF, combedEffortOrig, combedEffortCF;
+Eigen::MatrixXi FMesh, FField, FSings, FSeams;
 Eigen::MatrixXi EV, EF, FE;
-Eigen::MatrixXd VMesh, VFieldOrig, VFieldCF, VSingsOrig, VSingsCF, VMeshCutOrig, VMeshCutCF;
-Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawFieldOrig, rawFieldCF, cValues;
-Eigen::MatrixXcd pvFieldOrig, poissonOrigField;
+Eigen::MatrixXd VMesh, VField, VSings, VSeams, barycenters;
+Eigen::MatrixXd CMesh, CField, CSings, CSeams;
+Eigen::MatrixXd rawFieldOrig, rawFieldCF;
+Eigen::MatrixXd combedFieldOrig, combedFieldCF;
+Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
 igl::opengl::glfw::Viewer viewer;
+Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::VectorXi singVerticesOrig, singVerticesCF;
 Eigen::VectorXi singIndicesOrig, singIndicesCF;
-
 
 // "Subdivided" mesh obtained by splitting each triangle into 3 (only needed for display)
 Eigen::MatrixXd Vbs;
 Eigen::MatrixXi Fbs;
 
+
+//for averagin curl to faces, for visualization
+Eigen::SparseMatrix<double> AE2F;
+
 // Scale for visualizing textures
 double uv_scale;
+double curlMax;
+int N;
 
-// Data for original PolyVector field
-Eigen::VectorXi singularities_ori; // singularities
-Eigen::VectorXd curl_ori; // curl per edge
-Eigen::MatrixXi cuts_ori; // cut edges
-Eigen::MatrixXd two_pv_poisson_ori; // field after poisson integration
-Eigen::VectorXf poisson_error_ori; // poisson integration error
-Eigen::MatrixXd scalars_ori;
-Eigen::MatrixXd Vcut_ori;
-Eigen::MatrixXi Fcut_ori;
+
+//Eigen::MatrixXd scalars_ori;
 
 // Data for curl-free PolyVector field
-Eigen::MatrixXd two_pv; // field
-Eigen::VectorXi singularities; // singularities
-Eigen::VectorXd curl; // curl per edge
-Eigen::MatrixXi cuts; // cut edges
-Eigen::MatrixXd two_pv_poisson; // field after poisson integration
-Eigen::VectorXf poisson_error; // poisson integration error
-Eigen::MatrixXd scalars;
-Eigen::MatrixXd Vcut;
-Eigen::MatrixXi Fcut;
+//Eigen::MatrixXd scalars;
 
-// Vector of constrained faces
-Eigen::VectorXi b;
-
-// Matrix of constraints
-Eigen::MatrixXd bc;
-
-// "constraint level" flag (level=2 indicates that both directions are constrained,
-// level = 1 indicates a partially constrained face, i.e. only the first vector will
-// be constrained)
-Eigen::VectorXi blevel;
-
-// Face Barycenters (only needed for display)
-Eigen::MatrixXd B;
 
 // percentage of constrained faces
 double constraint_percentage = 0.002;
@@ -105,6 +92,10 @@ igl::IntegrableFieldSolverData<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::MatrixXd
 
 //texture image
 Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
+
+
+typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
+ViewingModes viewingMode=ORIGINAL_FIELD;
 
 int display_mode = 1;
 
@@ -274,7 +265,7 @@ bc<<
 }*/
 
 
-void colorEdgeMeshFaces(const Eigen::VectorXd &values,
+/*void colorEdgeMeshFaces(const Eigen::VectorXd &values,
                         const double &minimum,
                         const double &maximum,
                         Eigen::MatrixXd &C)
@@ -313,289 +304,100 @@ void colorEdgeMeshFaces(const Eigen::VectorXd &values,
     }
   }
 
+}*/
+
+void update_triangle_mesh()
+{
+
+  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD))
+    viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  else{  //curl viewing - currently averaged to the face
+    igl::jet(AE2F*(viewingMode==ORIGINAL_CURL ? rawFieldOrig: rawFieldCF), 0,curlMax, CMesh);
+    viewer.data_list[0].set_colors(CMesh);
+  }
 }
 
-void update_display(igl::opengl::glfw::Viewer& viewer)
+
+void update_raw_field_mesh()
 {
   using namespace std;
   using namespace Eigen;
-
-  viewer.data().clear();
-  viewer.data().lines.resize(0,9);
-  viewer.data().points.resize(0,6);
-  viewer.data().show_texture = false;
-
-  if (display_mode == 1)
-  {
-    cerr<< "Displaying original field, its singularities and its cuts"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-
-    // Highlight in red the constrained faces
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    for (unsigned i=0; i<b.size();++i)
-      C.row(b(i)) << 1, 0, 0;
-    viewer.data().set_colors(C);
-
-    //Draw constraints
-    drawConstraints(viewer);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<0,0,1;
-    drawField(viewer,two_pv_ori,color);
-
-    // Draw Cuts
-    drawCuts(viewer,cuts_ori);
-
-    //Draw Singularities
-    Eigen::MatrixXd singular_points = igl::slice(V, singularities_ori, 1);
-    viewer.data().add_points(singular_points,Eigen::RowVector3d(239./255.,205./255.,57./255.));
-
-  }
-
-  if (display_mode == 2)
-  {
-    cerr<< "Displaying current field, its singularities and its cuts"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-
-    // Highlight in red the constrained faces
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    for (unsigned i=0; i<b.size();++i)
-      C.row(b(i)) << 1, 0, 0;
-    viewer.data().set_colors(C);
-
-    //Draw constraints
-    drawConstraints(viewer);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<0,0,1;
-    drawField(viewer,two_pv,color);
-
-    // Draw Cuts
-    drawCuts(viewer,cuts);
-
-    //Draw Singularities
-    Eigen::MatrixXd singular_points = igl::slice(V, singularities, 1);
-    viewer.data().add_points(singular_points,Eigen::RowVector3d(239./255.,205./255.,57./255.));
-  }
-
-  if (display_mode == 3)
-  {
-    cerr<< "Displaying original field and its curl"  <<endl;
-
-    viewer.data().set_mesh(Vbs, Fbs);
-    Eigen::MatrixXd C;
-    colorEdgeMeshFaces(curl_ori, 0, 0.2, C);
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<1,1,1;
-    drawField(viewer,two_pv_ori,color);
-
-  }
-
-  if (display_mode == 4)
-  {
-    cerr<< "Displaying current field and its curl"  <<endl;
-
-    viewer.data().set_mesh(Vbs, Fbs);
-    Eigen::MatrixXd C;
-    colorEdgeMeshFaces(curl, 0, 0.2, C);
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<1,1,1;
-    drawField(viewer,two_pv,color);
-  }
-
-  if (display_mode == 5)
-  {
-    cerr<< "Displaying original poisson-integrated field and original poisson error"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-    Eigen::MatrixXd C;
-    igl::jet(poisson_error_ori, 0, 0.5, C);
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<1,1,1;
-    drawField(viewer,two_pv_poisson_ori,color);
-  }
-
-  if (display_mode == 6)
-  {
-    cerr<< "Displaying current poisson-integrated field and current poisson error"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-    Eigen::MatrixXd C;
-    igl::jet(poisson_error, 0, 0.5, C);
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<1,1,1;
-    drawField(viewer,two_pv_poisson,color);
-  }
-
-  if (display_mode == 7)
-  {
-    cerr<< "Displaying original texture with cuts and singularities"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    viewer.data().set_colors(C);
-    viewer.data().set_uv(uv_scale*scalars_ori, Fcut_ori);
-    viewer.data().set_texture(texture_R, texture_B, texture_G);
-    viewer.data().show_texture = true;
-
-    // Draw Cuts
-    drawCuts(viewer,cuts_ori);
-
-    //Draw Singularities
-    Eigen::MatrixXd singular_points = igl::slice(V, singularities_ori, 1);
-    viewer.data().add_points(singular_points,Eigen::RowVector3d(239./255.,205./255.,57./255.));
-
-  }
-  if (display_mode == 8)
-  {
-    cerr<< "Displaying current texture with cuts and singularities"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    viewer.data().set_colors(C);
-    viewer.data().set_uv(uv_scale*scalars, Fcut);
-    viewer.data().set_texture(texture_R, texture_B, texture_G);
-    viewer.data().show_texture = true;
-
-    // Draw Cuts
-    drawCuts(viewer,cuts);
-
-    //Draw Singularities
-    Eigen::MatrixXd singular_points = igl::slice(V, singularities, 1);
-    viewer.data().add_points(singular_points,Eigen::RowVector3d(239./255.,205./255.,57./255.));
-
-  }
-
-  if (display_mode == 9)
-  {
-    cerr<< "Displaying original field overlayed onto the current integrated field"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-
-    // Highlight in red the constrained faces
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    for (unsigned i=0; i<b.size();++i)
-      C.row(b(i)) << 1, 0, 0;
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<0,0,1;
-    drawField(viewer,two_pv_ori,color);
-
-    // Draw Integrated Field
-    color<<.2,.2,.2;
-    drawField(viewer,two_pv_poisson_ori,color);
-
-  }
-
-  if (display_mode == 0)
-  {
-    cerr<< "Displaying current field overlayed onto the current integrated field"  <<endl;
-
-    viewer.data().set_mesh(V, F);
-
-    // Highlight in red the constrained faces
-    MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-    for (unsigned i=0; i<b.size();++i)
-      C.row(b(i)) << 1, 0, 0;
-    viewer.data().set_colors(C);
-
-    // Draw Field
-    Eigen::RowVector3d color; color<<0,0,1;
-    drawField(viewer,two_pv,color);
-
-    // Draw Integrated Field
-    color<<.2,.2,.2;
-    drawField(viewer,two_pv_poisson,color);
+  
+  if ((viewingMode==ORIGINAL_CURL) || (viewingMode==OPTIMIZED_CURL)){
+    for (int i=1;i<=3;i++){  //hide all other meshes
+      viewer.data_list[i].show_faces=false;
+      viewer.data_list[i].show_lines = false;
+    }
+  } else {
+    Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
+    for (int i=0;i<FMesh.rows();i++)
+      for (int j=0;j<N;j++)
+        fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
+    
+    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF), fullGlyphColor,VField, FField, CField);
+    
+    viewer.data_list[1].clear();
+    viewer.data_list[1].set_mesh(VField, FField);
+    viewer.data_list[1].set_colors(CField);
+    viewer.data_list[1].show_faces = true;
+    viewer.data_list[1].show_lines = false;
+    
+    //singularity mesh
+    directional::singularity_spheres(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    
+    viewer.data_list[2].clear();
+    viewer.data_list[2].set_mesh(VSings, FSings);
+    viewer.data_list[2].set_colors(CSings);
+    viewer.data_list[2].show_faces = true;
+    viewer.data_list[2].show_lines = false;
+    
+    //seam mesh
+    double avgEdgeLength = igl::avg_edge_length(VMesh, FMesh);
+    std::vector<int> seamEdges;
+    for (int i=0;i<EV.rows();i++)
+      if ((viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF)(i)!=0)
+        seamEdges.push_back(i);
+    
+    Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
+    for (int i=0;i<seamEdges.size();i++){
+      P1.row(i)=VMesh.row(EV(seamEdges[i],0));
+      P2.row(i)=VMesh.row(EV(seamEdges[i],1));
+    }
+    
+    directional::line_cylinders(P1, P2, avgEdgeLength/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeams, FSeams, CSeams);
+    
+    viewer.data_list[3].clear();
+    viewer.data_list[3].set_mesh(VSeams, FSeams);
+    viewer.data_list[3].set_colors(CSeams);
+    viewer.data_list[3].show_faces = true;
+    viewer.data_list[3].show_lines = false;
   }
 
 }
+
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier)
 {
 
-  if (key == '1')
-  {
-    display_mode = 1;
-    update_display(viewer);
-  }
-
-  if (key == '2')
-  {
-    display_mode = 2;
-    update_display(viewer);
-  }
-
-  if (key == '3')
-  {
-    display_mode = 3;
-    update_display(viewer);
-  }
-
-  if (key == '4')
-  {
-    display_mode = 4;
-    update_display(viewer);
-  }
-
-  if (key == '5')
-  {
-    display_mode = 5;
-    update_display(viewer);
-  }
-
-  if (key == '6')
-  {
-    display_mode = 6;
-    update_display(viewer);
-  }
-
-  if (key == '7')
-  {
-    display_mode = 7;
-    update_display(viewer);
-  }
-
-  if (key == '8')
-  {
-    display_mode = 8;
-    update_display(viewer);
-  }
-
-  if (key == '9')
-  {
-    display_mode = 9;
-    update_display(viewer);
-  }
-
-  if (key == '0')
-  {
-    display_mode = 0;
-    update_display(viewer);
-  }
-
+  if ((key >= '1') && (key <='4'))
+    display_mode = key - '1';
+  
   if (key == 'A')
   {
     //do a batch of iterations
     printf("--Improving Curl--\n");
     for (int bi = 0; bi<5; ++bi)
     {
+      Eigen::MatrixXd two_pv=rawFieldCF.block(0,0,rawFieldCF.rows(),6);
       printf("\n\n **** Batch %d ****\n", iter);
       igl::integrable_polyvector_fields_solve(ipfdata, params, two_pv, iter ==0);
       iter++;
       params.wSmooth *= params.redFactor_wsmooth;
+      rawFieldCF.block(0,0,rawFieldCF.rows(),6)=two_pv;
+      rawFieldCF.block(0,6,rawFieldCF.rows(),6)=-two_pv;
     }
-    // Post process current field
+    
+    /*// Post process current field
     // Compute curl_minimizing matchings and curl
     printf("--Matchings and curl--\n");
     Eigen::MatrixXi match_ab, match_ba;  // matchings across interior edges
@@ -613,129 +415,97 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     printf("--Combing--\n");
     Eigen::MatrixXd combed;
     igl::polyvector_field_comb_from_matchings_and_cuts(V, F, two_pv, match_ab, match_ba, cuts, combed);
-    // Reconstruct integrable vector fields from combed field
-    printf("--Cut mesh--\n");
-    igl::cut_mesh(V, F, cuts, Vcut, Fcut);
-    printf("--Poisson--\n");
-    double avgPoisson = igl::polyvector_field_poisson_reconstruction(Vcut, Fcut, combed, scalars, two_pv_poisson, poisson_error);
-    double maxPoisson = poisson_error.maxCoeff();
-    printf("poisson error -- max: %.5g, avg: %.5g\n", maxPoisson, avgPoisson);
-
-    update_display(viewer);
+    // Reconstruct integrable vector fields from combed field*/
+    
+    Eigen::VectorXi prinIndices;
+    directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldCF, matchingCF, effortCF, curlCF);
+    directional::effort_to_indices(VMesh,FMesh,EV, EF, effortCF,matchingCF, N,prinIndices);
+    
+    std::vector<int> singVerticesList;
+    std::vector<int> singIndicesList;
+    for (int i=0;i<VMesh.rows();i++)
+      if (prinIndices(i)!=0){
+        singVerticesList.push_back(i);
+        singIndicesList.push_back(prinIndices(i));
+      }
+    
+    singVerticesCF.resize(singVerticesList.size());
+    singIndicesCF.resize(singIndicesList.size());
+    for (int i=0;i<singVerticesList.size();i++){
+      singVerticesCF(i)=singVerticesList[i];
+      singIndicesCF(i)=singIndicesList[i];
+    }
+    
+    directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
   }
 
+  update_raw_field_mesh();
   return false;
 }
 
 int main(int argc, char *argv[])
 {
 
+   cerr<<"Press keys 1-0 for various visualizations, 'A' to optimize for less curl." <<endl;
+  
   // Load a mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/decimated-knight.off", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", VMesh, FMesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", N, rawFieldOrig);
 
-  printf("--Initialization--\n");
-  V_border = igl::is_border_vertex(VMesh,FMesh);
+  /*V_border = igl::is_border_vertex(VMesh,FMesh);
   igl::adjacency_list(F, VV);
   igl::vertex_triangle_adjacency(VMesh,FMesh,VF,VFi);
-  igl::triangle_triangle_adjacency(FMesh,TT,TTi);
-  igl::edge_topology(FMesh,F,E,F2E,E2F);
+  igl::triangle_triangle_adjacency(FMesh,TT,TTi);*/
 
-  // Generate "subdivided" mesh for visualization of curl terms
-  igl::false_barycentric_subdivision(V, F, Vbs, Fbs);
+  igl::edge_topology(VMesh, FMesh, EV, FE, EF);
 
-  // Compute scale for visualizing fields
-  global_scale =  .2*igl::avg_edge_length(V, F);
+  igl::false_barycentric_subdivision(VMesh, FMesh, Vbs, Fbs);
 
-  //Compute scale for visualizing texture
-  uv_scale = 0.6/igl::avg_edge_length(V, F);
+  //global_scale =  .2*igl::avg_edge_length(VMesh, FMesh);
+  //uv_scale = 0.6/igl::avg_edge_length(V, F);
+  igl::barycenter(VMesh, FMesh, barycenters);
 
-  // Compute face barycenters
-  igl::barycenter(V, F, B);
+  //igl::local_basis(VMesh,FMesh,B1,B2,B3);
 
-  // Compute local basis for faces
-  igl::local_basis(V,F,B1,B2,B3);
-
-  //Generate random vectors for constraints
-  generate_constraints();
-
-  // Create an initial smooth 2^2-PolyVector field
-  printf("--Initial solution--\n");
-
-  directional::polyvector_field(VMesh, FMesh, cIDs, cValues, N, pvOrigField);
-  directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawOrigField);
-  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawOrigField, matching, effort);
-  directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,matching, N,prinIndices);
+  Eigen::VectorXi prinIndices;
+  directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldOrig, matchingOrig, effortOrig, curlOrig);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,prinIndices);
   
-
+  curlMax= curlOrig.maxCoeff();
+  
   std::vector<int> singVerticesList;
   std::vector<int> singIndicesList;
-  for (int i=0;i<wholeV.rows();i++)
+  for (int i=0;i<VMesh.rows();i++)
     if (prinIndices(i)!=0){
-      singOrigPositionsList.push_back(i);
+      singVerticesList.push_back(i);
       singIndicesList.push_back(prinIndices(i));
     }
   
-  singVertices.resize(singVerticesList.size());
-  singIndices.resize(singIndicesList.size());
+  singVerticesOrig.resize(singVerticesList.size());
+  singIndicesOrig.resize(singIndicesList.size());
   for (int i=0;i<singVerticesList.size();i++){
-    singVertices(i)=singVerticesList[i];
-    singIndices(i)=singIndicesList[i];
+    singVerticesOrig(i)=singVerticesList[i];
+    singIndicesOrig(i)=singIndicesList[i];
   }
   
-  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singVertices, faceIsCut);
-  directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldOrig, combedFieldOrig, combedMatchingOrig, combedEffortOrig);
 
-  // Post process original field
-  // Compute curl_minimizing matchings and curl
-  Eigen::MatrixXi match_ab, match_ba;  // matchings across interior edges
-  printf("--Matchings and curl--\n");
-  double avgCurl = igl::polyvector_field_matchings(two_pv_ori, V, F, true, true, match_ab, match_ba, curl_ori);
-  double maxCurl = curl_ori.maxCoeff();
-  printf("original curl -- max: %.5g, avg: %.5g\n", maxCurl,  avgCurl);
-
-  printf("--Singularities--\n");
-  // Compute singularities
-  igl::polyvector_field_singularities_from_matchings(V, F, V_border, VF, TT, E2F, F2E, match_ab, match_ba, singularities_ori);
-  printf("original #singularities: %ld\n", singularities.rows());
-
-  printf("--Cuts--\n");
- // Get mesh cuts based on singularities
-  igl::polyvector_field_cut_mesh_with_singularities(V, F, VF, VV, TT, TTi, singularities_ori, cuts_ori);
-
-  printf("--Combing--\n");
-// Comb field
-  Eigen::MatrixXd combed;
-  igl::polyvector_field_comb_from_matchings_and_cuts(V, F, TT, E2F, F2E, two_pv_ori, match_ab, match_ba, cuts_ori, combed);
-
-  printf("--Cut mesh--\n");
-  // Reconstruct integrable vector fields from combed field
-  igl::cut_mesh(V, F, VF, VFi, TT, TTi, V_border, cuts_ori, Vcut_ori, Fcut_ori);
-
-  printf("--Poisson--\n");
-  double avgPoisson = igl::polyvector_field_poisson_reconstruction(Vcut_ori, Fcut_ori, combed, scalars_ori, two_pv_poisson_ori, poisson_error_ori);
-  double maxPoisson = poisson_error_ori.maxCoeff();
-  printf("poisson error -- max: %.5g, avg: %.5g\n", maxPoisson, avgPoisson);
-
-
-  // Set the curl-free 2-PolyVector to equal the original field
-  two_pv = two_pv_ori;
-  singularities = singularities_ori;
-  curl = curl_ori;
-  cuts = cuts_ori;
-  two_pv_poisson = two_pv_poisson_ori;
-  poisson_error = poisson_error_ori;
-  Vcut = Vcut_ori;
-  Fcut = Fcut_ori;
-  scalars = scalars_ori;
-
-  printf("--Integrable - Precomputation--\n");
-  // Precompute stuff for solver
-  igl::integrable_polyvector_fields_precompute(V, F, b, bc, blevel, two_pv_ori, ipfdata);
-
-  cerr<<"Done. Press keys 1-0 for various visualizations, 'A' to improve integrability." <<endl;
-
- 
+  //trivial constraints
+  Eigen::VectorXi b; b.resize(1); b<<0;
+  Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.row(0).head(6);
+  Eigen::VectorXi blevel; blevel.resize(1); b<<1;
+  Eigen::MatrixXd twoVectorMat=rawFieldOrig.block(0,0,rawFieldOrig.rows(),6);
+  igl::integrable_polyvector_fields_precompute(VMesh, FMesh, b, bc, blevel, twoVectorMat , ipfdata);
   
+  rawFieldCF = rawFieldOrig;
+  matchingCF = matchingOrig;
+  effortCF = effortOrig;
+  combedFieldCF =combedFieldOrig;
+  combedMatchingCF =combedMatchingOrig;
+  combedEffortCF =combedEffortOrig;
+  curlCF = curlOrig;
+  singVerticesCF = singVerticesOrig;
+  singIndicesCF = singIndicesOrig;
 
   // Replace the standard texture with an integer shift invariant texture
   line_texture(texture_R, texture_G, texture_B);
@@ -746,44 +516,26 @@ int main(int argc, char *argv[])
   
   //apending and updating raw field mesh
   viewer.append_mesh();
-  update_raw_field_mesh();
-  
+ 
   //singularity mesh
   viewer.append_mesh();
-  directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
-  viewer.data().set_mesh(VSings, FSings);
-  viewer.data().set_colors(CSings);
-  viewer.data_list[2].show_faces = true;
-  viewer.data_list[2].show_lines = false;
-  
-  
+ 
   //seam mesh
-  double l = igl::avg_edge_length(VMesh, FMesh);
-  std::vector<int> seamEdges;
-  for (int i=0;i<EV.rows();i++)
-    if (combedMatching(i)!=0)
-      seamEdges.push_back(i);
-  
-  Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
-  for (int i=0;i<seamEdges.size();i++){
-    P1.row(i)=VMesh.row(EV(seamEdges[i],0));
-    P2.row(i)=VMesh.row(EV(seamEdges[i],1));
-  }
-  
-  Eigen::MatrixXd VSeam, CSeam;
-  Eigen::MatrixXi FSeam;
-  directional::line_cylinders(P1, P2, l/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeam, FSeam, CSeam);
-  
   viewer.append_mesh();
-  viewer.data().set_mesh(VSeam, FSeam);
-  viewer.data().set_colors(CSeam);
-  viewer.data_list[3].show_faces = false;
-  viewer.data_list[3].show_lines = false;
   
+
+  update_triangle_mesh();
+  update_raw_field_mesh();
   viewer.selected_data_index=0;
+  
+  glyphPrincipalColors<<1.0,0.0,0.5,
+  0.0,1.0,0.5,
+  1.0,0.5,0.0,
+  0.0,0.5,1.0,
+  0.5,1.0,0.0;
+  
   viewer.callback_key_down = &key_down;
   viewer.data().show_lines = false;
-  key_down(viewer,'2',0);
   viewer.launch();
 
   return 0;

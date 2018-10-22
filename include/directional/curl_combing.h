@@ -47,8 +47,8 @@ namespace directional
   {
     using namespace Eigen;
     VectorXi matching;
-    VectorXd effort;
-    curl_matching(V,F,EV, EF,FE,rawField,matching,effort);
+    VectorXd effort, curlNorm;
+    curl_matching(V,F,EV, EF,FE,rawField,matching,effort, curlNorm);
     //flood-filling through the matching to comb field
     combedField.conservativeResize(rawField.rows(), rawField.cols());
     int N=rawField.cols()/3;
@@ -80,7 +80,7 @@ namespace directional
     }while (!faceMatchingQueue.empty());
     
     //can be produced from the combing, but better used directly for sanity check.
-    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort);
+    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort, curlNorm);
   }
   
   //version for input in representative format (for N-RoSy directionals).
@@ -114,8 +114,8 @@ namespace directional
   {
     using namespace Eigen;
     VectorXi matching;
-    VectorXd effort;
-    curl_matching(V,F,EV, EF,FE,rawField,matching,effort);
+    VectorXd effort, curlNorm;
+    curl_matching(V,F,EV, EF,FE,rawField,matching,effort, curlNorm);
     //flood-filling through the matching to comb field
     combedField.conservativeResize(rawField.rows(), rawField.cols());
     int N=rawField.cols()/3;
@@ -147,7 +147,7 @@ namespace directional
     }while (!faceMatchingQueue.empty());
     
     //can be produced from the combing, but better used directly for sanity check.
-    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort);
+    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort, curlNorm);
   }
   
 }

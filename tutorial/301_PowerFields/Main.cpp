@@ -52,7 +52,7 @@ void update_raw_field_mesh()
   
   directional::representative_to_raw(VMesh,FMesh,representative, N, rawField);
   
-  if (cIDs.rows()!=0){
+  //if (cIDs.rows()!=0){
     directional::principal_matching(VMesh, FMesh, EV, EF, FE, rawField, matching, effort);
     
     directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N, indices);
@@ -93,7 +93,7 @@ void update_raw_field_mesh()
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);
     viewer.data_list[2].set_colors(CSings);
-  }
+  //}
   
 }
 
@@ -225,6 +225,7 @@ int main()
   viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
   
   viewer.selected_data_index = 0;
+  update_raw_field_mesh();
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

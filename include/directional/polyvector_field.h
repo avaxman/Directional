@@ -16,6 +16,8 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
+#include <igl/speye.h>
+#include <igl/eigs.h>
 #include <iostream>
 
 namespace directional
@@ -107,7 +109,7 @@ namespace directional
   
   // Computes a polyvector on the entire mesh from given values at the prescribed indices.
   // polyvector_precompute must be called in advance, and "b" must be on the given "bc"
-  // If no constraints are given the zero field will be returned.
+  // If no constraints are given the Fielder eigenvector field will be returned.
   // Inputs:
   //  B1, B2: #F by 3 matrices representing the local base of each face.
   //  bc: the faces on which the polyvector is prescribed.
@@ -135,7 +137,29 @@ namespace directional
     
     if (bc.size() == 0)
     {
-      polyVectorField = MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      //extracting Fiedler eigenvector into the field
+      //Have to use reals bc libigl does not support complex at the moment...
+      SparseMatrix<double> M; igl::speye(2*B1.rows(), 2*B1.rows(), M);
+      SparseMatrix<std::complex<double>> LComplex =Afull.adjoint()*Afull;
+      SparseMatrix<double> L(2*B1.rows(),2*B1.rows());
+      std::vector<Triplet<double> > LTriplets;
+      for (int k=0; k<LComplex.outerSize(); ++k)
+        for (SparseMatrix<std::complex<double>>::InnerIterator it(LComplex,k); it; ++it)
+        {
+          LTriplets.push_back(Triplet<double>(it.row(), it.col(), it.value().real()));
+          LTriplets.push_back(Triplet<double>(it.row(), LComplex.cols()+it.col(), -it.value().imag()));
+          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), it.col(), it.value().imag()));
+          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), LComplex.cols()+it.col(), it.value().real()));
+        }
+      L.setFromTriplets(LTriplets.begin(), LTriplets.end());
+      Eigen::MatrixXd U;
+      Eigen::VectorXd S;
+      igl::eigs(L,M,5,igl::EIGS_TYPE_SM,U,S);
+      
+      cout<<"S: "<<S<<endl;
+      
+      polyVectorField = U.block(0,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+     U.block(U.rows()/2,1,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); //MatrixXcd::Constant(B1.rows(), N, complex<double>());
       return;
     }
     

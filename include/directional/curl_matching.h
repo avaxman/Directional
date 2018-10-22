@@ -30,7 +30,8 @@ namespace directional
   // Output:
   // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
   //  effort: #E principal matching efforts.
-  //TODO: also return matching
+  // curlNorm: the L2-norm of the curl vector
+
   IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
                                 const Eigen::MatrixXi& F,
                                 const Eigen::MatrixXi& EV,
@@ -38,7 +39,8 @@ namespace directional
                                 const Eigen::MatrixXi& FE,
                                 const Eigen::MatrixXd& rawField,
                                 Eigen::VectorXi& matching,
-                                Eigen::VectorXd& effort)
+                                Eigen::VectorXd& effort,
+                                Eigen::VectorXd& curlNorm)
   {
     
     typedef std::complex<double> Complex;
@@ -77,7 +79,7 @@ namespace directional
         double currCurl = 0;
         for (int k=0;k<N;k++){
           RowVector3d vecDiff =rawField.block(EF(i, 1), 3 * ((j+k)%N), 1, 3)-rawField.block(EF(i, 0), 3*k, 1, 3);
-          currCurl +=std::abs(edgeVectors.row(i).dot(vecDiff));
+          currCurl +=pow(edgeVectors.row(i).dot(vecDiff),2.0);
         }
         
         if (currCurl < minCurl){
@@ -87,6 +89,8 @@ namespace directional
       }
       
       matching(i) =indexMinFromZero;
+      curlNorm(i)= sqrt(minCurl);
+      
       
       //std::cout<<"minCurl: "<<minCurl<<endl;
       
@@ -123,11 +127,12 @@ namespace directional
                                      const Eigen::MatrixXd& representativeField,
                                      const int N,
                                      Eigen::VectorXi& matching,
-                                     Eigen::VectorXd& effort)
+                                     Eigen::VectorXd& effort,
+                                     Eigen::VectorXd& curlNorm)
   {
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
-    curl_matching(V, F, EV, EF, FE, rawField, matching, effort);
+    curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm);
   }
 }
 
