@@ -236,7 +236,7 @@ int main()
   "  N       Toggle field normalization" << std::endl <<
   "  0+L-bttn  Place constraint pointing from the center of face to the cursor" << std::endl <<
   "  0+R-bttn  Remove constraint" << std::endl <<
-  "  1      Toggle specific vector in face." << std::endl <<
+  "  1      Toggle specific vector in face." << std::endl;
   
   // Load mesh
   igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", VMesh, FMesh);

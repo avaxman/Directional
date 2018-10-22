@@ -6,24 +6,24 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef IGL_INTEGRABLE_POLYVECTOR_FIELDS
-#define IGL_INTEGRABLE_POLYVECTOR_FIELDS
+#ifndef DIRECTIONAL_POLYCURL_REDUCTION
+#define DIRECTIONAL_POLYCURL_REDUCTION
 #include <igl/igl_inline.h>
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-namespace igl {
+namespace directional {
   // Compute a curl-free frame field from user constraints, optionally starting
   // from a given frame field (assumed to be interpolating the constraints).
   // Implementation of the paper "Integrable PolyVector Fields", SIGGRAPH 2015.
 
   // Set of parameters used during solve
-  struct integrable_polyvector_fields_parameters;
+  struct polycurl_reduction_parameters;
 
   // All data necessary for solving. Gets initialized from the original field
   //  and gets updated during each solve.
-  template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC> class IntegrableFieldSolverData;
+  template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC> class PolyCurlReductionSolverData;
 
 
   // Precomputes matrices and necessary initial variables from the mesh and the
@@ -38,24 +38,24 @@ namespace igl {
   //   original_field    #F by 6 list of the representative vectors of the frame field to be used as a starting point
   //                     (up to permutation and sign, stacked horizontally for each face)
   // Returns:
-  //   data              an IntegrableFieldSolverData object that holds all intermediate
+  //   data              an PolyCurlReductionSolverData object that holds all intermediate
   //                     data needed by the solve routine, with correctly initialized values.
   //
   template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-  IGL_INLINE void integrable_polyvector_fields_precompute(const Eigen::PlainObjectBase<DerivedV>& V,
+  IGL_INLINE void polycurl_reduction_precompute(const Eigen::PlainObjectBase<DerivedV>& V,
                                                     const Eigen::PlainObjectBase<DerivedF>& F,
                                                     const Eigen::VectorXi& b,
                                                     const Eigen::PlainObjectBase<DerivedC>& bc,
                                                     const Eigen::VectorXi& constraint_level,
                                                     const Eigen::PlainObjectBase<DerivedFF>& original_field,
-                                                    igl::IntegrableFieldSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &data);
+                                                    directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &data);
 
 
   // Given the current estimate of the field, performs one round of optimization
   // iterations and updates the current estimate. The intermediate data is saved
   // and returned for the next iteration.
   // Inputs:
-  //   data                         an IntegrableFieldSolverData object that holds all intermediate
+  //   data                         an PolyCurlReductionSolverData object that holds all intermediate
   //                                data needed by the solve routine, with their values at the current time instance.
   //   params                       solver parameters (see below)
   //   current_field                #F by 6 list of the representative vectors of the current frame field to be used as a starting point
@@ -67,8 +67,8 @@ namespace igl {
   //   current_field                updated estimate for the integrable field
   //
 template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-  IGL_INLINE void integrable_polyvector_fields_solve(IntegrableFieldSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata,
-    integrable_polyvector_fields_parameters &params,
+  IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata,
+    polycurl_reduction_parameters &params,
                                                Eigen::PlainObjectBase<DerivedFF>& current_field,
                                                bool current_field_is_not_ccw);
 
@@ -77,7 +77,7 @@ template <typename DerivedV, typename DerivedF, typename DerivedFF, typename Der
 
 
 //parameters
-struct igl::integrable_polyvector_fields_parameters
+struct directional::polycurl_reduction_parameters
 {
   // number of optimization iterations
   int numIter;
@@ -102,13 +102,13 @@ struct igl::integrable_polyvector_fields_parameters
   //tikhonov regularization term (typically not needed, default value should suffice)
   double tikh_gamma;
 
-  IGL_INLINE integrable_polyvector_fields_parameters();
+  IGL_INLINE polycurl_reduction_parameters();
 
 };
 
 //solver data
 template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-class igl::IntegrableFieldSolverData
+class directional::PolyCurlReductionSolverData
 {
 public:
   //Original field
@@ -212,9 +212,9 @@ public:
   IGL_INLINE void makeFieldCCW(Eigen::MatrixXd &sol3D);
 
 public:
-  IGL_INLINE IntegrableFieldSolverData();
+  IGL_INLINE PolyCurlReductionSolverData();
 
-  IGL_INLINE IntegrableFieldSolverData(
+  IGL_INLINE PolyCurlReductionSolverData(
                                      const Eigen::PlainObjectBase<DerivedV> &_V,
                                      const Eigen::PlainObjectBase<DerivedF> &_F,
                                      const Eigen::VectorXi& b,
@@ -224,8 +224,8 @@ public:
 };
 
 #ifndef IGL_STATIC_LIBRARY
-#include "integrable_polyvector_fields.cpp"
+#include "polycurl_reduction.cpp"
 #endif
 
 
-#endif /* defined(IGL_INTEGRABLE_POLYVECTOR_FIELDS) */
+#endif /* defined(DIRECTIONAL_POLYCURL_REDUCTION_FIELDS) */
