@@ -21,7 +21,6 @@
 #include <vector>
 #include <fstream>
 
-//test
 
 // Mesh
 Eigen::MatrixXd VMesh, VField, CField, CMesh;
