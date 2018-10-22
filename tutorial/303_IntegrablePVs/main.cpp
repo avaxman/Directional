@@ -1,7 +1,5 @@
 #include <igl/readOFF.h>
 #include <igl/readOBJ.h>
-#include <directional/n_polyvector.h>
-#include <directional/integrable_polyvector_fields.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/local_basis.h>
 #include <igl/avg_edge_length.h>
@@ -17,6 +15,7 @@
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
 #include <directional/polyvector_field_comb_from_matchings_and_cuts.h>
 #include <directional/polyvector_field_poisson_reconstruction.h>
+#include <directional/integrable_polyvector_fields.h>
 #include <igl/cut_mesh.h>
 #include <igl/slice.h>
 #include <igl/false_barycentric_subdivision.h>
@@ -30,13 +29,21 @@
 using namespace std;
 
 // Input mesh
-Eigen::MatrixXd V;
-Eigen::MatrixXi F;
 std::vector<bool> V_border;
 std::vector<std::vector<int> > VF, VFi;
 std::vector<std::vector<int> > VV;
 Eigen::MatrixXi TT, TTi;
 Eigen::MatrixXi E, E2F, F2E;
+
+Eigen::VectorXi cIDs, matching, indices;
+Eigen::VectorXd effort;
+Eigen::MatrixXi FMesh, FField, FSings;
+Eigen::MatrixXi EV, EF, FE;
+Eigen::MatrixXd VMesh, VField, VSings;
+Eigen::MatrixXd CMesh, CField, CSings;
+Eigen::MatrixXd rawField,representative, cValues;
+Eigen::MatrixXcd pvOrigField, poissonOrigField;
+igl::opengl::glfw::Viewer viewer;
 
 // Per face bases (only needed to generate constraints)
 Eigen::MatrixXd B1,B2,B3;
@@ -52,7 +59,6 @@ double global_scale;
 double uv_scale;
 
 // Data for original PolyVector field
-Eigen::MatrixXd two_pv_ori; // field
 Eigen::VectorXi singularities_ori; // singularities
 Eigen::VectorXd curl_ori; // curl per edge
 Eigen::MatrixXi cuts_ori; // cut edges
@@ -627,14 +633,14 @@ int main(int argc, char *argv[])
 {
 
   // Load a mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", V, F);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/decimated-knight.off", VMesh, FMesh);
 
   printf("--Initialization--\n");
-  V_border = igl::is_border_vertex(V,F);
+  V_border = igl::is_border_vertex(VMesh,FMesh);
   igl::adjacency_list(F, VV);
-  igl::vertex_triangle_adjacency(V,F,VF,VFi);
-  igl::triangle_triangle_adjacency(F,TT,TTi);
-  igl::edge_topology(V,F,E,F2E,E2F);
+  igl::vertex_triangle_adjacency(VMesh,FMesh,VF,VFi);
+  igl::triangle_triangle_adjacency(FMesh,TT,TTi);
+  igl::edge_topology(FMesh,F,E,F2E,E2F);
 
   // Generate "subdivided" mesh for visualization of curl terms
   igl::false_barycentric_subdivision(V, F, Vbs, Fbs);
@@ -656,7 +662,35 @@ int main(int argc, char *argv[])
 
   // Interpolate a 2-PolyVector field to be used as the original field
   printf("--Initial solution--\n");
-  igl::n_polyvector(V, F, b, bc, two_pv_ori);
+
+  
+ 
+  directional::polyvector_field(VMesh, FMesh, cIDs, cValues, N, pvField);
+  directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawField);
+  
+  directional
+  
+  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
+  directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,matching, N,prinIndices);
+  
+
+  std::vector<int> singPositionsList;
+  std::vector<int> singIndicesList;
+  for (int i=0;i<wholeV.rows();i++)
+    if (prinIndices(i)!=0){
+      singPositionsList.push_back(i);
+      singIndicesList.push_back(prinIndices(i));
+    }
+  
+  singPositions.resize(singPositionsList.size());
+  singIndices.resize(singIndicesList.size());
+  for (int i=0;i<singPositionsList.size();i++){
+    singPositions(i)=singPositionsList[i];
+    singIndices(i)=singIndicesList[i];
+  }
+  
+  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
+  directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
 
   // Post process original field
   // Compute curl_minimizing matchings and curl
