@@ -14,116 +14,117 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_combing.h>
-#include <directional/curl_combing.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
 #include <directional/integrable_polyvector_fields.h>
 
 
-#include <directional/polyvector_field_matchings.h>
-#include <directional/polyvector_field_singularities_from_matchings.h>
-#include <directional/polyvector_field_cut_mesh_with_singularities.h>
-#include <directional/polyvector_field_comb_from_matchings_and_cuts.h>
-#include <directional/polyvector_field_poisson_reconstruction.h>
-
-
-
 int N=6;
-Eigen::MatrixXi wholeF, cutF;
-Eigen::MatrixXd wholeV, cutV, rawField, combedField, barycenters;
+Eigen::MatrixXi FMeshWhole, FMeshCut;
+Eigen::MatrixXd VMeshWhole, VCuteWhole, VField, VSings;
+Eigen::MatrixXd rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
 Eigen::RowVector3d rawGlyphColor;
 igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
-Eigen::VectorXi singIndices, singPositions;
-Eigen::MatrixXd constPositions;
+Eigen::VectorXi singIndices, singVertices;
+//Eigen::MatrixXd constPositions;
 Eigen::MatrixXd glyphPrincipalColors(6,3);
 
 Eigen::VectorXi cut2wholeIndices;  //map between cut vertices to whole vertices.
 Eigen::VectorXi edge2TransitionIndices;  //map between all edges to transition variables (mostly -1; only relevant at cuts).
-Eigen::MatrixXd cutUV, cutUVW;
+Eigen::MatrixXd cutUV; //, cutUVW;
 Eigen::MatrixXi faceIsCut;
 
+//parameterization variables
 Eigen::SparseMatrix<double> vt2cMat;
 Eigen::SparseMatrix<double> constraintMat, symmMat;
+
 //between N vertex values and #cut transition variables to corner values (N*3 per face in same order)
 Eigen::VectorXd edgeWeights;
-
 Eigen::VectorXi constrainedVertices;
 
-bool showCombedField=false, showSingularities=false;
+//texture image
+Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
 
 
-void update_mesh()
+typedef enum {ROSY_FIELD, ROSY_PARAMETERIZATION, CF_FIELD, CF_PARAMETERIZATION} ViewingModes;
+ViewingModes viewingMode=ROSY_FIELD;
+
+
+void update_triangle_mesh()
 {
+  if ((viewingMode==ROSY_FIELD)||(viewingMode==CF_FIELD)){
+    viewer.data_list[0].clear();
+    viewer.data_list[0].set_mesh(VMeshWhole, FMeshWhole);
+    CMesh=Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
+    viewer.data_list[0].set_colors(CMesh);
+    viewer.data_list[0].show_texture=false;
+  } else {
+    viewer.data_list[0].clear();
+    viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
+    viewer.data_list[0].set_uv(cutUV);
+    viewer.data_list[0].show_texture=true;
+  }
+}
 
-  Eigen::MatrixXd fullV;
-  Eigen::MatrixXi fullF;
-  Eigen::MatrixXd fullC;
-  
-  if (!viewer.data().show_texture){
-    fullC=Eigen::MatrixXd::Constant(cutF.rows(),3, 1.0);
-    fullV=wholeV;
-    fullF=wholeF;
-    
-    Eigen::MatrixXd fullGlyphColor(wholeF.rows(),3*N);
-    for (int i=0;i<wholeF.rows();i++)
+void update_raw_field_mesh()
+{
+  if ((viewingMode==ROSY_PARAMETERIZATION)||(viewingMode==CF_PARAMETERIZATION)){
+    for (int i=1;i<=3;i++){  //hide all other meshes
+      viewer.data_list[i].show_faces=false;
+      viewer.data_list[i].show_lines = false;
+    }
+  } else {
+    Eigen::MatrixXd fullGlyphColor(FMeshWhole.rows(),3*N);
+    for (int i=0;i<FMeshWhole.rows();i++)
       for (int j=0;j<N;j++)
         fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
     
-    directional::glyph_lines_raw(wholeV, wholeF, (showCombedField ? combedField : rawField), fullGlyphColor, false, true, fullV, fullF, fullC);
+    directional::glyph_lines_raw(VMeshWhole, FMeshWhole, (viewingMode==ROSY_FIELD ? combedFieldRosy : combedFieldCF), fullGlyphColor, VField, FField, CField);
     
-    if (showSingularities)
-      directional::singularity_spheres(wholeV, wholeF, singPositions, singIndices, directional::defaultSingularityColors(N), false, true, fullV, fullF, fullC);
+    viewer.data_list[1].clear();
+    viewer.data_list[1].set_mesh(VField, FField);
+    viewer.data_list[1].set_colors(CField);
+    viewer.data_list[1].show_faces = true;
+    viewer.data_list[1].show_lines = false;
     
-    double l = igl::avg_edge_length(wholeV, wholeF);
-    Eigen::MatrixXd constColors(constPositions.rows(),3);
-    constColors.setConstant(0.5);
-    directional::point_spheres(constPositions, l/5.0, constColors, 8,  false, true, fullV, fullF, fullC);
+    //singularities mesh
+    directional::singularity_spheres(VMeshWhole, FMeshWhole, singVertices, (viewingMode==ROSY_FIELD ? singIndicesRosy : singIndicesCF), directional::defaultSingularityColors(N) fullGlyphColor, VSings, FSings, CSings);
     
-    //drawing seam edges
-    if (showCombedField){
-      double l = igl::avg_edge_length(wholeV, wholeF);
-      std::vector<int> seamEdges;
-      /*for (int i=0;i<EV.rows();i++)
-        if (combedMatching(i)!=0)
-          seamEdges.push_back(i);*/
-      
-      for (int i=0;i<wholeF.rows();i++)
-        for (int j=0;j<3;j++)
-          if (faceIsCut(i,j))
-            seamEdges.push_back(FE(i,j));
-      
-      Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
-      for (int i=0;i<seamEdges.size();i++){
-        P1.row(i)=wholeV.row(EV(seamEdges[i],0));
-        P2.row(i)=wholeV.row(EV(seamEdges[i],1));
-      }
-      
-      directional::line_cylinders(P1, P2, l/50.0, Eigen::MatrixXd::Constant(wholeF.rows(), 3, 0.0), 6, false, true, fullV, fullF, fullC);
+    viewer.data_list[2].clear();
+    viewer.data_list[2].set_mesh(VSings, FSings);
+    viewer.data_list[2].set_colors(CSings);
+    viewer.data_list[2].show_faces = true;
+    viewer.data_list[2].show_lines = false;
+    
+    
+    //seam mesh
+    double avgEdgeLength = igl::avg_edge_length(VMesh, FMeshWhole);
+    std::vector<int> seamEdges;
+    for (int i=0;i<EV.rows();i++)
+      if ((viewingMode==ROSY_FIELD ? combedMatchingRosy : combedMatchingCF)(i)!=0)
+        seamEdges.push_back(i);
+    
+    Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
+    for (int i=0;i<seamEdges.size();i++){
+      P1.row(i)=VMeshWhole.row(EV(seamEdges[i],0));
+      P2.row(i)=VMeshWhole.row(EV(seamEdges[i],1));
     }
-    viewer.data().clear();
-    viewer.data().set_face_based(true);
-    viewer.data().set_mesh(fullV, fullF);
-    viewer.data().set_colors(fullC);
-  } else {
-    fullV=cutV;
-    fullF=cutF;
     
+    directional::line_cylinders(P1, P2, avgEdgeLength/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeams, FSeams, CSeams);
     
-    
-    viewer.data().clear();
-    viewer.data().set_face_based(true);
-    viewer.data().set_mesh(fullV, fullF);
-    viewer.data().set_uv(cutUV);
-    
+    viewer.data_list[3].clear();
+    viewer.data_list[3].set_mesh(VSeams, FSeams);
+    viewer.data_list[3].set_colors(CSeams);
+    viewer.data_list[3].show_faces = true;
+    viewer.data_list[3].show_lines = false;
   }
-  
-  
 }
+
 
 // Handle keyboard input
 bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
@@ -142,93 +143,59 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 int main()
 {
   std::cout <<
-  "  0  Toggle raw field/Combed field" << std::endl <<
+  "  0  Loaded 4-RoSy field" << std::endl <<
   "  1  Show/hide singularities" << std::endl <<
-  "  2  Show textured mesh/original mesh" << std::endl <<
-   //igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", wholeV, wholeF);
- igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka-red.off", wholeV, wholeF);
-  //igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", wholeV, wholeF);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium-hex.rawfield", N, rawField);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/decimated-knight-curl-free.rawfield", N, rawField);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-red-cf.rawfield", N, rawField);
-  igl::edge_topology(wholeV, wholeF, EV, FE, EF);
+  "  2  Show textured mesh/original mesh" << std::endl;
   
-  /*Eigen::MatrixXd two_pv=rawField.block(0,0,rawField.rows(),6);
-  Eigen::VectorXi b; b.resize(1); b<<0;
-  Eigen::MatrixXd bc; bc.resize(1,6); bc<<two_pv.row(0);
-  double constraint_percentage = 0.002;
-  double rand_factor = 5;
-  int iter = 0;
-  Eigen::VectorXi blevel; blevel.resize(1); b<<1;
-  igl::integrable_polyvector_fields_parameters params;
-  igl::IntegrableFieldSolverData<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::MatrixXd, Eigen::MatrixXd> ipfdata;
-  igl::integrable_polyvector_fields_precompute(wholeV, wholeF, b, bc, blevel, two_pv, ipfdata);
-  for (int bi = 0; bi<50; ++bi)
-  {
-    printf("\n\n **** Batch %d ****\n", iter);
-    igl::integrable_polyvector_fields_solve(ipfdata, params, two_pv, iter ==0);
-    iter++;
-    params.wSmooth *= params.redFactor_wsmooth;
-  }
+  igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", VMesh, FMesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", N, rawFieldRoSy);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", N, rawFieldCF);
+  igl::edge_topology(VMesh, FMesh, EV, FE, EF);
+  igl::barycenter(VMesh, FMesh, barycenters);
   
-  printf("--Matchings and curl--\n");
-  Eigen::MatrixXi match_ab, match_ba;  // matchings across interior edges
-  Eigen::VectorXd curl; // curl per edge
-  double avgCurl = igl::polyvector_field_matchings(two_pv, wholeV, wholeF, true, true, match_ab, match_ba, curl);
-  double maxCurl = curl.maxCoeff();
-  printf("curl -- max: %.5g, avg: %.5g\n", maxCurl,  avgCurl);
-  // Compute singularities
-  printf("--Singularities--\n");
-  igl::polyvector_field_singularities_from_matchings(wholeV, wholeF, match_ab, match_ba, singPositions);
-  printf("#singularities: %ld\n", singPositions.rows());
-  // Get mesh cuts based on singularities
-  printf("--Cuts--\n");
-  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
-  // Comb field
-  printf("--Combing--\n");
-  Eigen::MatrixXd combed;
-  igl::polyvector_field_comb_from_matchings_and_cuts(wholeV, wholeF, two_pv, match_ab, match_ba, faceIsCut, combed);
+  //combing, cutting, and parameterizing according to RoSy field
+  directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawFieldRosy, matchingRosy, effortRosy);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effortRosy,matchingRosy, N,prinIndices);
   
-  rawField.block(0,0,rawField.rows(),6)=two_pv;
-  rawField.block(0,6,rawField.rows(),6)=-two_pv;
-  
-  directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield",  rawField);
-  return;*/
-  
-  //singIndices.resize(singPositions.size());
-  //singIndices.setZero();
-  
-    
-  //computing
-  //directional::principal_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
-  directional::curl_matching(wholeV, wholeF,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(wholeV,wholeF,EV, EF, effort,matching, N,prinIndices);
-  
-  //cutting and parameterizing
-  
-  std::vector<int> singPositionsList;
+  std::vector<int> singVerticesList;
   std::vector<int> singIndicesList;
   for (int i=0;i<wholeV.rows();i++)
     if (prinIndices(i)!=0){
-      singPositionsList.push_back(i);
+      singVerticesList.push_back(i);
       singIndicesList.push_back(prinIndices(i));
     }
   
-  singPositions.resize(singPositionsList.size());
-  singIndices.resize(singIndicesList.size());
-  for (int i=0;i<singPositionsList.size();i++){
-    singPositions(i)=singPositionsList[i];
-    singIndices(i)=singIndicesList[i];
+  singVerticesRosy.resize(singVerticesList.size());
+  singIndicesRosy.resize(singIndicesList.size());
+  for (int i=0;i<singVerticesList.size();i++){
+    singVerticesRosy(i)=singVerticesList[i];
+    singIndicesRosy(i)=singIndicesList[i];
   }
   
-  igl::polyvector_field_cut_mesh_with_singularities(wholeV, wholeF, singPositions, faceIsCut);
-  directional::curl_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
+  igl::polyvector_field_cut_mesh_with_singularities(VMesh, FMesh, singVerticesRosy, faceIsCutRosy);
+  directional:principal_combing(VMesh,FMesh, EV, EF, FE, faceIsCutRosy, rawFieldRosy, combedFieldRosy, combedMatchingRosy, combedEffortRosy);
   
-
-  //directional::principal_combing(wholeV,wholeF, EV, EF, FE, faceIsCut, rawField, combedField, combedMatching, combedEffort);
-  //std::cout<<"combedMatching: "<<combedMatching<<std::endl;
+  //combing and cutting according to curl-free field
+  directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldCF, matchingCF, effortCF);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effortCF,matchingCF, N,prinIndices);
   
-  igl::barycenter(wholeV, wholeF, barycenters);
+  std::vector<int> singVerticesList;
+  std::vector<int> singIndicesList;
+  for (int i=0;i<wholeV.rows();i++)
+    if (prinIndices(i)!=0){
+      singVerticesList.push_back(i);
+      singIndicesList.push_back(prinIndices(i));
+    }
+  
+  singVerticesCF.resize(singVerticesList.size());
+  singIndicesCF.resize(singIndicesList.size());
+  for (int i=0;i<singVerticesList.size();i++){
+    singVerticesCF(i)=singVerticesList[i];
+    singIndicesCF(i)=singIndicesList[i];
+  }
+  
+  igl::polyvector_field_cut_mesh_with_singularities(VMesh, FMesh, singVerticesCF, faceIsCutRosyCF);
+  directional::curl_combing(VMesh,FMesh, EV, EF, FE, faceIsCutCF, rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
   
   //Uniform weights for now
   edgeWeights=Eigen::VectorXd::Constant(EV.rows(), 1.0);
@@ -236,7 +203,7 @@ int main()
   cutV=wholeV;
   Eigen::VectorXi integerVars;
   bool isBarycentric =true;  //to constrain u+v+w=1
-  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singPositions, faceIsCut,  vt2cMat, constraintMat, symmMat, constrainedVertices, cutV, cutF, integerVars);
+  directional::setup_parameterization(N, wholeV, wholeF, combedMatching, singVertices, faceIsCut,  vt2cMat, constraintMat, symmMat, constrainedVertices, cutV, cutF, integerVars);
   
   std::vector<int> constPositionsList;
   for (int i=0;i<wholeV.rows();i++)
@@ -258,7 +225,7 @@ int main()
   
   Eigen::MatrixXd emptyMat;
   //igl::writeOBJ(TUTORIAL_SHARED_PATH "/torus-twosings-param.obj", cutV, cutF, emptyMat, emptyMat, cutUV, cutF);
-
+  
   
   //testing vt2cMat
   

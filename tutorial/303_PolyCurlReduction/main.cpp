@@ -200,6 +200,13 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     
     directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
   }
+  
+ if (key == 'W')
+  if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", rawFieldOrigCF))
+    std::cout << "Saved raw field" << std::endl;
+  else
+    std::cout << "Unable to save raw field. " << std::endl;
+  break;
 
   update_triangle_mesh();
   update_raw_field_mesh();

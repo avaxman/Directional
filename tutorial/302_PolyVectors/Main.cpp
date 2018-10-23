@@ -146,8 +146,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       break;
   }
   
-  ;
-  
   return true;
 }
 
