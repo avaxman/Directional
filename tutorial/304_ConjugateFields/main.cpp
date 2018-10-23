@@ -58,10 +58,10 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 void update_triangle_mesh()
 {
   if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
-   CMesh = Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
+    CMesh = Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
     for (int i = 0; i < b.rows(); i++)
       CMesh.row(b(i)) = Eigen::RowVector3d(0.5,0.1,0.1);
-  }else{  //curl viewing - currently averaged to the face
+  }else{  
     Eigen::VectorXd currConjugacy = (viewingMode==ORIGINAL_CONJUGACY ? conjugacyOrig: conjugacyConjugate);
     igl::jet(currConjugacy, 0.0,conjMax, CMesh);
     
@@ -87,7 +87,7 @@ void update_raw_field_mesh()
       for (int j=0;j<N;j++)
         fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
     
-
+    
     directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate), fullGlyphColor,VField, FField, CField);
     
     viewer.data_list[1].clear();
@@ -121,88 +121,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 }
 
 
-/*bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier)
-{
-  using namespace std;
-  using namespace Eigen;
-
-  if (key <'1' || key >'5')
-    return false;
-
-  viewer.data().lines.resize(0,9);
-  // Highlight in red the constrained faces
-  MatrixXd C = MatrixXd::Constant(F.rows(),3,1);
-  for (unsigned i=0; i<b.size();++i)
-      C.row(b(i)) << 1, 0, 0;
-
-  double maxC = std::max(conjugacy_c.maxCoeff(), conjugacy_s.maxCoeff());
-  double minC = std::min(conjugacy_c.minCoeff(), conjugacy_s.minCoeff());
-
-  Eigen::VectorXd valS = conjugacy_s;
-  // Eigen::VectorXd valS = (valS.array() - minC)/(maxC-minC);
-  // valS = 1 - valS.array();
-  Eigen::VectorXd valC = conjugacy_c;
-  // Eigen::VectorXd valC = (valC.array() - minC)/(maxC-minC);
-  // valC = 1 - valC.array();
-  MatrixXd CS, CC;
-  igl::jet(valS, 0, 0.004, CS);
-  igl::jet(valC, 0, 0.004, CC);
-
-  if (key == '1')
-  {
-    // Frame field constraints
-    MatrixXd F1_t = MatrixXd::Zero(F.rows(),3);
-    MatrixXd F2_t = MatrixXd::Zero(F.rows(),3);
-
-    for (unsigned i=0; i<b.size();++i)
-    {
-      F1_t.row(b(i)) = bc.block(i,0,1,3);
-      F2_t.row(b(i)) = bc.block(i,3,1,3);
-    }
-
-    viewer.data().add_edges(B - global_scale*F1_t, B + global_scale*F1_t , Eigen::RowVector3d(0,0,1));
-    viewer.data().add_edges(B - global_scale*F2_t, B + global_scale*F2_t , Eigen::RowVector3d(0,0,1));
-    viewer.data().set_colors(C);
-  }
-
-  if (key == '2')
-  {
-    // Interpolated result
-    viewer.data().add_edges(B - global_scale*smooth_pvf.block(0,0,F.rows(),3),
-                      B + global_scale*smooth_pvf.block(0,0,F.rows(),3),
-                      Eigen::RowVector3d(0,0,1));
-    viewer.data().add_edges(B - global_scale*smooth_pvf.block(0,3,F.rows(),3),
-                      B + global_scale*smooth_pvf.block(0,3,F.rows(),3),
-                      Eigen::RowVector3d(0,0,1));
-    viewer.data().set_colors(C);
-  }
-
-  if (key == '3')
-  {
-    // Interpolated result
-    viewer.data().set_colors(CS);
-  }
-
-  if (key == '4')
-  {
-    // Conjugate field
-    viewer.data().add_edges(B - global_scale*conjugate_pvf.block(0,0,F.rows(),3),
-                      B + global_scale*conjugate_pvf.block(0,0,F.rows(),3),
-                      Eigen::RowVector3d(0,0,1));
-    viewer.data().add_edges(B - global_scale*conjugate_pvf.block(0,3,F.rows(),3),
-                      B + global_scale*conjugate_pvf.block(0,3,F.rows(),3),
-                      Eigen::RowVector3d(0,0,1));
-    viewer.data().set_colors(C);
-  }
-  if (key == '5')
-  {
-    // Conjugate field
-    viewer.data().set_colors(CC);
-  }
-
-  return false;
-}*/
-
 int main(int argc, char *argv[])
 {
   using namespace Eigen;
@@ -213,14 +131,14 @@ int main(int argc, char *argv[])
   "  2      Conjugacy of original field" << std::endl <<
   "  3      Conjugate field" << std::endl <<
   "  4      Conjugacy of optimized field." << std::endl;
-
+  
   // Load a mesh in OBJ format
   igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
   // Compute face barycenters
   igl::barycenter(VMesh, FMesh, barycenters);
-
+  
   // Load constraints
   igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_b.dmat",b);
   igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_bc.dmat",bc);
@@ -254,24 +172,10 @@ int main(int argc, char *argv[])
     singIndicesOrig(i)=singIndicesList[i];
   }
   
-  cout<<"singVerticesOrig"<<singVerticesOrig<<endl;
-  
-
   // Initialize conjugate field with smooth field
   directional::ConjugateFFSolverData csdata(VMesh,FMesh);
-
-  // Optimize the field
-  /*int conjIter = 20;
-  double lambdaOrtho = .1;
-  double lambdaInit = 100;
-  double lambdaMultFactor = 1.01;
-  bool doHardConstraints = true;
-  VectorXi isConstrained = VectorXi::Constant(F.rows(),0);
-  for (unsigned i=0; i<b.size(); ++i)
-    isConstrained(b(i)) = 1;*/
-
+  
   double lambdaOut = directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
-  //rawFieldConjugate = rawFieldOrig;
   
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawFieldConjugate, matching, effort);
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,prinIndices);
@@ -290,21 +194,12 @@ int main(int argc, char *argv[])
     singVerticesConj(i)=singVerticesList[i];
     singIndicesConj(i)=singIndicesList[i];
   }
-
-  // local representations of field vectors
-  //Eigen::Matrix<double, Eigen::Dynamic, 2> pvU, pvV;
-  //pvU.resize(F.rows(),2); pvV.resize(F.rows(),2);
-  //smooth
-
+  
   csdata.evaluateConjugacy(rawFieldOrig, conjugacyOrig);
   conjMax = conjugacyOrig.lpNorm<Infinity>();
-  //conjugate
-  /*const Eigen::MatrixXd &Uc = conjugate_pvf.leftCols(3);
-  const Eigen::MatrixXd &Vc = conjugate_pvf.rightCols(3);
-  pvU << igl::dot_row(Uc,B1), igl::dot_row(Uc,B2);
-  pvV << igl::dot_row(Vc,B1), igl::dot_row(Vc,B2);*/
+  
   csdata.evaluateConjugacy(rawFieldConjugate, conjugacyConjugate);
- 
+  
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
@@ -325,8 +220,6 @@ int main(int argc, char *argv[])
   1.0,0.5,0.0,
   0.0,0.5,1.0,
   0.5,1.0,0.0;
-  
-  
   
   viewer.callback_key_down = &key_down;
   viewer.launch();
