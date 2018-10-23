@@ -1,7 +1,5 @@
 #include <igl/avg_edge_length.h>
 #include <igl/barycenter.h>
-#include <directional/conjugate_frame_fields.h>
-#include <directional/ConjugateFFSolverData.h>
 #include <igl/jet.h>
 #include <igl/readDMAT.h>
 #include <igl/readOBJ.h>
@@ -13,6 +11,8 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/principal_matching.h>
+#include <directional/conjugate_frame_fields.h>
+#include <directional/ConjugateFFSolverData.h>
 #include <vector>
 #include <cstdlib>
 
@@ -28,6 +28,7 @@ Eigen::MatrixXd CMesh, CField, CSings;
 Eigen::MatrixXd rawField,representative, cValues, barycenters;
 Eigen::MatrixXcd pvField;
 igl::opengl::glfw::Viewer viewer;
+Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::MatrixXd rawFieldOrig, rawFieldConjugate;
 Eigen::VectorXd conjugacyOrig, conjugacyConjugate;
@@ -53,15 +54,19 @@ Eigen::MatrixXd bc;
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CONJUGACY, OPTIMIZED_FIELD, OPTIMIZED_CONJUGACY} ViewingModes;
 ViewingModes viewingMode=ORIGINAL_FIELD;
 
+
 void update_triangle_mesh()
 {
-  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD))
-    viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
-  else{  //curl viewing - currently averaged to the face
+  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
+   CMesh = Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
+    for (int i = 0; i < b.rows(); i++)
+      CMesh.row(b(i)) = Eigen::RowVector3d(0.5,0.1,0.1);
+  }else{  //curl viewing - currently averaged to the face
     Eigen::VectorXd currConjugacy = (viewingMode==ORIGINAL_CONJUGACY ? conjugacyOrig: conjugacyConjugate);
     igl::jet(currConjugacy, 0.0,conjMax, CMesh);
-    viewer.data_list[0].set_colors(CMesh);
+    
   }
+  viewer.data_list[0].set_colors(CMesh);
 }
 
 
@@ -76,8 +81,14 @@ void update_raw_field_mesh()
       viewer.data_list[i].show_lines = false;
     }
   } else {
+    
+    Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
+    for (int i=0;i<FMesh.rows();i++)
+      for (int j=0;j<N;j++)
+        fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
+    
 
-    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate), RowVector3d(0.0,0.2,1.0),VField, FField, CField);
+    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate), fullGlyphColor,VField, FField, CField);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -210,22 +221,12 @@ int main(int argc, char *argv[])
   // Compute face barycenters
   igl::barycenter(VMesh, FMesh, barycenters);
 
-  // Local bases (needed for conjugacy)
-  //Eigen::MatrixXd B1, B2, B3;
-  //igl::local_basis(V, F, B1, B2, B3);
-
-  // Compute scale for visualizing fields
-  //global_scale =  .4*igl::avg_edge_length(V, F);
-
   // Load constraints
   igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_b.dmat",b);
   igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_bc.dmat",bc);
   
   bc.conservativeResize(bc.rows(), 2*bc.cols());
-  //cout<<"bc: "<<bc<<endl;
   bc.block(0,6,bc.rows(),6) = -bc.block(0,0,bc.rows(),6);
-  
-  //cout<<"bc: "<<bc<<endl;
   
   //initial solution
   Eigen::MatrixXcd pvField;
@@ -257,7 +258,7 @@ int main(int argc, char *argv[])
   
 
   // Initialize conjugate field with smooth field
-  igl::ConjugateFFSolverData<Eigen::MatrixXd, Eigen::MatrixXi> csdata(VMesh,FMesh);
+  directional::ConjugateFFSolverData csdata(VMesh,FMesh);
 
   // Optimize the field
   /*int conjIter = 20;
@@ -269,7 +270,7 @@ int main(int argc, char *argv[])
   for (unsigned i=0; i<b.size(); ++i)
     isConstrained(b(i)) = 1;*/
 
-  double lambdaOut = igl::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
+  double lambdaOut = directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
   //rawFieldConjugate = rawFieldOrig;
   
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawFieldConjugate, matching, effort);
@@ -318,6 +319,13 @@ int main(int argc, char *argv[])
   update_triangle_mesh();
   update_raw_field_mesh();
   viewer.selected_data_index=0;
+  
+  glyphPrincipalColors<<1.0,0.0,0.5,
+  0.0,1.0,0.5,
+  1.0,0.5,0.0,
+  0.0,0.5,1.0,
+  0.5,1.0,0.0;
+  
   
   
   viewer.callback_key_down = &key_down;
