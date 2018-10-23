@@ -172,13 +172,11 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     printf("--Improving Curl--\n");
     for (int bi = 0; bi<5; ++bi)
     {
-      Eigen::MatrixXd two_pv=rawFieldCF.block(0,0,rawFieldCF.rows(),6);
+      
       printf("\n\n **** Batch %d ****\n", iter);
-      directional::polycurl_reduction_solve(pcrdata, params, two_pv, iter ==0);
+      directional::polycurl_reduction_solve(pcrdata, params, rawFieldCF, iter ==0);
       iter++;
       params.wSmooth *= params.redFactor_wsmooth;
-      rawFieldCF.block(0,0,rawFieldCF.rows(),6)=two_pv;
-      rawFieldCF.block(0,6,rawFieldCF.rows(),6)=-two_pv;
     }
     
     Eigen::VectorXi prinIndices;
@@ -254,8 +252,7 @@ int main(int argc, char *argv[])
   Eigen::VectorXi b; b.resize(1); b<<0;
   Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.row(0).head(6);
   Eigen::VectorXi blevel; blevel.resize(1); b<<1;
-  Eigen::MatrixXd twoVectorMat=rawFieldOrig.block(0,0,rawFieldOrig.rows(),6);
-  directional::polycurl_reduction_precompute(VMesh, FMesh, b, bc, blevel, twoVectorMat , pcrdata);
+  directional::polycurl_reduction_precompute(VMesh, FMesh, b, bc, blevel, rawFieldOrig , pcrdata);
   
   rawFieldCF = rawFieldOrig;
   matchingCF = matchingOrig;

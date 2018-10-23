@@ -10,6 +10,7 @@
 #include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <igl/dot_row.h>
 #include <iostream>
 using namespace std;
 namespace igl 
@@ -65,8 +66,11 @@ namespace igl
 public:
     IGL_INLINE ConjugateFFSolverData(const Eigen::PlainObjectBase<DerivedV> &_V,
                                    const Eigen::PlainObjectBase<DerivedF> &_F);
-    IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> &pvU,
-                                      const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> &pvV,
+    IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 12> rawField,
+                                      Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 1> &conjValues) const ;
+    
+    IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> pvU,
+                                      const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> pvV,
                                       Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 1> &conjValues) const ;
   };
 }
@@ -360,9 +364,26 @@ computek()
 
 template<typename DerivedV, typename DerivedF>
 IGL_INLINE void igl::ConjugateFFSolverData<DerivedV, DerivedF>::
-evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> &pvU,
-                   const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> &pvV,
+evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 12> rawField,
                   Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 1> &conjValues) const 
+{
+  const Eigen::MatrixXd &Us = rawField.block(0,0,rawField.rows(),3);
+  const Eigen::MatrixXd &Vs = rawField.block(0,3,rawField.rows(),3);
+  Eigen::MatrixXd pvU(Us.rows(),2); pvU << igl::dot_row(Us,B1), igl::dot_row(Us,B2);
+  Eigen::MatrixXd pvV(Us.rows(),2);  pvV << igl::dot_row(Vs,B1), igl::dot_row(Vs,B2);
+  conjValues.resize(numF,1);
+  for (int j =0; j<numF; ++j)
+  {
+    Eigen::Matrix<typename DerivedV::Scalar, 4, 1> x; x<<pvU.row(j).transpose(), pvV.row(j).transpose();
+    conjValues[j] = x.transpose()*H[j]*x;
+  }
+}
+
+template<typename DerivedV, typename DerivedF>
+IGL_INLINE void igl::ConjugateFFSolverData<DerivedV, DerivedF>::
+evaluateConjugacy(const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> pvU,
+                  const Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 2> pvV,
+                  Eigen::Matrix<typename DerivedV::Scalar, Eigen::Dynamic, 1> &conjValues) const
 {
   conjValues.resize(numF,1);
   for (int j =0; j<numF; ++j)

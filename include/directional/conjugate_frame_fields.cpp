@@ -19,7 +19,7 @@ namespace igl {
   {
   public:
     IGL_INLINE ConjugateFFSolver(const ConjugateFFSolverData<DerivedV, DerivedF> &_data,
-                                 int _maxIter = 50,
+                                 int _maxIter = 20,
                                  const typename DerivedV::Scalar _lambdaOrtho = .1,
                                  const typename DerivedV::Scalar _lambdaInit = 100,
                                  const typename DerivedV::Scalar _lambdaMultFactor = 1.01,
@@ -397,7 +397,7 @@ solve(const Eigen::VectorXi &isConstrained,
 template <typename DerivedV, typename DerivedF, typename DerivedO>
 IGL_INLINE void igl::conjugate_frame_fields(const Eigen::PlainObjectBase<DerivedV> &V,
                                        const Eigen::PlainObjectBase<DerivedF> &F,
-                                       const Eigen::VectorXi &isConstrained,
+                                       const Eigen::VectorXi &b,
                                        const Eigen::PlainObjectBase<DerivedO> &initialSolution,
                                        Eigen::PlainObjectBase<DerivedO> &output,
                                        int maxIter,
@@ -406,14 +406,20 @@ IGL_INLINE void igl::conjugate_frame_fields(const Eigen::PlainObjectBase<Derived
                                        const typename DerivedV::Scalar lambdaMultFactor,
                                        bool doHardConstraints)
 {
+  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.rows(),0);
+  for (unsigned i=0; i<b.size(); ++i)
+    isConstrained(b(i)) = 1;
+  Eigen::MatrixXd twoFieldMat =initialSolution.block(0,0,initialSolution.rows(),6);
   igl::ConjugateFFSolverData<DerivedV, DerivedF> csdata(V, F);
   igl::ConjugateFFSolver<DerivedV, DerivedF, DerivedO> cs(csdata, maxIter, lambdaOrtho, lambdaInit, lambdaMultFactor, doHardConstraints);
-  cs.solve(isConstrained, initialSolution, output);
+  cs.solve(isConstrained, twoFieldMat, output);
+  output.conservativeResize(output.rows(), 2*output.cols());
+  output.block(0,6,output.rows(),6) = -output.block(0,0,output.rows(),6);
 }
 
 template <typename DerivedV, typename DerivedF, typename DerivedO>
 IGL_INLINE typename DerivedV::Scalar igl::conjugate_frame_fields(const igl::ConjugateFFSolverData<DerivedV, DerivedF> &csdata,
-                                                                 const Eigen::VectorXi &isConstrained,
+                                                                 const Eigen::VectorXi &b,
                                                                  const Eigen::PlainObjectBase<DerivedO> &initialSolution,
                                                                  Eigen::PlainObjectBase<DerivedO> &output,
                                                                  int maxIter,
@@ -422,8 +428,14 @@ IGL_INLINE typename DerivedV::Scalar igl::conjugate_frame_fields(const igl::Conj
                                                                  const typename DerivedV::Scalar lambdaMultFactor,
                                                                  bool doHardConstraints)
 {
+  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.rows(),0);
+  for (unsigned i=0; i<b.size(); ++i)
+    isConstrained(b(i)) = 1;
+  Eigen::MatrixXd twoFieldMat =initialSolution.block(0,0,initialSolution.rows(),6);
   igl::ConjugateFFSolver<DerivedV, DerivedF, DerivedO> cs(csdata, maxIter, lambdaOrtho, lambdaInit, lambdaMultFactor, doHardConstraints);
-  typename DerivedV::Scalar lambdaOut = cs.solve(isConstrained, initialSolution, output);
+  typename DerivedV::Scalar lambdaOut = cs.solve(isConstrained, twoFieldMat, output);
+  output.conservativeResize(output.rows(), 2*output.cols());
+  output.block(0,6,output.rows(),3) = -output.block(0,0,output.rows(),3);
   return lambdaOut;
 }
 

@@ -1157,7 +1157,8 @@ IGL_INLINE void directional::polycurl_reduction_precompute(
   data.solver.analyzePattern(data.Hess);
 
   data.initializeConstraints(b,bc,constraint_level);
-  data.initializeOriginalVariable(original_field);
+  Eigen::MatrixXd twoVectorMat=original_field.block(0,0,original_field.rows(),6);
+  data.initializeOriginalVariable(twoVectorMat);
 };
 
 
@@ -1167,8 +1168,12 @@ IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReduc
                                                         Eigen::PlainObjectBase<DerivedFF>& current_field,
                                                         bool current_field_is_not_ccw)
 {
+  Eigen::MatrixXd twoFieldMat=current_field.block(0,0,current_field.rows(),6);
   directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC> cffs(cffsoldata);
-  cffs.solve(params, current_field, current_field_is_not_ccw);
+  cffs.solve(params, twoFieldMat, current_field_is_not_ccw);
+  
+  current_field.block(0,0,current_field.rows(),6)=twoFieldMat;
+  current_field.block(0,6,current_field.rows(),6)=-twoFieldMat;
 };
 
 #ifdef IGL_STATIC_LIBRARY
