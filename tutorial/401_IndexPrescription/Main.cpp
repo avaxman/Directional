@@ -36,7 +36,7 @@ igl::opengl::glfw::Viewer viewer;
 
 int eulerChar, numGenerators, numBoundaries;
 
-int N = 3;
+int N = 2;
 
 bool drag = false;
 bool select = false;

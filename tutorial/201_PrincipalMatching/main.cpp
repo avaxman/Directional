@@ -29,8 +29,6 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 bool zeroPressed=false;
 
-
-
 void update_triangle_mesh()
 {
   

@@ -71,7 +71,7 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 int iter = 0;
 
 // Create a texture that hides the integer translation in the parametrization
-void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_R,
+/*void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_R,
                   Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_G,
                   Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_B)
 {
@@ -88,7 +88,7 @@ void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &te
   
   texture_G = texture_R;
   texture_B = texture_R;
-}
+}*/
 
 
 void update_triangle_mesh()
@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
   singIndicesCF = singIndicesOrig;
   
   // Replace the standard texture with an integer shift invariant texture
-  line_texture(texture_R, texture_G, texture_B);
+  //line_texture(texture_R, texture_G, texture_B);
   
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);

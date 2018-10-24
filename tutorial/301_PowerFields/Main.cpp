@@ -134,7 +134,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       
     case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/horsers.rawfield", rawField))
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/rocker-arm2500.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
@@ -216,7 +216,7 @@ int main()
   "  0+R-bttn Remove constraint" << std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMesh, FMesh);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   
   cIDs.resize(0);
