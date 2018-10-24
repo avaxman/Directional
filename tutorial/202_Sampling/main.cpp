@@ -1,13 +1,16 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/readOFF.h>
 #include <igl/edge_topology.h>
+#include <igl/triangle_triangle_adjacency.h>
+#include <igl/euler_characteristic.h>
+#include <igl/readDMAT.h>
+#include <igl/writeDMAT.h>
+#include <directional/visualization_schemes.h>
 #include <directional/dual_cycles.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/index_prescription.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/euler_characteristic.h>
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
@@ -15,12 +18,10 @@
 #include <directional/singularity_spheres.h>
 #include <directional/glyph_lines_raw.h>
 
-Eigen::VectorXi singVertices;
-Eigen::VectorXi singIndices;
+Eigen::VectorXi singVertices,singIndices;
+Eigen::VectorXi prinSingVertices,prinSingIndices;
 
 Eigen::SparseMatrix<double> basisCycles;
-Eigen::VectorXi prinSingIndices;
-Eigen::RowVector3d rawGlyphColor;
 Eigen::MatrixXi FMesh, FField, FSings;
 Eigen::MatrixXd VMesh, VField, VSings;
 Eigen::MatrixXi EV, FE, EF;
@@ -30,7 +31,6 @@ Eigen::MatrixXd rawField;
 Eigen::VectorXd effort;
 Eigen::VectorXi constFaces;
 Eigen::MatrixXd constVecMat;
-
 Eigen::VectorXd cycleCurvature;
 Eigen::VectorXi vertex2cycle;
 Eigen::VectorXi innerEdges;
@@ -50,7 +50,7 @@ void update_directional_field()
   using namespace Eigen;
   using namespace std;
   VectorXd rotationAngles;
-  prinSingIndices=VectorXi::Zero(basisCycles.rows());
+  VectorXi prinSingIndices=VectorXi::Zero(basisCycles.rows());
   for (int i=0;i<singVertices.size();i++)
     prinSingIndices(singVertices[i])=singIndices[i];
   
@@ -65,7 +65,7 @@ void update_directional_field()
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING){
     Eigen::VectorXd effort;
     directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
-    directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,prinSingIndices);
+    directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,prinSingVertices, prinSingIndices);
   }
   
   if (viewingMode==IMPLICIT_FIELD){
@@ -80,17 +80,17 @@ void update_directional_field()
     representative.rowwise().normalize();
     directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
     directional::principal_matching(VMesh, FMesh,EV,EF,FE,rawField, matching, effort);
-    directional::effort_to_indices(VMesh,FMesh,EV,EF,effort,matching,N,prinSingIndices);
+    directional::effort_to_indices(VMesh,FMesh,EV,EF,effort,matching,N,prinSingVertices, prinSingIndices);
   }
   
   Eigen::MatrixXd CField, CSings;
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, rawGlyphColor, VField, FField, CField);
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
   
   if (viewingMode==TRIVIAL_ONE_SING)
-    directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices,  VSings, FSings, CSings);
   
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    directional::singularity_spheres(VMesh, FMesh, prinSingIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh, N, prinSingVertices, prinSingIndices,  VSings, FSings, CSings);
                                      
   
   viewer.data_list[1].clear();
@@ -117,20 +117,20 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
       break;
       
     case '4':{
-      singIndices[0]++;
-      singIndices[1]--;
-      cout<<"Prescribed singularity index: "<<singIndices[0]<<std::endl;
+      singIndices[0]--;
+      singIndices[1]++;
+      cout<<"Prescribed singularity index: "<<singIndices[0]<<"/"<<N<<std::endl;
       break;
     }
     case '5':{
-      singIndices[0]--;
-      singIndices[1]++;
-      cout<<"Prescribed singularity index: "<<singIndices[0]<<std::endl;
+      singIndices[0]++;
+      singIndices[1]--;
+      cout<<"Prescribed singularity index: "<<singIndices[0]<<"/"<<N<<std::endl;
       break;
     }
       
     case '6':{
-      globalRotation+=igl::PI/32;
+      globalRotation+=igl::PI/16;
       std::cout<<"globalRotation: " <<globalRotation<<std::endl;
       break;
     }
@@ -141,14 +141,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
   update_directional_field();
   return true;
 }
-
-double sign(double x){
-  if (x>0) return 1.0;
-  if (x<0) return -1.0;
-  return 0.0;
-}
-
-
 
 int main()
 {
@@ -165,20 +157,7 @@ int main()
   
   directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   
-  //taking midway faces as constraints for the implicit field interpolation
-  vector<int> constFacesList;
-  for (int i=0;i<FMesh.rows();i++){
-    for (int j=0;j<3;j++)
-      if (sign(VMesh.row(FMesh(i,j))(2))!=sign(VMesh.row(FMesh(i,(j+1)%3))(2))){
-        constFacesList.push_back(i);
-        break;
-      }
-  }
-  constFaces.resize(constFacesList.size());
-  for (int i=0;i<constFacesList.size();i++)
-    constFaces(i)=constFacesList[i];
-  
-  rawGlyphColor <<0.0, 0.2, 1.0;
+  igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",constFaces);
   
   singVertices.resize(2);
   singIndices.resize(2);
@@ -187,12 +166,11 @@ int main()
   singIndices(0)=N;
   singIndices(1)=N;
   
-  
   //triangle mesh
-  Eigen::MatrixXd CMesh=Eigen::MatrixXd::Constant(FMesh.rows(),3,1.0);
+  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
 
   for (int i = 0; i < constFaces.rows(); i++)
-    CMesh.row(constFaces(i)) = Eigen::RowVector3d(0.5,0.1,0.1);
+    CMesh.row(constFaces(i)) = directional::selected_face_color();
   
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(CMesh);

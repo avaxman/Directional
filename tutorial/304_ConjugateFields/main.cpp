@@ -215,8 +215,6 @@ int main(int argc, char *argv[])
   update_raw_field_mesh();
   viewer.selected_data_index=0;
   
-
-  
   viewer.callback_key_down = &key_down;
   viewer.launch();
   

@@ -65,7 +65,8 @@ namespace directional
                                     const Eigen::VectorXd& effort,
                                     const Eigen::VectorXi& matching,
                                     const int N,
-                                    Eigen::VectorXi& indices)
+                                    Eigen::VectorXi& singVertices,
+                                    Eigen::VectorXi& singIndices)
   {
     Eigen::SparseMatrix<double> basisCycles;
     Eigen::VectorXd cycleCurvature;
@@ -77,9 +78,24 @@ namespace directional
       effortInner(i)=effort(innerEdges(i));
     Eigen::VectorXi fullIndices;
     directional::effort_to_indices(basisCycles, effortInner, matching, cycleCurvature, N, fullIndices);
-    indices.conservativeResize(V.size());
+    Eigen::VectorXi indices(V.size());
     for (int i=0;i<V.rows();i++)
       indices(i)=fullIndices(vertex2cycle(i));
+    
+    std::vector<int> singVerticesList;
+    std::vector<int> singIndicesList;
+    for (int i=0;i<V.rows();i++)
+      if (indices(i)!=0){
+        singVerticesList.push_back(i);
+        singIndicesList.push_back(indices(i));
+      }
+    
+    singVertices.conservativeResize(singVerticesList.size());
+    singIndices.conservativeResize(singIndicesList.size());
+    for (int i=0;i<singVerticesList.size();i++){
+      singVertices(i)=singVerticesList[i];
+      singIndices(i)=singIndicesList[i];
+    }
   }
 }
 

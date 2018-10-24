@@ -37,7 +37,7 @@ namespace directional
   }
   
   //returns field with colors by indices in each directional object
-  Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(Eigen::MatrixXd& field){
+  Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field){
     
     Eigen::Matrix<double, 9,3> glyphPrincipalColors;
     glyphPrincipalColors<<1.0,0.0,0.5,
@@ -61,7 +61,7 @@ namespace directional
   
   //returns the default singularity colors
   //supports up to N=6
-  Eigen::MatrixXd IGL_INLINE default_singularity_colors(int N){
+  Eigen::MatrixXd IGL_INLINE default_singularity_colors(const int N){
     assert ((N>=1) && (N<=6));
     Eigen::MatrixXd fullColors;
     Eigen::VectorXd NList(2*N);

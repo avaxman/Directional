@@ -5,6 +5,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
+#include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
@@ -31,12 +32,13 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 void update_raw_field_mesh()
 {
   
-  Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
+  /*Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
   for (int i=0;i<FMesh.rows();i++)
     for (int j=0;j<N;j++)
-      fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
+      fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);*/
 
-  directional::glyph_lines_raw(VMesh, FMesh, (viewer.data_list[3].show_faces ? combedField : rawField), fullGlyphColor,VField, FField, CField);
+  Eigen::MatrixXd currField =(viewer.data_list[3].show_faces ? combedField : rawField);
+  directional::glyph_lines_raw(VMesh, FMesh, currField, directional::indexed_glyph_colors(currField),VField, FField, CField);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
@@ -69,38 +71,17 @@ int main()
   igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", VMesh, FMesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
+  igl::barycenter(VMesh, FMesh, barycenters);
   
   //computing
   directional::principal_combing(VMesh,FMesh, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,prinIndices);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,singVertices, singIndices);
   
-  std::vector<int> singVerticesList;
-  std::vector<int> singIndicesList;
-  for (int i=0;i<VMesh.rows();i++)
-    if (prinIndices(i)!=0){
-      singVerticesList.push_back(i);
-      singIndicesList.push_back(prinIndices(i));
-    }
-  
-  singVertices.resize(singVerticesList.size());
-  singIndices.resize(singIndicesList.size());
-  for (int i=0;i<singVerticesList.size();i++){
-    singVertices(i)=singVerticesList[i];
-    singIndices(i)=singIndicesList[i];
-  }
-  
-  igl::barycenter(VMesh, FMesh, barycenters);
-  
-  glyphPrincipalColors<<1.0,0.0,0.5,
-  0.0,1.0,0.5,
-  1.0,0.5,0.0,
-  0.0,0.5,1.0,
-  0.5,1.0,0.0;
-  
+
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  viewer.data().set_colors(directional::default_mesh_color());
 
   //apending and updating raw field mesh
   viewer.append_mesh();
@@ -108,7 +89,7 @@ int main()
   
   //singularity mesh
   viewer.append_mesh();
-  directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
   viewer.data().set_mesh(VSings, FSings);
   viewer.data().set_colors(CSings);
   viewer.data_list[2].show_faces = true;
