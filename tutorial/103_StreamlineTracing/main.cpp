@@ -33,15 +33,20 @@ Eigen::MatrixXd raw;
 igl::StreamlineData sl_data;
 igl::StreamlineState sl_state;
 
-int degree;         // degree of the vector field
-int half_degree;    // degree/2 if treat_as_symmetric
+igl::StreamlineState sl_state0;		//The starting points off the streamlines
+
+int degree = 4;						// degree of the vector field
+int half_degree = degree / 2;		// degree/2 if treat_as_symmetric
 bool treat_as_symmetric = true;
 
 int anim_t = 0;
 int anim_t_dir = 1;
 
-int streamLengths = 3;
-int itt = 0;
+int streamLengths = 3;				//The number of segments a streamline consists off
+int currentSegment = 0;				//The last segment of the streamline which is currently up to be replaced by the front runner
+
+int MaxLifespan = 20;				//The lifespan of a streamline before it respawns
+int currentLifespan = 0;			//The number off itterations past since the streamlines spawned
 
 bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
@@ -78,16 +83,27 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   CField.block(CField.rows()-CFieldNew.rows(),0,CFieldNew.rows(),3) = CFieldNew;
   */
 
-  viewer.selected_data_index= itt+1;  //streamline mesh
+  viewer.selected_data_index= currentSegment+1;  //Select the last segment off the streamline
   viewer.data().clear();
   viewer.data().set_mesh(VFieldNew, FFieldNew);
   viewer.data().set_colors(CFieldNew);
   anim_t += anim_t_dir;
 
-  if (itt < streamLengths-1)
-	  itt++;
+
+  //Update the itteration values
+  if (currentSegment < streamLengths-1)
+	  currentSegment++;
   else
-	  itt = 0;
+	  currentSegment = 0;
+
+  if (currentLifespan < MaxLifespan)
+	  currentLifespan++;
+  else {
+	  //reset the start points of the streamlines
+	  sl_state = sl_state0;
+	  currentLifespan = 0;
+  }
+
   
   return false;
 }
@@ -125,10 +141,10 @@ int main(int argc, char *argv[])
   half_degree = 3;
   treat_as_symmetric = true;
   
-  directional::power_field(VMesh, FMesh, b,  bc , 4, powerField);
+  directional::power_field(VMesh, FMesh, b,  bc , degree, powerField);
   
   // Convert it to raw field
-  directional::power_to_raw(VMesh,FMesh,powerField,4,raw, true);
+  directional::power_to_raw(VMesh, FMesh, powerField, degree, raw, true);
   
   igl::streamlines_init(VMesh, FMesh, raw, false, sl_data, sl_state);
   
@@ -145,13 +161,12 @@ int main(int argc, char *argv[])
   viewer.core.animation_max_fps = 30.;
   
   // Draw initial seeds on sample points
-  igl::StreamlineState sl_state0;
   sl_state0 = sl_state;
   igl::streamlines_next(VMesh, FMesh, sl_data, sl_state0);
   Eigen::MatrixXd v = sl_state0.end_point - sl_state0.start_point;
   v.rowwise().normalize();
   
-  //streamline mesh
+  //streamline meshes
   for (int i = 0; i < streamLengths; i++) {
 	  igl::streamlines_next(VMesh, FMesh, sl_data, sl_state);
 
