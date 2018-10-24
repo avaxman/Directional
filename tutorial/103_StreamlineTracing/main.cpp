@@ -4,7 +4,6 @@
 #include <igl/parula.h>
 #include <igl/per_face_normals.h>
 #include <igl/per_vertex_normals.h>
-#include <directional/polyvector_field_matchings.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/readOFF.h>
 #include <igl/slice.h>
@@ -31,8 +30,8 @@ Eigen::MatrixXd cValues;
 Eigen::MatrixXcd powerField;
 Eigen::MatrixXd raw;
 
-igl::StreamlineData sl_data;
-igl::StreamlineState sl_state;
+directional::StreamlineData sl_data;
+directional::StreamlineState sl_state;
 
 int degree;         // degree of the vector field
 int half_degree;    // degree/2 if treat_as_symmetric
@@ -50,7 +49,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   if (!viewer.core.is_animating)
     return false;
   
-  igl::streamlines_next(VMesh, FMesh, sl_data, sl_state);
+  directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
   Eigen::RowVector3d color = Eigen::RowVector3d::Zero();
   double value = ((anim_t) % 100) / 100.;
   
@@ -123,7 +122,7 @@ int main(int argc, char *argv[])
   // Convert it to raw field
   directional::power_to_raw(VMesh,FMesh,powerField,4,raw, true);
   
-  igl::streamlines_init(VMesh, FMesh, raw, false, sl_data, sl_state);
+  directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state);
   
   //triangle mesh
   viewer.data().set_mesh(VMesh, FMesh);
@@ -138,9 +137,9 @@ int main(int argc, char *argv[])
   viewer.core.animation_max_fps = 30.;
   
   // Draw initial seeds on sample points
-  igl::StreamlineState sl_state0;
+  directional::StreamlineState sl_state0;
   sl_state0 = sl_state;
-  igl::streamlines_next(VMesh, FMesh, sl_data, sl_state0);
+  directional::streamlines_next(VMesh, FMesh, sl_data, sl_state0);
   Eigen::MatrixXd v = sl_state0.end_point - sl_state0.start_point;
   v.rowwise().normalize();
   

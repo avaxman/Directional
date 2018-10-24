@@ -1,4 +1,4 @@
-// This file is part of libigl, a simple c++ geometry processing library.
+// This file is part of libdirectional, a library for directional field processing.
 //
 // Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>
 //
@@ -10,21 +10,20 @@
 #include <igl/sort_vectors_ccw.h>
 #include "streamlines.h"
 #include <igl/per_face_normals.h>
-#include "polyvector_field_matchings.h"
 #include <igl/segment_segment_intersect.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/barycenter.h>
 #include <igl/slice.h>
+#include <directional/principal_matching.h>
 
 #include <Eigen/Geometry>
 
 
 
-IGL_INLINE void igl::streamlines_init(
+IGL_INLINE void directional::streamlines_init(
                                       const Eigen::MatrixXd V,
                                       const Eigen::MatrixXi F,
                                       const Eigen::MatrixXd &temp_field,
-                                      const bool treat_as_symmetric,
                                       StreamlineData &data,
                                       StreamlineState &state,
                                       double percentage
@@ -32,13 +31,13 @@ IGL_INLINE void igl::streamlines_init(
   using namespace Eigen;
   using namespace std;
   
-  igl::edge_topology(V, F, data.E, data.F2E, data.E2F);
+  igl::edge_topology(V, F, data.EV, data.FE, data.EF);
   igl::triangle_triangle_adjacency(F, data.TT);
   
   // prepare vector field
   // --------------------------
-  int half_degree = temp_field.cols() / 3;
-  int degree = treat_as_symmetric ? half_degree * 2 : half_degree;
+  //int half_degree = temp_field.cols() / 3;
+  int degree = temp_field.cols()/3;
   data.degree = degree;
   
   Eigen::MatrixXd FN;
@@ -50,9 +49,9 @@ IGL_INLINE void igl::streamlines_init(
   for (unsigned i = 0; i < F.rows(); ++i){
     const Eigen::RowVectorXd &n = FN.row(i);
     Eigen::RowVectorXd temp(1, degree * 3);
-    if (treat_as_symmetric)
-      temp << temp_field.row(i), -temp_field.row(i);
-    else
+    //if (treat_as_symmetric)
+    //  temp << temp_field.row(i), -temp_field.row(i);
+    //else
       temp = temp_field.row(i);
     igl::sort_vectors_ccw(temp, n, order, sorted);
     
@@ -64,8 +63,8 @@ IGL_INLINE void igl::streamlines_init(
       data.field.block(i, j * 3, 1, 3) = pd;
     }
   }
-  Eigen::VectorXd curl;
-  igl::polyvector_field_matchings(data.field, V, F, false, treat_as_symmetric, data.match_ab, data.match_ba, curl);
+  Eigen::VectorXd effort;
+  directional::principal_matching(V, F, data.EV, data.EF, data.FE, data.field, data.matching, effort);
   
   // create seeds for tracing
   // --------------------------
@@ -97,7 +96,7 @@ IGL_INLINE void igl::streamlines_init(
   
 }
 
-IGL_INLINE void igl::streamlines_next(
+IGL_INLINE void directional::streamlines_next(
                                       const Eigen::MatrixXd V,
                                       const Eigen::MatrixXi F,
                                       const StreamlineData & data,
@@ -148,11 +147,11 @@ IGL_INLINE void igl::streamlines_next(
           state.current_face(j,i) = f1;
           
           // matching direction on next face
-          int e1 = data.F2E(f0, k);
-          if (data.E2F(e1, 0) == f0)
-            m1 = data.match_ab(e1, m0);
+          int e1 = data.FE(f0, k);
+          if (data.EF(e1, 0) == f0)
+            m1 = (data.matching(e1)+m0)%data.degree; //m1 = data.match_ab(e1, m0);
           else
-            m1 = data.match_ba(e1, m0);
+            m1 = (-data.matching(e1)+m0+data.degree)%data.degree;  //data.match_ba(e1, m0);
           
           state.current_direction(j, i) = m1;
           break;
