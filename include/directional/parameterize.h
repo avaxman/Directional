@@ -196,7 +196,7 @@ namespace directional
       //cout<<"fixedValues: "<<fixedValues<<endl;
       
       
-      if (intIter==0){  //first solution{
+      //if (intIter==0){  //first solution{
         
         //SimplicialLDLT<SparseMatrix<double> > lusolver;
         //ldltsolver.compute(A);
@@ -217,17 +217,19 @@ namespace directional
             return;
           }
         }*/
-      } else { //conjugate gradients with warm solution
+      /*} else { //conjugate gradients with warm solution
         
-        ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
+        ConjugateGradient<SparseMatrix<double>, Lower|Upper, DiagonalPreconditioner<double> > cg;
         cg.compute(A);
-        //x = cg.solveWithGuess(b,xprev);
-        x = cg.solve(b);
+        cout<<"(A*xprev - b).lpNorm<Infinity>(): "<<(A*xprev - b).lpNorm<Infinity>()<<endl;
+        x = cg.solveWithGuess(b,xprev);
+        cout<<"(A*x - b).lpNorm<Infinity>(): "<<(A*x - b).lpNorm<Infinity>()<<endl;
+        //x = cg.solve(b);
         std::cout << "#iterations:     " << cg.iterations() << std::endl;
         std::cout << "estimated error: " << cg.error()      << std::endl;
         // update b, and solve again
         // x = cg.solve(b);
-      }
+      }*/
       
       fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
       cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;

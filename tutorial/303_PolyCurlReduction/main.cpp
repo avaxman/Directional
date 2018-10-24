@@ -21,6 +21,7 @@
 #include <directional/singularity_spheres.h>
 #include <directional/curl_combing.h>
 #include <directional/polycurl_reduction.h>
+#include <directional/write_raw_field.h>
 
 #include "tutorial_shared_path.h"
 
@@ -84,7 +85,7 @@ void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &te
   for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
     for (unsigned j=0; j<size; ++j)
       texture_R(i,j) = 0;
-
+  
   texture_G = texture_R;
   texture_B = texture_R;
 }
@@ -156,13 +157,13 @@ void update_raw_field_mesh()
     viewer.data_list[3].show_faces = true;
     viewer.data_list[3].show_lines = false;
   }
-
+  
 }
 
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier)
 {
-
+  
   if ((key >= '1') && (key <='4'))
     viewingMode = (ViewingModes)(key - '1');
   
@@ -199,15 +200,18 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     }
     
     directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
+    curlMax= curlCF.maxCoeff();
+    std:: cout<<"curlMax optimized: "<<curlMax<<std::endl;
   }
   
- if (key == 'W')
-  if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", rawFieldOrigCF))
-    std::cout << "Saved raw field" << std::endl;
-  else
-    std::cout << "Unable to save raw field. " << std::endl;
-  break;
-
+  if (key == 'W'){
+    if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", rawFieldCF))
+      std::cout << "Saved raw field" << std::endl;
+    else
+      std::cout << "Unable to save raw field. " << std::endl;
+  }
+  
+  
   update_triangle_mesh();
   update_raw_field_mesh();
   return false;
@@ -227,17 +231,18 @@ int main(int argc, char *argv[])
   igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", VMesh, FMesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", N, rawFieldOrig);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
-
+  
   //global_scale =  .2*igl::avg_edge_length(VMesh, FMesh);
   //uv_scale = 0.6/igl::avg_edge_length(V, F);
   igl::barycenter(VMesh, FMesh, barycenters);
-
+  
   Eigen::VectorXi prinIndices;
   directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldOrig, matchingOrig, effortOrig, curlOrig);
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,prinIndices);
   
   curlMax= curlOrig.maxCoeff();
- 
+  std:: cout<<"curlMax original: "<<curlMax<<std::endl;
+  
   std::vector<int> singVerticesList;
   std::vector<int> singIndicesList;
   for (int i=0;i<VMesh.rows();i++)
@@ -254,7 +259,7 @@ int main(int argc, char *argv[])
   }
   
   directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldOrig, combedFieldOrig, combedMatchingOrig, combedEffortOrig);
-
+  
   //trivial constraints
   Eigen::VectorXi b; b.resize(1); b<<0;
   Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.row(0).head(6);
@@ -270,20 +275,20 @@ int main(int argc, char *argv[])
   curlCF = curlOrig;
   singVerticesCF = singVerticesOrig;
   singIndicesCF = singIndicesOrig;
-
+  
   // Replace the standard texture with an integer shift invariant texture
   line_texture(texture_R, texture_G, texture_B);
-
+  
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
   
   //apending and updating raw field mesh
   viewer.append_mesh();
- 
+  
   //singularity mesh
   viewer.append_mesh();
- 
+  
   //seam mesh
   viewer.append_mesh();
   
@@ -309,6 +314,6 @@ int main(int argc, char *argv[])
   viewer.callback_key_down = &key_down;
   viewer.data().show_lines = false;
   viewer.launch();
-
+  
   return 0;
 }

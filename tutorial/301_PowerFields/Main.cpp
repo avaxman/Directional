@@ -84,6 +84,8 @@ void update_raw_field_mesh()
       viewer.append_mesh();
       viewer.data_list[2].show_faces = true;
       viewer.data_list[2].show_lines = false;
+      
+       viewer.selected_data_index = 0;
     }
     
     viewer.data_list[1].clear();
@@ -132,7 +134,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       
     case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", rawField))
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/horsers.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
@@ -214,7 +216,7 @@ int main()
   "  0+R-bttn Remove constraint" << std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   
   cIDs.resize(0);

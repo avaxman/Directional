@@ -10,11 +10,10 @@
 #include <directional/line_cylinders.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
-#include <directional/principal_matching.h>
 #include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
-#include <directional/principal_combing.h>
+#include <directional/curl_combing.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
 #include <directional/polyvector_field_cut_mesh_with_singularities.h>
@@ -57,7 +56,7 @@ void update_triangle_mesh()
 
 void update_raw_field_mesh()
 {
-  if ((viewingMode=ROT_PARAMETERIZATION)||(viewingMode=FULL_PARAMETERIZATION)){
+  if ((viewingMode==ROT_PARAMETERIZATION)||(viewingMode==FULL_PARAMETERIZATION)){
     for (int i=1;i<=3;i++){  //hide all other meshes
       viewer.data_list[i].show_faces=false;
       viewer.data_list[i].show_lines = false;
@@ -121,8 +120,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '2': viewingMode = FULL_PARAMETERIZATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/dragon-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/dragon-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
+      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
+      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
       break;
     //case '2': viewer.data().show_texture=!viewer.data().show_texture; update_mesh(); break;
   }
@@ -141,13 +140,15 @@ int main()
   "  W  Save parameterized OBJ file "<< std::endl;
   
 
-  igl::readOFF(TUTORIAL_SHARED_PATH "/dragon4.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dragon4.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
   //combing and cutting
-  directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort);
+  Eigen::VectorXd curlNorm;
+  directional::curl_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort, curlNorm);
+  std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,prinIndices);
   
   std::vector<int> singVerticesList;
@@ -167,7 +168,7 @@ int main()
   
   directional::ParameterizationData pd;
   igl::polyvector_field_cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::principal_combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, combedField, combedMatching, combedEffort);
+  directional::curl_combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, combedField, combedMatching, combedEffort);
   
   std::cout<<"Setting up parameterization"<<std::endl;
   
@@ -191,7 +192,7 @@ int main()
   0.5,1.0,0.0,
   0.5,0.0,1.0;
   
-  //apending and updating raw field mesh
+  //raw field mesh
   viewer.append_mesh();
   
   //singularity mesh
