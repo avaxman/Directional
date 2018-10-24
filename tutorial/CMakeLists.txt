@@ -70,6 +70,7 @@ endif()
 # Chapter 5
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("501_SeamlessParameterization")
+  add_subdirectory("502_MixedIntegerParameterization")
 endif()
 
 
