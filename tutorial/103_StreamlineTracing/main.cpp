@@ -8,9 +8,9 @@
 #include <igl/readOFF.h>
 #include <igl/slice.h>
 #include <igl/sort_vectors_ccw.h>
-#include <directional/streamlines.h>
-//#include <igl/copyleft/comiso/nrosy.h>
 #include <igl/opengl/glfw/Viewer.h>
+#include <directional/streamlines.h>
+#include <directional/visualization_schemes.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/line_cylinders.h>
@@ -22,21 +22,15 @@
 
 
 // Mesh
-Eigen::MatrixXd VMesh, VField, CField, CMesh;
+Eigen::MatrixXd VMesh, VField, CField;
 Eigen::MatrixXi FMesh, FField;
-
-Eigen::VectorXi cIDs;
-Eigen::MatrixXd cValues;
 Eigen::MatrixXcd powerField;
-Eigen::MatrixXd raw;
+Eigen::MatrixXd rawField;
 
 directional::StreamlineData sl_data;
 directional::StreamlineState sl_state;
 
-int degree;         // degree of the vector field
-int half_degree;    // degree/2 if treat_as_symmetric
-bool treat_as_symmetric = true;
-
+int N=3;         // degree of the vector field
 int anim_t = 0;
 int anim_t_dir = 1;
 
@@ -62,7 +56,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   
   Eigen::MatrixXd VFieldNew, CFieldNew;
   Eigen::MatrixXi FFieldNew;
-  directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
+  directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1), 4, VFieldNew, FFieldNew, CFieldNew);
   
   //extending current streamline mesh
   FField.conservativeResize(FField.rows()+FFieldNew.rows(),3);
@@ -104,30 +98,16 @@ int main(int argc, char *argv[])
   // Load a mesh in OFF format
   igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
   // Create a Vector Field
-  Eigen::VectorXi b;
-  Eigen::MatrixXd bc;
-  Eigen::VectorXd S; // unused
-  
-  b.resize(1);
-  b << 0;
-  bc.resize(1, 3);
-  bc << 1, 1, 1;
-  
-
-  half_degree = 3;
-  treat_as_symmetric = true;
-  
-  directional::power_field(VMesh, FMesh, b,  bc , 4, powerField);
+  directional::power_field(VMesh, FMesh, Eigen::VectorXi(),  Eigen::MatrixXd() , 3, powerField);
   
   // Convert it to raw field
-  directional::power_to_raw(VMesh,FMesh,powerField,4,raw, true);
+  directional::power_to_raw(VMesh,FMesh,powerField,3,rawField, true);
   
-  directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state);
+  directional::streamlines_init(VMesh, FMesh, rawField, sl_data, sl_state);
   
   //triangle mesh
   viewer.data().set_mesh(VMesh, FMesh);
-  CMesh.setConstant(FMesh.rows(), 3, 0.1);
-  viewer.data().set_colors(CMesh);
+  viewer.data().set_colors(directional::default_mesh_color());
   viewer.data().show_lines = false;
   
   // Viewer Settings

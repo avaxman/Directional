@@ -92,13 +92,14 @@ namespace directional
   void IGL_INLINE glyph_lines_raw(const Eigen::MatrixXd &V,
                                   const Eigen::MatrixXi &F,
                                   const Eigen::MatrixXd &rawField,
-                                  const Eigen::MatrixXd &glyphColor,
+                                  const Eigen::MatrixXd &glyphColors,
                                   Eigen::MatrixXd &fieldV,
                                   Eigen::MatrixXi &fieldF,
-                                  Eigen::MatrixXd &fieldC)
+                                  Eigen::MatrixXd &fieldC,
+                                  const double sizeRatio = 1.0)
   {
-    double l = igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColor, l/30, l/6, l/50, fieldV, fieldF, fieldC);
+    double l = sizeRatio*igl::avg_edge_length(V, F);
+    glyph_lines_raw(V, F, rawField, glyphColors, l/30, l/6, l/50, fieldV, fieldF, fieldC);
   }
   
 }

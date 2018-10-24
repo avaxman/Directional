@@ -4,6 +4,7 @@
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
+#include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 
@@ -11,39 +12,27 @@ int currF, currVec, N;
 Eigen::MatrixXi FMesh, FField;
 Eigen::MatrixXd VMesh, VField,  barycenters;
 Eigen::MatrixXd CMesh, CField;
-Eigen::MatrixXd rawField, rawGlyphColor;
-Eigen::RowVector3d defaultGlyphColor;
-Eigen::RowVector3d selectedFaceGlyphColor;
-Eigen::RowVector3d selectedVectorGlyphColor;
+Eigen::MatrixXd rawField;
 igl::opengl::glfw::Viewer viewer;
 
 //User input variables
-bool drag = false;
 bool zeroPressed = false;
-
 
 void update_triangle_mesh()
 {
   
-  CMesh=Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
-  CMesh.row(currF)<<0.5,0.1,0.1;
-  
+  CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  CMesh.row(currF)=directional::selected_face_color();
   viewer.data_list[0].set_colors(CMesh);
 }
 
 void update_raw_field_mesh()
 {
-  Eigen::MatrixXd rawGlyphColor(FMesh.rows(),3*N);
-  for (int i=0;i<FMesh.rows();i++){
-    for (int j=0;j<N;j++){
-      if (i==currF)
-        rawGlyphColor.block(i,3*j,1,3)<<(j==currVec ? selectedVectorGlyphColor : selectedFaceGlyphColor);
-      else
-        rawGlyphColor.block(i,3*j,1,3)<<defaultGlyphColor;
-    }
-  }
+  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
+  glyphColors.row(currF)=directional::selected_face_glyph_color().replicate(1,N);
+  glyphColors.block(currF,3*currVec,1,3)=directional::selected_vector_glyph_color();
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, rawGlyphColor, VField, FField, CField);
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors, VField, FField, CField);
   
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
@@ -64,7 +53,6 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 // Handle keyboard input
 bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
-  int borders;
   switch (key)
   {
       // Select vector
@@ -73,15 +61,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '2':
     case '3':
     case '4':
-    case '5':
-    case '6':
       currVec = key - '1';
       update_raw_field_mesh();
-      break;
-   
-      // Toggle field drawing for easier rotation
-    case 'D':
-      drag = !drag;
       break;
   }
   return true;
@@ -135,12 +116,7 @@ int main()
   "  0+Left button    Choose face" << std::endl <<
   "  0+Right button   Edit vector in current face" << std::endl;
   
-  
   igl::barycenter(VMesh, FMesh, barycenters);
-  
-  defaultGlyphColor<<0.0, 0.2, 1.0;
-  selectedFaceGlyphColor<<223.0/255.0, 210.0/255.0, 16.0/255.0;
-  selectedVectorGlyphColor<<0.0,1.0,0.5;
   
   //triangle mesh setup
   viewer.data().set_face_based(true);
