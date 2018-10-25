@@ -6,6 +6,7 @@
 #include <igl/edge_topology.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
+#include <directional/visualization_schemes.h>
 #include <directional/dual_cycles.h>
 #include <directional/index_prescription.h>
 #include <directional/rotation_to_representative.h>
@@ -23,7 +24,6 @@ Eigen::SparseMatrix<double> basisCycles;
 Eigen::VectorXi vertex2cycle, innerEdges;
 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
 
-Eigen::RowVector3d rawGlyphColor;
 Eigen::MatrixXi FMesh, FSings, FField, EV, FE, EF;
 Eigen::MatrixXd VMesh, VSings, VField, BC, FN;
 Eigen::MatrixXd CMesh, CSings, CField;
@@ -43,14 +43,13 @@ bool select = false;
 
 double globalRotation=0;
 
-
 void update_triangle_mesh()
 {
   
-  CMesh=Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
+  CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
   
   for (int i=0;i<cycleFaces[currCycle].size();i++)
-    CMesh.row(cycleFaces[currCycle][i])<<1.0,0.0,0.0;
+    CMesh.row(cycleFaces[currCycle][i])<<directional::selected_face_color();
   
   viewer.data_list[0].set_colors(CMesh);
 }
@@ -65,18 +64,18 @@ void update_raw_field_mesh()
   if (eulerChar*N != sum)
   {
     std::cout << "Warning: All non-generator singularities should add up to N * the Euler characteristic."<<std::endl;
-    std::cout << "Total indices: " << sum << std::endl;
-    std::cout << "Expected: " << eulerChar*N << std::endl;
+    std::cout << "Total indices: " << sum <<"/"<<N<< std::endl;
+    std::cout << "Expected: " << eulerChar*N<<"/"<<N<< std::endl;
   }
   
   directional::index_prescription(VMesh,FMesh,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
-  std::cout<<"field linfError: "<<linfError<<std::endl;
+  std::cout<<"Index prescription linfError: "<<linfError<<std::endl;
   
   Eigen::MatrixXd representative;
   directional::rotation_to_representative(VMesh, FMesh,EV,EF,rotationAngles,N,globalRotation, representative);
   directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, rawGlyphColor,  VField, FField, CField);
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
@@ -103,7 +102,7 @@ void update_singularities_mesh()
     singIndices(i)=singIndicesList[i];
   }
   
-  directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
   
   viewer.data_list[2].clear();
   viewer.data_list[2].set_mesh(VSings, FSings);
@@ -213,7 +212,7 @@ int main()
   "  -          Decrease index  of current cycle" << std::endl <<
   "  1          rotate field globally" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/fertility.off", VMesh, FMesh);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   
   directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
