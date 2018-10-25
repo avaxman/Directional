@@ -6,6 +6,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
 #include <directional/visualization_schemes.h>
+#include <directional/seam_lines.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
@@ -16,8 +17,8 @@
 
 
 int currF=0, N;
-Eigen::MatrixXi FMesh, FField, FSings;
-Eigen::MatrixXd VMesh, VField, VSings, CSings, CField;
+Eigen::MatrixXi FMesh, FField, FSings, FSeams;
+Eigen::MatrixXd VMesh, VField, VSings, VSeams, CSings, CField, CSeams;
 Eigen::MatrixXd rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
 Eigen::RowVector3d rawGlyphColor;
@@ -26,7 +27,6 @@ Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 
 void update_raw_field_mesh()
@@ -39,7 +39,6 @@ void update_raw_field_mesh()
   viewer.data_list[1].set_colors(CField);
   viewer.data_list[1].show_lines = false;
 }
-
 
 
 // Handle keyboard input
@@ -88,26 +87,11 @@ int main()
   viewer.data_list[2].show_lines = false;
   
   
-  //seam mesh
-  double l = igl::avg_edge_length(VMesh, FMesh);
-  std::vector<int> seamEdges;
-  for (int i=0;i<EV.rows();i++)
-    if (combedMatching(i)!=0)
-      seamEdges.push_back(i);
-  
-  Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
-  for (int i=0;i<seamEdges.size();i++){
-    P1.row(i)=VMesh.row(EV(seamEdges[i],0));
-    P2.row(i)=VMesh.row(EV(seamEdges[i],1));
-  }
-  
-  Eigen::MatrixXd VSeam, CSeam;
-  Eigen::MatrixXi FSeam;
-  directional::line_cylinders(P1, P2, l/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeam, FSeam, CSeam);
-  
+  //seam mes
   viewer.append_mesh();
-  viewer.data().set_mesh(VSeam, FSeam);
-  viewer.data().set_colors(CSeam);
+  directional::seam_lines(VMesh,FMesh,EV,combedMatching, VSeams,FSeams,CSeams);
+  viewer.data().set_mesh(VSeams, FSeams);
+  viewer.data().set_colors(CSeams);
   viewer.data_list[3].show_faces = false;
   viewer.data_list[3].show_lines = false;
   

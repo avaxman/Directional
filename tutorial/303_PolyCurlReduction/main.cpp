@@ -13,8 +13,10 @@
 #include <igl/jet.h>
 #include <igl/barycenter.h>
 #include <igl/false_barycentric_subdivision.h>
+#include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
-#include <directional/line_cylinders.h>
+//#include <directional/line_cylinders.h>
+#include <directional/seam_lines.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
@@ -37,23 +39,17 @@ Eigen::MatrixXd rawFieldOrig, rawFieldCF;
 Eigen::MatrixXd combedFieldOrig, combedFieldCF;
 Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
 igl::opengl::glfw::Viewer viewer;
-Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::VectorXi singVerticesOrig, singVerticesCF;
 Eigen::VectorXi singIndicesOrig, singIndicesCF;
 
-// "Subdivided" mesh obtained by splitting each triangle into 3 (only needed for display)
-//Eigen::MatrixXd Vbs;
-//Eigen::MatrixXi Fbs;
 
-//for averagin curl to faces, for visualization
+//for averaging curl to faces, for visualization
 Eigen::SparseMatrix<double> AE2F;
 
-// Scale for visualizing textures
-//double uv_scale;
 double curlMax;
 int N;
-
+int iter=0;
 
 // The set of parameters for calculating the curl-free fields
 directional::polycurl_reduction_parameters params;
@@ -61,34 +57,9 @@ directional::polycurl_reduction_parameters params;
 // Solver data (needed for precomputation)
 directional::PolyCurlReductionSolverData<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::MatrixXd, Eigen::MatrixXd> pcrdata;
 
-//texture image
-Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
-
 
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
 ViewingModes viewingMode=ORIGINAL_FIELD;
-
-int iter = 0;
-
-// Create a texture that hides the integer translation in the parametrization
-/*void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_R,
-                  Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_G,
-                  Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_B)
-{
-  unsigned size = 128;
-  unsigned size2 = size/2;
-  unsigned lineWidth = 3;
-  texture_R.setConstant(size, size, 255);
-  for (unsigned i=0; i<size; ++i)
-    for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
-      texture_R(i,j) = 0;
-  for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
-    for (unsigned j=0; j<size; ++j)
-      texture_R(i,j) = 0;
-  
-  texture_G = texture_R;
-  texture_B = texture_R;
-}*/
 
 
 void update_triangle_mesh()
@@ -114,12 +85,8 @@ void update_raw_field_mesh()
       viewer.data_list[i].show_lines = false;
     }
   } else {
-    Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
-    for (int i=0;i<FMesh.rows();i++)
-      for (int j=0;j<N;j++)
-        fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
-    
-    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF), fullGlyphColor,VField, FField, CField);
+    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF),
+                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF)),VField, FField, CField);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -128,7 +95,7 @@ void update_raw_field_mesh()
     viewer.data_list[1].show_lines = false;
     
     //singularity mesh
-    directional::singularity_spheres(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh, N, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings);
     
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);
@@ -137,19 +104,7 @@ void update_raw_field_mesh()
     viewer.data_list[2].show_lines = false;
     
     //seam mesh
-    double avgEdgeLength = igl::avg_edge_length(VMesh, FMesh);
-    std::vector<int> seamEdges;
-    for (int i=0;i<EV.rows();i++)
-      if ((viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF)(i)!=0)
-        seamEdges.push_back(i);
-    
-    Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
-    for (int i=0;i<seamEdges.size();i++){
-      P1.row(i)=VMesh.row(EV(seamEdges[i],0));
-      P2.row(i)=VMesh.row(EV(seamEdges[i],1));
-    }
-    
-    directional::line_cylinders(P1, P2, avgEdgeLength/25.0, Eigen::MatrixXd::Constant(FMesh.rows(), 3, 0.0), 6, VSeams, FSeams, CSeams);
+    directional::seam_lines(VMesh, FMesh, EV, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams);
     
     viewer.data_list[3].clear();
     viewer.data_list[3].set_mesh(VSeams, FSeams);
@@ -182,22 +137,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     
     Eigen::VectorXi prinIndices;
     directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldCF, matchingCF, effortCF, curlCF);
-    directional::effort_to_indices(VMesh,FMesh,EV, EF, effortCF,matchingCF, N,prinIndices);
-    
-    std::vector<int> singVerticesList;
-    std::vector<int> singIndicesList;
-    for (int i=0;i<VMesh.rows();i++)
-      if (prinIndices(i)!=0){
-        singVerticesList.push_back(i);
-        singIndicesList.push_back(prinIndices(i));
-      }
-    
-    singVerticesCF.resize(singVerticesList.size());
-    singIndicesCF.resize(singIndicesList.size());
-    for (int i=0;i<singVerticesList.size();i++){
-      singVerticesCF(i)=singVerticesList[i];
-      singIndicesCF(i)=singIndicesList[i];
-    }
+    directional::effort_to_indices(VMesh,FMesh,EV, EF, effortCF,matchingCF, N,singVerticesCF, singIndicesCF);
     
     directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
     curlMax= curlCF.maxCoeff();
@@ -210,7 +150,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     else
       std::cout << "Unable to save raw field. " << std::endl;
   }
-  
   
   update_triangle_mesh();
   update_raw_field_mesh();
@@ -238,25 +177,10 @@ int main(int argc, char *argv[])
   
   Eigen::VectorXi prinIndices;
   directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldOrig, matchingOrig, effortOrig, curlOrig);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,prinIndices);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,singVerticesOrig, singIndicesOrig);
   
   curlMax= curlOrig.maxCoeff();
   std:: cout<<"curlMax original: "<<curlMax<<std::endl;
-  
-  std::vector<int> singVerticesList;
-  std::vector<int> singIndicesList;
-  for (int i=0;i<VMesh.rows();i++)
-    if (prinIndices(i)!=0){
-      singVerticesList.push_back(i);
-      singIndicesList.push_back(prinIndices(i));
-    }
-  
-  singVerticesOrig.resize(singVerticesList.size());
-  singIndicesOrig.resize(singIndicesList.size());
-  for (int i=0;i<singVerticesList.size();i++){
-    singVerticesOrig(i)=singVerticesList[i];
-    singIndicesOrig(i)=singIndicesList[i];
-  }
   
   directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldOrig, combedFieldOrig, combedMatchingOrig, combedEffortOrig);
   
@@ -276,12 +200,10 @@ int main(int argc, char *argv[])
   singVerticesCF = singVerticesOrig;
   singIndicesCF = singIndicesOrig;
   
-  // Replace the standard texture with an integer shift invariant texture
-  //line_texture(texture_R, texture_G, texture_B);
-  
+ 
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  viewer.data().set_colors(directional::default_seam_color());
   
   //apending and updating raw field mesh
   viewer.append_mesh();
@@ -295,12 +217,6 @@ int main(int argc, char *argv[])
   update_triangle_mesh();
   update_raw_field_mesh();
   viewer.selected_data_index=0;
-  
-  glyphPrincipalColors<<1.0,0.0,0.5,
-  0.0,1.0,0.5,
-  1.0,0.5,0.0,
-  0.0,0.5,1.0,
-  0.5,1.0,0.0;
   
   //creating the AE2F operator
   std::vector<Eigen::Triplet<double> > AE2FTriplets;

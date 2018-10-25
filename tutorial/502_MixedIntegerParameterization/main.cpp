@@ -39,6 +39,36 @@ typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 
+//texture image
+Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
+
+
+typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
+ViewingModes viewingMode=ORIGINAL_FIELD;
+
+int iter = 0;
+
+// Create a texture that hides the integer translation in the parametrization
+/*void line_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_R,
+ Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_G,
+ Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_B)
+ {
+ unsigned size = 128;
+ unsigned size2 = size/2;
+ unsigned lineWidth = 3;
+ texture_R.setConstant(size, size, 255);
+ for (unsigned i=0; i<size; ++i)
+ for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
+ texture_R(i,j) = 0;
+ for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
+ for (unsigned j=0; j<size; ++j)
+ texture_R(i,j) = 0;
+ 
+ texture_G = texture_R;
+ texture_B = texture_R;
+ }*/
+
+
 void update_triangle_mesh()
 {
   if (viewingMode==FIELD){

@@ -72,6 +72,10 @@ namespace directional
     igl::jet(-NList,true,fullColors);
     return fullColors;
   }
+  
+  Eigen::RowVector3d IGL_INLINE default_seam_color(){
+    return Eigen::RowVector3d(0.0,0.0,0.0);
+  }
 }
 
 #endif
