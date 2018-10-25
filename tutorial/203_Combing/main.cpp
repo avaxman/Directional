@@ -12,7 +12,7 @@
 #include <directional/principal_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
-#include <directional/principal_combing.h>
+#include <directional/combing.h>
 #include <directional/line_cylinders.h>
 
 
@@ -65,8 +65,9 @@ int main()
   igl::barycenter(VMesh, FMesh, barycenters);
   
   //computing
-  directional::principal_combing(VMesh,FMesh, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
+  directional::combing(VMesh,FMesh, EV, EF, FE, rawField, matching, combedField);
+  directional::principal_matching(VMesh, FMesh,EV, EF, FE, combedField, combedMatching, combedEffort);
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,singVertices, singIndices);
   
   

@@ -15,13 +15,12 @@
 #include <igl/false_barycentric_subdivision.h>
 #include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
-//#include <directional/line_cylinders.h>
 #include <directional/seam_lines.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
-#include <directional/curl_combing.h>
+#include <directional/combing.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/write_raw_field.h>
 
@@ -47,7 +46,7 @@ Eigen::VectorXi singIndicesOrig, singIndicesCF;
 //for averaging curl to faces, for visualization
 Eigen::SparseMatrix<double> AE2F;
 
-double curlMax;
+double curlMax, curlMaxOrig;
 int N;
 int iter=0;
 
@@ -68,7 +67,7 @@ void update_triangle_mesh()
     viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
   else{  //curl viewing - currently averaged to the face
     Eigen::VectorXd currCurl = AE2F*(viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
-    igl::jet(currCurl, 0.0,curlMax, CMesh);
+    igl::jet(currCurl, 0.0,curlMaxOrig, CMesh);
     viewer.data_list[0].set_colors(CMesh);
   }
 }
@@ -138,8 +137,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     Eigen::VectorXi prinIndices;
     directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldCF, matchingCF, effortCF, curlCF);
     directional::effort_to_indices(VMesh,FMesh,EV, EF, effortCF,matchingCF, N,singVerticesCF, singIndicesCF);
-    
-    directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldCF, combedFieldCF, combedMatchingCF, combedEffortCF);
+    directional::combing(VMesh,FMesh, EV, EF, FE, rawFieldCF, matchingCF, combedFieldCF);
+    directional::curl_matching(VMesh, FMesh,EV, EF, FE, combedFieldCF, combedMatchingCF, combedEffortCF, curlCF);
     curlMax= curlCF.maxCoeff();
     std:: cout<<"curlMax optimized: "<<curlMax<<std::endl;
   }
@@ -178,11 +177,12 @@ int main(int argc, char *argv[])
   Eigen::VectorXi prinIndices;
   directional::curl_matching(VMesh, FMesh,EV, EF, FE, rawFieldOrig, matchingOrig, effortOrig, curlOrig);
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effortOrig,matchingOrig, N,singVerticesOrig, singIndicesOrig);
-  
-  curlMax= curlOrig.maxCoeff();
+  curlMaxOrig= curlOrig.maxCoeff();
+  curlMax = curlMaxOrig;
   std:: cout<<"curlMax original: "<<curlMax<<std::endl;
   
-  directional::curl_combing(VMesh,FMesh, EV, EF, FE,rawFieldOrig, combedFieldOrig, combedMatchingOrig, combedEffortOrig);
+  directional::combing(VMesh,FMesh, EV, EF, FE,rawFieldOrig, matchingOrig,combedFieldOrig);
+  directional::curl_matching(VMesh, FMesh,EV, EF, FE, combedFieldOrig, combedMatchingOrig, combedEffortOrig, curlOrig);
   
   //trivial constraints
   Eigen::VectorXi b; b.resize(1); b<<0;

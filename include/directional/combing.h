@@ -5,8 +5,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef DIRECTIONAL_CURL_COMBING_H
-#define DIRECTIONAL_CURL_COMBING_H
+#ifndef DIRECTIONAL_PRINCIPAL_COMBING_H
+#define DIRECTIONAL_PRINCIPAL_COMBING_H
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
@@ -14,7 +14,7 @@
 #include <igl/edge_topology.h>
 #include <directional/tree.h>
 #include <directional/representative_to_raw.h>
-#include <directional/curl_matching.h>
+#include <directional/principal_matching.h>
 
 #include <Eigen/Core>
 #include <queue>
@@ -35,20 +35,16 @@ namespace directional
   // Output:
   // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Expect most matching =0 due to the combing.
   //  effort: #E updated principal-matching efforts.
-  IGL_INLINE void curl_combing(const Eigen::MatrixXd& V,
-                                    const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::MatrixXi& FE,
-                                    const Eigen::MatrixXd& rawField,
-                                    Eigen::MatrixXd& combedField,
-                                    Eigen::VectorXi& combedMatching,
-                                    Eigen::VectorXd& combedEffort)
+  IGL_INLINE void combing(const Eigen::MatrixXd& V,
+                          const Eigen::MatrixXi& F,
+                          const Eigen::MatrixXi& EV,
+                          const Eigen::MatrixXi& EF,
+                          const Eigen::MatrixXi& FE,
+                          const Eigen::MatrixXd& rawField,
+                          const Eigen::VectorXi& matching,
+                          Eigen::MatrixXd& combedField)
   {
     using namespace Eigen;
-    VectorXi matching;
-    VectorXd effort, curlNorm;
-    curl_matching(V,F,EV, EF,FE,rawField,matching,effort, curlNorm);
     //flood-filling through the matching to comb field
     combedField.conservativeResize(rawField.rows(), rawField.cols());
     int N=rawField.cols()/3;
@@ -78,44 +74,36 @@ namespace directional
       }
       
     }while (!faceMatchingQueue.empty());
-    
-    //can be produced from the combing, but better used directly for sanity check.
-    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort, curlNorm);
   }
   
   //version for input in representative format (for N-RoSy directionals).
-  IGL_INLINE void curl_combing(const Eigen::MatrixXd& V,
-                                    const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::MatrixXi& FE,
-                                    const Eigen::MatrixXd& representativeField,
-                                    const int N,
-                                    Eigen::MatrixXd& combedField,
-                                    Eigen::VectorXi& combedMatching,
-                                    Eigen::VectorXd& combedEffort)
+  IGL_INLINE void combing(const Eigen::MatrixXd& V,
+                          const Eigen::MatrixXi& F,
+                          const Eigen::MatrixXi& EV,
+                          const Eigen::MatrixXi& EF,
+                          const Eigen::MatrixXi& FE,
+                          const Eigen::MatrixXd& representativeField,
+                          const int N,
+                          const Eigen::VectorXi& matching,
+                          Eigen::MatrixXd& combedField)
   {
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
-    curl_combing(V, F, EV, EF, FE, rawField, combedField, combedMatching, combedEffort);
+    combing(V, F, EV, EF, FE, rawField, matching, combedField);
   }
   
   //version with prescribed cuts from faces
-  IGL_INLINE void curl_combing(const Eigen::MatrixXd& V,
-                                    const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::MatrixXi& FE,
-                                    const Eigen::MatrixXi& faceIsCut,
-                                    const Eigen::MatrixXd& rawField,
-                                    Eigen::MatrixXd& combedField, 
-                                    Eigen::VectorXi& combedMatching,
-                                    Eigen::VectorXd& combedEffort)
+  IGL_INLINE void combing(const Eigen::MatrixXd& V,
+                          const Eigen::MatrixXi& F,
+                          const Eigen::MatrixXi& EV,
+                          const Eigen::MatrixXi& EF,
+                          const Eigen::MatrixXi& FE,
+                          const Eigen::MatrixXi& faceIsCut,
+                          const Eigen::MatrixXd& rawField,
+                          const Eigen::VectorXi& matching,
+                          Eigen::MatrixXd& combedField)
   {
     using namespace Eigen;
-    VectorXi matching;
-    VectorXd effort, curlNorm;
-    curl_matching(V,F,EV, EF,FE,rawField,matching,effort, curlNorm);
     //flood-filling through the matching to comb field
     combedField.conservativeResize(rawField.rows(), rawField.cols());
     int N=rawField.cols()/3;
@@ -145,9 +133,6 @@ namespace directional
       }
       
     }while (!faceMatchingQueue.empty());
-    
-    //can be produced from the combing, but better used directly for sanity check.
-    curl_matching(V, F, EV, EF, FE, combedField, combedMatching, combedEffort, curlNorm);
   }
   
 }
