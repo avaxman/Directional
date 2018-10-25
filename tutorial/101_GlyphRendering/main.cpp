@@ -52,7 +52,7 @@ void create_meshes()
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
- 
+  
   switch (key)
   {
     case GLFW_KEY_SPACE: drawSingularities=!drawSingularities; viewer.data_list[2].show_faces=!viewer.data_list[2].show_faces; /*update_mesh();*/ break;
@@ -66,14 +66,14 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 int main()
 {
   std::cout <<"<space bar>  Show/hide Singularities" << std::endl;
-
+  
   igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", VMesh, FMesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
   directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
   
   // Set colors for Singularities
-
-
+  
+  
   create_meshes();
   viewer.callback_key_down = &key_down;
   viewer.launch();

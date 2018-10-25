@@ -29,8 +29,8 @@ Eigen::MatrixXd barycenters, faceNormals;
 Eigen::VectorXi matching;
 Eigen::MatrixXd rawField;
 Eigen::VectorXd effort;
-Eigen::VectorXi constFaces;
-Eigen::MatrixXd constVecMat;
+Eigen::VectorXi b;
+Eigen::MatrixXd bc;
 Eigen::VectorXd cycleCurvature;
 Eigen::VectorXi vertex2cycle;
 Eigen::VectorXi innerEdges;
@@ -69,13 +69,13 @@ void update_directional_field()
   }
   
   if (viewingMode==IMPLICIT_FIELD){
-    constVecMat.conservativeResize(constFaces.rows(),3);
-    for (int i=0;i<constFaces.size();i++)
-      constVecMat.row(i)<<rawField.block(constFaces(i),0,1,3).normalized();
+    bc.conservativeResize(b.rows(),3);
+    for (int i=0;i<b.size();i++)
+      bc.row(i)<<rawField.block(b(i),0,1,3).normalized();
     
     Eigen::VectorXd effort;
     Eigen::MatrixXcd powerField;
-    directional::power_field(VMesh, FMesh, constFaces, constVecMat, N, powerField);
+    directional::power_field(VMesh, FMesh, b, bc, N, powerField);
     directional::power_to_representative(VMesh,FMesh, powerField,N,representative);
     representative.rowwise().normalize();
     directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
@@ -91,7 +91,7 @@ void update_directional_field()
   
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
     directional::singularity_spheres(VMesh, FMesh, N, prinSingVertices, prinSingIndices,  VSings, FSings, CSings);
-                                     
+  
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
@@ -157,7 +157,7 @@ int main()
   
   directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   
-  igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",constFaces);
+  igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",b);
   
   singVertices.resize(2);
   singIndices.resize(2);
@@ -168,20 +168,20 @@ int main()
   
   //triangle mesh
   Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
-
-  for (int i = 0; i < constFaces.rows(); i++)
-    CMesh.row(constFaces(i)) = directional::selected_face_color();
+  
+  for (int i = 0; i < b.rows(); i++)
+    CMesh.row(b(i)) = directional::selected_face_color();
   
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(CMesh);
-
+  
   //directional & singularities meshes
   viewer.append_mesh();
   viewer.data().show_lines=false;
   viewer.append_mesh();
   viewer.data().show_lines=false;
   update_directional_field();
-
+  
   viewer.callback_key_down = &key_down;
   viewer.launch();
 }

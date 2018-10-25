@@ -49,22 +49,6 @@ void update_raw_field_mesh()
     for (int j=0;j<3;j++)
       glyphColors.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphColors.row(currF).segment(3*i,3);
   
-
-  /*glyphColors.block(currF,3*currVec,1,3)=directional::selected_vector_glyph_color();
-  
-  Eigen::MatrixXd rawGlyphColor(FMesh.rows(),3*N);
-  for (int i=0;i<FMesh.rows();i++)
-    for (int j=0;j<N;j++)
-      rawGlyphColor.block(i,3*j,1,3)<<defaultGlyphColor;
-  
-  //for marked face and its neighbors, coloring adjacent matchings
-  for (int i=0;i<N;i++){
-    rawGlyphColor.block(currF,3*i,1,3)<<glyphPrincipalColors.row(i);
-    for (int j=0;j<3;j++)
-      if (otherFaces(j)!=-1)  //boundary edge
-        rawGlyphColor.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphPrincipalColors.row(i);
-  }*/
-  
   directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors, VField, FField, CField);
   
   viewer.data_list[1].set_mesh(VField, FField);
@@ -104,13 +88,13 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
   if (!zeroPressed)
     return false;
   int fid;
-  Eigen::Vector3d bc;
+  Eigen::Vector3d baryInFace;
   
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
   double y = viewer.core.viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
-                               viewer.core.proj, viewer.core.viewport, VMesh, FMesh, fid, bc))
+                               viewer.core.proj, viewer.core.viewport, VMesh, FMesh, fid, baryInFace))
   {
     
     //choosing face

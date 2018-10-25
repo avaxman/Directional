@@ -31,12 +31,6 @@ Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 void update_raw_field_mesh()
 {
-  
-  /*Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
-  for (int i=0;i<FMesh.rows();i++)
-    for (int j=0;j<N;j++)
-      fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);*/
-
   Eigen::MatrixXd currField =(viewer.data_list[3].show_faces ? combedField : rawField);
   directional::glyph_lines_raw(VMesh, FMesh, currField, directional::indexed_glyph_colors(currField),VField, FField, CField);
   
@@ -44,10 +38,8 @@ void update_raw_field_mesh()
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
   viewer.data_list[1].show_lines = false;
-  
-  
 }
-  
+
 
 
 // Handle keyboard input
@@ -78,11 +70,11 @@ int main()
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,singVertices, singIndices);
   
-
+  
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(directional::default_mesh_color());
-
+  
   //apending and updating raw field mesh
   viewer.append_mesh();
   update_raw_field_mesh();
@@ -102,7 +94,7 @@ int main()
   for (int i=0;i<EV.rows();i++)
     if (combedMatching(i)!=0)
       seamEdges.push_back(i);
-    
+  
   Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
   for (int i=0;i<seamEdges.size();i++){
     P1.row(i)=VMesh.row(EV(seamEdges[i],0));
