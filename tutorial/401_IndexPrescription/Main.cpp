@@ -16,6 +16,7 @@
 #include <directional/singularity_spheres.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/write_raw_field.h>
+#include <directional/read_singularities.h>
 
 
 Eigen::VectorXi cycleIndices;
@@ -170,6 +171,26 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
       
+      /*Eigen::VectorXi singVertices, singIndices;
+      std::vector<int> singVerticesList, singIndicesList;
+      for (int i=0;i<VMesh.rows();i++)
+        if (cycleIndices(vertex2cycle(i))){
+          singVerticesList.push_back(i);
+          singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
+        }
+      
+      singVertices.resize(singVerticesList.size());
+      singIndices.resize(singIndicesList.size());
+      for (int i=0;i<singVerticesList.size();i++){
+        singVertices(i)=singVerticesList[i];
+        singIndices(i)=singIndicesList[i];
+      }
+      
+      if (directional::write_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices))
+        std::cout << "Saved raw field" << std::endl;
+      else
+        std::cout << "Unable to save raw field. Error: " << errno << std::endl;*/
+      
   }
   return true;
 }
@@ -218,6 +239,13 @@ int main()
   directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
   
+  //loading singularities
+  Eigen::VectorXi singVertices, singIndices;
+  directional::read_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices);
+  
+  for (int i=0;i<singVertices.size();i++)
+    cycleIndices(vertex2cycle(singVertices(i)))=singIndices(i);
+  
   std::vector<std::vector<int>> boundaryLoops;
   igl::boundary_loop(FMesh, boundaryLoops);
   numBoundaries=boundaryLoops.size();
@@ -240,6 +268,8 @@ int main()
         cycleFaces[it.row()].push_back(f2);
     }
   }
+  
+  
   
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
