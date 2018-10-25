@@ -25,10 +25,9 @@ Eigen::MatrixXi FMesh, FField, FSings;
 Eigen::MatrixXi EV, EF, FE;
 Eigen::MatrixXd VMesh, VField, VSings;
 Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField,representative, cValues, barycenters;
+Eigen::MatrixXd rawField,representative, barycenters;
 Eigen::MatrixXcd pvField;
 igl::opengl::glfw::Viewer viewer;
-Eigen::MatrixXd glyphPrincipalColors(5,3);
 
 Eigen::MatrixXd rawFieldOrig, rawFieldConjugate;
 Eigen::VectorXd conjugacyOrig, conjugacyConjugate;
@@ -36,20 +35,11 @@ Eigen::VectorXi singVerticesOrig, singVerticesConj;
 Eigen::VectorXi singIndicesOrig, singIndicesConj;
 
 int N=4;
-double conjMax;
-
-
-// Face barycenters
-Eigen::MatrixXd B;
-
-// Scale for visualizing the fields
-double global_scale;
+double conjMaxOrig;
 
 // Input constraints
 Eigen::VectorXi b;
 Eigen::MatrixXd bc;
-
-
 
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CONJUGACY, OPTIMIZED_FIELD, OPTIMIZED_CONJUGACY} ViewingModes;
 ViewingModes viewingMode=ORIGINAL_FIELD;
@@ -57,14 +47,13 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 
 void update_triangle_mesh()
 {
-  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
-    CMesh = Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
+  if ((viewingMode==ORIGINAL_FIELD)||(viewingMode==OPTIMIZED_FIELD)){
+    CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
     for (int i = 0; i < b.rows(); i++)
-      CMesh.row(b(i)) = Eigen::RowVector3d(0.5,0.1,0.1);
-  }else{  
+      CMesh.row(b(i)) = directional::selected_face_color();
+  }else{
     Eigen::VectorXd currConjugacy = (viewingMode==ORIGINAL_CONJUGACY ? conjugacyOrig: conjugacyConjugate);
-    igl::jet(currConjugacy, 0.0,conjMax, CMesh);
-    
+    igl::jet(currConjugacy, 0.0,conjMaxOrig, CMesh);
   }
   viewer.data_list[0].set_colors(CMesh);
 }
@@ -82,13 +71,8 @@ void update_raw_field_mesh()
     }
   } else {
     
-    Eigen::MatrixXd fullGlyphColor(FMesh.rows(),3*N);
-    for (int i=0;i<FMesh.rows();i++)
-      for (int j=0;j<N;j++)
-        fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
-    
-    
-    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate), fullGlyphColor,VField, FField, CField);
+    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate),
+                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate)),VField, FField, CField);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -97,7 +81,7 @@ void update_raw_field_mesh()
     viewer.data_list[1].show_lines = false;
     
     //singularity mesh
-    directional::singularity_spheres(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj), directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh,N,  (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj), VSings, FSings, CSings);
     
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);
@@ -151,58 +135,26 @@ int main(int argc, char *argv[])
   directional::polyvector_field(VMesh, FMesh, b, bc, N, pvField);
   directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawFieldOrig);
   
-  //cout<<"rawFieldOrig: "<<bc<<endl;
-  
   Eigen::VectorXi prinIndices;
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawFieldOrig, matching, effort);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,prinIndices);
-  
-  std::vector<int> singVerticesList;
-  std::vector<int> singIndicesList;
-  for (int i=0;i<VMesh.rows();i++)
-    if (prinIndices(i)!=0){
-      singVerticesList.push_back(i);
-      singIndicesList.push_back(prinIndices(i));
-    }
-  
-  singVerticesOrig.resize(singVerticesList.size());
-  singIndicesOrig.resize(singIndicesList.size());
-  for (int i=0;i<singVerticesList.size();i++){
-    singVerticesOrig(i)=singVerticesList[i];
-    singIndicesOrig(i)=singIndicesList[i];
-  }
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,singVerticesOrig, singIndicesOrig);
   
   // Initialize conjugate field with smooth field
   directional::ConjugateFFSolverData csdata(VMesh,FMesh);
   
-  double lambdaOut = directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
+  directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
   
   directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawFieldConjugate, matching, effort);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,prinIndices);
-  
-  singVerticesList.clear();
-  singIndicesList.clear();
-  for (int i=0;i<VMesh.rows();i++)
-    if (prinIndices(i)!=0){
-      singVerticesList.push_back(i);
-      singIndicesList.push_back(prinIndices(i));
-    }
-  
-  singVerticesConj.resize(singVerticesList.size());
-  singIndicesConj.resize(singIndicesList.size());
-  for (int i=0;i<singVerticesList.size();i++){
-    singVerticesConj(i)=singVerticesList[i];
-    singIndicesConj(i)=singIndicesList[i];
-  }
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N,singVerticesConj, singIndicesConj);
   
   csdata.evaluateConjugacy(rawFieldOrig, conjugacyOrig);
-  conjMax = conjugacyOrig.lpNorm<Infinity>();
+  conjMaxOrig = conjugacyOrig.lpNorm<Infinity>();
   
   csdata.evaluateConjugacy(rawFieldConjugate, conjugacyConjugate);
   
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  viewer.data().set_colors(directional::default_mesh_color());
   viewer.data().show_lines = false;
   
   //apending and updating raw field mesh

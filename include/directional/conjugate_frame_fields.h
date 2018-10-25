@@ -26,7 +26,7 @@ namespace directional {
                                          Eigen::MatrixXd &output,
                                          int _maxIter = 50,
                                          const double _lambdaOrtho = .1,
-                                         const double _lambdaInit = 100,
+                                         const double _lambdaInit = 10,
                                          const double _lambdaMultFactor = 1.01,
                                          bool _doHardConstraints = true);
   
@@ -36,7 +36,7 @@ namespace directional {
                                            Eigen::MatrixXd &output,
                                            int _maxIter = 50,
                                            const double _lambdaOrtho = .1,
-                                           const double _lambdaInit = 100,
+                                           const double _lambdaInit = 10,
                                            const double _lambdaMultFactor = 1.01,
                                            bool _doHardConstraints = true);
   

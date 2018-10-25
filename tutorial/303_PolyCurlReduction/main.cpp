@@ -63,13 +63,14 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 
 void update_triangle_mesh()
 {
-  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD))
-    viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
-  else{  //curl viewing - currently averaged to the face
+  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
+    viewer.data_list[0].set_colors(directional::default_mesh_color());
+  }else{  //curl viewing - currently averaged to the face
     Eigen::VectorXd currCurl = AE2F*(viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
     igl::jet(currCurl, 0.0,curlMaxOrig, CMesh);
     viewer.data_list[0].set_colors(CMesh);
   }
+ 
 }
 
 
@@ -203,7 +204,7 @@ int main(int argc, char *argv[])
  
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(directional::default_seam_color());
+  viewer.data().set_colors(directional::default_mesh_color());
   
   //apending and updating raw field mesh
   viewer.append_mesh();
