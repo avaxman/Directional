@@ -232,8 +232,8 @@ namespace directional
       }*/
       
       fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
-      cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
-      cout<<"(Efull*fullx-gamma).lpNorm<Infinity>(): "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
+      //cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
+      cout<<"Poisson error: "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
       
       if ((alreadyFixed-fixedMask).sum()==0)
         break;
@@ -250,8 +250,8 @@ namespace directional
         }
       }
       
-      cout<<"minIntDiffIndex : "<<minIntDiffIndex<<endl;
-      cout<<"minIntDiff : "<<minIntDiff<<endl;
+      cout<<"Integer variable: "<<minIntDiffIndex<<endl;
+      cout<<"Integer error: "<<minIntDiff<<endl;
       
       if (minIntDiffIndex!=-1){
         alreadyFixed(minIntDiffIndex) = 1;

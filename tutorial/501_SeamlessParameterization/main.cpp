@@ -6,19 +6,19 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
 #include <igl/cut_mesh.h>
+#include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
-#include <directional/line_cylinders.h>
+#include <directional/seam_lines.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/curl_matching.h>
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
-#include <directional/principal_combing.h>
+#include <directional/combing.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
-#include <directional/polyvector_field_cut_mesh_with_singularities.h>
-
+#include <directional/cut_mesh_with_singularities.h>
 
 int N;
 Eigen::MatrixXi FMeshWhole, FMeshCut, FField, FSings, FSeams;
@@ -30,9 +30,7 @@ Eigen::RowVector3d rawGlyphColor;
 igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd glyphPrincipalColors(6,3);
 Eigen::MatrixXd cutUV;
 
 
@@ -45,7 +43,7 @@ void update_triangle_mesh()
   if (viewingMode==FIELD){
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshWhole, FMeshWhole);
-    viewer.data_list[0].set_colors(Eigen::RowVector3d(1.0,1.0,1.0));
+    viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].show_texture=false;
   } else {
     viewer.data_list[0].clear();
@@ -63,12 +61,8 @@ void update_raw_field_mesh()
       viewer.data_list[i].show_lines = false;
     }
   } else {
-    Eigen::MatrixXd fullGlyphColor(FMeshWhole.rows(),3*N);
-    for (int i=0;i<FMeshWhole.rows();i++)
-      for (int j=0;j<N;j++)
-        fullGlyphColor.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
     
-    directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, fullGlyphColor, VField, FField, CField);
+    directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -77,7 +71,7 @@ void update_raw_field_mesh()
     viewer.data_list[1].show_lines = false;
     
     //singularities mesh
-    directional::singularity_spheres(VMeshWhole, FMeshWhole, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+    directional::singularity_spheres(VMeshWhole, FMeshWhole, N, singVertices, singIndices, VSings, FSings, CSings);
     
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);
@@ -85,21 +79,7 @@ void update_raw_field_mesh()
     viewer.data_list[2].show_faces = true;
     viewer.data_list[2].show_lines = false;
     
-    
-    //seam mesh
-    double avgEdgeLength = igl::avg_edge_length(VMeshWhole, FMeshWhole);
-    std::vector<int> seamEdges;
-    for (int i=0;i<EV.rows();i++)
-      if (combedMatching(i)!=0)
-        seamEdges.push_back(i);
-    
-    Eigen::MatrixXd P1(seamEdges.size(),3), P2(seamEdges.size(),3);
-    for (int i=0;i<seamEdges.size();i++){
-      P1.row(i)=VMeshWhole.row(EV(seamEdges[i],0));
-      P2.row(i)=VMeshWhole.row(EV(seamEdges[i],1));
-    }
-    
-    directional::line_cylinders(P1, P2, avgEdgeLength/25.0, Eigen::MatrixXd::Constant(FMeshWhole.rows(), 3, 0.0), 6, VSeams, FSeams, CSeams);
+    directional::seam_lines(VMeshWhole,FMeshWhole,EV,combedMatching, VSeams,FSeams,CSeams);
     
     viewer.data_list[3].clear();
     viewer.data_list[3].set_mesh(VSeams, FSeams);
@@ -116,8 +96,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   switch (key)
   {
       // Select vector
-    case '0': viewingMode = FIELD; break;
-    case '1': viewingMode = PARAMETERIZATION; break;
+    case '1': viewingMode = FIELD; break;
+    case '2': viewingMode = PARAMETERIZATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/botijo-param.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUV, FMeshCut);
@@ -133,11 +113,10 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 int main()
 {
   std::cout <<
-  "  0  Loaded field" << std::endl <<
-  "  1  Show textured mesh" << std::endl <<
+  "  1  Loaded field" << std::endl <<
+  "  2  Show textured mesh" << std::endl <<
   "  W  Save parameterized OBJ file "<< std::endl;
   
-
   igl::readOBJ(TUTORIAL_SHARED_PATH "/botijo.obj", VMeshWhole, FMeshWhole);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/botijo.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
@@ -145,27 +124,13 @@ int main()
   
   //combing and cutting
   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,prinIndices);
-  
-  std::vector<int> singVerticesList;
-  std::vector<int> singIndicesList;
-  for (int i=0;i<VMeshWhole.rows();i++)
-    if (prinIndices(i)!=0){
-      singVerticesList.push_back(i);
-      singIndicesList.push_back(prinIndices(i));
-    }
-  
-  singVertices.resize(singVerticesList.size());
-  singIndices.resize(singIndicesList.size());
-  for (int i=0;i<singVerticesList.size();i++){
-    singVertices(i)=singVerticesList[i];
-    singIndices(i)=singIndicesList[i];
-  }
+  directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
   directional::ParameterizationData pd;
-  igl::polyvector_field_cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::principal_combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, combedField, combedMatching, combedEffort);
-  
+  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField);
+   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
+ 
   std::cout<<"Setting up parameterization"<<std::endl;
   
   directional::setup_parameterization(N, VMeshWhole, FMeshWhole, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
@@ -175,13 +140,6 @@ int main()
   std::cout<<"Solving parameterization"<<std::endl;
   directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUV);
   std::cout<<"Done!"<<std::endl;
-  
-  glyphPrincipalColors<<1.0,0.0,0.5,
-  0.0,1.0,0.5,
-  1.0,0.5,0.0,
-  0.0,0.5,1.0,
-  0.5,1.0,0.0,
-  0.5,0.0,1.0;
   
   //apending and updating raw field mesh
   viewer.append_mesh();
