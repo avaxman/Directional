@@ -35,7 +35,7 @@ igl::StreamlineState sl_state;
 
 igl::StreamlineState sl_state0;		//The starting points off the streamlines
 
-int degree = 4;						// degree of the vector field
+int degree = 1;						// degree of the vector field
 int half_degree = degree / 2;		// degree/2 if treat_as_symmetric
 bool treat_as_symmetric = true;
 
@@ -46,7 +46,7 @@ int streamLengths = 3;				//The number of segments a streamline consists off
 int currentSegment = 0;				//The last segment of the streamline which is currently up to be replaced by the front runner
 
 int MaxLifespan = 20;				//The lifespan of a streamline before it respawns
-int currentLifespan = 0;			//The number off itterations past since the streamlines spawned
+Eigen::VectorXi currentLifespan;			//The number off itterations past since the streamlines spawned
 
 bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
@@ -70,18 +70,6 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   Eigen::MatrixXd VFieldNew, CFieldNew;
   Eigen::MatrixXi FFieldNew;
   directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
-  
-  //extending current streamline mesh
-  /*
-  FField.conservativeResize(FField.rows()+FFieldNew.rows(),3);
-  FField.block(FField.rows()-FFieldNew.rows(),0,FFieldNew.rows(),3)=FFieldNew.array()+VField.rows();
-  
-  VField.conservativeResize(VField.rows()+VFieldNew.rows(),3);
-  VField.block(VField.rows()-VFieldNew.rows(),0,VFieldNew.rows(),3) = VFieldNew;
-  
-  CField.conservativeResize(CField.rows()+CFieldNew.rows(),3);
-  CField.block(CField.rows()-CFieldNew.rows(),0,CFieldNew.rows(),3) = CFieldNew;
-  */
 
   viewer.selected_data_index= currentSegment+1;  //Select the last segment off the streamline
   viewer.data().clear();
@@ -91,17 +79,24 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 
 
   //Update the itteration values
+  //segment number
   if (currentSegment < streamLengths-1)
 	  currentSegment++;
   else
 	  currentSegment = 0;
 
-  if (currentLifespan < MaxLifespan)
-	  currentLifespan++;
-  else {
-	  //reset the start points of the streamlines
-	  sl_state = sl_state0;
-	  currentLifespan = 0;
+  //Lifespan update
+  for (int i = 0; i < sl_state.start_point.rows(); i++) {
+
+	  if (currentLifespan(i) < MaxLifespan)
+		  currentLifespan(i)++;
+	  else {
+		  sl_state.start_point.row(i) = sl_state0.start_point.row(i);
+		  sl_state.end_point.row(i) = sl_state0.end_point.row(i);
+		  sl_state.current_direction(i) = sl_state0.current_direction(i);
+		  sl_state.current_face(i) = sl_state0.current_face(i);
+		  currentLifespan(i) = 0;
+	  }
   }
 
   
@@ -166,7 +161,7 @@ int main(int argc, char *argv[])
   Eigen::MatrixXd v = sl_state0.end_point - sl_state0.start_point;
   v.rowwise().normalize();
   
-  //streamline meshes
+  //streamline meshes, create 1 for each segment we trace
   for (int i = 0; i < streamLengths; i++) {
 	  igl::streamlines_next(VMesh, FMesh, sl_data, sl_state);
 
@@ -185,14 +180,11 @@ int main(int argc, char *argv[])
 	  viewer.data().set_colors(CFieldNew);
 	  viewer.data().show_lines = false;
   }
-  /*
-  viewer.append_mesh();
-  directional::line_cylinders(sl_state0.start_point, sl_state0.start_point + 0.0005 * v, 0.0005, Eigen::MatrixXd::Constant(sl_state0.start_point.rows(),3,1.0), 4, VField, FField, CField);
-  viewer.data().set_mesh(VField, FField);
-  viewer.data().set_colors(CField);
-  viewer.data().show_lines = false;
-  */
 
+  //Give all streams a random starting age
+  currentLifespan.resize(sl_state.start_point.rows());
+  for (int i = 0; i < sl_state.start_point.rows(); i++)
+	  currentLifespan(i) = rand() % (MaxLifespan / 2);
 
   cout <<
   "Press [space] to toggle animation" << endl;
