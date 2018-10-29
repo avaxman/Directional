@@ -1,7 +1,7 @@
 # Building the Website
 
-For developers who want to contribute to the website/documentation of libigl.
-If you want to preview changes to the libigl website before a commit, you can follow the instructions below.
+For developers who want to contribute to the website/documentation of Directional.
+If you want to preview changes to the Directional website before a commit, you can follow the instructions below.
 
 1. Install mkdocs and the material theme
    ```bash
@@ -21,16 +21,6 @@ If you want to preview changes to the libigl website before a commit, you can fo
    ```bash
    python3 -m mkdocs build
    ```
-4. Deploy the website directly to github (will overwrite the gh-pages branch of the remote repository):
-   ```
-   python3 -m mkdocs gh-deploy
-   ```
-
-!!! warning
-    The `gh-deploy` script will overwrite the content of the `gh-pages` in the remote repository. Be sure of what you are doing before pushing new content with this command.
-
-!!! tip
-    Be careful to not have any `<>` characters in your email in your `.gitconfig`, otherwise the `gh-deploy` script will fail.
 
 !!! tip
     Dead links can be checked using the [LinkChecker](https://wummel.github.io/linkchecker/) tool. Run the website locally, then run LinkChecker on it:

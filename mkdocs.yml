@@ -1,7 +1,7 @@
-site_name: libdirectional
-site_url: 'https://avaxman.github.io/libdirectional/'
-repo_name: 'libdirectional'
-repo_url: 'https://github.com/avaxman/libdirectional.git'
+site_name: Directional
+site_url: 'https://avaxman.github.io/Directional/'
+repo_name: 'Directional'
+repo_url: 'https://github.com/avaxman/Directional.git'
 edit_uri: '../avaxman.github.io/edit/docs/docs/'
 site_description: "Directional-Field Processing Library"
 # strict: true
@@ -40,7 +40,7 @@ markdown_extensions:
       repo_url_shorthand: true
       repo_url_shortener: true
       user: avaxman
-      repo: libdirectional
+      repo: Directional
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences
@@ -49,7 +49,7 @@ markdown_extensions:
   - pymdownx.tilde
   - scripts.fixPaths:
       variables:
-        repo_url: 'https://github.com/avaxman/libdirectional/tree/master'
+        repo_url: 'https://github.com/avaxman/Directional/tree/master'
 extra_javascript:
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
 extra_css:
@@ -57,19 +57,7 @@ extra_css:
 nav:
   - Home: index.md
   - Tutorial: tutorial.md
-  - Contributing:
-    - Style Guidelines: style-guidelines.md
-    - Bug Report: CONTRIBUTING.md
-  - Misc:
-    - File Formats:
-      - Index: file-formats/index.md
-      - rawfield: file-formats/bf.md
-      - dmat: file-formats/dmat.md
-      - rbr: file-formats/rbr.md
-      - tgf: file-formats/tgf.md
-      - xml: file-formats/xml.md
-    - Building the Website: website.md
+  - File Formats: file_formats.md
+  - Website: website.md
   - FAQ: faq.md
-  - About:
-    - Release History: RELEASE_HISTORY.md
-    - License: LICENSE.md
+  - Release History: RELEASE_HISTORY.md
