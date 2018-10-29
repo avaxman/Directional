@@ -174,66 +174,59 @@ The Cartesian representation is a meta-category for representation of vectors in
 
 ### 301 Power Fields
 
-This representation is offered in [#knoppel_2013], but they did not give it a specific name---we use the name given in [#azencot_2017].
+This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" given in [^azencot_2017].
 
-A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a <i>power vector</i>---a single complex number $y$ per face so that its root set $y=u^N$ comprise the $N$-RoSy. 
+A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy. 
 
-By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy: $$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
-where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and similarly for $g$. The field is computed through the function `directional::power_field()`.
+By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy: 
+
+$$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
+
+where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and $e_g$ is for $g$ respectively. The field is computed through the function `directional::power_field()`.
 
 For fixed set $B$ and changing $y_B$, It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field. This is done by using the function `directional::power_field_precompute()`, coupled with the appropriate version of `directional::power_field()`. Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
 
-![([Example 301](301_GloballyOptimal/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mes. Note the singularities that are discovered through principal matching.](images/301_GloballyOptimal.png) 
+If the set $B$ is empty, then the computed field is the first Eigenvector of the Dirichlet energy.
+
+![([Example 301]({{ repo_url }}/301_PowerFields/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png) 
 
 
 ### 302 PolyVectors
 
-A Polyvector field [#diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent plane. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a complex polynomial in the local compex basis:
-$$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N$$
-where the roots $P(z)=0$ are the vectors represented as complex numbers. The Dirichlet energy is as before, but there is a term for each $a_i$, with the right power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
+A Polyvector field [^diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent plane. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local compex basis:
 
-The example allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In the case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
+$$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N,$$
+
+where the roots $P(z)=0$ are the vectors of the face-based directional object, represented as complex numbers in the local basis. The Dirichlet energy is as for power fields, except with a term for each $a_i$, with the appropriate power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
+
+[Example 302]({{ repo_url }}/302_PolyVectors/main.cpp) allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In this case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
 
 ![([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces](images/302_PolyVectors.png) 
 
-### 303 Integrable PolyVectors
+### 303 PolyCurl Reduction
 
-<span style="color:red">
-This tutorial is a direct migration of the libigl version, as the functionality would reside in Directional. It is fully functional, but the syntax is not Directional-compatible as of yet.
-</span>
+Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be *integrable*: it must be possible to locally break them down into individual vector fields that are gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl-reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors of both respective adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the POlyVector itself, allowing for singularities to naturally move around. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors for a bijective parameterization, and keeping it as smooth and orthogonal as possible for quality results. 
 
-Vector-field guided surface parameterization is based on the idea of designing the gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields (N-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be integrable: it must be possible to break them down into individual vector fields that are gradients of scalar functions. Fields obtained by most smoothness-based design methods (eg. [#ray_2008][], [#knoppel_2013][], [#diamanti_2014][], [#bommes_2009][], [#panozzo_2014][]) do not have this property. In [#diamanti_2015][], a method for creating integrable polyvector fields was introduced. This method takes as input a given field and improves its integrability by removing the vector field curl, thus turning it into a gradient of a function ([Example 303](303_IntegrablePVs/main.cpp)).
+A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-parameterization). In [Example 303]({{ repo_url }}/303_PolyCurlReduction/main.cpp) we demonstrate the optimization for curl.
 
-![Integration error is removed from a frame field to produce a field aligned parameterization free of triangle flips.](images/303_IntegrablePVs.png)
-
-This method retains much of the core principles of the polyvector framework - it expresses the condition for zero discrete curl condition (which typically requires integers for the vector matchings) into a condition involving continuous variables only. This is done using coefficients of appropriately defined polynomials. The parameterizations generated by the resulting fields are exactly aligned to the field directions and contain no inverted triangles.
+![([Example 303](303_PolyCurlReduction/main.cpp)) PolyCurl is iterative reduced from an initial PolyVector field, Top: fields for iteration 0 (original), 10, and 50. Bottom: PolyCurl plots. The color is the norm of the vector of the roots of the PolyCurl. Its maximal value (infinity norm) appears below.](images/303_PolyCurlReduction.png)
 
 ### 304 Conjugate Fields
 
-<span style="color:red">
-This tutorial is a direct migration of the libigl version, as the functionality would reside in Directional. It is fully functional, but the syntax is not Directional-compatible as of yet.
-</span>
 
-Two tangent vectors lying on a face of a triangle mesh are conjugate if
+Two tangent vectors $u$ and $v$ are conjugate if
 
-\\[ k_1 (u^T d_1)(v^T d_1) + k_2(u^T d_2)(v^T d_2) = 0. \\]
+$$k_1 (u^T d_1)(v^T d_1) + k_2(u^T d_2)(v^T d_2) = 0. $$,
+where $k_1$ and $k_2$ are the principal curvatures and $d_1$ and $d_2$ are the respective principal directions.
 
-This condition is very important in architectural geometry: The faces of an
-infinitely dense quad mesh whose edges are aligned with a conjugate field are
-planar. Thus, a quad mesh whose edges follow a conjugate field  are easier to
-planarize [#liu_2011].
+Conjugate vector fields are very important in computational geometry: their integral lines form, informally speaking, an infinitesimal planar quad mesh. As such, the finite quad mesh that result out of integrating these fields is considered as a good candidate for consequent planarity parameterization [^liu_2011].
 
-Finding a conjugate vector field that satisfies given directional constraints
-is a standard problem in architectural geometry, which can be tackled by
-deforming a Poly-Vector field to the closest conjugate field.
+Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by
+deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates beweetn a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304](304_ConjugateField/main.cpp)).
 
-This algorithm [#diamanti_2014] alternates a global step, which enforces
-smoothness, with a local step, that projects the field on every face to the
-closest conjugate field ([Example 304](304_ConjugateField/main.cpp)).
 
-![A smooth 4-PolyVector field (left) is deformed to become a conjugate field
-(right).](images/304_ConjugateFields.png)
+![([Example 304](304_ConjugateFields/main.cpp)) A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.](images/304_ConjugateFields.png)
 
 
 ## Chapter 4: Polar Methods
