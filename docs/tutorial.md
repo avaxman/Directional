@@ -1,9 +1,10 @@
 
-<h1>libdirectional tutorial notes</h1>
+<h1>Directional tutorial notes</h1>
 
 
 ## Introduction
-libdirectional is a C++ geometry processing library written as an extension to [libigl](http://libigl.github.io/libigl/), with a  speciality in directional fields. The functionality is based on the definitions and taxonomy surveyed theoretically in [#vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
+
+Directional is a C++ geometry processing library written as an extension library to [libigl](http://libigl.github.io/libigl/), with a speciality in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
 
 The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.
 
@@ -11,7 +12,7 @@ The header files contain documentation of the parameters to each function and th
 
 ### Installing the tutorial examples
 
-This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of libdirectional, where every subchapter relates to a single example. The tutorial code can be installed by going into the `Tutorial` folder, and following the following instructions:
+This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of Directional, where every subchapter relates to a single example. The tutorial code can be installed by going into the `Tutorial` folder, and following the following instructions:
 
 
 ```cpp
@@ -29,79 +30,91 @@ Most examples contain a component of user interaction; the instructions of what 
 
 ### Discretization
 
-There are several ways to discretize directional fields, although not all of them fit for all representations. They roughly divide into face-based, edge-based, and vertex-basex discretization (see [#degoes_2016] for an in-depth analysis). The only discretization currently supported by libdirectional is face-based fields, where the discrete tangent plane is considered as the supporting plane to each (naturally flat) face. We also use a local basis (mostly provide by `igl::local_basis()`) to parameterize each tangent plane. Notions like connection, parallel transport, and consequently smoothness, are measured through dual edges between adjacent faces.
+There are several ways to encode directional fields on discrete triangle meshes, although not all of them compatible with the different information that the fields conveys. Mainstream discretizations roughly divide into face-based, edge-based, and vertex-basex discretization (see [^degoes_2016] for an in-depth analysis). The only discretization currently supported by Directional is that of face-based fields, where the discrete tangent plane is considered as the supporting plane to each (naturally flat) face. We also use a local basis (mostly provide by `igl::local_basis()`) to parameterize each tangent plane. Notions like connection, parallel transport, and consequently smoothness, are measured through *dual edges* between adjacent faces.
 
 ### Representation
 
-libdirectional uses several different representations to describe directional fields. We denote the number of faces in the mesh as $|F|$, the set of inner edges (adjacent to two triangles) as $E_I$, and the degree of the field (must be fixed for the entire field) as $N$. The supported  representations are as follows, where the taxonomy is based on that of the directional field course [#vaxman_2016]:
+The representation of a directional field is the way it is encoded in each discrete tangent plane, and cross adjacent tangent planes. Directional uses several different representations to describe directional fields. We denote the number of faces in the mesh as $|F|$, the set of inner edges (adjacent to two triangles) as $E_I$, and the degree of the field (must be fixed for the entire field) as $N$. The supported  representations are as follows, where the taxonomy is based on that of the directional field course [^vaxman_2016]:
 
-1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counterclockwise order in most libdirectional functions that process raw fields.
-2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$
-3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two neighbouring triangles. The rotation represents the deviation from the Levi-Civita parallel transport [#ray_2008], [#crane_2010]. This representation may only encode $N$-direction fields. Note that the <i>effort</i> (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely create the full face-based field.
-4. **Power Field** - An $|F|$-sized *complex* vector, representing an $N$-RoSy as a single complex number $y=u^N$, where the $N$-RoSy is the set of roots $u$. The magnitude is also encoded this way, though it may be neglected in some applications.
-5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a complex polynomial $f(z)=\sum_{i=0}^{N-1}{a_iz^i}+z^N$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
+1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counterclockwise order in most Directional functions that process raw fields.
+2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$. That means the all functions should also accept $N$ as input to decode the full field.
+3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two adjacent triangles. The rotation represents the deviation from the Levi-Civita parallel transport [^ray_2008], [^crane_2010]. This representation may only encode $N$-direction fields. Note that the *effort* (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely decode the full face-based field.
+4. **Power Field** - An $|F|$-sized *complex* vector, representing an $N$-RoSy as a single complex number $y=u^N$, where the $N$-RoSy is the set of roots $u$. The magnitude is also encoded this way, though it may be neglected in some applications. The representation depends on a local $2D$ basis, such as one that could be obtained from ```igl::local_basis()```.
+5. **PolyVector** - A $|F| \times N$ complex double matrix, encoding the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are an $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
 
-libdirectional provides a number of conversion functions to switch between different representations. Each of the functions is of the form \<method 1>\_to\_\<method 2>, where \<method 1> and \<method 2> are the representation names in the above list. e.g., `rotation_to_representative()` and `polyvector_to_raw()`. Some possible combinations are given by composing two functions in sequence.
+Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```rotation_to_representative()``` and  ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence.
 
-However, note that every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not possess the same generality of directional fields (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, or rotation-angle representation. converting into the more explicit raw representation is done mostly for I/O and visualization.
+However, note that every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not possess the same generality of directional fields (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, or rotation-angle representation. converting into the more explicit raw representation is often needed for I/O and visualization.
 
 
 ## Chapter 1: I/O and Visualization
 
+### Visualization paradigm
+
+Directional uses the libigl viewer (although a viewer is not necessary for the core functionality), and augments it with auxuliary functionality and colors schemes that pertain to directional fields specifically. The drawing paradigm in Directional is that the visualization functions create actual meshes (vertices, faces, and per-face colors) for the different components of the field: box-like meshes for per-face glyphs representing vectors, sphere meshes for representing singularities, piecewise-cylinder curves to represent streamlines, and more. These visualization meshes can then be stored in libigl viewer as multiple meshes and visualized as needed. 
+
+The color schemes and directional visualization mesh creation functionality are mostly given in [visualization_schemes.h]({{ repo_url }}/include/directional/visualization_schemes.h), and can be called to create a homogeneous look for visualizing fields throughout applications. Most notable are ```indexed_glyph_colors()``` that gives back glyph meshes colored by index per face, and ```default_singularity_colors()``` that produces singularity meshes according to index. Other visualization functionality is detailed below in the context of the different examples.
+
 ### 101 Glyph Rendering
 
-The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101](101_GlyphRendering/main.cpp), a field is read from a file as follows:
+The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp), a field is read from a file as follows:
 
 ```cpp
 directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
-directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singPositions, singIndices);
+directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
 ```
 
-The field is read in <i>raw</i> format, which is detailed in [Chapter 2: Discretization and Representation](#chapter2:discandrep). The field is <i>face-based</i>, and the singularities are consequently <i>vertex-based</i>.
+The field is read in *raw* format (see File Formats), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*, where ```singVertices``` are the singular vertices, and ```singIndices``` are the corresponding integer indices, so that the actual fractional indices are $\frac{singIndices}{N}$.
 
-The field is drawn on the mesh as follows:
+The visualization meshes for the glyphs and the singularities are obtained as follows
 
 ```cpp
-if (drawSingularities)
-    directional::singularity_spheres(V, F, singPositions, singIndices, positiveIndexColors, negativeIndexColors, false, true, fullV, fullF, fullC);
-directional::glyph_lines_raw(V, F, rawField, rawGlyphColor, false, true, fullV, fullF, fullC);
+directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
+directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
 ```
 
 These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer.
 
-``directional::singularity_spheres()`` creates small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function). The spheres are only created where the index is different than $0$.
+``directional::glyph_lines_raw()`` creates box-like meshes on the faces that constitute the *glyph drawing*: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header. In this case, we give the ```default_glyph_color()``` from the Directional visualization schemes. Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by the extended version of the function. 
 
-``directional::glyph_lines_raw()`` creates lines on the faces that constitute the <i>glyph drawing</i>: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header.
-  
-Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by the extended version of the function. 
+``directional::singularity_spheres()`` creates a mesh of small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function). The spheres are only created where the index is different than $0$.
 
-![([Example 101](101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png) 
+
+![[Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png)
+
 
 ### 102 Picking and editing
 
-This is a simple tutorial that demonstrates how libdirectional uses libigl picking to make directional field editing possible. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the ability to set different colors for glyphs, via the following code in [Example 102](101_PickingEditing/main.cpp).
+This tutorial demonstrates the editing paradigm in Directional, using libigl picking to make directional field editing possible. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different setting of colors for glyphs: for the selected face and for the selected vector in the face particularly, via the following code in [Example 102]({{ repo_url }}/101_PickingEditing/main.cpp).
 
 ```cpp
-Eigen::MatrixXd fullGlyphColor(F.rows(),3*N);
-  for (int i=0;i<F.rows();i++){
-    for (int j=0;j<N;j++){
-      if (i==currF)
-        fullGlyphColor.block(i,3*j,1,3)<<(j==currVec ? selectedVectorGlyphColor : selectedFaceGlyphColor);
-      else
-        fullGlyphColor.block(i,3*j,1,3)<<defaultGlyphColor;
-    }
-  }
+Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
+glyphColors.row(currF)=directional::selected_face_glyph_color().replicate(1,N);
+glyphColors.block(currF,3*currVec,1,3)=directional::selected_vector_glyph_color();
+
+directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors, VField, FField, CField);
 ```
 
-The size of ``fullGlyphColor`` can either be one color per vector, per face, or uniform for all vetors in the entire mesh; the intent will automatically be devised from the size of the matrix.
+The selected face coloring is done as follows:
 
-![([Example 102](102_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/102_PickingEditing.png)
+```cpp
+CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+CMesh.row(currF)=directional::selected_face_color();
+```
+
+
+![([Example 102]({{ repo_url }}/102_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/102_PickingEditing.png)
 
 ### 103 Streamline Tracing
 
-Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). libdirectional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103](103_StreamlineTracing/main.cpp).
+Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all type of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103]({{ repo_url }}/103_StreamlineTracing/main.cpp). The streamline are compiled into meshes with the following:
 
-![([Example 103](103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
+```cpp
+  directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1), 4, VFieldNew, FFieldNew, CFieldNew);
+```
+creating meshes from many cylinders to have the appearance of continuous curves.
+
+![([Example 103]({{ repo_url }}/103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.gif)
 
 ## Chapter 2: Discretization and Representation
 
@@ -110,7 +123,7 @@ In the following sections, we show some effects of working with different repres
 
 ### 201 Principal Matching
 
-One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In libdirectional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
+One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
 
 Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [#diamanti_2014]. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
 
@@ -176,7 +189,7 @@ The example allows a user to set individual vectors within each face, and see th
 ### 303 Integrable PolyVectors
 
 <span style="color:red">
-This tutorial is a direct migration of the libigl version, as the functionality would reside in libdirectional. It is fully functional, but the syntax is not libdirectional-compatible as of yet.
+This tutorial is a direct migration of the libigl version, as the functionality would reside in Directional. It is fully functional, but the syntax is not Directional-compatible as of yet.
 </span>
 
 Vector-field guided surface parameterization is based on the idea of designing the gradients
@@ -189,7 +202,7 @@ This method retains much of the core principles of the polyvector framework - it
 ### 304 Conjugate Fields
 
 <span style="color:red">
-This tutorial is a direct migration of the libigl version, as the functionality would reside in libdirectional. It is fully functional, but the syntax is not libdirectional-compatible as of yet.
+This tutorial is a direct migration of the libigl version, as the functionality would reside in Directional. It is fully functional, but the syntax is not Directional-compatible as of yet.
 </span>
 
 Two tangent vectors lying on a face of a triangle mesh are conjugate if
@@ -217,11 +230,11 @@ closest conjugate field ([Example 304](304_ConjugateField/main.cpp)).
 
 ### Polar Fields
 
-Polar fields are represented using angles. These angles may encode the rotation from some known basis on a tangent plane (and so it is a "logarithmic" representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent planes (in the sense of deviation from parallel transport). The former usually requires integer variables for directional field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, libdirectional supports the latter.
+Polar fields are represented using angles. These angles may encode the rotation from some known basis on a tangent plane (and so it is a "logarithmic" representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent planes (in the sense of deviation from parallel transport). The former usually requires integer variables for directional field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, Directional supports the latter.
 
 ### 401 Index Prescription
 
-The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in libdirectional is that of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
+The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in Directional is that of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
 
 $$
 \delta = \text{argmin}\ |\delta_{ij}|^2\ s.t.\ H\delta = -K_0 + K.
@@ -255,7 +268,7 @@ The algorithm is performed through the function ``directional::index_prescriptio
 
 ## Outlook for continuing development
 
-libdirectional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:
+Directional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:
 
 1. Face-based polar representation, and mixed-integer directional algorithms.
 
@@ -265,7 +278,7 @@ libdirectional is a budding project, and there are many algorithms in the state-
 
 4. Differential operators and Hodge decomposition.
 
-5. Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from libdirectional, but they are not entirely compatible.
+5. Cutting, integration, and parameterization. Note the libigl has this capacity that could be called from Directional, but they are not entirely compatible.
 
 6. Support for tensor fields.
 
