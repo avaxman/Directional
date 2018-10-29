@@ -123,38 +123,48 @@ In the following sections, we show some effects of working with different repres
 
 ### 201 Principal Matching
 
-One of the fundamental operations in directional-field processing is <i>matching</i>. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
+One of the fundamental operations in directional-field processing is *matching*. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l$, $k+l$ is matched to $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
 
-Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [#diamanti_2014]. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
+Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [^diamanti_2014]. Principal matching creates the matching that minimizes the effort of the matching, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
 
-principal matching is done through this function (from in [Example 201](201_PrincipalMatching/main.cpp)):
+principal matching is done through the function ```principal_matching()```  (from in [Example 201]({{ repo_url }}/201_PrincipalMatching/main.cpp)) as follow:
 
 ```cpp
-directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort);
-directional::effort_to_indices(V,F,EV, EF, effort,N,prinIndices);
+directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
+directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,singVertices,singIndices);
 ```
-`directional::effort_to_indices()` computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional undergoes along a cycle around the vertex. a directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$ (modulu $N$). Note that this can also include multiple full rotations, and therefore the index is unbounded. The <i>fractional</i> part of the index is encoded by the matching; however, matching alone cannot encode <i>integral</i> indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities).
+`directional::effort_to_indices()` computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional object undergoes along a cycle around the vertex. a directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations(so: this is *not* taken modulu $N$), where the index is unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). ```singVertices``` and ```singIndices``` only enumerate the singular vertices.
 
-![([Example 201](201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
+![([Example 201]({{ repo_url }}/201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
 
 
 ### 202 Sampling
 
-This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a Cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. There are three modes seen in the example:
+This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a Cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In that case, low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
 
-1. In the polar mode, the user can control the index of a singularity directly. As such, the rotation angles between faces become arbitrarily large, and appear as noise in the low valence cycles. 
+1. In the polar mode, the user can prescrube the index of a singularity directly. With this, the rotation angles between adjacent faces become arbitrarily large, and appear as noise in the low valence cycles. 
 
-2. In the principal matching mode, the rotations are computed from the field, without prior knowledge of the polar prescribed rotations from the previous mode. The noise of the field then gives rise to a "singularity party". 
+2. In the principal matching mode, the rotations are recoconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The noise of the field then gives rise to a "singularity party". 
 
-3. In the Cartesian mode, the field is interpolated on the white faces, keeping the red band fixed from the polar mode. We see a field that in smooth in the Cartesian sense, with more uniformly dispersed singularities.
+3. In the Cartesian mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that in smooth in the Cartesian sense, with more uniformly dispersed singularities.
 
-![([Example 202](202_Sampling/main.cpp)) Left to right: the polar mode, the principal matching mode, and the Cartesian mode.](images/202_Sampling.png)
+![([Example 202]({{ repo_url }}/202_Sampling/main.cpp)) Animating: the polar mode, the principal matching mode, and the Cartesian mode.](images/202_Sampling.gif)
 
 ### 203 Combing
 
-Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to preapre a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a set of connected paths that connect between singularities, also known as <i>cuts</i>. Note that such paths do not cut the mesh to a simply-connected patch, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities, and nothing happens. The combing is done through the function `directional::principal_combing()`.
+Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to prepare a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a set of connected paths that connect between singularities, also known as *seams*. Note that such paths do not necessarily the mesh to a simply-connected patch, but only connects subgroups with indices adding up to an integer; as a trivial example, a 1-vector field is trivially combed to begin with, even in the presence of its (integral) singularities, and the set of seams is zero. The combing is done through the function ```directional::combing()``` as follows, taken from [Example 203]({{ repo_url }}/203_Combing/main.cpp)
 
-![([Example 203](203_Combing/main.cpp)) Vector indices inside each face are colored. They are uncombed in the left image, and combed, with the cut showing, in the right image.](images/203_Combing.png) 
+```cpp
+directional::combing(VMesh,FMesh, EV, EF, FE, rawField, matching, combedField);
+```
+
+where ```combedField``` is the re-indexed ```rawField```, done according to the matching. We can re-do the matching on the combed field to retrieve the seams:
+
+```cpp
+directional::principal_matching(VMesh, FMesh,EV, EF, FE, combedField, combedMatching, combedEffort);
+```
+
+![([Example 203]({{ repo_url }}/203_Combing/main.cpp)) Vector indices inside each face are colored, combed (with seams) and uncombed).](images/203_Combing.gif) 
 
 ## Chapter 3: Cartesian Methods
 
