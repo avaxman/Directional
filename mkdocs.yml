@@ -6,7 +6,7 @@ edit_uri: '../avaxman.github.io/edit/docs/docs/'
 site_description: "Directional-Field Processing Library"
 # strict: true
 docs_dir: 'docs'
-remote_branch: 'master'
+remote_branch: 'gh-pages'
 theme:
   name: material
   favicon: 'favicon.ico'
