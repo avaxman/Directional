@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Directional is a C++ geometry processing library written as an extension library to [libigl](http://libigl.github.io/libigl/), with a speciality in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
+Directional is a C++ geometry processing library written as an extension library to [libigl](http://libigl.github.io/libigl/), with a speciality in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by much of the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.
 
 The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set (often only one) of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, instead directly working with calling to standalone functions. The visualization is done using the libigl viewer with some extended options that allow the rendering of directional fields.
 
@@ -22,9 +22,9 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-This will build all tutorial examples in the `build` folder. To build in windows, use the `cmake-gui .` options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the "startup project". 
+This will build all tutorial examples in the `build` folder. To build in windows, use the `cmake-gui .` options instead of the last two, and creates the project using Visual Studio, with the proper tutorial chapter as the "startup project".
 
-To access a single example, say ``202_Sampling``, go to the ``build`` subfolder, and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder directly for each example. 
+To access a single example, say ``202_Sampling``, go to the ``build`` subfolder, and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder directly for each example.
 
 Most examples contain a component of user interaction; the instructions of what to do will be given in the command-line output upon execution.
 
@@ -51,7 +51,7 @@ However, note that every conversion is possible; for instance, it is not possibl
 
 ### Visualization paradigm
 
-Directional uses the libigl viewer (although a viewer is not necessary for the core functionality), and augments it with auxuliary functionality and colors schemes that pertain to directional fields specifically. The drawing paradigm in Directional is that the visualization functions create actual meshes (vertices, faces, and per-face colors) for the different components of the field: box-like meshes for per-face glyphs representing vectors, sphere meshes for representing singularities, piecewise-cylinder curves to represent streamlines, and more. These visualization meshes can then be stored in libigl viewer as multiple meshes and visualized as needed. 
+Directional uses the libigl viewer (although a viewer is not necessary for the core functionality), and augments it with auxuliary functionality and colors schemes that pertain to directional fields specifically. The drawing paradigm in Directional is that the visualization functions create actual meshes (vertices, faces, and per-face colors) for the different components of the field: box-like meshes for per-face glyphs representing vectors, sphere meshes for representing singularities, piecewise-cylinder curves to represent streamlines, and more. These visualization meshes can then be stored in libigl viewer as multiple meshes and visualized as needed.
 
 The color schemes and directional visualization mesh creation functionality are mostly given in [visualization_schemes.h]({{ repo_url }}/include/directional/visualization_schemes.h), and can be called to create a homogeneous look for visualizing fields throughout applications. Most notable are ```indexed_glyph_colors()``` that gives back glyph meshes colored by index per face, and ```default_singularity_colors()``` that produces singularity meshes according to index. Other visualization functionality is detailed below in the context of the different examples.
 
@@ -75,7 +75,7 @@ directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSi
 
 These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer.
 
-``directional::glyph_lines_raw()`` creates box-like meshes on the faces that constitute the *glyph drawing*: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header. In this case, we give the ```default_glyph_color()``` from the Directional visualization schemes. Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by the extended version of the function. 
+``directional::glyph_lines_raw()`` creates box-like meshes on the faces that constitute the *glyph drawing*: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several ways to give colors to these vectors, which can be individual or global; check the documentation to the function in the header. In this case, we give the ```default_glyph_color()``` from the Directional visualization schemes. Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by the extended version of the function.
 
 ``directional::singularity_spheres()`` creates a mesh of small spheres on vertices, where the size of the sphere is devised automatically (but can be configured using the extended version of this function). The spheres are only created where the index is different than $0$.
 
@@ -142,9 +142,9 @@ directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,singVertice
 
 This is an educatory example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation, to a Cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In that case, low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
 
-1. In the polar mode, the user can prescrube the index of a singularity directly. With this, the rotation angles between adjacent faces become arbitrarily large, and appear as noise in the low valence cycles. 
+1. In the polar mode, the user can prescrube the index of a singularity directly. With this, the rotation angles between adjacent faces become arbitrarily large, and appear as noise in the low valence cycles.
 
-2. In the principal matching mode, the rotations are recoconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The noise of the field then gives rise to a "singularity party". 
+2. In the principal matching mode, the rotations are recoconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The noise of the field then gives rise to a "singularity party".
 
 3. In the Cartesian mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that in smooth in the Cartesian sense, with more uniformly dispersed singularities.
 
@@ -164,21 +164,21 @@ where ```combedField``` is the re-indexed ```rawField```, done according to the 
 directional::principal_matching(VMesh, FMesh,EV, EF, FE, combedField, combedMatching, combedEffort);
 ```
 
-![([Example 203]({{ repo_url }}/203_Combing/main.cpp)) Vector indices inside each face are colored, combed (with seams) and uncombed).](images/203_Combing.gif) 
+![([Example 203]({{ repo_url }}/203_Combing/main.cpp)) Vector indices inside each face are colored, combed (with seams) and uncombed).](images/203_Combing.gif)
 
 ## Chapter 3: Cartesian Methods
 
 ### Cartesian Fields
 
-The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local $2D$ basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation. 
+The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local $2D$ basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation.
 
 ### 301 Power Fields
 
 This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" given in [^azencot_2017].
 
-A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy. 
+A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
 
-By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy: 
+By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based Dirichlet energy:
 
 $$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
 
@@ -188,7 +188,7 @@ For fixed set $B$ and changing $y_B$, It is possible to speed up computations by
 
 If the set $B$ is empty, then the computed field is the first Eigenvector of the Dirichlet energy.
 
-![([Example 301]({{ repo_url }}/301_PowerFields/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png) 
+![([Example 301]({{ repo_url }}/301_PowerFields/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
 
 
 ### 302 PolyVectors
@@ -201,12 +201,12 @@ where the roots $P(z)=0$ are the vectors of the face-based directional object, r
 
 [Example 302]({{ repo_url }}/302_PolyVectors/main.cpp) allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In this case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
 
-![([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces](images/302_PolyVectors.png) 
+![([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces](images/302_PolyVectors.png)
 
 ### 303 PolyCurl Reduction
 
 Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be *integrable*: it must be possible to locally break them down into individual vector fields that are gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl-reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors of both respective adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the POlyVector itself, allowing for singularities to naturally move around. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors for a bijective parameterization, and keeping it as smooth and orthogonal as possible for quality results. 
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) need to be *integrable*: it must be possible to locally break them down into individual vector fields that are gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl-reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors of both respective adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the POlyVector itself, allowing for singularities to naturally move around. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors for a bijective parameterization, and keeping it as smooth and orthogonal as possible for quality results.
 
 A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-parameterization). In [Example 303]({{ repo_url }}/303_PolyCurlReduction/main.cpp) we demonstrate the optimization for curl.
 
@@ -223,10 +223,10 @@ where $k_1$ and $k_2$ are the principal curvatures and $d_1$ and $d_2$ are the r
 Conjugate vector fields are very important in computational geometry: their integral lines form, informally speaking, an infinitesimal planar quad mesh. As such, the finite quad mesh that result out of integrating these fields is considered as a good candidate for consequent planarity parameterization [^liu_2011].
 
 Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by
-deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates beweetn a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304](304_ConjugateField/main.cpp)).
+deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates beweetn a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304]({{ repo_url }}/304_ConjugateField/main.cpp)).
 
 
-![([Example 304](304_ConjugateFields/main.cpp)) A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.](images/304_ConjugateFields.png)
+![([Example 304]({{ repo_url }}/304_ConjugateFields/main.cpp)) A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.](images/304_ConjugateFields.png)
 
 
 ## Chapter 4: Polar Methods
@@ -237,36 +237,77 @@ Polar fields are represented using angles. These angles may encode the rotation 
 
 ### 401 Index Prescription
 
-The notation of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [#ray_2008], [#crane_2010]. The formulation and notation we use in Directional is that of Trivial Connections [#crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i,f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of basis cycles (see next section), around which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
+The notion of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [^ray_2008], [^crane_2010]. The formulation and notation we use in Directional is that of Trivial Connections [^crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i$ and $f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of *basis cycles*, around all of which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as a matrix $H$. Every such cycle (row in the matrix) has a curvature, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
 
 $$
 \delta = \text{argmin}\ |\delta_{ij}|^2\ s.t.\ H\delta = -K_0 + K.
 $$
 
-$H$ is the matrix that defines the basis-cycles sum, $K_0$ is the original curvature of the basis cycle, and $K$ is the prescribed curvature. $K$ defines singularities: for regular cycles, we prescribe $K=0$, and for a singular cycle with prescribed singularity index $\frac{1}{N}$, we set $K=\frac{2\pi}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except handle cycles which can have unbounded index. See [#crane_2010] for exact details. If the input obeys the sum, the result obeys the prescribed indices around the cycles, and nothing else. As the representation is differential, there is still a global degree of freedom in setting a single direction in a single arbitrary face.
+$H$ is the matrix that defines the basis-cycles sum, $K_0$ is a vector of the original curvatures of every basis cycle, and $K$ is the prescribed curvature. $K$ defines the prescribed singularity indices: for regular cycles, we prescribe $K=0$, and for a singular cycle with prescribed singularity index $\frac{i}{N}$, we set $K=\frac{2\pi i}{N}$. the sum of $K$ has to conform to the Poincar&eacute; index theorem, except generator (handle) cycles that admit unbounded indices. See [^crane_2010] for exact details. If the input obeys the sum, the result obeys the prescribed indices around the cycles everywhere. The representation is *differential*, and there is then a global degree of freedom in setting a single direction in a single arbitrary face.
 
-Note that the correct definition for "cycle curvature" corresponds to the so-called "cycle holonomy", only up to integer multiples of $2\pi$. However, in the discrete setting, the curvature should theoretically be computed as the exact angle defect, in which for inner vertices we use $2\pi-\sum{\alpha}$, and for boundary vertices we use $\pi - \sum{\alpha}$ ($\alpha$ are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary loop cycle, we add up all the defects. That is requires for exact discrete Poincar&eacute; index consistency.
+Note that the correct definition for "cycle curvature" corresponds to the so-called "cycle holonomy", only up to integer multiples of $2\pi$. However, in the discrete setting, the curvature should theoretically be computed as the exact discrete angle defect, in which for inner vertices we use $2\pi-\sum{\alpha}$, and for boundary vertices we use $\pi - \sum{\alpha}$ ($\alpha$ are the angles at the corners of a vertex). For a cycle aggregating many vertices, such as a boundary-loop cycle, we add up all the defects. That is required for exact discrete Poincar&eacute; index consistency. Note that the boundary indices define how many rotations of the vector field the boundary loop "sees". As an example, a constant field on a simple disc in the plane has all indices $0$ inside, but the boundary index is in fact $1$---This obeys the total index sum $\chi = 2-2g-b = 2-0-1=1$ ($g$ stands for genus and $b$ for number of boundary loops)
 
 #### Basis Cycles
 
-The basis cycles form the cycles around which curvatures (and singularities) are prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_I|$, where $E_I$ is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains 1 or -1 values depending on the (arbitrary) orientation of the dual edge participating in the cycle to the respective face. There are three types of cycles, so ordered in the rows of $H$: 
+The basis cycles form the cycles around which curvatures (and singularities) have to be prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_I|$, where $E_I$ is the number of inner edges in the mesh. Each row in the matrix describes the sum over one cycle, and contains $1$ or $-1$ values depending on the (arbitrary) orientation of the dual edge participating in the cycle to the respective face. There are three types of cycles, so ordered in the rows of $H$:
 
 1. $1$-ring dual cycles around each inner vertex, on which vertex-based singularities can be encoded (the relevant part of $H$ is basically $\left(d_0\right)^T$ in discrete exterior calculus, restricted to inner edges).
-2. Cycles around mesh boundary loops. 
-3. Cycles around topological generators (independent handles).
+2. Cycles around mesh boundary loops.
+3. Cycles around the $2g$ topological generators (independent handles).
 
 The method `directional::dual_cycles()` computes the proper basis cycles and matrix $H$. To be able to intuitively prescribe singularities to inner vertices, the method also returns a conversion vector ``vertex2cycle``, and the list of indices of inner edges from the list of edges.
 
-The singularity indices that are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle.
-
-If the prescribed indices do not conform to correct sum, a result will still be computed by least squares, but it will be unpredictable.
-
-The algorithm is performed through the function ``directional::index_prescription()``, which also accepts a solver for precomputation.
+The singularity indices that are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle. If the prescribed indices do not conform to the Poincar&eacute; index theorem, a result will still be computed by least squares, but it will be unpredictable. The algorithm is performed through the function ``directional::index_prescription()``, which can also accept a solver for precomputation, for the purpose of prefactoring $H$ only once.
 
 
-![([Example 401](401_IndexPrescription/main.cpp)) Indices are prescribed on three vertex singularities, and on the boundary loop, to match the index theorem. The computed field is smooth and obeys these indices exactly.](images/401_IndexPrescription.png) 
+![([Example 401]({{ repo_url }}/401_IndexPrescription/main.cpp)) Indices are prescribed on several vertex singularities, and on a generator loop, to match the index theorem.](images/401_IndexPrescription.png)
 
 ## Chapter 5: Seamless Parameterization
+
+Directional fields are commonly used to create seamless parameterizations [^bommes_2009],[^Kaelberer_2007],[^Myles_2014]. Recall that [combing](#203-combing) trivializes the matching everywhere but a sparse set of seams. We augment these seams so that the mesh is cut into disc topology. Then, we treat a combed $N$-directional $\left\{v_0,\cdots,v_{N-1}\right\}$ as a set of candidate gradients for $N$ vertex-based functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. On the cut mesh, we then solve the Poisson problem:
+
+$$ F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - v_i\right|^2}} $$.
+
+Consider a seam edge $e_{ij}$ between original vertices $v_i$ and $v_j$, and between adjacent faces $f_k$ and $f_l$. The two vertices are then cut into four corners $v_{i,k},v_{j,k},v_{i,l},v_{j,l}$. Note that some corners might be identical, if the seam edge is at a singularity. across the seam edge, we enforce the (linear) seamless conditions:
+
+$$F_{i,k}= \pi_e \cdot F_{i,l}  + T_e,$$
+
+where $\pi_e:N \times N$ is a permutation matrix attached to the (dual) edge $e$, matching values in the integrated function $F$ as it did for the directional field $v$. and $T_e:N \times 1$ is a *translational jump* (also: period jump), that encodes the discontinuity in $F$ across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a quad-mesh parameterization, it is the number of quads in such a loop.
+
+Every parameterization that obeys the seamless constraint is seamless; it can be easily shown [^Kaelberer_2007] that the translational jump $T_e$ is in fact uniform across seam curves between singularities. Thus, the amount of such jumps is the number of seam curves in the mesh.
+
+### 501 Seamless Parameterization
+
+In [Example 501]({{ repo_url }}/501_SeamlessParameterization/main.cpp) we demonstrate the computation of such a parameterization. The core functionality is in these lines:
+
+```cpp
+directional::ParameterizationData pd;
+directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
+  ...
+directional::setup_parameterization(N, VMeshWhole, FMeshWhole, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+ double lengthRatio=0.01;
+ bool isInteger = false;  //do not do translational seamless.
+ std::cout<<"Solving parameterization"<<std::endl;
+ directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUV);
+```
+
+```directional::cut_mesh_with_singularities()``` encodes the the seams in ```pd.face2cut```. ```directional::setup_parameterization()``` creates the Poisson system and the constraints, and creates the actual cut mesh in ```VMeshCut``` and ```FMeshCut```.  ```directional::parameterize()``` solves the parameterization, and puts the result in ```cutUV```. The functionality is currently limited only to $2^2$ fields ($N=4$) with symmetry assumed. ```lengthRatio``` encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal.
+
+The variable ```isInteger``` refers set to ```false``` which means that the parameterization would only be *rotationally-seamless*; the appearance across the seams would align only in direction. The next example considers the stronger option.
+
+
+![([Example 501]({{ repo_url }}/501_SeamlessParameterization/main.cpp)) Left: directional field. Right: rotationally-seamless parameterization. Note that the direction of the texture aligns across seams.](images/501_SeamlessParameterization.png)
+
+### 502 Mixed-Integer Parametrization
+
+To use seamless parameterizations for the purpose of quad meshing, we require the texture to be *fully-seamless* across seams. With this, the seams are virtually invisible on the cut mesh. This can be done by setting all $T_e$ to values in $2\mathbb{Z}$ (for why double integers are necessary, see [^Kaelberer_2007]). The solving is done by simple iterative rounding [^Bommes_2009]: we choose the value in $T_e$ which is the closest to a double integer, round and fix it, and repeat until all $T_e$ are rounded. Note that CoMISo [^Bommes_2012] has a more sophisticated Gauss-Seidel rounding algorithm that is more efficient; however, we include an implementation in Directional to avoid the dependency, and since this will be used for general $N$-function parameterization in future versions of Directional.
+
+Mixed-integer parameterization is demonstrated in [Example 502]({{ repo_url }}/502_MixedIntegerParameterization/main.cpp). The essential difference from [Example 501]({{ repo_url }}/501_SeamlessParameterization/main.cpp) is by simply setting ```isInteger=true```, when passed to ```directional::parameterize()```.
+
+*Note:* The input field ```horsers-cf.rawfield``` is computed according to [Example 303](#303-polycurl-reduction) to have negligible PolyCurl. As such, the rotationally-seamless parameterization has a very low error ($L_\infty$ of $1.25778\cdot 10^{-5})$). The rounding iterations incur some error, but it is rather low as well (after rounding $116$ variables it climbs to $L_\infty=0.657496$); we therefore recommend to warm-start a mixed-integer parameterization with a curl-reduced directional field.
+
+
+![([Example 502]({{ repo_url }}/502_MixedIntegerParameterization/main.cpp)) Top Left: directional field. Top right: rotationally-seamless parameterization. Bottom: fully-seamless parameterization.](images/502_MixedIntegerParameterization.png)
 
 
 ## Outlook for continuing development
@@ -290,15 +331,17 @@ Directional is a budding project, and there are many algorithms in the state-of-
 ## References
 [^azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
 [^bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Mixed-integer quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf), 2009.
+[^Bommes_2012]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Practical Mixed-Integer Optimization for Geometry Processing](https://www.graphics.rwth-aachen.de/publication/0319/), 2012.
 [^bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly, [Shape-Up: Shaping Discrete Geometry with Projections](http://lgg.epfl.ch/publications/2012/shapeup.pdf), 2012.
 [^crane_2010]: Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, [Trivial Connections on Discrete Surfaces](https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/), 2010.
 [^diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Designing N-PolyVector Fields with Complex Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014.
 [^diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015.
 [^degoes_2016]: Fernando de Goes, Mathieu Desbrun, Yiying Tong, [Vector Field Processing on Triangle Meshes](http://geometry.caltech.edu/pubs/dGDT16.pdf), 2016.
-[^knoppel_2013]: Felix Knöppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
+[^Kaelberer_2007]: Felix K&auml;lberer, Matthias Nieser, Konrad Polthier, [QuadCover - Surface Parameterization using Branched Coverings](http://www.mi.fu-berlin.de/en/math/groups/ag-geom/publications/ressources/db/KNP07-QuadCover.pdf), 2007
+[^knoppel_2013]: Felix Kn&ouml;ppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
 [^ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy, [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
 [^liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, [General Planar Quadrilateral Mesh Design Using Conjugate Direction Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf), 2008.
+[^Myles_2014]: Ashish Myles, Nico Pietroni, Denis Zorin, [Robust Field-aligned Global Parametrization](http://vcg.isti.cnr.it/Publications/2014/MPZ14/), 2014.
 [^solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf), 2017.
 [^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
-
