@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(libdirectional_tutorials)
+project(Directional_tutorials)
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
@@ -13,9 +13,9 @@ option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
 
-### Adding libIGL and libdirectional: choose the path to your local copy
+### Adding libIGL and Directional: choose the path to your local copy
 find_package(LIBIGL REQUIRED QUIET)
-include(libdirectional)
+include(Directional)
 
 ### Output directories
 if(MSVC)

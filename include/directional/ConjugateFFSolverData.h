@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a simple c++ geometry processing library.
+// This file is part of Directional, a simple c++ geometry processing library.
 //
 // Copyright (C) 2013 Olga Diamanti, 2015 Alec Jacobson, 2018 Amir Vaxman
 //
@@ -8,6 +8,7 @@
 
 #ifndef DIRECTIONAL_CONJUGATE_FF_SOLVER_DATA_H
 #define DIRECTIONAL_CONJUGATE_FF_SOLVER_DATA_H
+
 #include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <Eigen/Sparse>

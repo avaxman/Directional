@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -7,6 +7,13 @@
 
 #ifndef DIRECTIONAL_PARAMETERIZE_H
 #define DIRECTIONAL_PARAMETERIZE_H
+
+#include <iostream>
+#include <fstream>
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
@@ -19,32 +26,23 @@
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/setup_parameterization.h>
-#include <iostream>
-#include <fstream>
-
-#include <Eigen/Core>
-#include <queue>
-#include <vector>
-#include <cmath>
 
 
 namespace directional
 {
-  // Creates a parameterization of (currently supported) (u,v) functions from a directional field by solving the Poisson equation, with custom edge weights
+  // Creates a parameterization of (currently supported) (u,v, -u,-v) functions from a directional field by solving the Poisson equation, with custom edge weights
   // Input:
-  //  wholeV:      #V x 3 vertex coordinates of the original mesh
-  //  wholeF:      #F x 3 face vertex indices of the original mesh
-  //  FE:          #F x 3 faces to edges indices
-  //  rawField:    #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size. (currently only supporting sign-symmetric 4-fields)
-  //  edgeWeights  #E x 3  weight per edge (for the Poisson system)
-  //  edgeLength   #edgeLength of quad mesh (scaling the gradient)
-  //  vt2cMat:     #V+#T (translational jumps)  x #cutV - a map between whole vertex values and the translational jump to the vertices of the cut mesh
-  //  constraintMat: matrix of constraints around singularities and nodes in the cut graph
-  //  cutV:        #cV x 3 vertices of the cut mesh
-  //  cutF:      #F x 3 faces of the cut mesh
-  //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be integer
-  //  Output:
-  // cutUV:        #cV x 2 (u,v) coordinates per cut vertex
+  //  wholeV:       #V x 3 vertex coordinates of the original mesh.
+  //  wholeF:       #F x 3 face vertex indices of the original mesh.
+  //  FE:           #F x 3 faces to edges indices.
+  //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size. (currently only supporting sign-symmetric 4-fields).
+  //  lengthRatio   #edgeLength/bounding_box_diagonal of quad mesh (scaling the gradient).
+  //  pd:           Parameterization data obtained from directional::setup_parameterization.
+  //  cutV:         #cV x 3 vertices of the cut mesh.
+  //  cutF:         #F x 3 faces of the cut mesh.
+  //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to double integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be double integer.
+  // Output:
+  //  cutUV:        #cV x 2 (u,v) coordinates per cut vertex.
   IGL_INLINE void parameterize(const Eigen::MatrixXd& wholeV,
                                const Eigen::MatrixXi& wholeF,
                                const Eigen::MatrixXi& FE,
@@ -60,6 +58,8 @@ namespace directional
   {
     using namespace Eigen;
     using namespace std;
+    
+    assert (rawField.cols()==12 && "Currently only supporting N=4 parameterization");
     
     VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff()+1,1.0);
     double length = igl::bounding_box_diagonal(wholeV)*lengthRatio;

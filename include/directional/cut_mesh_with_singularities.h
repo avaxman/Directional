@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 //
 // Copyright (C) 2015 Olga Diamanti <olga.diam@gmail.com>, 2018 Amir vaxman
 //
@@ -8,6 +8,7 @@
 
 #ifndef DIRECTIONAL_CUT_MESH_WITH_SINGULARITIES
 #define DIRECTIONAL_CUT_MESH_WITH_SINGULARITIES
+
 #include <igl/igl_inline.h>
 
 #include <Eigen/Core>

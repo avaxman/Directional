@@ -1,6 +1,6 @@
-// This file is part of libigl, a simple c++ geometry processing library.
+// This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2015 Olga Diamanti <olga.diam@gmail.com>
+// Copyright (C) 2015 Olga Diamanti <olga.diam@gmail.com>, 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -8,10 +8,10 @@
 
 #ifndef DIRECTIONAL_POLYCURL_REDUCTION
 #define DIRECTIONAL_POLYCURL_REDUCTION
-#include <igl/igl_inline.h>
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <igl/igl_inline.h>
 
 namespace directional {
   // Compute a curl-free frame field from user constraints, optionally starting
@@ -23,7 +23,7 @@ namespace directional {
 
   // All data necessary for solving. Gets initialized from the original field
   //  and gets updated during each solve.
-  template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC> class PolyCurlReductionSolverData;
+  class PolyCurlReductionSolverData;
 
 
   // Precomputes matrices and necessary initial variables from the mesh and the
@@ -40,15 +40,13 @@ namespace directional {
   // Returns:
   //   data              an PolyCurlReductionSolverData object that holds all intermediate
   //                     data needed by the solve routine, with correctly initialized values.
-  //
-  template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-  IGL_INLINE void polycurl_reduction_precompute(const Eigen::PlainObjectBase<DerivedV>& V,
-                                                    const Eigen::PlainObjectBase<DerivedF>& F,
-                                                    const Eigen::VectorXi& b,
-                                                    const Eigen::PlainObjectBase<DerivedC>& bc,
-                                                    const Eigen::VectorXi& constraint_level,
-                                                    const Eigen::PlainObjectBase<DerivedFF>& original_field,
-                                                    directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &data);
+  IGL_INLINE void polycurl_reduction_precompute(const Eigen::MatrixXd& V,
+                                                const Eigen::MatrixXi& F,
+                                                const Eigen::VectorXi& b,
+                                                const Eigen::MatrixXd& bc,
+                                                const Eigen::VectorXi& constraintLevel,
+                                                const Eigen::MatrixXd& originalField,
+                                                directional::PolyCurlReductionSolverData &data);
 
 
   // Given the current estimate of the field, performs one round of optimization
@@ -65,12 +63,10 @@ namespace directional {
   //                                needs to be set to true during the first call to solve(). If unsure, set to true.
   // Returns:
   //   current_field                updated estimate for the integrable field
-  //
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-  IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata,
-    polycurl_reduction_parameters &params,
-                                               Eigen::PlainObjectBase<DerivedFF>& current_field,
-                                               bool current_field_is_not_ccw);
+  IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData &cffsoldata,
+                                           polycurl_reduction_parameters &params,
+                                           Eigen::MatrixXd& currentField,
+                                           bool fieldNotCCW);
 
 
 };
@@ -107,7 +103,6 @@ struct directional::polycurl_reduction_parameters
 };
 
 //solver data
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
 class directional::PolyCurlReductionSolverData
 {
 public:
@@ -133,7 +128,7 @@ public:
   //per-edge angles (for parallel transport)
   Eigen::VectorXd K;
   //local bases
-  DerivedV B1, B2, FN;
+  Eigen::MatrixXd B1, B2, FN;
 
   //Solver Data
   Eigen::VectorXd residuals;
@@ -199,33 +194,31 @@ public:
   std::vector<Eigen::Triplet<double> > Hess_triplets;
   Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
 
-  IGL_INLINE void precomputeMesh(const Eigen::PlainObjectBase<DerivedV> &_V,
-                                 const Eigen::PlainObjectBase<DerivedF> &_F);
+  IGL_INLINE void precomputeMesh(const Eigen::MatrixXd &_V,
+                                 const Eigen::MatrixXi &_F);
   IGL_INLINE void computeInteriorEdges();
   IGL_INLINE void computeJacobianPattern();
   IGL_INLINE void computeHessianPattern();
   IGL_INLINE void computeNewHessValues();
-  IGL_INLINE void initializeOriginalVariable(const Eigen::PlainObjectBase<DerivedFF>& original_field);
+  IGL_INLINE void initializeOriginalVariable(const Eigen::MatrixXd& originalField);
   IGL_INLINE void initializeConstraints(const Eigen::VectorXi& b,
-                                        const Eigen::PlainObjectBase<DerivedC>& bc,
-                                        const Eigen::VectorXi& constraint_level);
+                                        const Eigen::MatrixXd& bc,
+                                        const Eigen::VectorXi& constraintLevel);
   IGL_INLINE void makeFieldCCW(Eigen::MatrixXd &sol3D);
 
 public:
   IGL_INLINE PolyCurlReductionSolverData();
 
   IGL_INLINE PolyCurlReductionSolverData(
-                                     const Eigen::PlainObjectBase<DerivedV> &_V,
-                                     const Eigen::PlainObjectBase<DerivedF> &_F,
+                                     const Eigen::MatrixXd &_V,
+                                     const Eigen::MatrixXi &_F,
                                      const Eigen::VectorXi& b,
-                                     const Eigen::VectorXi& constraint_level,
-                                     const Eigen::PlainObjectBase<DerivedFF>& original_field);
+                                     const Eigen::VectorXi& constraintLevel,
+                                     const Eigen::MatrixXd& originalField);
 
 };
 
-#ifndef IGL_STATIC_LIBRARY
 #include "polycurl_reduction.cpp"
+
+
 #endif
-
-
-#endif /* defined(DIRECTIONAL_POLYCURL_REDUCTION_FIELDS) */

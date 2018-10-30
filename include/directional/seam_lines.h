@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -6,19 +6,31 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_SEAM_LINES_H
 #define DIRECTIONAL_SEAM_LINES_H
+
+#include <string>
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/avg_edge_length.h>
 #include <directional/visualization_schemes.h>
 #include <directional/line_cylinders.h>
-#include <Eigen/Core>
-#include <string>
-#include <vector>
-#include <cmath> 
-
 
 namespace directional
 {
   
+  //creating meshes for seam lines, as curves of cylinders
+  // Input:
+  //  V:      #V X 3 vertex coordinates.
+  //  F:      #F X 3 mesh triangles.
+  //  EV:     #E x 2 edges to vertices indices
+  //  seams:  which edges of EV are seams
+  //  width:  the width of the seam lines
+  //  res:    the resolution of the cylinder bases.
+  // Output:
+  //  VSeams:          The vertices of the seam cylinders.
+  //  FSeams:          The faces of the seam cylinders.
+  //  CSeams:         The colors of the seam cylinders (per face).
   void IGL_INLINE seam_lines(const Eigen::MatrixXd &V,
                              const Eigen::MatrixXi &F,
                              const Eigen::MatrixXi &EV,
@@ -44,6 +56,8 @@ namespace directional
     directional::line_cylinders(P1, P2, width, directional::default_seam_color().replicate(P1.rows(),1), res, VSeams, FSeams, CSeams);
   }
   
+  
+  //A version with default width and resolution.
   void IGL_INLINE seam_lines(const Eigen::MatrixXd &V,
                              const Eigen::MatrixXi &F,
                              const Eigen::MatrixXi &EV,

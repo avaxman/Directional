@@ -54,7 +54,7 @@ int iter=0;
 directional::polycurl_reduction_parameters params;
 
 // Solver data (needed for precomputation)
-directional::PolyCurlReductionSolverData<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::MatrixXd, Eigen::MatrixXd> pcrdata;
+directional::PolyCurlReductionSolverData pcrdata;
 
 
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;

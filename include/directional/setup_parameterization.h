@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -7,6 +7,11 @@
 
 #ifndef DIRECTIONAL_SETUP_PARAMETERIZATION_H
 #define DIRECTIONAL_SETUP_PARAMETERIZATION_H
+
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
@@ -16,13 +21,6 @@
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/dcel.h>
-#include <directional/polygonal_edge_topology.h>
-
-#include <Eigen/Core>
-#include <queue>
-#include <vector>
-#include <cmath>
-
 
 namespace directional
 {
@@ -41,21 +39,28 @@ namespace directional
   };
   
   
-  // Reorders the vectors in a face (preserving CCW) so that the principal matching across most edges, except a small set (called a cut), is an identity, making it ready for cutting and parameterization.
-  // Important: if the Raw field in not CCW ordered, the result is unpredictable.
+  // Setting up the seamless parameterization algorithm
   // Input:
-  //  wholeV:      #V x 3 vertex coordinates
-  //  wholeF:      #F x 3 face vertex indices
-  //  EV:     #E x 2 edges to vertices indices
-  //  EF:     #E x 2 edges to faces indices
-  // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Expect most matching =0 due to the combing.
+  //  N:          The degree of the field.
+  //  wholeV:     #V x 3 vertex coordinates
+  //  wholeF:     #F x 3 face vertex indices
+  //  EV:         #E x 2 edges to vertices indices
+  //  EF:         #E x 2 edges to faces indices
+  // matching:    #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Most matching should be zero due to prior combing.
+  // singVertices:list of singular vertices in wholeV.
   // Output:
+  //  pd:         parameterization data subsequently used in directional::parameterize();
+  //  cutV:       the Vertices of the cut mesh.
+  //  cutF:       The Vaces of the cut mesh.
   
   IGL_INLINE void setup_parameterization(const int N,
                                          const Eigen::MatrixXd& wholeV,
                                          const Eigen::MatrixXi& wholeF,
+                                         const Eigen::MatrixXi& EV,
+                                         const Eigen::MatrixXi& EF,
+                                         const Eigen::MatrixXi& FE,
                                          const Eigen::VectorXi& matching,
-                                         const Eigen::VectorXi& singPositions,
+                                         const Eigen::VectorXi& singVertices,
                                          ParameterizationData& pd,
                                          Eigen::MatrixXd& cutV,
                                          Eigen::MatrixXi& cutF)
@@ -64,19 +69,45 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    assert(N==4);  //currently only working with 4-symmetry
+    assert(N==4 && "Seamless Parameterization currently only supports N=4");
     
-    MatrixXi EV, FE, EF, EFi,EH, FH;
+    MatrixXi EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH,prevH,twinH,innerEdges;
     
     VectorXi D=VectorXi::Constant(wholeF.rows(),3);
     VectorXi isSingular=VectorXi::Zero(wholeV.rows());
-    for (int i=0;i<singPositions.size();i++)
-      isSingular(singPositions(i))=1;
+    for (int i=0;i<singVertices.size();i++)
+      isSingular(singVertices(i))=1;
     
     pd.constrainedVertices=VectorXi::Zero(wholeV.rows());
-    hedra::polygonal_edge_topology(D,wholeF,EV,FE,EF,EFi, FEs,innerEdges);
+    
+    //computing extra topological information
+    std::vector<int> innerEdgesVec;
+    EFi=Eigen::MatrixXi::Constant(EF.rows(), 2,-1);
+    FEs=Eigen::MatrixXd::Zero(FE.rows(),FE.cols());
+    for (int i=0;i<EF.rows();i++)
+      for (int k=0;k<2;k++){
+        if (EF(i,k)==-1)
+          continue;
+        
+        for (int j=0;j<D(EF(i,k));j++)
+          if (FE(EF(i,k),j)==i)
+            EFi(i,k)=j;
+      }
+    
+    for (int i=0;i<EF.rows();i++){
+      if (EFi(i,0)!=-1) FEs(EF(i,0),EFi(i,0))=1.0;
+      if (EFi(i,1)!=-1) FEs(EF(i,1),EFi(i,1))=-1.0;
+      if ((EF(i,0)!=-1)&&(EF(i,1)!=-1))
+        innerEdgesVec.push_back(i);
+    }
+    
+    innerEdges.resize(innerEdgesVec.size());
+    for (int i=0;i<innerEdgesVec.size();i++)
+      innerEdges(i)=innerEdgesVec[i];
+    
+    //hedra::polygonal_edge_topology(D,wholeF,EV,FE,EF,EFi, FEs,innerEdges);
     hedra::dcel(D,wholeF,EV,EF,EFi,innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH, twinH);
     
     VectorXi isBoundary = VectorXi::Zero(wholeV.rows());

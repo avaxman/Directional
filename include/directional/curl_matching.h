@@ -1,21 +1,22 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
+
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_CURL_MATCHING_H
 #define DIRECTIONAL_CURL_MATCHING_H
+
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
 #include <directional/representative_to_raw.h>
-
-#include <Eigen/Core>
-#include <vector>
-#include <cmath>
-
 
 namespace directional
 {
@@ -92,9 +93,6 @@ namespace directional
       matching(i) =indexMinFromZero;
       curlNorm(i)= sqrt(minCurl);
       
-      
-      //std::cout<<"minCurl: "<<minCurl<<endl;
-      
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
       double currEffort=0;
       for (int j = 0; j < N; j++) {
@@ -109,12 +107,7 @@ namespace directional
       }
       
       effort(i) = currEffort;
-      
-      //cout<<"currEffort/(2.0*igl::PI): "<<currEffort/(2.0*igl::PI)<<endl;
-      
-      //matching(i)=indexMinFromZero-round(currEffort/(2.0*igl::PI));
-      //effort(i)=currEffort+2*igl::PI*(double)(indexMinFromZero-matching(i));
-      
+
     }
     
   }

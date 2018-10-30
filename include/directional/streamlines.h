@@ -1,6 +1,6 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>, 2018 Amir Vaxman
+// Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>, 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -45,7 +45,7 @@ namespace directional
   
   // Given a mesh and a field the function computes the /data/ necessary for tracing the field'
   // streamlines, and creates the initial /state/ for the tracing.
-  // Inputs:
+  // Input:
   //   V             #V by 3 list of mesh vertex coordinates
   //   F             #F by 3 list of mesh faces
   //   temp_field    #F by 3n list of the 3D coordinates of the per-face vectors
@@ -53,7 +53,7 @@ namespace directional
   //   treat_as_symmetric
   //              if true, adds n symmetry directions to the field (N = 2n). Else N = n
   //   percentage    [0-1] percentage of faces sampled
-  // Outputs:
+  // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
   IGL_INLINE void streamlines_init(
@@ -79,10 +79,5 @@ namespace directional
                                    
                                    );
 }
-
-
-#ifndef IGL_STATIC_LIBRARY
-#  include "streamlines.cpp"
-#endif
 
 #endif

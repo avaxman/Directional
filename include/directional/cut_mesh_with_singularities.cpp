@@ -1,10 +1,11 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // 
 // Copyright (C) 2016 Alec Jacobson <alecjacobson@gmail.com>, 2018 Amir Vaxman
 // 
 // This Source Code Form is subject to the terms of the Mozilla Public License 
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can 
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #include <directional/cut_mesh_with_singularities.h>
 #include <directional/dijkstra.h>
 #include <igl/vertex_triangle_adjacency.h>

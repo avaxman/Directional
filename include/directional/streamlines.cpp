@@ -1,23 +1,21 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>
+// Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>, 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
+#include <Eigen/Geometry>
 #include <igl/edge_topology.h>
 #include <igl/sort_vectors_ccw.h>
-#include "streamlines.h"
 #include <igl/per_face_normals.h>
 #include <igl/segment_segment_intersect.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/barycenter.h>
 #include <igl/slice.h>
 #include <directional/principal_matching.h>
-
-#include <Eigen/Geometry>
-
+#include <directional/streamlines.h>
 
 
 IGL_INLINE void directional::streamlines_init(
@@ -36,7 +34,6 @@ IGL_INLINE void directional::streamlines_init(
   
   // prepare vector field
   // --------------------------
-  //int half_degree = temp_field.cols() / 3;
   int degree = temp_field.cols()/3;
   data.degree = degree;
   
@@ -49,10 +46,7 @@ IGL_INLINE void directional::streamlines_init(
   for (unsigned i = 0; i < F.rows(); ++i){
     const Eigen::RowVectorXd &n = FN.row(i);
     Eigen::RowVectorXd temp(1, degree * 3);
-    //if (treat_as_symmetric)
-    //  temp << temp_field.row(i), -temp_field.row(i);
-    //else
-      temp = temp_field.row(i);
+    temp = temp_field.row(i);
     igl::sort_vectors_ccw(temp, n, order, sorted);
     
     // project vectors to tangent plane
@@ -158,8 +152,6 @@ IGL_INLINE void directional::streamlines_next(
         }
         
       }
-      
-      
     }
   }
 }

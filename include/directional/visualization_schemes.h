@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -19,6 +19,7 @@ namespace directional
     return Eigen::RowVector3d::Constant(1.0);
   }
   
+  //Color for faces that are selected for editing and constraints
   Eigen::RowVector3d IGL_INLINE selected_face_color(){
     return Eigen::RowVector3d(0.7,0.2,0.2);
   }
@@ -28,15 +29,17 @@ namespace directional
     return Eigen::RowVector3d(0.0,0.2,1.0);
   }
   
+  //Glyphs in selected faces
   Eigen::RowVector3d IGL_INLINE selected_face_glyph_color(){
     return Eigen::RowVector3d(223.0/255.0, 210.0/255.0, 16.0/255.0);
   }
   
+  //The selected glyph currently edited from a selected face
   Eigen::RowVector3d IGL_INLINE selected_vector_glyph_color(){
     return Eigen::RowVector3d(0.0,1.0,0.5);
   }
   
-  //returns field with colors by indices in each directional object
+  //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
   Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field){
     
     Eigen::Matrix<double, 9,3> glyphPrincipalColors;
@@ -59,10 +62,8 @@ namespace directional
     return fullGlyphColors;
   }
   
-  //returns the default singularity colors
-  //supports up to N=6
+  //Jet-based singularity colors
   Eigen::MatrixXd IGL_INLINE default_singularity_colors(const int N){
-    assert ((N>=1) && (N<=6));
     Eigen::MatrixXd fullColors;
     Eigen::VectorXd NList(2*N);
     for (int i=0;i<N;i++){
@@ -73,6 +74,7 @@ namespace directional
     return fullColors;
   }
   
+  //Colors for emphasized edges, mostly seams and cuts
   Eigen::RowVector3d IGL_INLINE default_seam_color(){
     return Eigen::RowVector3d(0.0,0.0,0.0);
   }

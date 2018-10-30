@@ -1,4 +1,4 @@
-// This file is part of libigl, a simple c++ geometry processing library.
+// This file is part of Directional, a library for directional field processing.
 //
 // Copyright (C) 2014 Olga Diamanti <olga.diam@gmail.com>, 2018 Amir Vaxman
 //
@@ -9,6 +9,7 @@
 
 #ifndef DIRECTIONAL_CONJUGATE_FRAME_FIELDS_H
 #define DIRECTIONAL_CONJUGATE_FRAME_FIELDS_H
+
 #include <igl/igl_inline.h>
 #include "ConjugateFFSolverData.h"
 #include <Eigen/Core>
@@ -42,9 +43,6 @@ namespace directional {
   
 };
 
-
-#ifndef IGL_STATIC_LIBRARY
 #include "conjugate_frame_fields.cpp"
-#endif
 
 #endif

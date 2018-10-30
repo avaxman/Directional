@@ -1,4 +1,4 @@
-//This file is part of libdirectional, a library for directional field processing.
+//This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2016 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License

@@ -1,13 +1,13 @@
-// This file is part of libigl, a simple c++ geometry processing library.
+// This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2015 Olga Diamanti <olga.diam@gmail.com>
+// Copyright (C) 2015 Olga Diamanti <olga.diam@gmail.com>, 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <directional/polycurl_reduction.h>
-#include <directional/field_local_global_conversions.h>
+
+#include <iostream>
 #include <igl/parallel_transport_angles.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
@@ -16,7 +16,9 @@
 #include <igl/slice.h>
 #include <igl/slice_into.h>
 #include <igl/sort_vectors_ccw.h>
-#include <iostream>
+#include <directional/polycurl_reduction.h>
+#include <directional/field_local_global_conversions.h>
+
 
 IGL_INLINE directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
 numIter(5),
@@ -34,14 +36,14 @@ tikh_gamma(1e-8)
 
 
 
-
-namespace directional {
-  template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
+namespace directional
+{
+  
   class PolyCurlReductionSolver
   {
   private:
 
-    PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &data;
+    PolyCurlReductionSolverData &data;
     //Symbolic calculations
     IGL_INLINE void rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
                                     const double &s,
@@ -75,11 +77,11 @@ namespace directional {
                                        Eigen::MatrixXd &Jac = *(Eigen::MatrixXd*)NULL);
 
   public:
-    IGL_INLINE PolyCurlReductionSolver(PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata);
+    IGL_INLINE PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata);
 
     IGL_INLINE bool solve(polycurl_reduction_parameters &params,
-                          Eigen::PlainObjectBase<DerivedFF>& current_field,
-                          bool current_field_is_not_ccw);
+                          Eigen::MatrixXd& currentField,
+                          bool fieldNotCCW);
 
     IGL_INLINE void solveGaussNewton(polycurl_reduction_parameters &params,
                                      const Eigen::VectorXd &x_initial,
@@ -127,15 +129,10 @@ namespace directional {
 
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::PolyCurlReductionSolverData()
-{}
+IGL_INLINE directional::PolyCurlReductionSolverData::PolyCurlReductionSolverData(){}
 
-
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-precomputeMesh(const Eigen::PlainObjectBase<DerivedV> &_V,
-               const Eigen::PlainObjectBase<DerivedF> &_F)
+IGL_INLINE void directional::PolyCurlReductionSolverData::precomputeMesh(const Eigen::MatrixXd &_V,
+                                                                         const Eigen::MatrixXi &_F)
 {
   numV = _V.rows();
   numF = _F.rows();
@@ -151,11 +148,11 @@ precomputeMesh(const Eigen::PlainObjectBase<DerivedV> &_V,
     EVecNorm.row(k) = (_V.row(E(k,1))-_V.row(E(k,0))).normalized();
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-initializeConstraints(const Eigen::VectorXi& b,
-                      const Eigen::PlainObjectBase<DerivedC>& bc,
-                      const Eigen::VectorXi& constraint_level)
+
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::initializeConstraints(const Eigen::VectorXi& b,
+                                                                                const Eigen::MatrixXd& bc,
+                                                                                const Eigen::VectorXi& constraintLevel)
 {
   //save constrained
   Eigen::VectorXi iSorted, constrained_unsorted;
@@ -165,7 +162,7 @@ initializeConstraints(const Eigen::VectorXi& b,
   indInConstrained.setConstant(numF,1,-1);
   for (int k =0; k<b.size(); ++k)
   {
-    is_constrained_face[b[k]] = constraint_level[k];
+    is_constrained_face[b[k]] = constraintLevel[k];
     for (int i=0; i<2;++i)
     {
       int xi = 2*2*b[k] + 2*i +0;
@@ -177,13 +174,12 @@ initializeConstraints(const Eigen::VectorXi& b,
   }
   //sort in descending order (so removing rows will work)
   igl::sort(constrained_unsorted, 1, false, constrained, iSorted);
-  constrained_vec3 = bc.template cast<double>();
+  constrained_vec3 = bc.cast<double>();
 
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-makeFieldCCW(Eigen::MatrixXd &sol3D)
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::makeFieldCCW(Eigen::MatrixXd &sol3D)
 {
   //sort ccw
   Eigen::RowVectorXd t;
@@ -221,12 +217,11 @@ makeFieldCCW(Eigen::MatrixXd &sol3D)
   }
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-initializeOriginalVariable(const Eigen::PlainObjectBase<DerivedFF>& original_field)
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::initializeOriginalVariable(const Eigen::MatrixXd& original_field)
 {
   Eigen::MatrixXd sol2D;
-  Eigen::MatrixXd sol3D = original_field.template cast<double>();
+  Eigen::MatrixXd sol3D = original_field.cast<double>();
   makeFieldCCW(sol3D);
   igl::global2local(B1, B2, sol3D, sol2D);
   xOriginal.setZero(numVariables);
@@ -235,9 +230,8 @@ initializeOriginalVariable(const Eigen::PlainObjectBase<DerivedFF>& original_fie
 
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-computeInteriorEdges()
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::computeInteriorEdges()
 {
   Eigen::VectorXi isBorderEdge;
   // Flag border edges
@@ -270,11 +264,9 @@ computeInteriorEdges()
 
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-add_Jacobian_to_svector(const int &toplace,
-                        const Eigen::MatrixXd &tJac,
-                        Eigen::VectorXd &SS_Jac)
+IGL_INLINE void directional::PolyCurlReductionSolverData::add_Jacobian_to_svector(const int &toplace,
+                                                                                  const Eigen::MatrixXd &tJac,
+                                                                                  Eigen::VectorXd &SS_Jac)
 {
   int numInnerRows = tJac.rows();
   int numInnerCols = tJac.cols();
@@ -284,14 +276,13 @@ add_Jacobian_to_svector(const int &toplace,
       SS_Jac(ind) = tJac(j,k);
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-add_jac_indices_face(const int numInnerRows,
-                     const int numInnerCols,
-                     const int startRowInJacobian,
-                     const int startIndexInVectors,
-                     Eigen::VectorXi &Rows,
-                     Eigen::VectorXi &Columns)
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_face(const int numInnerRows,
+                                                                               const int numInnerCols,
+                                                                               const int startRowInJacobian,
+                                                                               const int startIndexInVectors,
+                                                                               Eigen::VectorXi &Rows,
+                                                                               Eigen::VectorXi &Columns)
 {
   for (int fi=0; fi<numF; ++fi)
   {
@@ -303,16 +294,15 @@ add_jac_indices_face(const int numInnerRows,
 }
 
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-face_Jacobian_indices(const int &startRow,
-                      const int &toplace,
-                      const int& fi,
-                      const int& half_degree,
-                      const int &numInnerRows,
-                      const int &numInnerCols,
-                      Eigen::VectorXi &rows,
-                      Eigen::VectorXi &columns)
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::face_Jacobian_indices(const int &startRow,
+                                                                                const int &toplace,
+                                                                                const int& fi,
+                                                                                const int& half_degree,
+                                                                                const int &numInnerRows,
+                                                                                const int &numInnerCols,
+                                                                                Eigen::VectorXi &rows,
+                                                                                Eigen::VectorXi &columns)
 {
   int ind = toplace;
   for (int j=0; j<numInnerRows; ++j)
@@ -327,14 +317,13 @@ face_Jacobian_indices(const int &startRow,
   }
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-add_jac_indices_edge(const int numInnerRows,
-                     const int numInnerCols,
-                     const int startRowInJacobian,
-                     const int startIndexInVectors,
-                     Eigen::VectorXi &Rows,
-                     Eigen::VectorXi &Columns)
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_edge(const int numInnerRows,
+                                                                               const int numInnerCols,
+                                                                               const int startRowInJacobian,
+                                                                               const int startIndexInVectors,
+                                                                               Eigen::VectorXi &Rows,
+                                                                               Eigen::VectorXi &Columns)
 {
   for (int ii=0; ii<numInteriorEdges; ++ii)
   {
@@ -352,17 +341,15 @@ add_jac_indices_edge(const int numInnerRows,
 }
 
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-edge_Jacobian_indices(const int &startRow,
-                      const int &toplace,
-                      const int& a,
-                      const int& b,
-                      const int& half_degree,
-                      const int &numInnerRows,
-                      const int &numInnerCols,
-                      Eigen::VectorXi &rows,
-                      Eigen::VectorXi &columns)
+IGL_INLINE void directional::PolyCurlReductionSolverData::edge_Jacobian_indices(const int &startRow,
+                                                                                const int &toplace,
+                                                                                const int& a,
+                                                                                const int& b,
+                                                                                const int& half_degree,
+                                                                                const int &numInnerRows,
+                                                                                const int &numInnerCols,
+                                                                                Eigen::VectorXi &rows,
+                                                                                Eigen::VectorXi &columns)
 {
   int ind = toplace;
   for (int j=0; j<numInnerRows; ++j)
@@ -378,9 +365,8 @@ edge_Jacobian_indices(const int &startRow,
   }
 }
 
-template<typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-computeJacobianPattern()
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::computeJacobianPattern()
 {
   num_residuals_smooth = 4*numInteriorEdges;
   num_residuals_close = 4*numF;
@@ -462,9 +448,8 @@ computeJacobianPattern()
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-computeHessianPattern()
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::computeHessianPattern()
 {
   //II_Jac is sorted in ascending order already
   int starti = 0;
@@ -497,9 +482,8 @@ computeHessianPattern()
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC>::
-computeNewHessValues()
+
+IGL_INLINE void directional::PolyCurlReductionSolverData::computeNewHessValues()
 {
   for (int i =0; i<Hess_triplets.size(); ++i)
     Hess_triplets[i] = Eigen::Triplet<double>(Hess_triplets[i].row(),
@@ -511,21 +495,18 @@ computeNewHessValues()
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::PolyCurlReductionSolver( PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata):
-data(cffsoldata)
+
+IGL_INLINE directional::PolyCurlReductionSolver::PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata):data(cffsoldata)
 { };
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE bool directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-solve(polycurl_reduction_parameters &params,
-      Eigen::PlainObjectBase<DerivedFF>& current_field,
-      bool current_field_is_not_ccw)
+IGL_INLINE bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_parameters &params,
+                                                            Eigen::MatrixXd& currentField,
+                                                            bool fieldNotCCW)
 {
   Eigen::MatrixXd sol2D;
-  Eigen::MatrixXd sol3D = current_field.template cast<double>();
-  if (current_field_is_not_ccw)
+  Eigen::MatrixXd sol3D = currentField.cast<double>();
+  if (fieldNotCCW)
     data.makeFieldCCW(sol3D);
 
   igl::global2local(data.B1, data.B2, sol3D, sol2D);
@@ -540,15 +521,14 @@ solve(polycurl_reduction_parameters &params,
   for (int i =0; i<data.numF; i++)
     sol2D.row(i) = x.segment(i*2*2, 2*2);
   igl::local2global(data.B1, data.B2, sol2D, sol3D);
-  current_field = sol3D.cast<typename DerivedFF::Scalar>();
+  currentField = sol3D.cast<double>();
   return true;
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-solveGaussNewton(polycurl_reduction_parameters &params,
-                 const Eigen::VectorXd &x_initial,
-                 Eigen::VectorXd &x)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_reduction_parameters &params,
+                                                                       const Eigen::VectorXd &x_initial,
+                                                                       Eigen::VectorXd &x)
 {
   bool converged = false;
 
@@ -644,12 +624,11 @@ solveGaussNewton(polycurl_reduction_parameters &params,
 
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE double directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ(const Eigen::VectorXd &x,
-   const Eigen::VectorXd &x0,
-   const polycurl_reduction_parameters &params,
-   bool doJacs)
+
+IGL_INLINE double directional::PolyCurlReductionSolver::RJ(const Eigen::VectorXd &x,
+                                                           const Eigen::VectorXd &x0,
+                                                           const polycurl_reduction_parameters &params,
+                                                           bool doJacs)
 {
   Eigen::MatrixXd sol2D(data.numF,4), sol02D(data.numF,4);
   for (int i =0; i<data.numF; i++)
@@ -698,16 +677,15 @@ RJ(const Eigen::VectorXd &x,
 
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
-                   const Eigen::RowVectorXd &vec2D_b,
-                   const double &k,
-                   const int nA,
-                   const int nB,
-                   Eigen::VectorXd &residuals,
-                   bool do_jac,
-                   Eigen::MatrixXd &Jac)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
+                                                                         const Eigen::RowVectorXd &vec2D_b,
+                                                                         const double &k,
+                                                                         const int nA,
+                                                                         const int nB,
+                                                                         Eigen::VectorXd &residuals,
+                                                                         bool do_jac,
+                                                                         Eigen::MatrixXd &Jac)
 {
   const Eigen::RowVector2d &ua = vec2D_a.segment(0, 2);
   const Eigen::RowVector2d &va = vec2D_a.segment(2, 2);
@@ -774,13 +752,12 @@ rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ_Smoothness(const Eigen::MatrixXd &sol2D,
-              const double &wSmoothSqrt,
-              const int startRowInJacobian,
-              bool doJacs,
-              const int startIndexInVectors)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Smoothness(const Eigen::MatrixXd &sol2D,
+                                                                    const double &wSmoothSqrt,
+                                                                    const int startRowInJacobian,
+                                                                    bool doJacs,
+                                                                    const int startIndexInVectors)
 {
   if (wSmoothSqrt ==0)
     return;
@@ -815,13 +792,12 @@ RJ_Smoothness(const Eigen::MatrixXd &sol2D,
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
-                const double &s,
-                Eigen::VectorXd &residuals,
-                bool do_jac,
-                Eigen::MatrixXd &Jac)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
+                                                                      const double &s,
+                                                                      Eigen::VectorXd &residuals,
+                                                                      bool do_jac,
+                                                                      Eigen::MatrixXd &Jac)
 {
 
   const Eigen::RowVector2d &ua = vec2D_a.segment(0, 2);
@@ -865,14 +841,13 @@ rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
   }
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ_Barrier(const Eigen::MatrixXd &sol2D,
-           const double &s,
-           const double &wBarrierSqrt,
-           const int startRowInJacobian,
-           bool doJacs,
-           const int startIndexInVectors)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Barrier(const Eigen::MatrixXd &sol2D,
+                                                                 const double &s,
+                                                                 const double &wBarrierSqrt,
+                                                                 const int startRowInJacobian,
+                                                                 bool doJacs,
+                                                                 const int startIndexInVectors)
 {
   if (wBarrierSqrt ==0)
     return;
@@ -898,15 +873,14 @@ RJ_Barrier(const Eigen::MatrixXd &sol2D,
   }
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ_Closeness(const Eigen::MatrixXd &sol2D,
-             const Eigen::MatrixXd &sol02D,
-             const double &wCloseUnconstrainedSqrt,
-             const double &wCloseConstrainedSqrt,
-             const int startRowInJacobian,
-             bool doJacs,
-             const int startIndexInVectors)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Closeness(const Eigen::MatrixXd &sol2D,
+                                                                   const Eigen::MatrixXd &sol02D,
+                                                                   const double &wCloseUnconstrainedSqrt,
+                                                                   const double &wCloseConstrainedSqrt,
+                                                                   const int startRowInJacobian,
+                                                                   bool doJacs,
+                                                                   const int startIndexInVectors)
 {
   if (wCloseUnconstrainedSqrt ==0 && wCloseConstrainedSqrt ==0)
     return;
@@ -942,15 +916,14 @@ RJ_Closeness(const Eigen::MatrixXd &sol2D,
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
-                 const Eigen::RowVector2d &ea,
-                 const Eigen::RowVectorXd &vec2D_b,
-                 const Eigen::RowVector2d &eb,
-                 Eigen::VectorXd &residuals,
-                 bool do_jac,
-                 Eigen::MatrixXd &Jac)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
+                                                                       const Eigen::RowVector2d &ea,
+                                                                       const Eigen::RowVectorXd &vec2D_b,
+                                                                       const Eigen::RowVector2d &eb,
+                                                                       Eigen::VectorXd &residuals,
+                                                                       bool do_jac,
+                                                                       Eigen::MatrixXd &Jac)
 {
   const Eigen::RowVector2d &ua = vec2D_a.segment(0, 2);
   const Eigen::RowVector2d &va = vec2D_a.segment(2, 2);
@@ -986,14 +959,13 @@ rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
   }
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ_Curl(const Eigen::MatrixXd &sol2D,
-        const double &wCASqrt,
-        const double &wCBSqrt,
-        const int startRowInJacobian,
-        bool doJacs,
-        const int startIndexInVectors)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Curl(const Eigen::MatrixXd &sol2D,
+                                                              const double &wCASqrt,
+                                                              const double &wCBSqrt,
+                                                              const int startRowInJacobian,
+                                                              bool doJacs,
+                                                              const int startIndexInVectors)
 {
   if((wCASqrt==0) &&(wCBSqrt==0))
     return;
@@ -1047,15 +1019,14 @@ RJ_Curl(const Eigen::MatrixXd &sol2D,
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
-                             const Eigen::RowVector2d &ea,
-                             const Eigen::RowVectorXd &vec2D_b,
-                             const Eigen::RowVector2d &eb,
-                             Eigen::VectorXd &residuals,
-                             bool do_jac,
-                             Eigen::MatrixXd &Jac)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
+                                                                                   const Eigen::RowVector2d &ea,
+                                                                                   const Eigen::RowVectorXd &vec2D_b,
+                                                                                   const Eigen::RowVector2d &eb,
+                                                                                   Eigen::VectorXd &residuals,
+                                                                                   bool do_jac,
+                                                                                   Eigen::MatrixXd &Jac)
 {
   const Eigen::RowVector2d &ua = vec2D_a.segment(0, 2);
   const Eigen::RowVector2d &va = vec2D_a.segment(2, 2);
@@ -1089,13 +1060,12 @@ rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
   }
 }
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC>::
-RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
-            const double &wQuotCurlSqrt,
-            const int startRowInJacobian,
-            bool doJacs,
-            const int startIndexInVectors)
+
+IGL_INLINE void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
+                                                                  const double &wQuotCurlSqrt,
+                                                                  const int startRowInJacobian,
+                                                                  bool doJacs,
+                                                                  const int startIndexInVectors)
 {
   for (int ii=0; ii<data.numInteriorEdges; ++ii)
   {
@@ -1140,15 +1110,13 @@ RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
 }
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::polycurl_reduction_precompute(
-                                                             const Eigen::PlainObjectBase<DerivedV>& V,
-                                                             const Eigen::PlainObjectBase<DerivedF>& F,
-                                                             const Eigen::VectorXi& b,
-                                                             const Eigen::PlainObjectBase<DerivedC>& bc,
-                                                             const Eigen::VectorXi& constraint_level,
-                                                             const Eigen::PlainObjectBase<DerivedFF>& original_field,
-                                                             directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &data)
+IGL_INLINE void directional::polycurl_reduction_precompute(const Eigen::MatrixXd& V,
+                                                           const Eigen::MatrixXi& F,
+                                                           const Eigen::VectorXi& b,
+                                                           const Eigen::MatrixXd& bc,
+                                                           const Eigen::VectorXi& constraintLevel,
+                                                           const Eigen::MatrixXd& original_field,
+                                                           directional::PolyCurlReductionSolverData &data)
 {
   data.precomputeMesh(V,F);
 
@@ -1156,29 +1124,23 @@ IGL_INLINE void directional::polycurl_reduction_precompute(
   data.computeHessianPattern();
   data.solver.analyzePattern(data.Hess);
 
-  data.initializeConstraints(b,bc,constraint_level);
+  data.initializeConstraints(b,bc,constraintLevel);
   Eigen::MatrixXd twoVectorMat=original_field.block(0,0,original_field.rows(),6);
   data.initializeOriginalVariable(twoVectorMat);
 };
 
 
-template <typename DerivedV, typename DerivedF, typename DerivedFF, typename DerivedC>
-IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData<DerivedV, DerivedF, DerivedFF, DerivedC> &cffsoldata,
-                                              directional::polycurl_reduction_parameters &params,
-                                                        Eigen::PlainObjectBase<DerivedFF>& current_field,
-                                                        bool current_field_is_not_ccw)
+
+IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData &cffsoldata,
+                                                      directional::polycurl_reduction_parameters &params,
+                                                      Eigen::MatrixXd& currentField,
+                                                      bool fieldNotCCW)
 {
-  Eigen::MatrixXd twoFieldMat=current_field.block(0,0,current_field.rows(),6);
-  directional::PolyCurlReductionSolver<DerivedV, DerivedF, DerivedFF, DerivedC> cffs(cffsoldata);
-  cffs.solve(params, twoFieldMat, current_field_is_not_ccw);
+  Eigen::MatrixXd twoFieldMat=currentField.block(0,0,currentField.rows(),6);
+  directional::PolyCurlReductionSolver cffs(cffsoldata);
+  cffs.solve(params, twoFieldMat, fieldNotCCW);
   
-  current_field.block(0,0,current_field.rows(),6)=twoFieldMat;
-  current_field.block(0,6,current_field.rows(),6)=-twoFieldMat;
+  currentField.block(0,0,currentField.rows(),6)=twoFieldMat;
+  currentField.block(0,6,currentField.rows(),6)=-twoFieldMat;
 };
 
-#ifdef IGL_STATIC_LIBRARY
-// Explicit template instantiation
-template directional::PolyCurlReductionSolverData<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >::PolyCurlReductionSolverData();
-template void igl::polycurl_reduction_solve<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(directional::PolyCurlReductionSolverData<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, igl::polycurl_reduction_parameters&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, bool);
-template void igl::polycurl_reduction_precompute<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<int, -1, 1, 0, -1, 1> const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::Matrix<int, -1, 1, 0, -1, 1> const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, directional::PolyCurlReductionSolverData<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
-#endif

@@ -163,7 +163,7 @@ int main()
   
   std::cout<<"Setting up parameterization"<<std::endl;
   
-  directional::setup_parameterization(N, VMeshWhole, FMeshWhole, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+  directional::setup_parameterization(N, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
   double lengthRatio=0.01;
   bool isInteger = false;  //do not do translational seamless.

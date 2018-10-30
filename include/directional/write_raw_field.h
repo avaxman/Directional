@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -19,7 +19,7 @@ namespace directional
 	// Writes a a directional field in raw format to file
 	// Inputs:
 	//   filename: The name used for the mesh and singularity file, without extention
-  //   rawField: #F by 3*N in xyzxyz format (N is derived)
+  //   rawField: #F by 3*N in xyzxyz format (N is derived from F.cols())
   // Returns:
 	//   Whether or not the file was written successfully
 	bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField)
