@@ -80,4 +80,6 @@ namespace directional
                                    );
 }
 
+#include "streamlines.cpp"
+
 #endif

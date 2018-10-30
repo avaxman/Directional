@@ -284,7 +284,7 @@ In [Example 501]({{ repo_url }}/501_SeamlessParameterization/main.cpp) we demons
 directional::ParameterizationData pd;
 directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
   ...
-directional::setup_parameterization(N, VMeshWhole, FMeshWhole, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+directional::setup_parameterization(N, VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
  double lengthRatio=0.01;
  bool isInteger = false;  //do not do translational seamless.
  std::cout<<"Solving parameterization"<<std::endl;
