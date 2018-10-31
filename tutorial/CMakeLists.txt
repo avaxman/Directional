@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(libdirectional_tutorials)
+project(Directional_tutorials)
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
@@ -13,9 +13,9 @@ option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
 
-### Adding libIGL and libdirectional: choose the path to your local copy
+### Adding libIGL and Directional: choose the path to your local copy
 find_package(LIBIGL REQUIRED QUIET)
-include(libdirectional)
+include(Directional)
 
 ### Output directories
 if(MSVC)
@@ -45,6 +45,7 @@ if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_GlyphRendering")
   add_subdirectory("102_PickingEditing")
   add_subdirectory("103_StreamlineTracing")
+  add_subdirectory("104_VectorfieldVisualization")
 endif()
 
 # Chapter 2
@@ -58,7 +59,7 @@ endif()
 if(TUTORIALS_CHAPTER3)
   add_subdirectory("301_PowerFields")
   add_subdirectory("302_PolyVectors")
-  add_subdirectory("303_IntegrablePVs")
+  add_subdirectory("303_PolyCurlReduction")
   add_subdirectory("304_ConjugateFields")
 endif()
 
@@ -70,6 +71,7 @@ endif()
 # Chapter 5
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("501_SeamlessParameterization")
+  add_subdirectory("502_MixedIntegerParameterization")
 endif()
 
 

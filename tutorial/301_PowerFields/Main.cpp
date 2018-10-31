@@ -1,4 +1,13 @@
 #include <iostream>
+#include <Eigen/Core>
+#include <igl/opengl/glfw/Viewer.h>
+#include <igl/read_triangle_mesh.h>
+#include <igl/per_face_normals.h>
+#include <igl/triangle_triangle_adjacency.h>
+#include <igl/unproject_onto_mesh.h>
+#include <igl/boundary_loop.h>
+#include <igl/edge_topology.h>
+#include <directional/visualization_schemes.h>
 #include <directional/power_field.h>
 #include <directional/power_to_representative.h>
 #include <directional/power_to_raw.h>
@@ -8,23 +17,15 @@
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
 #include <directional/write_raw_field.h>
-#include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/unproject_onto_mesh.h>
-#include <igl/boundary_loop.h>
-#include <igl/edge_topology.h>
 
 
-Eigen::VectorXi cIDs, matching, indices;
+Eigen::VectorXi b, matching, singVertices, singIndices;
 Eigen::VectorXd effort;
 Eigen::MatrixXi FMesh, FField, FSings;
 Eigen::MatrixXi EV, EF, FE;
 Eigen::MatrixXd VMesh, VField, VSings;
 Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField,representative, cValues;
+Eigen::MatrixXd rawField,representative, bc, barycenters;
 Eigen::MatrixXcd powerField;
 igl::opengl::glfw::Viewer viewer;
 
@@ -35,65 +36,59 @@ bool zeroPressed = false;
 void update_triangle_mesh()
 {
   
-  CMesh=Eigen::MatrixXd::Constant(FMesh.rows(), 3, 1.0);
-  for (int i = 0; i < cIDs.rows(); i++)
-    CMesh.row(cIDs(i)) = Eigen::RowVector3d(0.5,0.1,0.1);
+  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  for (int i = 0; i < b.rows(); i++)
+    CMesh.row(b(i)) = directional::selected_face_color();
   
   viewer.data_list[0].set_colors(CMesh);
 }
 
+void recompute_field(){
+  directional::power_field(VMesh, FMesh, b, bc, N, powerField);
+}
+
 void update_raw_field_mesh()
 {
-  directional::power_field(VMesh, FMesh, cIDs, cValues, N, powerField);
   directional::power_to_representative(VMesh, FMesh, powerField, N, representative);
-  
   if (normalized)
     representative.rowwise().normalize();
   
   directional::representative_to_raw(VMesh,FMesh,representative, N, rawField);
+  directional::principal_matching(VMesh, FMesh, EV, EF, FE, rawField, matching, effort);
+  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N, singVertices, singIndices);
   
-  if (cIDs.rows()!=0){
-    directional::principal_matching(VMesh, FMesh, EV, EF, FE, rawField, matching, effort);
-    
-    directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N, indices);
-    std::vector<int> singIndicesList,singVerticesList;
-    for (int i=0;i<VMesh.rows();i++)
-      if (indices(i)!=0){
-        singIndicesList.push_back(indices(i));
-        singVerticesList.push_back(i);
-      }
-    
-    Eigen::VectorXi singIndices(singIndicesList.size());
-    Eigen::VectorXi singVertices(singVerticesList.size());
-    for (int i=0;i<singIndicesList.size();i++){
-      singIndices(i)=singIndicesList[i];
-      singVertices(i)=singVerticesList[i];
-    }
-    
-    directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
-    
-      directional::glyph_lines_raw(VMesh, FMesh, rawField, Eigen::RowVector3d(0, 0, 1),  VField, FField, CField);
-    
-    if (viewer.data_list.size()<2){
-      
-      //apending and updating raw field mesh
-      viewer.append_mesh();
-      viewer.data_list[1].show_faces = true;
-      viewer.data_list[1].show_lines = false;
-      
-      viewer.append_mesh();
-      viewer.data_list[2].show_faces = true;
-      viewer.data_list[2].show_lines = false;
-    }
-    
-    viewer.data_list[1].clear();
-    viewer.data_list[1].set_mesh(VField, FField);
-    viewer.data_list[1].set_colors(CField);
-    
-    viewer.data_list[2].clear();
-    viewer.data_list[2].set_mesh(VSings, FSings);
-    viewer.data_list[2].set_colors(CSings);
+  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
+  
+  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
+  if (b.rows()!=0){
+    glyphColors.row(b(b.rows()-1))=directional::selected_face_glyph_color().replicate(1,N);
+    //glyphColors.block(b(b.rows()-1),0,1,3)=directional::selected_vector_glyph_color();
   }
+  
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors,  VField, FField, CField);
+  
+  if (viewer.data_list.size()<2){
+    
+    //apending and updating raw field mesh
+    viewer.append_mesh();
+    viewer.data_list[1].show_faces = true;
+    viewer.data_list[1].show_lines = false;
+    
+    viewer.append_mesh();
+    viewer.data_list[2].show_faces = true;
+    viewer.data_list[2].show_lines = false;
+    
+    viewer.selected_data_index = 0;
+  }
+  
+  viewer.data_list[1].clear();
+  viewer.data_list[1].set_mesh(VField, FField);
+  viewer.data_list[1].set_colors(CField);
+  
+  viewer.data_list[2].clear();
+  viewer.data_list[2].set_mesh(VSings, FSings);
+  viewer.data_list[2].set_colors(CSings);
+  
   
 }
 
@@ -117,8 +112,9 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       // Reset the constraints
     case 'R':
-      cIDs.resize(0);
-      cValues.resize(0, 6);
+      b.resize(0);
+      bc.resize(0, 3);
+      recompute_field();
       update_triangle_mesh();
       update_raw_field_mesh();
       break;
@@ -149,53 +145,31 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     return false;
   
   int fid;
-  Eigen::Vector3d bc;
+  Eigen::Vector3d baryInFace;
   
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
   double y = viewer.core.viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
-                               viewer.core.proj, viewer.core.viewport, VMesh, FMesh, fid, bc))
+                               viewer.core.proj, viewer.core.viewport, VMesh, FMesh, fid, baryInFace))
   {
-    //Remove constraint
-    if (key == 2)
-    {
-      if (cIDs.size()==0)  //nothing to remove
-        return false;
-      int i;
-      for (i = 0; i < cIDs.rows(); i++)
-        if (cIDs(i) == fid)
-          break;
-      if (i == cIDs.rows())
-        return false;
-      cIDs(i) = cIDs(cIDs.size() - 1);
-      cIDs.conservativeResize(cIDs.rows() - 1);
-      cValues.row(i) = cValues.row(cValues.rows() - 1);
-      cValues.conservativeResize(cValues.rows() - 1, 3);
-      update_triangle_mesh();
-      update_raw_field_mesh();
-      return true;
-    }
-    
+   
     int i;
-    for (i = 0; i < cIDs.rows(); i++)
-      if (cIDs(i) == fid)
+    for (i = 0; i < b.rows(); i++)
+      if (b(i) == fid)
         break;
-    if (i == cIDs.rows())
+    if (i == b.rows())
     {
-      cIDs.conservativeResize(cIDs.rows() + 1);
-      cIDs(i) = fid;
-      cValues.conservativeResize(cValues.rows() + 1, 3);
+      b.conservativeResize(b.rows() + 1);
+      b(i) = fid;
+      bc.conservativeResize(bc.rows() + 1, 3);
     }
     
     // Compute direction from the center of the face to the mouse
-    cValues.row(i) =
-    (VMesh.row(FMesh(fid, 0)) * bc(0) +
-     VMesh.row(FMesh(fid, 1)) * bc(1) +
-     VMesh.row(FMesh(fid, 2)) * bc(2) -
-     (VMesh.row(FMesh(fid, 0)) +
-      VMesh.row(FMesh(fid, 1)) +
-      VMesh.row(FMesh(fid, 2))) / 3).normalized();
+    bc.row(i) =(VMesh.row(FMesh(fid, 0)) * baryInFace(0) +
+                VMesh.row(FMesh(fid, 1)) * baryInFace(1) +
+                VMesh.row(FMesh(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
+    recompute_field();
     update_triangle_mesh();
     update_raw_field_mesh();
     return true;
@@ -210,21 +184,23 @@ int main()
   "  R        Reset the constraints" << std::endl <<
   "  N        Toggle field normalization" << std::endl <<
   "  W        Save raw field" << std::endl <<
-  "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl <<
-  "  0+R-bttn Remove constraint" << std::endl;
+  "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   
   // Load mesh
   igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
+  igl::barycenter(VMesh, FMesh, barycenters);
   
-  cIDs.resize(0);
-  cValues.resize(0, 3);
+  b.resize(0);
+  bc.resize(0, 3);
   
   //triangle mesh setup
   viewer.data_list[0].set_mesh(VMesh, FMesh);
-  viewer.data_list[0].set_colors(Eigen::RowVector3d::Constant(3,1.0));
+  viewer.data_list[0].set_colors(directional::default_mesh_color());
   
   viewer.selected_data_index = 0;
+  recompute_field();
+  update_raw_field_mesh();
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

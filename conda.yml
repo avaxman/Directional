@@ -1,0 +1,57 @@
+name: libigl
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - bzip2=1.0.6=h470a237_2
+  - click=7.0=py_0
+  - jinja2=2.10=py_1
+  - libffi=3.2.1=hfc679d8_5
+  - libgcc-ng=7.2.0=hdf63c60_3
+  - libstdcxx-ng=7.2.0=hdf63c60_3
+  - livereload=2.5.2=py_0
+  - markdown=2.6.11=py_0
+  - markupsafe=1.0=py37h470a237_1
+  - mkdocs=1.0.4=py_0
+  - ncurses=6.1=hfc679d8_1
+  - pip=18.1=py37_1000
+  - python=3.7.0=h5001a0f_4
+  - pyyaml=3.13=py37h470a237_1
+  - readline=7.0=haf1bffa_1
+  - setuptools=40.4.3=py37_0
+  - six=1.11.0=py37_1001
+  - sqlite=3.25.2=hb1c47c0_0
+  - tk=8.6.8=ha92aebf_0
+  - tornado=5.1.1=py37h470a237_0
+  - wheel=0.32.1=py37_0
+  - xz=5.2.4=h470a237_1
+  - yaml=0.1.7=h470a237_1
+  - zlib=1.2.11=h470a237_3
+  - ca-certificates=2018.03.07=0
+  - certifi=2018.10.15=py37_0
+  - openssl=1.0.2p=h14c3975_0
+  - pygments=2.2.0=py37_0
+  - pip:
+    - arrow==0.12.1
+    - beautifulsoup4==4.6.3
+    - bibtexparser==1.0.1
+    - future==0.16.0
+    - gitdb2==2.0.4
+    - gitpython==2.1.11
+    - habanero==0.6.0
+    - latexcodec==1.0.5
+    - meshio==2.3.1
+    - mkdocs-material==3.0.3
+    - pipdate==0.3.2
+    - pipenv==2018.10.13
+    - pipreqs==0.4.9
+    - pycosat==0.6.3
+    - pymdown-extensions==4.12
+    - pymesh2==0.2.1
+    - scholarly==0.2.3
+    - smmap2==2.0.4
+    - titlecase==0.12.0
+    - virtualenv==16.0.0
+    - virtualenv-clone==0.3.0
+    - yarg==0.1.9
+prefix: /home/jdumas/miniconda3/envs/libigl

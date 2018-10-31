@@ -1,4 +1,5 @@
 #include <igl/opengl/glfw/Viewer.h>
+#include <directional/visualization_schemes.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/singularity_spheres.h>
@@ -20,16 +21,12 @@ bool drawSingularities=false;
 
 void create_meshes()
 {
-
-  CMesh.resize(1,3);
-  CMesh<<1.0,1.0,1.0;
-  
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, rawGlyphColor, VField, FField, CField);
-  directional::singularity_spheres(VMesh, FMesh, singVertices, singIndices, directional::defaultSingularityColors(N), VSings, FSings, CSings);
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
+  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
   
   //triangle mesh
   viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(CMesh);
+  viewer.data().set_colors(directional::default_mesh_color());
   viewer.data().set_face_based(true);
   viewer.data().show_lines=true;
   
@@ -55,7 +52,7 @@ void create_meshes()
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
- 
+  
   switch (key)
   {
     case GLFW_KEY_SPACE: drawSingularities=!drawSingularities; viewer.data_list[2].show_faces=!viewer.data_list[2].show_faces; /*update_mesh();*/ break;
@@ -69,14 +66,14 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 int main()
 {
   std::cout <<"<space bar>  Show/hide Singularities" << std::endl;
-
+  
   igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", VMesh, FMesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
   directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
   
   // Set colors for Singularities
-
-  rawGlyphColor <<0.0, 0.2, 1.0;
+  
+  
   create_meshes();
   viewer.callback_key_down = &key_down;
   viewer.launch();
