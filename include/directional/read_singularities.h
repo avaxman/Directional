@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -22,14 +22,14 @@ namespace directional
 	//   fileName: The to be loaded file.
 	// Outputs:
 	//   singularities: The vector containing the singularities
-	//   N: The degree of the field
-  //   singPositions: the singular vertices.
-  //   singIndices:   the index of the singularities, where the actual fractional index is singIndices/N.
+	//   N:             The degree of the field
+  //   singVertices:  The singular vertices.
+  //   singIndices:   Rhe index of the singularities, where the actual fractional index is singIndices/N.
 	// Return:
 	//   Whether or not the file was written successfully
   bool IGL_INLINE read_singularities(const std::string &fileName,
                                      int& N,
-                                     Eigen::VectorXi &singPositions,
+                                     Eigen::VectorXi &singVertices,
                                      Eigen::VectorXi& singIndices)
 	{
 		try
@@ -39,11 +39,11 @@ namespace directional
 			f >> N;
 			f >> numSings;
 
-			singPositions = Eigen::VectorXi::Zero(numSings);
+			singVertices = Eigen::VectorXi::Zero(numSings);
       singIndices = Eigen::VectorXi::Zero(numSings);
       
       for (int i=0;i<numSings;i++)
-        f >> singPositions.coeffRef(i)>> singIndices.coeffRef(i);
+        f >> singVertices.coeffRef(i)>> singIndices.coeffRef(i);
       
 			f.close();
 			return f.fail();

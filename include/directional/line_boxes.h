@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -7,27 +7,26 @@
 
 #ifndef DIRECTIONAL_LINE_BOXES_H
 #define DIRECTIONAL_LINE_BOXES_H
-#include <igl/igl_inline.h>
+
 #include <Eigen/Core>
 #include <string>
 #include <vector>
 #include <cmath> 
 #include <complex>
-
+#include <igl/igl_inline.h>
 
 namespace directional
 {
   // creates a mesh of thin boxes to visualize lines on the overlay of the mesh
-  // Inputs:
-  //  P1,P2         each #P by 3 coordinates of the box endpoints
-  //  normals       normals to the boxes (w.r.t. height).
-  //  width, height box dimensions
-  //  cyndColors    #P by 3 RBG colors per cylinder
-  //  res           the resolution of the cylinder (size of base polygon)
-  // Outputs:
-  //  V             #V by 3 cylinder mesh coordinates
-  //  T             #T by 3 mesh triangles
-  //  C             #T/#V by 3 colors
+  // Input:
+  //  P1,P2:          Each #P by 3 coordinates of the box endpoints
+  //  normals:        Normals to the boxes (w.r.t. height).
+  //  width, height:  Box dimensions
+  //  boxColors:      #P by 3 RBG colors per box
+  // Output:
+  //  V:              #V by 3 box mesh coordinates
+  //  T:              #T by 3 mesh triangles
+  //  C:              #T by 3 colors
   
   IGL_INLINE bool line_boxes(const Eigen::MatrixXd& P1,
                              const Eigen::MatrixXd& P2,

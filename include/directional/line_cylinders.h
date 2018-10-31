@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -19,17 +19,14 @@ namespace directional
 {
   // creates a mesh of small cylinders to visualize lines on the overlay of the mesh
   // Inputs:
-  //  P1,P2   each #P by 3 coordinates of the endpoints of the cylinders
-  //  radius  double radii of the cylinders
-  //  cyndColors       #P by 3 RBG colors per cylinder
-  //  res     integer the resolution of the cylinder (size of base polygon)
-  // colorPerVertex in the output mesh
-  // extendMesh   if to extend the V,T,TC, or to overwrite them
+  //  P1,P2:      #P by 3 coordinates of the endpoints of the cylinders
+  //  radius:     Cylinder base radii
+  //  cyndColors: #P by 3 RBG colors per cylinder
+  //  res:        The resolution of the cylinder (size of base polygon)
   // Outputs:
   //  V   #V by 3 cylinder mesh coordinates
   //  T   #T by 3 mesh triangles
-  //  C   #T/#V by 3 colors
-  
+  //  C   #T by 3 face-based colors
   IGL_INLINE bool line_cylinders(const Eigen::MatrixXd& P1,
                                  const Eigen::MatrixXd& P2,
                                  const double& radius,

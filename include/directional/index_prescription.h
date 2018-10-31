@@ -1,20 +1,22 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_INDEX_PRESCRIPTION_H
 #define DIRECTIONAL_INDEX_PRESCRIPTION_H
+
+#include <Eigen/Core>
+#include <vector>
+#include <cmath>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/parallel_transport_angles.h>
 #include <igl/edge_topology.h>
 #include <igl/boundary_loop.h>
-#include <Eigen/Core>
-#include <vector>
-#include <cmath>
 
 
 namespace directional
@@ -31,9 +33,9 @@ namespace directional
   //  cycleCurvature: #c the original curvature for each basis cycle.
   //  solver: The Simplicial LDLT solver used to solver the problem. It will only prefactor the matrix once upon the first call to the function; the state of  the solver solely depends on the basisCycles, therefore it only needs to be reset if the basisCycles matrix changed.
   //  N: the degree of the field.
-  // Outputs:3
+  // Output:
   //  rotationAngles: #iE rotation angles (difference from parallel transport) per inner dual edge
-  //  linfError: l_infinity error of the computation. If this is not approximately 0, the indices are likely inconsistent (don't add up to the correct sum).
+  //  linfError: l_infinity error of the computation. If this is not approximately 0, the prescribed indices are likely inconsistent (don't add up to the correct sum).
   IGL_INLINE void index_prescription(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::MatrixXi& EV,

@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -7,57 +7,51 @@
 
 #ifndef DIRECTIONAL_PARAMETERIZE_H
 #define DIRECTIONAL_PARAMETERIZE_H
+
+#include <iostream>
+#include <fstream>
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/edge_topology.h>
+#include <igl/min_quad_with_fixed.h>
+#include <igl/matlab_format.h>
+#include <igl/bounding_box_diagonal.h>
 #include <directional/tree.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
-#include <igl/min_quad_with_fixed.h>
-#include <igl/matlab_format.h>
-#include <iostream>
-#include <fstream>
-
-#include <Eigen/Core>
-#include <queue>
-#include <vector>
-#include <cmath>
+#include <directional/setup_parameterization.h>
 
 
 namespace directional
 {
-  // Creates a parameterization of (currently supported) (u,v) functions from a directional field by solving the Poisson equation, with custom edge weights
+  // Creates a parameterization of (currently supported) (u,v, -u,-v) functions from a directional field by solving the Poisson equation, with custom edge weights
   // Input:
-  //  wholeV:      #V x 3 vertex coordinates of the original mesh
-  //  wholeF:      #F x 3 face vertex indices of the original mesh
-  //  FE:          #F x 3 faces to edges indices
-  //  rawField:    #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size. (currently only supporting sign-symmetric 4-fields)
-  //  edgeWeights  #E x 3  weight per edge (for the Poisson system)
-  //  edgeLength   #edgeLength of quad mesh (scaling the gradient)
-  //  vt2cMat:     #V+#T (translational jumps)  x #cutV - a map between whole vertex values and the translational jump to the vertices of the cut mesh
-  //  constraintMat: matrix of constraints around singularities and nodes in the cut graph
-  //  cutV:        #cV x 3 vertices of the cut mesh
-  //  cutF:      #F x 3 faces of the cut mesh
-  // integerRound;   which variables (from #V+#T) are rounded iteratively to integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be integer
-  //  Output:
-  // cutUV:        #cV x 2 (u,v) coordinates per cut vertex
+  //  wholeV:       #V x 3 vertex coordinates of the original mesh.
+  //  wholeF:       #F x 3 face vertex indices of the original mesh.
+  //  FE:           #F x 3 faces to edges indices.
+  //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size. (currently only supporting sign-symmetric 4-fields).
+  //  lengthRatio   #edgeLength/bounding_box_diagonal of quad mesh (scaling the gradient).
+  //  pd:           Parameterization data obtained from directional::setup_parameterization.
+  //  cutV:         #cV x 3 vertices of the cut mesh.
+  //  cutF:         #F x 3 faces of the cut mesh.
+  //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to double integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be double integer.
+  // Output:
+  //  cutUV:        #cV x 2 (u,v) coordinates per cut vertex.
   IGL_INLINE void parameterize(const Eigen::MatrixXd& wholeV,
                                const Eigen::MatrixXi& wholeF,
                                const Eigen::MatrixXi& FE,
                                const Eigen::MatrixXd rawField,
-                               const Eigen::VectorXd& edgeWeights,
-                               const double edgeLength,
-                               //const Eigen::SparseMatrix<double> i2vtMat,
-                               const Eigen::SparseMatrix<double> vt2cMat,
-                               const Eigen::SparseMatrix<double> constraintMat,
-                               const Eigen::SparseMatrix<double> symmMat,
+                               const double lengthRatio,
+                               const ParameterizationData& pd,
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
-                               const bool isInteger,
-                               const Eigen::VectorXi& integerVars,
-                               Eigen::MatrixXd& cutUVW,
+                               const bool roundIntegers,
                                Eigen::MatrixXd& cutUV)
   
   
@@ -65,9 +59,14 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
+    assert (rawField.cols()==12 && "Currently only supporting N=4 parameterization");
+    
+    VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff()+1,1.0);
+    double length = igl::bounding_box_diagonal(wholeV)*lengthRatio;
+    
     //TODO: in vertex space, not corner...
     int N = rawField.cols()/3;
-    int numVars = symmMat.cols();
+    int numVars = pd.symmMat.cols();
     //constructing face differentials
     vector<Triplet<double>> d0Triplets;
     vector<Triplet<double>> M1Triplets;
@@ -78,7 +77,7 @@ namespace directional
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,j)+k, -1.0));
           d0Triplets.push_back(Triplet<double>(3*N*i+N*j+k, N*cutF(i,(j+1)%3)+k, 1.0));
           Vector3d edgeVector=(cutV.row(cutF(i,(j+1)%3))-cutV.row(cutF(i,j))).transpose();
-          gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0)*edgeLength;
+          gamma(3*N*i+N*j+k)=(rawField.block(i, 3*k, 1,3)*edgeVector)(0,0)/length;
           M1Triplets.push_back(Triplet<double>(3*N*i+N*j+k, 3*N*i+N*j+k, edgeWeights(FE(i,j))));
         }
       }
@@ -89,15 +88,17 @@ namespace directional
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     
     SparseMatrix<double> d0T=d0.transpose();
-    //SparseMatrix<double> cutEtE=d0T*M1*d0;
-    
+
     //the variables that should be fixed in the end
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
     for (int i=0;i<N/2;i++)
       fixedMask(i)=1;  //first vertex is always (0,0)
-    for (int i=0;i<integerVars.size();i++)
-      fixedMask(integerVars(i))=1;
+    
+    if (roundIntegers){
+      for (int i=0;i<pd.integerVars.size();i++)
+        fixedMask(pd.integerVars(i))=1;
+    }
     
     //the variables that were already fixed in the previous iteration
     VectorXi alreadyFixed(numVars);
@@ -109,20 +110,18 @@ namespace directional
     VectorXd fixedValues(numVars);
     fixedValues.setZero();
     
-    SparseMatrix<double> Efull=d0*vt2cMat*symmMat;
+    SparseMatrix<double> Efull=d0*pd.vertexTrans2CutMat*pd.symmMat;
     VectorXd x, xprev;
     
     //reducing constraintMat
     SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
-    SparseMatrix<double> Cfull = constraintMat*symmMat;
+    SparseMatrix<double> Cfull = pd.constraintMat*pd.symmMat;
     qrsolver.compute(Cfull.transpose());
     int CRank=qrsolver.rank();
-    //cout<<"CRank: "<<CRank<<endl;
-    
+
     //creating sliced permutation matrix
     VectorXi PIndices=qrsolver.colsPermutation().indices();
-    //cout<<"PIndices: "<<PIndices<<endl;
-    
+
     vector<Triplet<double> > CTriplets;
     for (int k=0; k<Cfull.outerSize(); ++k)
       for (SparseMatrix<double>::InnerIterator it(Cfull,k); it; ++it)
@@ -155,12 +154,10 @@ namespace directional
       //reducing rank on Cpart
       qrsolver.compute(Cpart.transpose());
       int CpartRank=qrsolver.rank();
-      //cout<<"CRank: "<<CRank<<endl;
-      
+  
       //creating sliced permutation matrix
       VectorXi PIndices=qrsolver.colsPermutation().indices();
-      //cout<<"PIndices: "<<PIndices<<endl;
-      
+
       vector<Triplet<double> > CPartTriplets;
       VectorXd bpart(CpartRank);
       for (int k=0; k<Cpart.outerSize(); ++k)
@@ -174,9 +171,6 @@ namespace directional
       
       Cpart.resize(CpartRank, Cpart.cols());
       Cpart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
-      
-      
-      //myfile<<igl::matlab_format(C,"C")<<std::endl;
       SparseMatrix<double> A(EtE.rows()+Cpart.rows(),EtE.rows()+Cpart.rows());
       
       vector<Triplet<double>> ATriplets;
@@ -202,43 +196,44 @@ namespace directional
       //cout<<"fixedValues: "<<fixedValues<<endl;
       
       
-      if (intIter==0){  //first solution{
+      //if (intIter==0){  //first solution{
         
-        SimplicialLDLT<SparseMatrix<double> > ldltsolver;
-        //cout<<"Computing A..."<<endl;
-        ldltsolver.compute(A);
-        if(ldltsolver.info()!=Success) {
-          cout<<"LDLT failed, trying LU"<<endl;
+        //SimplicialLDLT<SparseMatrix<double> > lusolver;
+        //ldltsolver.compute(A);
+        //if(ldltsolver.info()!=Success) {
+        //  cout<<"LDLT failed, trying LU"<<endl;
           SparseLU<SparseMatrix<double> > lusolver;
           lusolver.compute(A);
           if(lusolver.info()!=Success) {
-            cout<<"LU failed as well!"<<endl;
+            cout<<"LU decomposition failed!"<<endl;
             return;
           }
           x = lusolver.solve(b);
-        } else{
+        /*} else{
           cout<<"Computing A done!"<<endl;
           x = ldltsolver.solve(b);
           if(ldltsolver.info()!=Success) {
             cout<<"Solving failed!!!"<<endl;
             return;
           }
-        }
-      } else { //conjugate gradients with warm solution
+        }*/
+      /*} else { //conjugate gradients with warm solution
         
-        ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
+        ConjugateGradient<SparseMatrix<double>, Lower|Upper, DiagonalPreconditioner<double> > cg;
         cg.compute(A);
-        //x = cg.solveWithGuess(b,xprev);
-        x = cg.solve(b);
+        cout<<"(A*xprev - b).lpNorm<Infinity>(): "<<(A*xprev - b).lpNorm<Infinity>()<<endl;
+        x = cg.solveWithGuess(b,xprev);
+        cout<<"(A*x - b).lpNorm<Infinity>(): "<<(A*x - b).lpNorm<Infinity>()<<endl;
+        //x = cg.solve(b);
         std::cout << "#iterations:     " << cg.iterations() << std::endl;
         std::cout << "estimated error: " << cg.error()      << std::endl;
         // update b, and solve again
         // x = cg.solve(b);
-      }
+      }*/
       
       fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
-      cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
-      cout<<"(Efull*fullx-gamma).lpNorm<Infinity>(): "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
+      //cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
+      cout<<"Poisson error: "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
       
       if ((alreadyFixed-fixedMask).sum()==0)
         break;
@@ -255,8 +250,8 @@ namespace directional
         }
       }
       
-      cout<<"minIntDiffIndex : "<<minIntDiffIndex<<endl;
-      cout<<"minIntDiff : "<<minIntDiff<<endl;
+      cout<<"Integer variable: "<<minIntDiffIndex<<endl;
+      cout<<"Integer error: "<<minIntDiff<<endl;
       
       if (minIntDiffIndex!=-1){
         alreadyFixed(minIntDiffIndex) = 1;
@@ -274,18 +269,18 @@ namespace directional
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     //cout<<"fullx: "<<fullx<<endl;
-    VectorXd cutUVWVec=vt2cMat*symmMat*fullx;
-    cutUVW.conservativeResize(cutV.rows(),N/2);
+    VectorXd cutUVVec=pd.vertexTrans2CutMat*pd.symmMat*fullx;
+    //cutUVW.conservativeResize(cutV.rows(),N/2);
     cutUV.conservativeResize(cutV.rows(),2);
     for (int i=0;i<cutV.rows();i++)
-      cutUVW.row(i)<<cutUVWVec.segment(N*i,N/2).transpose();
+      cutUV.row(i)<<cutUVVec.segment(N*i,N/2).transpose();
     
     //cout<<"symmMat*fullx: "<<symmMat*fullx<<endl;
     //cout<<"cutUVWVec: "<<cutUVWVec<<endl;
     //cout<<"cutUVW: "<<cutUVW<<endl;
-    if (N==4){
-      cutUV = cutUVW.block(0,0,cutUVW.rows(),2);
-    }else {
+    //if (N==4){
+      //cutUV = cutUVW.block(0,0,cutUVW.rows(),2);
+    /*}else {
       double yratio = 2.0/sqrt(3.0);
       RowVector3d UAxis; UAxis<<1, 1,0; UAxis.normalize();
       RowVector3d VAxis; VAxis<<-1, 1, 2; VAxis.normalize();
@@ -294,7 +289,7 @@ namespace directional
       cutUV.col(0) = a-b/2.0;
       cutUV.col(1) = b*sqrt(3.0)/2.0*yratio;
       //cutUV = cutUVW.block(0,0,cutUVW.rows(),2);
-    }
+    }*/
   }
 }
   

@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2016 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -14,13 +14,13 @@
 
 namespace directional
 {
-  // create a tree from a graph given by the edges in EV
+  // Creates a tree from a graph given by the edges in EV
   // edges containing a negative vertex are skipped.
-  // Inputs:
-  //  EV #E by 2 list of edges in the graph
-  // Outputs:
-  //  tE: #Te vector of edges (within EV) in the graph.
-  //  tEf: #V the edges leading to each vertex. -1 for the root
+  // Input:
+  //  EV:   #E by 2 list of edges in the graph
+  // Output:
+  //  tE:   #Te vector of edges (within EV) in the graph.
+  //  tEf:  #V the edges leading to each vertex. -1 for the root
   IGL_INLINE void tree(const Eigen::MatrixXi& EV,
                        Eigen::VectorXi& tE,
                        Eigen::VectorXi& tEf)
@@ -86,9 +86,6 @@ namespace directional
   }
   
 }
-
-
-
 
 #endif
 

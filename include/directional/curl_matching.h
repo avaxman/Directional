@@ -1,21 +1,22 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
+
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_CURL_MATCHING_H
 #define DIRECTIONAL_CURL_MATCHING_H
+
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
 #include <directional/representative_to_raw.h>
-
-#include <Eigen/Core>
-#include <vector>
-#include <cmath>
-
 
 namespace directional
 {
@@ -30,7 +31,8 @@ namespace directional
   // Output:
   // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
   //  effort: #E principal matching efforts.
-  //TODO: also return matching
+  // curlNorm: the L2-norm of the curl vector
+
   IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
                                 const Eigen::MatrixXi& F,
                                 const Eigen::MatrixXi& EV,
@@ -38,7 +40,8 @@ namespace directional
                                 const Eigen::MatrixXi& FE,
                                 const Eigen::MatrixXd& rawField,
                                 Eigen::VectorXi& matching,
-                                Eigen::VectorXd& effort)
+                                Eigen::VectorXd& effort,
+                                Eigen::VectorXd& curlNorm)
   {
     
     typedef std::complex<double> Complex;
@@ -52,6 +55,7 @@ namespace directional
     
     matching.conservativeResize(EF.rows());
     matching.setConstant(-1);
+    curlNorm.conservativeResize(EF.rows());
     
     VectorXcd edgeTransport(EF.rows());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
     MatrixXd edgeVectors(EF.rows(), 3);
@@ -77,7 +81,7 @@ namespace directional
         double currCurl = 0;
         for (int k=0;k<N;k++){
           RowVector3d vecDiff =rawField.block(EF(i, 1), 3 * ((j+k)%N), 1, 3)-rawField.block(EF(i, 0), 3*k, 1, 3);
-          currCurl +=std::abs(edgeVectors.row(i).dot(vecDiff));
+          currCurl +=pow(edgeVectors.row(i).dot(vecDiff),2.0);
         }
         
         if (currCurl < minCurl){
@@ -87,8 +91,7 @@ namespace directional
       }
       
       matching(i) =indexMinFromZero;
-      
-      //std::cout<<"minCurl: "<<minCurl<<endl;
+      curlNorm(i)= sqrt(minCurl);
       
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
       double currEffort=0;
@@ -104,12 +107,7 @@ namespace directional
       }
       
       effort(i) = currEffort;
-      
-      //cout<<"currEffort/(2.0*igl::PI): "<<currEffort/(2.0*igl::PI)<<endl;
-      
-      //matching(i)=indexMinFromZero-round(currEffort/(2.0*igl::PI));
-      //effort(i)=currEffort+2*igl::PI*(double)(indexMinFromZero-matching(i));
-      
+
     }
     
   }
@@ -123,11 +121,12 @@ namespace directional
                                      const Eigen::MatrixXd& representativeField,
                                      const int N,
                                      Eigen::VectorXi& matching,
-                                     Eigen::VectorXd& effort)
+                                     Eigen::VectorXd& effort,
+                                     Eigen::VectorXd& curlNorm)
   {
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
-    curl_matching(V, F, EV, EF, FE, rawField, matching, effort);
+    curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm);
   }
 }
 

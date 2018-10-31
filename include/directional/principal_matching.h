@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -6,16 +6,15 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_PRINCIPAL_MATCHING_H
 #define DIRECTIONAL_PRINCIPAL_MATCHING_H
+
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
 #include <directional/representative_to_raw.h>
-
-#include <Eigen/Core>
-#include <vector>
-#include <cmath>
-
 
 namespace directional
 {
@@ -28,9 +27,8 @@ namespace directional
   //  EF:     #E x 2 edges to faces indices
   //  raw:    The directional field, assumed to be ordered CCW, and in xyzxyzxyz...xyz (3*N cols) form. The degree is inferred by the size.
   // Output:
-  // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
-  //  effort: #E principal matching efforts.
-  //TODO: also return matching
+  //  matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
+  //= effort: #E principal matching efforts.
   IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::MatrixXi& EV,
@@ -104,7 +102,7 @@ namespace directional
     
   }
   
-  //version with representative vector (for N-RoSy) as input.
+  //Version with representative vector (for N-RoSy alone) as input.
   IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::MatrixXi& EV,

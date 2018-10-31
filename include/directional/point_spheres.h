@@ -1,32 +1,33 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_POINT_SPHERES_H
 #define DIRECTIONAL_POINT_SPHERES_H
-#include <igl/igl_inline.h>
-#include <Eigen/Core>
+
 #include <string>
 #include <vector>
-#include <cmath> 
+#include <cmath>
+#include <Eigen/Core>
+#include <igl/igl_inline.h>
 
 
 namespace directional
 {
   // creates small spheres to visualize points on the overlay of the mesh
-  // Inputs:
-  //  P       #P by 3 coordinates of the centers of spheres
-  //  radius  double radii of the spheres
-  //  C       #P by 3 - RBG colors per sphere
-  //  res integer   the resolution of the sphere
-  // colorPerVertex of the output mesh
+  // Input:
+  //  P:      #P by 3 coordinates of the centers of spheres
+  //  radius: radii of the spheres
+  //  C:      #P by 3 - RBG colors per sphere
+  //  res:    the resolution of the sphere discretization
   // extendMesh if to extend the V,T,TC, or to overwrite them
-  // Outputs:
-  //  V   #V by 3 cylinder mesh coordinates
-  //  T   #T by 3 mesh triangles
-  //  C  #T/#V by 3 colors
+  // Output:
+  //  V:    #V by 3 sphere mesh coordinates
+  //  T     #T by 3 sphere mesh triangles
+  //  C:    #T by 3 face-based colors
   IGL_INLINE bool point_spheres(const Eigen::MatrixXd& points,
                                 const double& radius,
                                 const Eigen::MatrixXd& colors,

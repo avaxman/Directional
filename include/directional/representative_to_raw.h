@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2017 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -6,12 +6,14 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_REPRESENTATIVE_TO_RAW_H
 #define DIRECTIONAL_REPRESENTATIVE_TO_RAW_H
+
+#include <iostream>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <igl/per_face_normals.h>
 #include <igl/igl_inline.h>
 #include <igl/PI.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <iostream>
+
 
 
 namespace directional

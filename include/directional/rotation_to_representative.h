@@ -1,18 +1,21 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2017 Amir Vaxman <avaxman@gmail.com>
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_ROTATION_TO_REPRESENTATIVE_H
 #define DIRECTIONAL_ROTATION_TO_REPRESENTATIVE_H
+
+#include <vector>
+#include <cmath>
+#include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <igl/igl_inline.h>
 #include <igl/gaussian_curvature.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <vector>
-#include <cmath>
+
 
 namespace directional
 {

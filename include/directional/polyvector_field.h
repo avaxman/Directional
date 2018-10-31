@@ -1,4 +1,4 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2017 Daniele Panozzo <daniele.panozzo@gmail.com>, Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
@@ -16,6 +16,8 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
+#include <igl/speye.h>
+#include <igl/eigs.h>
 #include <iostream>
 
 namespace directional
@@ -24,16 +26,16 @@ namespace directional
   // Precalculate the polyvector LDLt solvers. Must be recalculated whenever
   // bc changes or the mesh changes.
   // Inputs:
-  //  V: #V by 3 vertex coordinates.
-  //  F: #F by 3 face vertex indices.
-  //  EV: #E by 2 matrix of edges (vertex indices)
-  //  EF: #E by 2 matrix of oriented adjacent faces
+  //  V:      #V by 3 vertex coordinates.
+  //  F:      #F by 3 face vertex indices.
+  //  EV:     #E by 2 matrix of edges (vertex indices)
+  //  EF:     #E by 2 matrix of oriented adjacent faces
   //  B1, B2: #F by 3 matrices representing the local base of each face.
-  //  bc: The face ids where the pv is prescribed.
-  //  N: The degree of the field.
+  //  bc:     The face ids where the pv is prescribed.
+  //  N:      The degree of the field.
   // Outputs:
-  //  solver: with prefactorized left-hand side
-  //  AFull, AVar: The resulting left-hand side matrices
+  //  solver:       with prefactorized left-hand side
+  //  AFull, AVar:  The resulting left-hand side matrices
   IGL_INLINE void polyvector_precompute(const Eigen::MatrixXd& V,
                                         const Eigen::MatrixXi& F,
                                         const Eigen::MatrixXi& EV,
@@ -107,14 +109,14 @@ namespace directional
   
   // Computes a polyvector on the entire mesh from given values at the prescribed indices.
   // polyvector_precompute must be called in advance, and "b" must be on the given "bc"
-  // If no constraints are given the zero field will be returned.
+  // If no constraints are given the Fielder eigenvector field will be returned.
   // Inputs:
-  //  B1, B2: #F by 3 matrices representing the local base of each face.
-  //  bc: the faces on which the polyvector is prescribed.
-  //  b: The directionals on the faces indicated by bc. Should be given in either #bc by N raw format X1,Y1,Z1,X2,Y2,Z2,Xn,Yn,Zn, or representative #bc by 3 format (single xyz), implying N-RoSy
-  //  solver: with prefactorized left-hand side
-  //  Afull, AVar: left-hand side matrices (with and without constraints) of the system
-  //  N: The degree of the field.
+  //  B1, B2:       #F by 3 matrices representing the local base of each face.
+  //  bc:           The faces on which the polyvector is prescribed.
+  //  b:            The directionals on the faces indicated by bc. Should be given in either #bc by N raw format X1,Y1,Z1,X2,Y2,Z2,Xn,Yn,Zn, or representative #bc by 3 format (single xyz), implying N-RoSy
+  //  solver:       With prefactorized left-hand side
+  //  Afull, AVar:  Left-hand side matrices (with and without constraints) of the system
+  //  N:            The degree of the field.
   // Outputs:
   //  polyVectorField: #F by N The output interpolated field, in polyvector (complex polynomial) format.
   IGL_INLINE void polyvector_field(const Eigen::MatrixXd& B1,
@@ -135,7 +137,41 @@ namespace directional
     
     if (bc.size() == 0)
     {
-      polyVectorField = MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      //extracting first eigenvector into the field
+      //Have to use reals because libigl does not currently support complex eigs.
+      SparseMatrix<double> M; igl::speye(2*B1.rows(), 2*B1.rows(), M);
+      //creating a matrix of only the N-rosy interpolation
+      SparseMatrix<std::complex<double> > AfullNRosy(Afull.rows()/N,Afull.cols()/N);
+      std::vector<Triplet<std::complex<double> > > AfullNRosyTriplets;
+      for (int k=0; k<Afull.outerSize(); ++k)
+        for (SparseMatrix<std::complex<double> >::InnerIterator it(Afull,k); it; ++it)
+        {
+          if ((it.row()<Afull.rows()/N)&&(it.col()<Afull.cols()/N))
+            AfullNRosyTriplets.push_back(Triplet<std::complex<double> > (it.row(), it.col(), it.value()));
+        }
+      
+      AfullNRosy.setFromTriplets(AfullNRosyTriplets.begin(), AfullNRosyTriplets.end());
+      
+      SparseMatrix<std::complex<double>> LComplex =AfullNRosy.adjoint()*AfullNRosy;
+      SparseMatrix<double> L(2*B1.rows(),2*B1.rows());
+      std::vector<Triplet<double> > LTriplets;
+      for (int k=0; k<LComplex.outerSize(); ++k)
+        for (SparseMatrix<std::complex<double>>::InnerIterator it(LComplex,k); it; ++it)
+        {
+          LTriplets.push_back(Triplet<double>(it.row(), it.col(), it.value().real()));
+          LTriplets.push_back(Triplet<double>(it.row(), LComplex.cols()+it.col(), -it.value().imag()));
+          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), it.col(), it.value().imag()));
+          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), LComplex.cols()+it.col(), it.value().real()));
+        }
+      L.setFromTriplets(LTriplets.begin(), LTriplets.end());
+      Eigen::MatrixXd U;
+      Eigen::VectorXd S;
+      igl::eigs(L,M,5,igl::EIGS_TYPE_SM,U,S);
+      
+      polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
+      
+      polyVectorField.col(0) = U.block(0,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+     U.block(U.rows()/2,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); 
       return;
     }
     

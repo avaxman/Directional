@@ -1,9 +1,10 @@
-// This file is part of libdirectional, a library for directional field processing.
+// This file is part of Directional, a library for directional field processing.
 // Copyright (C) 2017 Daniele Panozzo <daniele.panozzo@gmail.com>, Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef DIRECTIONAL_POWER_TO_REPRESENTATIVE_H
 #define DIRECTIONAL_POWER_TO_REPRESENTATIVE_H
 
@@ -22,7 +23,7 @@ namespace directional
   //  Y:              #F x 1 representing the field to the Nth power: Y=U^N where U is any representative.
   //  N:              The degree of the field.
   // Output:
-  //  U: #F x 3 representative vectors on the faces.
+  //  U:              #F x 3 representative vectors on the faces.
   IGL_INLINE void power_to_representative(const Eigen::MatrixXd& B1,
                                           const Eigen::MatrixXd& B2,
                                           const Eigen::MatrixXcd& powerField,
