@@ -74,6 +74,7 @@ int main()
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(directional::default_mesh_color());
+  viewer.data().show_lines = false;
   
   //apending and updating raw field mesh
   viewer.append_mesh();

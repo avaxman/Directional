@@ -72,7 +72,7 @@ void update_raw_field_mesh()
   } else {
     
     directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate),
-                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate)),VField, FField, CField);
+                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate)),VField, FField, CField, 1.5);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -81,7 +81,7 @@ void update_raw_field_mesh()
     viewer.data_list[1].show_lines = false;
     
     //singularity mesh
-    directional::singularity_spheres(VMesh, FMesh,N,  (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh,N,  (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj), VSings, FSings, CSings, 2.0);
     
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);

@@ -86,7 +86,7 @@ void update_raw_field_mesh()
     }
   } else {
     directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF),
-                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF)),VField, FField, CField);
+                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF)),VField, FField, CField,2.0);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);
@@ -95,7 +95,7 @@ void update_raw_field_mesh()
     viewer.data_list[1].show_lines = false;
     
     //singularity mesh
-    directional::singularity_spheres(VMesh, FMesh, N, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings);
+    directional::singularity_spheres(VMesh, FMesh, N, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings,1.5);
     
     viewer.data_list[2].clear();
     viewer.data_list[2].set_mesh(VSings, FSings);
@@ -104,7 +104,7 @@ void update_raw_field_mesh()
     viewer.data_list[2].show_lines = false;
     
     //seam mesh
-    directional::seam_lines(VMesh, FMesh, EV, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams);
+    directional::seam_lines(VMesh, FMesh, EV, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams, 2.0);
     
     viewer.data_list[3].clear();
     viewer.data_list[3].set_mesh(VSeams, FSeams);
@@ -205,6 +205,7 @@ int main(int argc, char *argv[])
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(directional::default_mesh_color());
+  viewer.data().show_lines=false;
   
   //apending and updating raw field mesh
   viewer.append_mesh();
@@ -229,7 +230,6 @@ int main(int argc, char *argv[])
   AE2F.setFromTriplets(AE2FTriplets.begin(), AE2FTriplets.end());
   
   viewer.callback_key_down = &key_down;
-  viewer.data().show_lines = false;
   viewer.launch();
   
   return 0;

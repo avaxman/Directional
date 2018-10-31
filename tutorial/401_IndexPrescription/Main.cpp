@@ -76,7 +76,7 @@ void update_raw_field_mesh()
   directional::rotation_to_representative(VMesh, FMesh,EV,EF,rotationAngles,N,globalRotation, representative);
   directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
+  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField, 2.5);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
@@ -103,7 +103,7 @@ void update_singularities_mesh()
     singIndices(i)=singIndicesList[i];
   }
   
-  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
+  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings, 2.5);
   
   viewer.data_list[2].clear();
   viewer.data_list[2].set_mesh(VSings, FSings);

@@ -45,48 +45,20 @@ void update_triangle_mesh()
     viewer.data_list[0].set_mesh(VMeshWhole, FMeshWhole);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].show_texture=false;
+    viewer.data_list[0].show_lines=false;
   } else {
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_uv(cutUV);
     viewer.data_list[0].show_texture=true;
+    viewer.data_list[0].show_lines=false;
   }
 }
 
 void update_raw_field_mesh()
 {
-  if (viewingMode==PARAMETERIZATION){
-    for (int i=1;i<=3;i++){  //hide all other meshes
-      viewer.data_list[i].show_faces=false;
-      viewer.data_list[i].show_lines = false;
-    }
-  } else {
-    
-    directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField);
-    
-    viewer.data_list[1].clear();
-    viewer.data_list[1].set_mesh(VField, FField);
-    viewer.data_list[1].set_colors(CField);
-    viewer.data_list[1].show_faces = true;
-    viewer.data_list[1].show_lines = false;
-    
-    //singularities mesh
-    directional::singularity_spheres(VMeshWhole, FMeshWhole, N, singVertices, singIndices, VSings, FSings, CSings);
-    
-    viewer.data_list[2].clear();
-    viewer.data_list[2].set_mesh(VSings, FSings);
-    viewer.data_list[2].set_colors(CSings);
-    viewer.data_list[2].show_faces = true;
-    viewer.data_list[2].show_lines = false;
-    
-    directional::seam_lines(VMeshWhole,FMeshWhole,EV,combedMatching, VSeams,FSeams,CSeams);
-    
-    viewer.data_list[3].clear();
-    viewer.data_list[3].set_mesh(VSeams, FSeams);
-    viewer.data_list[3].set_colors(CSeams);
-    viewer.data_list[3].show_faces = true;
-    viewer.data_list[3].show_lines = false;
-  }
+  for (int i=1;i<=3;i++)  //hide all other meshes
+    viewer.data_list[i].show_faces= (viewingMode==FIELD);
 }
 
 
@@ -143,16 +115,36 @@ int main()
   
   //apending and updating raw field mesh
   viewer.append_mesh();
+  directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,2.5);
+  
+  viewer.data_list[1].clear();
+  viewer.data_list[1].set_mesh(VField, FField);
+  viewer.data_list[1].set_colors(CField);
+  viewer.data_list[1].show_faces = true;
+  viewer.data_list[1].show_lines = false;
   
   //singularity mesh
   viewer.append_mesh();
+  directional::singularity_spheres(VMeshWhole, FMeshWhole, N, singVertices, singIndices, VSings, FSings, CSings,2.5);
+  
+  viewer.data_list[2].clear();
+  viewer.data_list[2].set_mesh(VSings, FSings);
+  viewer.data_list[2].set_colors(CSings);
+  viewer.data_list[2].show_faces = true;
+  viewer.data_list[2].show_lines = false;
   
   //seams mesh
   viewer.append_mesh();
+  directional::seam_lines(VMeshWhole,FMeshWhole,EV,combedMatching, VSeams,FSeams,CSeams,2.5);
   
+  viewer.data_list[3].clear();
+  viewer.data_list[3].set_mesh(VSeams, FSeams);
+  viewer.data_list[3].set_colors(CSeams);
+  viewer.data_list[3].show_faces = true;
+  viewer.data_list[3].show_lines = false;
+
   update_triangle_mesh();
   update_raw_field_mesh();
-  viewer.data_list[0].show_lines=false;
   viewer.callback_key_down = &key_down;
   viewer.launch();
 }

@@ -123,6 +123,8 @@ int main()
   viewer.append_mesh();
   update_raw_field_mesh();
   
+  viewer.selected_data_index=0;
+  
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
   viewer.callback_mouse_down = &mouse_down;

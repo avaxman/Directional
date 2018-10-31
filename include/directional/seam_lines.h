@@ -64,9 +64,10 @@ namespace directional
                              const Eigen::VectorXi seams,
                              Eigen::MatrixXd &VSeams,
                              Eigen::MatrixXi &FSeams,
-                             Eigen::MatrixXd &CSeams)
+                             Eigen::MatrixXd &CSeams,
+                             const double lengthRatio=1.25)
   {
-    double l = igl::avg_edge_length(V, F);
+    double l = lengthRatio*igl::avg_edge_length(V, F);
     seam_lines(V,F,EV, seams, l/25.0,6, VSeams, FSeams, CSeams);
   }
   

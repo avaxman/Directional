@@ -39,7 +39,7 @@ namespace directional
                                       Eigen::MatrixXd& singV,
                                       Eigen::MatrixXi& singF,
                                       Eigen::MatrixXd& singC,
-                                      const double radiusRatio=1.0)
+                                      const double radiusRatio=1.25)
   
   {
 
