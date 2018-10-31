@@ -4,13 +4,14 @@
 #include <igl/parula.h>
 #include <igl/per_face_normals.h>
 #include <igl/per_vertex_normals.h>
+//#include <directional/polyvector_field_matchings.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/readOFF.h>
 #include <igl/slice.h>
 #include <igl/sort_vectors_ccw.h>
-#include <igl/opengl/glfw/Viewer.h>
 #include <directional/streamlines.h>
-#include <directional/visualization_schemes.h>
+//#include <igl/copyleft/comiso/nrosy.h>
+#include <igl/opengl/glfw/Viewer.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/line_cylinders.h>
@@ -20,116 +21,196 @@
 #include <vector>
 #include <fstream>
 
-
 // Mesh
-Eigen::MatrixXd VMesh, VField, CField;
+Eigen::MatrixXd VMesh, VField, CField, CMesh;
 Eigen::MatrixXi FMesh, FField;
+
+Eigen::VectorXi cIDs;
+Eigen::MatrixXd cValues;
 Eigen::MatrixXcd powerField;
-Eigen::MatrixXd rawField;
+Eigen::MatrixXd raw;
 
 directional::StreamlineData sl_data;
 directional::StreamlineState sl_state;
 
-int N=3;         // degree of the vector field
+directional::StreamlineState sl_state0;		//The starting points off the streamlines
+
+int degree = 1;						// degree of the vector field
+int half_degree = degree / 2;		// degree/2 if treat_as_symmetric
+bool treat_as_symmetric = true;
+
 int anim_t = 0;
 int anim_t_dir = 1;
 
+int streamLengths = 3;				//The number of segments a streamline consists off
+int currentSegment = 0;				//The last segment of the streamline which is currently up to be replaced by the front runner
+
+int MaxLifespan = 20;				//The lifespan of a streamline before it respawns
+Eigen::VectorXi currentLifespan;			//The number off itterations past since the streamlines spawned
 
 bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
-  using namespace Eigen;
-  using namespace std;
-  
-  if (!viewer.core.is_animating)
-    return false;
-  
-  directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
-  Eigen::RowVector3d color = Eigen::RowVector3d::Zero();
-  double value = ((anim_t) % 100) / 100.;
-  
-  if (value > 0.5)
-    value = 1 - value;
-  value = value / 0.5;
-  igl::parula(value, color[0], color[1], color[2]);
-  
-  //CField=color.replicate(FField.rows(),1);
-  
-  Eigen::MatrixXd VFieldNew, CFieldNew;
-  Eigen::MatrixXi FFieldNew;
-  directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1), 4, VFieldNew, FFieldNew, CFieldNew);
-  
-  //extending current streamline mesh
-  FField.conservativeResize(FField.rows()+FFieldNew.rows(),3);
-  FField.block(FField.rows()-FFieldNew.rows(),0,FFieldNew.rows(),3)=FFieldNew.array()+VField.rows();
-  
-  VField.conservativeResize(VField.rows()+VFieldNew.rows(),3);
-  VField.block(VField.rows()-VFieldNew.rows(),0,VFieldNew.rows(),3) = VFieldNew;
-  
-  CField.conservativeResize(CField.rows()+CFieldNew.rows(),3);
-  CField.block(CField.rows()-CFieldNew.rows(),0,CFieldNew.rows(),3) = CFieldNew;
-  
-  
-  viewer.selected_data_index=1;  //streamline mesh
-  viewer.data().clear();
-  viewer.data().set_mesh(VField, FField);
-  viewer.data().set_colors(CField);
-  anim_t += anim_t_dir;
-  
-  return false;
+	using namespace Eigen;
+	using namespace std;
+
+	if (!viewer.core.is_animating)
+		return false;
+
+	directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
+	Eigen::RowVector3d color(1.0, 1.0, 1.0);
+	//CField=color.replicate(FField.rows(),1);
+
+	Eigen::MatrixXd VFieldNew, CFieldNew;
+	Eigen::MatrixXi FFieldNew;
+	directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(), 1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
+
+	viewer.selected_data_index = currentSegment + 1;  //Select the last segment off the streamline
+	viewer.data().clear();
+	viewer.data().set_mesh(VFieldNew, FFieldNew);
+	viewer.data().set_colors(CFieldNew);
+	anim_t += anim_t_dir;
+
+
+	//Shade the tail of the streamline
+	cout << "currentSegment= " << currentSegment + 1 << endl;
+	int t = 1;
+	for (int i = 1; i < streamLengths; i++) {
+		int nextSegment = currentSegment + 1 + i;
+		if (nextSegment > streamLengths)
+			nextSegment -= (streamLengths);
+		cout << nextSegment << endl;
+		viewer.selected_data_index = nextSegment;
+		viewer.data().set_colors(CFieldNew * ((1.0 / streamLengths)*t));
+		t++;
+	}
+	cout << endl;
+
+
+	//Update the itteration values
+	//segment number
+	if (currentSegment < streamLengths - 1)
+		currentSegment++;
+	else
+		currentSegment = 0;
+
+	//Lifespan update
+	for (int i = 0; i < sl_state.start_point.rows(); i++) {
+
+		if (currentLifespan(i) < MaxLifespan)
+			currentLifespan(i)++;
+		else {
+			sl_state.start_point.row(i) = sl_state0.start_point.row(i);
+			sl_state.end_point.row(i) = sl_state0.end_point.row(i);
+			sl_state.current_direction(i) = sl_state0.current_direction(i);
+			sl_state.current_face(i) = sl_state0.current_face(i);
+			currentLifespan(i) = 0;
+		}
+	}
+
+
+	return false;
 }
 
 bool key_down(igl::opengl::glfw::Viewer &viewer, unsigned char key, int modifier)
 {
-  if (key == ' ')
-  {
-    viewer.core.is_animating = !viewer.core.is_animating;
-    return true;
-  }
-  return false;
+	if (key == ' ')
+	{
+		viewer.core.is_animating = !viewer.core.is_animating;
+		return true;
+	}
+	return false;
+}
+
+Eigen::MatrixXd create_mask(Eigen::VectorXd data) {
+	Eigen::MatrixXd C;
+	igl::parula(data, true, C);
+	return C;
+}
+
+Eigen::VectorXd scalars_from_field(Eigen::MatrixXd field) {
+	Eigen::VectorXd scalars = (field.col(0)*field.col(0)) + (field.col(1)*field.col(1)) + (field.col(2)*field.col(2));
+	return scalars;
 }
 
 int main(int argc, char *argv[])
 {
-  using namespace Eigen;
-  using namespace std;
-  
-  igl::opengl::glfw::Viewer viewer;
-  
-  // Load a mesh in OFF format
-  igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
-  // Create a Vector Field
-  directional::power_field(VMesh, FMesh, Eigen::VectorXi(),  Eigen::MatrixXd() , 3, powerField);
-  
-  // Convert it to raw field
-  directional::power_to_raw(VMesh,FMesh,powerField,3,rawField, true);
-  
-  directional::streamlines_init(VMesh, FMesh, rawField, sl_data, sl_state);
-  
-  //triangle mesh
-  viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(directional::default_mesh_color());
-  viewer.data().show_lines = false;
-  
-  // Viewer Settings
-  viewer.callback_pre_draw = &pre_draw;
-  viewer.callback_key_down = &key_down;
-  viewer.core.is_animating = false;
-  viewer.core.animation_max_fps = 30.;
-  
-  // Draw initial seeds on sample points
-  directional::StreamlineState sl_state0;
-  sl_state0 = sl_state;
-  directional::streamlines_next(VMesh, FMesh, sl_data, sl_state0);
-  Eigen::MatrixXd v = sl_state0.end_point - sl_state0.start_point;
-  v.rowwise().normalize();
-  
-  //streamline mesh
-  viewer.append_mesh();
-  directional::line_cylinders(sl_state0.start_point, sl_state0.start_point + 0.0005 * v, 0.0005, Eigen::MatrixXd::Constant(sl_state0.start_point.rows(),3,1.0), 4, VField, FField, CField);
-  viewer.data().set_mesh(VField, FField);
-  viewer.data().set_colors(CField);
-  viewer.data().show_lines = false;
-  cout <<
-  "Press [space] to toggle animation" << endl;
-  viewer.launch();
+	using namespace Eigen;
+	using namespace std;
+
+	igl::opengl::glfw::Viewer viewer;
+
+	// Load a mesh in OFF format
+	igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
+	// Create a Vector Field
+	Eigen::VectorXi b;
+	Eigen::MatrixXd bc;
+	Eigen::VectorXd S; // unused
+
+	b.resize(1);
+	b << 0;
+	bc.resize(1, 3);
+	bc << 1, 1, 1;
+
+
+	half_degree = 3;
+	treat_as_symmetric = true;
+
+	directional::power_field(VMesh, FMesh, b, bc, degree, powerField);
+
+	// Convert it to raw field
+	directional::power_to_raw(VMesh, FMesh, powerField, degree, raw, true);
+	cout << "RAW rows: " << raw.rows() << endl << "RAW cols: " << raw.cols() << endl;
+
+	directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state);
+
+	CMesh = create_mask(scalars_from_field(raw));
+	//CMesh.col(0) = CMesh.col(0)*0;
+	//CMesh.col(1) = CMesh.col(1)*0.5;
+
+	//triangle mesh
+	viewer.data().set_mesh(VMesh, FMesh);
+	viewer.data().set_colors(CMesh);
+	viewer.data().show_lines = false;
+
+	// Viewer Settings
+	viewer.callback_pre_draw = &pre_draw;
+	viewer.callback_key_down = &key_down;
+	viewer.core.is_animating = false;
+	viewer.core.animation_max_fps = 30.;
+
+	// Draw initial seeds on sample points
+	sl_state0 = sl_state;
+	directional::streamlines_next(VMesh, FMesh, sl_data, sl_state0);
+	Eigen::MatrixXd v = sl_state0.end_point - sl_state0.start_point;
+	v.rowwise().normalize();
+
+	cout << "starting points: " << sl_state.start_point.rows() << "Faces: " << FMesh.rows();
+	//streamline meshes, create 1 for each segment we trace
+	for (int i = 0; i < streamLengths; i++) {
+		directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
+
+		Eigen::RowVector3d color = Eigen::RowVector3d::Zero();
+		double value = ((anim_t) % 100) / 100.;
+		if (value > 0.5)
+			value = 1 - value;
+		value = value / 0.5;
+		igl::parula(value, color[0], color[1], color[2]);
+
+		Eigen::MatrixXd VFieldNew, CFieldNew;
+		Eigen::MatrixXi FFieldNew;
+		viewer.append_mesh();
+		directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(), 1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
+		viewer.data().set_mesh(VFieldNew, FFieldNew);
+		viewer.data().set_colors(CFieldNew);
+		viewer.data().show_lines = false;
+	}
+
+	//Give all streams a random starting age
+	currentLifespan.resize(sl_state.start_point.rows());
+	for (int i = 0; i < sl_state.start_point.rows(); i++)
+		currentLifespan(i) = rand() % (MaxLifespan / 2);
+
+	cout <<
+		"Press [space] to toggle animation" << endl;
+	viewer.launch();
 }
