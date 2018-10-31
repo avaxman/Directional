@@ -115,20 +115,12 @@ Eigen::MatrixXd create_mask(Eigen::VectorXd data) {
 }
 
 Eigen::VectorXd scalars_from_field(Eigen::MatrixXd field, int N) {
+	field.normalize();
 	Eigen::VectorXd scalars;
 	scalars.resize(field.rows());
 	scalars.setZero();
-
-	std::cout << field.row(3) << std::endl;
 	for (int i = 0; i < N; i++) {
-		scalars = scalars + ((field.col(i*3)*field.col(i*3)) + (field.col(i*3+1)*field.col(i*3+1)) + (field.col(i*3+2)*field.col(i*3+2)));
-		for (int x = 0; x < field.rows(); x++) {
-			scalars(x) += sqrt((field(x*field.cols() + 3 * N) * field(x*field.cols() + 3 * N)) + (field(x*field.cols() + 3 * N + 1) * field(x*field.cols() + 3 * N + 1)) + (field(x*field.cols() + 3 * N + 2) * field(x*field.cols() + 3 * N + 2)));
-		}
-		std::cout << scalars(0) << std::endl;
-		std::cout << scalars(1) << std::endl;
-		std::cout << scalars(2) << std::endl;
-		std::cout << scalars(3) << std::endl << std::endl;
+		scalars += ((field.col(i*3)*field.col(i*3)) + (field.col(i*3+1)*field.col(i*3+1)) + (field.col(i*3+2)*field.col(i*3+2)));
 	}
 	//scalars /= N;
 	return scalars;
