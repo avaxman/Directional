@@ -304,7 +304,7 @@ Mixed-integer parameterization is demonstrated in [Example 502]({{ repo_url }}/5
 *Note:* The input field ```horsers-cf.rawfield``` is computed according to [Example 303](#303-polycurl-reduction) to have negligible PolyCurl. As such, the rotationally-seamless parameterization has a very low error ($L_\infty$ of $1.25778\cdot 10^{-5}$). The rounding iterations incur some error, but it is rather low as well (after rounding $116$ variables it climbs to $L_\infty=0.657496$); we therefore recommend to warm-start a mixed-integer parameterization with a curl-reduced directional field.
 
 
-![([Example 502]({{ repo_url }}/502_MixedIntegerParameterization/main.cpp)) Top Left: directional field. Top right: rotationally-seamless parameterization. Bottom: fully-seamless parameterization.](images/502_MixedIntegerParameterization.png)
+![([Example 502]({{ repo_url }}/502_MixedIntegerParameterization/main.cpp)) Left to right: directional field,  rotationally-seamless parameterization (before rounding), fully-seamless parameterization.](images/502_MixedIntegerParameterization.png)
 
 
 ## Outlook for continuing development
