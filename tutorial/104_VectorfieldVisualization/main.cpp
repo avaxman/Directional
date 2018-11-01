@@ -19,6 +19,8 @@
 #include <vector>
 #include <fstream>
 
+#include <directional/Visualization.h>
+
 // Mesh
 Eigen::MatrixXd VMesh, CMesh;
 Eigen::MatrixXi FMesh;
@@ -48,11 +50,11 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 		return false;
 
 	directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
-	Eigen::RowVector3d color(1.0, 1.0, 1.0);
-	//CField=color.replicate(FField.rows(),1);
 
-	Eigen::MatrixXd VFieldNew, CFieldNew;
-	Eigen::MatrixXi FFieldNew;
+	RowVector3d color(1.0, 1.0, 1.0);
+
+	MatrixXd VFieldNew, CFieldNew;
+	MatrixXi FFieldNew;
 	directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(), 1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
 
 	viewer.selected_data_index = currentSegment + 1;  //Select the last segment off the streamline
@@ -60,40 +62,23 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 	viewer.data().set_mesh(VFieldNew, FFieldNew);
 	viewer.data().set_colors(CFieldNew);
 
-
 	//Shade the tail of the streamline
-	int t = 1;
 	for (int i = 1; i < streamLengths; i++) {
+		//select the next segment off the streamline
 		int nextSegment = currentSegment + 1 + i;
 		if (nextSegment > streamLengths)
 			nextSegment -= (streamLengths);
 		viewer.selected_data_index = nextSegment;
-		viewer.data().set_colors(CFieldNew * ((1.0 / streamLengths)*t));
-		t++;
+
+		//darken it the futher it is away from the head
+		MatrixXd segmentC = CFieldNew * ((1.0 / streamLengths)*(i+1));
+		segmentC.conservativeResize(segmentC.rows(), 4);
+		segmentC.col(3).setConstant(1.0/i);
+
+		viewer.data().set_colors(segmentC);
 	}
 
-
-	//Update the itteration values
-	//segment number
-	if (currentSegment < streamLengths - 1)
-		currentSegment++;
-	else
-		currentSegment = 0;
-
-	//Lifespan update
-	for (int i = 0; i < sl_state.start_point.rows(); i++) {
-
-		if (currentLifespan(i) < MaxLifespan)
-			currentLifespan(i)++;
-		else {
-			sl_state.start_point.row(i) = sl_state0.start_point.row(i);
-			sl_state.end_point.row(i) = sl_state0.end_point.row(i);
-			sl_state.current_direction(i) = sl_state0.current_direction(i);
-			sl_state.current_face(i) = sl_state0.current_face(i);
-			currentLifespan(i) = 0;
-		}
-	}
-
+	visualization::updateItt(currentSegment, streamLengths, sl_state, sl_state0, currentLifespan, MaxLifespan);
 
 	return false;
 }
@@ -107,25 +92,7 @@ bool key_down(igl::opengl::glfw::Viewer &viewer, unsigned char key, int modifier
 	}
 	return false;
 }
-
-Eigen::MatrixXd create_mask(Eigen::VectorXd data) {
-	Eigen::MatrixXd C;
-	igl::parula(-data, true, C);
-	return C;
-}
-
-Eigen::VectorXd scalars_from_field(Eigen::MatrixXd field, int N) {
-	field.normalize();
-	Eigen::VectorXd scalars;
-	scalars.resize(field.rows());
-	scalars.setZero();
-	for (int i = 0; i < N; i++) {
-		scalars += ((field.col(i*3)*field.col(i*3)) + (field.col(i*3+1)*field.col(i*3+1)) + (field.col(i*3+2)*field.col(i*3+2)));
-	}
-	//scalars /= N;
-	return scalars;
-}
-
+		
 int main(int argc, char *argv[])
 {
 	using namespace Eigen;
@@ -153,14 +120,11 @@ int main(int argc, char *argv[])
 	directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state);
 
 	//get the color matrix for the mesh
-	CMesh = create_mask(scalars_from_field(raw, degree))*0.8;
-	//CMesh.col(0) = CMesh.col(0)*0.6;
-	//CMesh.col(1) = CMesh.col(1)*0.8;
-	//CMesh.col(2) = CMesh.col(2)*1.3;
+	visualization::create_mask(raw, degree, CMesh);
 	
 	//triangle mesh
 	viewer.data().set_mesh(VMesh, FMesh);
-	viewer.data().set_colors(CMesh);
+	viewer.data().set_colors(CMesh*0.8);
 	viewer.data().show_lines = false;
 
 	// Viewer Settings
