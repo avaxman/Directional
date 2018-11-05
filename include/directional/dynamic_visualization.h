@@ -11,23 +11,32 @@ namespace dynamic_visualization
 		Eigen::MatrixXi FMesh,
 		directional::StreamlineData &sl_data,
 		Eigen::MatrixXd rawField,
-		Eigen::MatrixXd &C
+		Eigen::MatrixXd &C,
+		const std::function<bool(Eigen::VectorXd&)> userFunc
 	) {
-		
+		Eigen::VectorXd color;
+
+		//When a function is profided, run this
+		if (userFunc) {
+			userFunc(color);
+			igl::jet(color, true, C);
+			return;
+		}
+
+		//Color the mesh based on the effort it takes 
 		Eigen::VectorXd effort;
 		directional::principal_matching(VMesh, FMesh, sl_data.EV, sl_data.EF, sl_data.FE, rawField, sl_data.matching, effort);		
+		effort = effort.cwiseAbs();
 
-		Eigen::VectorXd average_effort_per_face;
-		average_effort_per_face.resize(FMesh.rows());
-
+		color.resize(FMesh.rows());
 		for (int i = 0; i < FMesh.rows(); i++) 
 		{
 			Eigen::Vector3i indices = sl_data.FE.row(i);
 			double value = (effort(indices(0))*effort(indices(0))) + (effort(indices(1))*effort(indices(1))) + (effort(indices(2))*effort(indices(02)));
-			average_effort_per_face(i) = sqrt(value);
+			color(i) = sqrt(value);
 		}
 
-		igl::jet(average_effort_per_face, true, C);
+		igl::jet(color, true, C);
 	}
 
 	IGL_INLINE void initialize(

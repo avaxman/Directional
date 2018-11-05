@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state, 1.5/double(degree));
 
 	//Create a color mask for the imported mesh
-	dynamic_visualization::create_mask(VMesh, FMesh, sl_data, raw, CMesh);
+	dynamic_visualization::create_mask(VMesh, FMesh, sl_data, raw, CMesh, false);
 	
 	//Create the imported mesh in the viewer
 	viewer.data().set_mesh(VMesh, FMesh);
