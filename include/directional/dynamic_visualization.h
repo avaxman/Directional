@@ -6,16 +6,42 @@
 
 namespace dynamic_visualization
 { 
-	IGL_INLINE void create_mask(Eigen::MatrixXd field, const int N, Eigen::MatrixXd &C) {
+	IGL_INLINE void create_mask(
+		Eigen::MatrixXd VMesh,
+		Eigen::MatrixXi FMesh,
+		directional::StreamlineData &sl_data,
+		Eigen::MatrixXd rawField,
+		Eigen::MatrixXd &C
+	) {
 		
-		Eigen::VectorXd scalars;
-		scalars.resize(field.rows());
-		scalars.setZero();
-		scalars = field.rowwise().norm();
-		igl::parula(-scalars, true, C);
+		Eigen::VectorXd effort;
+		directional::principal_matching(VMesh, FMesh, sl_data.EV, sl_data.EF, sl_data.FE, rawField, sl_data.matching, effort);		
+
+		Eigen::VectorXd average_effort_per_face;
+		average_effort_per_face.resize(FMesh.rows());
+
+		for (int i = 0; i < FMesh.rows(); i++) 
+		{
+			Eigen::Vector3i indices = sl_data.FE.row(i);
+			double value = (effort(indices(0))*effort(indices(0))) + (effort(indices(1))*effort(indices(1))) + (effort(indices(2))*effort(indices(02)));
+			average_effort_per_face(i) = sqrt(value);
+		}
+
+		igl::jet(average_effort_per_face, true, C);
 	}
 
-	IGL_INLINE void initialize(igl::opengl::glfw::Viewer &viewer, const int streamLengths, directional::StreamlineData &sl_data, directional::StreamlineState &sl_state, Eigen::MatrixXd &VMesh, Eigen::MatrixXi &FMesh, Eigen::VectorXi &currentLifespan, const int MaxLifespan) {
+	IGL_INLINE void initialize(
+		igl::opengl::glfw::Viewer &viewer, 
+		const int streamLengths, 
+		directional::StreamlineData &sl_data, 
+		directional::StreamlineState &sl_state, 
+		Eigen::MatrixXd &VMesh, 
+		Eigen::MatrixXi &FMesh, 
+		Eigen::VectorXi &currentLifespan, 
+		const int MaxLifespan
+	) {
+
+		//Create a mesh for each part of the noodle
 		for (int i = 0; i < streamLengths; i++) {
 			directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
 
@@ -30,7 +56,7 @@ namespace dynamic_visualization
 			viewer.data().show_lines = false;
 		}
 
-		//Give all streams a random starting age
+		//Give all noodles a random starting age
 		currentLifespan.resize(sl_state.start_point.rows());
 		for (int i = 0; i < sl_state.start_point.rows(); i++)
 			currentLifespan(i) = rand() % (MaxLifespan / 2);
@@ -45,8 +71,7 @@ namespace dynamic_visualization
 		const int MaxLifespan
 	) {
 
-		//Update the itteration values
-		//segment number
+		//update current segment number
 		if (currentSegment < streamLengths - 1)
 			currentSegment++;
 		else
@@ -67,7 +92,12 @@ namespace dynamic_visualization
 		}
 	}
 
-	IGL_INLINE void shade_noodles(const int streamLengths, int &currentSegment, Eigen::MatrixXd CFieldNew, igl::opengl::glfw::Viewer &viewer) {
+	IGL_INLINE void shade_noodles(
+		const int streamLengths, 
+		int &currentSegment, 
+		Eigen::MatrixXd CFieldNew, 
+		igl::opengl::glfw::Viewer &viewer
+	) {
 
 		//Shade the tail of the streamline
 		for (int i = 1; i < streamLengths; i++) {
@@ -86,7 +116,15 @@ namespace dynamic_visualization
 		}
 	}
 
-	IGL_INLINE void update_noodles(directional::StreamlineData &sl_data, directional::StreamlineState &sl_state, Eigen::MatrixXd &VMesh, Eigen::MatrixXi &FMesh, igl::opengl::glfw::Viewer &viewer, const int streamLengths, int &currentSegment) {
+	IGL_INLINE void update_noodles(
+		directional::StreamlineData &sl_data, 
+		directional::StreamlineState &sl_state, 
+		Eigen::MatrixXd &VMesh, 
+		Eigen::MatrixXi &FMesh, 
+		igl::opengl::glfw::Viewer &viewer, 
+		const int streamLengths, 
+		int &currentSegment
+	) {
 
 		directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
 
@@ -94,7 +132,7 @@ namespace dynamic_visualization
 
 		Eigen::MatrixXd VFieldNew, CFieldNew;
 		Eigen::MatrixXi FFieldNew;
-		directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(), 1) /*Eigen::MatrixXd::Constant(sl_state.start_point.rows(),3,1.0)*/, 4, VFieldNew, FFieldNew, CFieldNew);
+		directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(), 1), 4, VFieldNew, FFieldNew, CFieldNew);
 
 		viewer.selected_data_index = currentSegment + 1;  //Select the last segment off the streamline
 		viewer.data().clear();
@@ -104,8 +142,18 @@ namespace dynamic_visualization
 		shade_noodles(streamLengths, currentSegment, CFieldNew, viewer);
 	}
 
-	IGL_INLINE void update(igl::opengl::glfw::Viewer &viewer, directional::StreamlineData &sl_data, directional::StreamlineState &sl_state, directional::StreamlineState &sl_state0, Eigen::MatrixXd &VMesh, Eigen::MatrixXi &FMesh, const int streamLengths, int &currentSegment, Eigen::VectorXi &currentLifespan,
-		const int MaxLifespan) {
+	IGL_INLINE void update(
+		igl::opengl::glfw::Viewer &viewer, 
+		directional::StreamlineData &sl_data, 
+		directional::StreamlineState &sl_state, 
+		directional::StreamlineState &sl_state0, 
+		Eigen::MatrixXd &VMesh, 
+		Eigen::MatrixXi &FMesh, 
+		const int streamLengths, 
+		int &currentSegment, 
+		Eigen::VectorXi &currentLifespan,
+		const int MaxLifespan
+	) {
 
 		update_noodles(sl_data, sl_state, VMesh, FMesh, viewer, streamLengths, currentSegment);
 		update_itteration_values(currentSegment, streamLengths, sl_state, sl_state0, currentLifespan, MaxLifespan);

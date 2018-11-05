@@ -84,10 +84,10 @@ int main(int argc, char *argv[])
 
 	// Convert it to raw field
 	directional::power_to_raw(VMesh, FMesh, powerField, degree, raw, true);
-	directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state, 0.9);
+	directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state, 1.5/double(degree));
 
 	//Create a color mask for the imported mesh
-	dynamic_visualization::create_mask(raw, degree, CMesh);
+	dynamic_visualization::create_mask(VMesh, FMesh, sl_data, raw, CMesh);
 	
 	//Create the imported mesh in the viewer
 	viewer.data().set_mesh(VMesh, FMesh);
