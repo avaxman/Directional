@@ -3,6 +3,9 @@
 
 #include <igl/igl_inline.h>
 #include <igl/parula.h>
+#include <directional/power_field.h>
+#include <directional/power_to_raw.h>
+#include <directional/line_cylinders.h>
 
 namespace dynamic_visualization
 { 
@@ -32,7 +35,7 @@ namespace dynamic_visualization
 		for (int i = 0; i < FMesh.rows(); i++) 
 		{
 			Eigen::Vector3i indices = sl_data.FE.row(i);
-			double value = (effort(indices(0))*effort(indices(0))) + (effort(indices(1))*effort(indices(1))) + (effort(indices(2))*effort(indices(02)));
+			double value = (effort(indices(0))*effort(indices(0))) + (effort(indices(1))*effort(indices(1))) + (effort(indices(2))*effort(indices(2)));
 			color(i) = sqrt(value);
 		}
 
@@ -42,13 +45,45 @@ namespace dynamic_visualization
 	IGL_INLINE void initialize(
 		igl::opengl::glfw::Viewer &viewer, 
 		const int streamLengths, 
+		const int degree,
 		directional::StreamlineData &sl_data, 
 		directional::StreamlineState &sl_state, 
+		directional::StreamlineState &sl_state0,
 		Eigen::MatrixXd &VMesh, 
 		Eigen::MatrixXi &FMesh, 
 		Eigen::VectorXi &currentLifespan, 
 		const int MaxLifespan
 	) {
+		// Create a Vector Field
+		Eigen::MatrixXcd powerField;
+		Eigen::MatrixXd raw;
+		Eigen::VectorXi b;
+		Eigen::MatrixXd bc;
+
+		b.resize(1);
+		b << 0;
+		bc.resize(1, 3);
+		bc << 1, 1, 1;
+
+		directional::power_field(VMesh, FMesh, b, bc, degree, powerField);
+
+		// Convert it to raw field
+		directional::power_to_raw(VMesh, FMesh, powerField, degree, raw, true);
+		directional::streamlines_init(VMesh, FMesh, raw, sl_data, sl_state, 1.5 / double(degree));
+
+		//Create a color mask for the imported mesh
+		Eigen::MatrixXd CMesh;
+		dynamic_visualization::create_mask(VMesh, FMesh, sl_data, raw, CMesh, false);
+
+		//Create the imported mesh in the viewer
+		viewer.data().set_mesh(VMesh, FMesh);
+		viewer.data().set_colors(CMesh);
+		viewer.data().show_lines = false;
+
+
+		// Save the spawn points off the seeds
+		sl_state0 = sl_state;
+
 
 		//Create a mesh for each part of the noodle
 		for (int i = 0; i < streamLengths; i++) {
