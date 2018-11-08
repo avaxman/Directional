@@ -1,36 +1,28 @@
 #include <igl/readOFF.h>
-#include <directional/streamlines.h>
 #include <igl/opengl/glfw/Viewer.h>
-#include <directional/line_cylinders.h>
+#include <directional/dynamic_visualization.h>
 
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <fstream>
 
-#include <directional/dynamic_visualization.h>
 
 Eigen::MatrixXd VMesh;						//Vertices of the imported mesh
 Eigen::MatrixXi FMesh;						//Faces of the imported mesh
 
-
-directional::StreamlineData sl_data;		//The data of the vectorfield through which the
-directional::StreamlineState sl_state;		//The actual state of the noodle
-directional::StreamlineState sl_state0;		//The state of the noodles when they 
-
+dynamic_visualization::noodleData n_data;
 
 int degree = 1;								//Degree of the vector field
 int streamLengths = 5;						//The number of segments a noodle consists off
-int currentSegment = 0;						//The last segment of the noodle which is currently up to be replaced by the front runner
 int MaxLifespan = 20;						//The lifespan of a noodle before it respawns
-Eigen::VectorXi currentLifespan;			//The number off itterations each noodle have been alive 
 
 bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
 	if (!viewer.core.is_animating)
 		return false;
 
-	dynamic_visualization::update(viewer, sl_data, sl_state, sl_state0, VMesh, FMesh, streamLengths, currentSegment, currentLifespan, MaxLifespan);
+	dynamic_visualization::update(viewer, n_data, VMesh, FMesh);
 
 	return false;
 }
@@ -56,7 +48,7 @@ int main(int argc, char *argv[])
 	igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
 
 	//Initialize noodles
-	dynamic_visualization::initialize(viewer, streamLengths, degree, sl_data, sl_state, sl_state0, VMesh, FMesh, currentLifespan, MaxLifespan);
+	dynamic_visualization::initialize(viewer, n_data, VMesh, FMesh, streamLengths, degree, MaxLifespan, 1.0, false);
 
 	// Viewer Settings
 	viewer.callback_pre_draw = &pre_draw;
