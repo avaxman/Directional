@@ -118,8 +118,20 @@ creating meshes from many cylinders to have the appearance of continuous curves.
 
 ### 104 Dynamic Visualization
 
-This tutorial simulates the behavior of particles within a n-degree field and is based on the simulation of the earth as seen on https://earth.nullschool.net/. This was implemented in the dynamic_visualization.h file. There are two main functions. The first is the initialize function, which creates the initial noodles and colors the mesh. By default the mesh is colored based on the average effort (average of the effort per edge) per face it takes for a noodle to move from one face to the next. This can also be done by giving it an custom user defined function. The second function is the update function. This function uses the same method as used in [103 Streamline Tracing] to make the noodles move. Instead of showing the entire path, it only shows part of it. 
+This tutorial simulates the behavior of particles within a n-degree field and is based on the simulation of the earth elements as seen on https://earth.nullschool.net/. This was implemented in the dynamic_visualization.h file. There are two main functions. The first is the initialize function, which creates the initial noodles and colors the mesh. By default the mesh is colored based on the average effort (average of the effort per edge) per face it takes for a noodle to move from one face to the next. This can also be done by giving it an custom user defined function as an extra argument. The initialization without the user function for the coloring looks like this:
 
+```cpp
+  directional::initialize_noodles(n_data, VMesh, CMesh, FMesh, streamLengths, degree, MaxLifespan, 1.0);
+```
+
+
+The second function is the update_noodles function. This function uses the same method as used in [103 Streamline Tracing] to make the noodles move. Instead of showing the entire path, it only shows part of it. It also shades the tail of the noodle to indicate the travel direction. The update function is called like so:
+
+```cpp
+  directional::update_noodles(n_data, VMesh, FMesh);
+```
+
+As a result we get a mesh over which the noodles are traveling which are representing the flow in the vector field.
 ![([Example 104]({{ repo_url }}/104_DynamicVisualization/main.cpp)) Dynamic Visualization](images/104_DynamicVisualization.gif)
 
 
