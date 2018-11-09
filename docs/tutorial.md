@@ -120,7 +120,8 @@ creating meshes from many cylinders to have the appearance of continuous curves.
 
 This tutorial simulates the behavior of particles within a n-degree field and is based on the simulation of the earth as seen on https://earth.nullschool.net/. This was implemented in the dynamic_visualization.h file. There are two main functions. The first is the initialize function, which creates the initial noodles and colors the mesh. By default the mesh is colored based on the average effort (average of the effort per edge) per face it takes for a noodle to move from one face to the next. This can also be done by giving it an custom user defined function. The second function is the update function. This function uses the same method as used in [103 Streamline Tracing] to make the noodles move. Instead of showing the entire path, it only shows part of it. 
 
-![[Example 104] Dynamic Visualization.](images/104_DynamicVisualization.gif)
+![([Example 104]({{ repo_url }}/104_DynamicVisualization/main.cpp)) Dynamic Visualization](images/104_DynamicVisualization.gif)
+
 
 ## Chapter 2: Discretization and Representation
 
