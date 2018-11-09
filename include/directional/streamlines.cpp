@@ -58,7 +58,7 @@ IGL_INLINE void directional::streamlines_init(
     }
   }
   Eigen::VectorXd effort;
-  directional::principal_matching(V, F, data.EV, data.EF, data.FE, data.field, data.matching, effort);
+  directional::principal_matching(V, F, data.EV, data.EF, data.FE, data.field, data.matching, data.effort);
   
   // create seeds for tracing
   // --------------------------

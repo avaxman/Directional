@@ -13,7 +13,7 @@ Eigen::MatrixXi FMesh;						//Faces of the imported mesh
 
 dynamic_visualization::noodleData n_data;
 
-int degree = 1;								//Degree of the vector field
+int degree = 3;								//Degree of the vector field
 int streamLengths = 5;						//The number of segments a noodle consists off
 int MaxLifespan = 20;						//The lifespan of a noodle before it respawns
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
 
 	//Initialize noodles
-	dynamic_visualization::initialize(viewer, n_data, VMesh, FMesh, streamLengths, degree, MaxLifespan, 1.0, false);
+  dynamic_visualization::initialize(viewer, n_data, VMesh, FMesh, streamLengths, degree, MaxLifespan, 1.0);
 
 	// Viewer Settings
 	viewer.callback_pre_draw = &pre_draw;

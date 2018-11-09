@@ -7,6 +7,7 @@
 #include <directional/power_to_raw.h>
 #include <directional/line_cylinders.h>
 #include <directional/streamlines.h>
+#include <directional/principal_matching.h>
 
 namespace dynamic_visualization
 { 
@@ -18,10 +19,29 @@ namespace dynamic_visualization
 		int currentSegment;						//The last segment of the noodle which is currently up to be replaced by the front runner
 		int MaxLifespan;						//The lifespan of a noodle before it respawns
 		int degree;
-		Eigen::VectorXi currentLifespan;			//The number off itterations each noodle have been alive 
+		Eigen::VectorXi currentLifespan;			//The number off itterations each noodle have been alive
 	};
+  
+  IGL_INLINE bool effort_based_coloring(const Eigen::MatrixXd& VMesh, const Eigen::MatrixXi& FMesh, const dynamic_visualization::noodleData &n_data, const Eigen::MatrixXd& rawField, Eigen::MatrixXd& colors)
+  {
+    //Color the mesh based on the effort it takes
+    Eigen::VectorXd effort;
+    //directional::principal_matching(VMesh, FMesh, n_data.sl_data.EV, n_data.sl_data.EF, n_data.sl_data.FE, rawField, n_data.sl_data.matching, effort);
 
-	IGL_INLINE void create_mask(
+    Eigen::VectorXd scalarColor(FMesh.rows());
+    for (int i = 0; i < FMesh.rows(); i++)
+    {
+      Eigen::Vector3i indices = n_data.sl_data.FE.row(i);
+      double value = (n_data.sl_data.effort(indices(0))*n_data.sl_data.effort(indices(0))) +
+      (n_data.sl_data.effort(indices(1))*n_data.sl_data.effort(indices(1))) + (n_data.sl_data.effort(indices(2))*n_data.sl_data.effort(indices(2)));
+      scalarColor(i) = sqrt(value);
+    }
+    
+    igl::jet(scalarColor, true, colors);
+    return true;
+  }
+
+	/*IGL_INLINE void create_mask(
 		Eigen::MatrixXd VMesh,
 		Eigen::MatrixXi FMesh,
 		dynamic_visualization::noodleData &n_data,
@@ -38,33 +58,19 @@ namespace dynamic_visualization
 			return;
 		}
 
-		//Color the mesh based on the effort it takes 
-		Eigen::VectorXd effort;
-		directional::principal_matching(VMesh, FMesh, n_data.sl_data.EV, n_data.sl_data.EF, n_data.sl_data.FE, rawField, n_data.sl_data.matching, effort);		
-		effort = effort.cwiseAbs();
-
-		color.resize(FMesh.rows());
-		for (int i = 0; i < FMesh.rows(); i++) 
-		{
-			Eigen::Vector3i indices = n_data.sl_data.FE.row(i);
-			double value = (effort(indices(0))*effort(indices(0))) + (effort(indices(1))*effort(indices(1))) + (effort(indices(2))*effort(indices(2)));
-			color(i) = sqrt(value);
-		}
-
-		igl::jet(color, true, C);
-	}
+		
+	}*/
 
 	IGL_INLINE void initialize(
-		igl::opengl::glfw::Viewer &viewer,						//viewer
-		dynamic_visualization::noodleData &n_data,				//noodle data
-		Eigen::MatrixXd &VMesh,									//verts of the mesh
-		Eigen::MatrixXi &FMesh,									//Faces of the mesh
-		const int streamLengths,								//How many segments does a noodle consists of
-		const int degree,										//degree of the vectorfield
-		const int MaxLifespan,									//The number of frames a noodle is allowed to life
-		const double percentage,								//Changes the amount of noodles on the mesh
-		const std::function<bool(Eigen::VectorXd&)> userFunc	
-	) {
+                             igl::opengl::glfw::Viewer &viewer,						//viewer
+                             dynamic_visualization::noodleData &n_data,				//noodle data
+                             const Eigen::MatrixXd &VMesh,									//verts of the mesh
+                             const Eigen::MatrixXi &FMesh,									//Faces of the mesh
+                             const int streamLengths,								//How many segments does a noodle consists of
+                             const int degree,										//degree of the vectorfield
+                             const int MaxLifespan,									//The number of frames a noodle is allowed to life
+                             const double percentage,								//Changes the amount of noodles on the mesh
+                             const std::function<bool(const Eigen::MatrixXd&, const Eigen::MatrixXi&,  const dynamic_visualization::noodleData &n_data, const Eigen::MatrixXd&, Eigen::MatrixXd&)> userFunc = effort_based_coloring) {
 		n_data.streamLengths = streamLengths;
 		n_data.degree = degree;
 		n_data.MaxLifespan = MaxLifespan;
@@ -89,7 +95,8 @@ namespace dynamic_visualization
 
 		//Create a color mask for the imported mesh
 		Eigen::MatrixXd CMesh;
-		dynamic_visualization::create_mask(VMesh, FMesh, n_data, raw, CMesh, userFunc);
+		//dynamic_visualization::create_mask(VMesh, FMesh, n_data, raw, CMesh, userFunc);
+    userFunc(VMesh, FMesh, n_data, raw,CMesh);
 
 		//Create the imported mesh in the viewer
 		viewer.data().set_mesh(VMesh, FMesh);
