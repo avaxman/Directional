@@ -52,8 +52,24 @@ int main(int argc, char *argv[])
 	// Load a mesh in OFF format
 	igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", VMesh, FMesh);
 
+	// Create a Vector Field
+	Eigen::MatrixXcd powerField;
+	Eigen::MatrixXd raw;
+	Eigen::VectorXi b;
+	Eigen::MatrixXd bc;
+
+	b.resize(1);
+	b << 0;
+	bc.resize(1, 3);
+	bc << 1, 1, 1;
+
+	directional::power_field(VMesh, FMesh, b, bc, N, powerField);
+
+	// Convert it to raw field
+	directional::power_to_raw(VMesh, FMesh, powerField, N, raw, true);
+
 	//Initialize noodles
-	directional::initialize_noodles(n_data, VMesh, CMesh, FMesh, streamLengths, N, MaxLifespan, 1.0);
+	directional::initialize_noodles(n_data, VMesh, CMesh, FMesh, raw, streamLengths, N, MaxLifespan, 1.0);
 
 	// Viewer Settings
 	viewer.callback_pre_draw = &pre_draw;

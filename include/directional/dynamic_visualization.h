@@ -1,8 +1,10 @@
 // This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2016 Francisca Gil Ureta <gilureta@cs.nyu.edu>, 2018 Amir Vaxman <avaxman@gmail.com>, 2018 Lennert Sietsma <lennertsietsma@gmail.com>
-
-
+//// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>, 2018 Lennert Sietsma <lennertsietsma@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_DYNAMIC_VISUALIZATION_H
 #define DIRECTIONAL_DYNAMIC_VISUALIZATION_H
 
@@ -18,18 +20,23 @@ namespace directional
 	struct noodleData {
 		directional::StreamlineData sl_data;		//The data of the vectorfield through which the
 		directional::StreamlineState sl_state;		//The actual state of the noodle
-		directional::StreamlineState sl_state0;		//The state of the noodles when they
+		directional::StreamlineState sl_state0;		//The state of the noodles when they spawn, used for the respawn of noodles
 		int streamLengths;							//The number of segments a noodle consists off
+		int degree;									//Degree of the vectorfield
 		int currentSegment;							//The last segment of the noodle which is currently up to be replaced by the front runner
 		int MaxLifespan;							//The lifespan of a noodle before it respawns
-		int degree;
 		Eigen::VectorXi currentLifespan;			//The number off itterations each noodle have been alive 
-		Eigen::MatrixXd VNoodles;					//Vertices belonging to the noodles
-		Eigen::MatrixXd CNoodles;					//Colors belonging to the noodles
-		Eigen::MatrixXi FNoodles;					//Faces belonging to the noodles
+		Eigen::MatrixXd VNoodles;					//Vertices belonging to the noodles = #V by 3 vertices.
+		Eigen::MatrixXd CNoodles;					//Colors belonging to the noodles = #F by 3 double RGB || #V by 3 double
+		Eigen::MatrixXi FNoodles;					//Faces belonging to the noodles = #F by 3 triangles.
 	};
 
-	IGL_INLINE void effort_based_coloring(const Eigen::MatrixXd& VMesh, const Eigen::MatrixXi& FMesh, const directional::noodleData &n_data, const Eigen::MatrixXd& rawField, Eigen::MatrixXd& colors)
+	IGL_INLINE void effort_based_coloring(
+		const Eigen::MatrixXd& VMesh, 
+		const Eigen::MatrixXi& FMesh, 
+		const directional::noodleData &n_data, 
+		const Eigen::MatrixXd& rawField, 
+		Eigen::MatrixXd& colors)
 	{
 		//Color the mesh based on the effort it takes by calculating a scalar color per face
 
@@ -46,10 +53,11 @@ namespace directional
 	}
 
 	IGL_INLINE void initialize_noodles(
-		directional::noodleData &n_data,				//noodle data
+		directional::noodleData &n_data,						//noodle data
 		Eigen::MatrixXd &VMesh,									//verts of the mesh
 		Eigen::MatrixXd &CMesh,									//colors of the mesh
 		Eigen::MatrixXi &FMesh,									//Faces of the mesh
+		Eigen::MatrixXd rawField,								//Vectorfield that is applied to the mesh
 		const int streamLengths,								//How many segments does a noodle consists of
 		const int degree,										//degree of the vectorfield
 		const int MaxLifespan,									//The number of frames a noodle is allowed to life
@@ -61,25 +69,11 @@ namespace directional
 		n_data.MaxLifespan = MaxLifespan;
 		n_data.currentSegment = 0;
 
-		// Create a Vector Field
-		Eigen::MatrixXcd powerField;
-		Eigen::MatrixXd raw;
-		Eigen::VectorXi b;
-		Eigen::MatrixXd bc;
 
-		b.resize(1);
-		b << 0;
-		bc.resize(1, 3);
-		bc << 1, 1, 1;
-
-		directional::power_field(VMesh, FMesh, b, bc, degree, powerField);
-
-		// Convert it to raw field
-		directional::power_to_raw(VMesh, FMesh, powerField, degree, raw, true);
-		directional::streamlines_init(VMesh, FMesh, raw, n_data.sl_data, n_data.sl_state, percentage / double(degree));
+		directional::streamlines_init(VMesh, FMesh, rawField, n_data.sl_data, n_data.sl_state, percentage / double(degree));
 
 		//Create a color mask for the imported mesh
-		userFunc(VMesh, FMesh, n_data, raw, CMesh);
+		userFunc(VMesh, FMesh, n_data, rawField, CMesh);
 
 		// Save the spawn points off the seeds
 		n_data.sl_state0 = n_data.sl_state;
@@ -114,7 +108,7 @@ namespace directional
 	}
 
 	IGL_INLINE void update_itteration_values(
-		directional::noodleData &n_data
+		directional::noodleData &n_data			//The current data of the noodles
 	) {
 		//update current segment number
 		if (n_data.currentSegment < n_data.streamLengths - 1)
@@ -138,9 +132,9 @@ namespace directional
 	}
 
 	IGL_INLINE void update_noodles(
-		directional::noodleData &n_data,
-		Eigen::MatrixXd &VMesh,
-		Eigen::MatrixXi &FMesh
+		directional::noodleData &n_data,			//An initizalized instance of noodledata, containing the current data of all noodles
+		Eigen::MatrixXd &VMesh,						// #V by 3, containing the vertices of the mesh
+		Eigen::MatrixXi &FMesh						// #F by 3, containing the faces of the mesh
 	) {
 		//move the noodle 1 frame in time
 		directional::streamlines_next(VMesh, FMesh, n_data.sl_data, n_data.sl_state);
