@@ -73,5 +73,11 @@ if(TUTORIALS_CHAPTER5)
   add_subdirectory("502_MixedIntegerParameterization")
 endif()
 
+# Chapter 6
+if(TUTORIALS_CHAPTER5)
+  add_subdirectory("601_DifferentialOperators")
+  add_subdirectory("602_HodgeDecomposition")
+endif()
+
 
 

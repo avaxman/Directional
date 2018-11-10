@@ -71,8 +71,7 @@ void update_raw_field_mesh()
     }
   } else {
     
-    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate),
-                                 directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate)),VField, FField, CField, 1.5);
+    directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate), directional::indexed_glyph_colors((viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate)),VField, FField, CField, 1.5);
     
     viewer.data_list[1].clear();
     viewer.data_list[1].set_mesh(VField, FField);

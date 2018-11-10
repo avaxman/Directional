@@ -70,7 +70,6 @@ void update_triangle_mesh()
     igl::jet(currCurl, 0.0,curlMaxOrig, CMesh);
     viewer.data_list[0].set_colors(CMesh);
   }
- 
 }
 
 
