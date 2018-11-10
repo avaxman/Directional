@@ -33,7 +33,7 @@ namespace directional
   // Output:
   //  Gv:    #3f x V Conforming gradient matrix, returning vector of xyzxyz per face gradient vectors
   //  Ge:    #3f x V Non-conforming gradient of the same style, but for mid-edge functions
-  //  J:    #3F x 3F retoation operator [Nx] per face
+  //  J:    #3F x 3F rotation operator [Nx] per face
   //  C:  Curl operator which is basically (JGe)^T * Mchi
   //  C:  Divergence operator which is basically Gv^T * Mchi
   
@@ -77,7 +77,7 @@ namespace directional
         }
         assert (currEdge!=-1 && "Something wrong with edge topology!");
         for (int k=0;k<3;k++){
-          GvTriplets.push_back(Triplet<double>(3*i+k,F((j+2)%3),eVecRot(k)/dblA(i)));
+          GvTriplets.push_back(Triplet<double>(3*i+k,F(i,(j+2)%3),eVecRot(k)/dblA(i)));
           GeTriplets.push_back(Triplet<double>(3*i+k,currEdge,-2*eVecRot(k)/dblA(i)));
         }
       }

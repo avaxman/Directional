@@ -31,11 +31,12 @@ void update_mesh()
   if ((viewingMode==GRAD_MESH)||(viewingMode==DIV_MESH)){
     viewer.data_list[0].set_mesh(VMesh, FMesh);
     viewer.data_list[0].set_colors(viewingMode==GRAD_MESH ? vScalar : fieldDiv);
-    directional::glyph_lines_raw(VMesh, FMesh, gradField, directional::default_glyph_color(),VField, FField, CField,0.5);
+    directional::glyph_lines_raw(VMesh, FMesh, gradField, directional::default_glyph_color(),VField, FField, CField,2.0);
   }else{  //non-conforming mesh
+    viewer.data_list[0].set_mesh(VMesh, FMesh);
     //viewer.data_list[0].set_mesh(VMidEdge, FMidEdge);
     //viewer.data_list[0].set_colors(viewingMode==COGRAD_MESH ? eScalar : fieldCurl);
-    directional::glyph_lines_raw(VMesh, FMesh, rotCogradField, directional::default_glyph_color(),VField, FField, CField,0.5);
+    directional::glyph_lines_raw(VMesh, FMesh, rotCogradField, directional::default_glyph_color(),VField, FField, CField,2.0);
     
   }
   viewer.data_list[1].clear();
@@ -92,6 +93,9 @@ int main()
   Eigen::VectorXd gradFieldVec = Gv*vScalar;
   Eigen::VectorXd rotCogradFieldVec = J*Ge*eScalar;
   
+  /*std::cout<<"Gv*VectorXd::Ones(V.rows()): "<<Gv*Eigen::VectorXd::Ones(VMesh.rows())<<std::endl;
+  std::cout<<"Gv*V: "<<Gv*VMesh<<std::endl;*/
+  
   gradField.resize(FMesh.rows(),3);
   rotCogradField.resize(FMesh.rows(),3);
   for (int i=0;i<FMesh.rows();i++)
@@ -99,6 +103,15 @@ int main()
       gradField(i,j)=gradFieldVec(3*i+j);
       rotCogradField(i,j)=rotCogradFieldVec(3*i+j);
     }
+  
+  //std::cout<<"gradField: "<<gradField<<std::endl;
+  //std::cout<<"rotCogradField: "<<rotCogradField<<std::endl;
+  
+  fieldDiv = D*gradFieldVec;
+  fieldCurl = C*rotCogradFieldVec;
+  
+  std::cout<<"(C*gradField).lpNorm<Infinity>(): "<<(C*gradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
+  std::cout<<"(D*rotCogradField).lpNorm<Infinity>(): "<<(D*rotCogradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   
  
   //Triangle mesh
