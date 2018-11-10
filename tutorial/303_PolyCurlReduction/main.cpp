@@ -206,6 +206,7 @@ int main(int argc, char *argv[])
   viewer.data().set_mesh(VMesh, FMesh);
   viewer.data().set_colors(directional::default_mesh_color());
   viewer.data().show_lines=false;
+  viewer.data().set_face_based(true);
   
   //apending and updating raw field mesh
   viewer.append_mesh();
