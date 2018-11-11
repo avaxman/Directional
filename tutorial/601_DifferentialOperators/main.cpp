@@ -1,7 +1,9 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/edge_topology.h>
 #include <igl/diag.h>
-#include <directional/midedge_mesh.h>
+#include <directional/non_conforming_mesh.h>
+//#include <directional/edge_diamond_mesh.h>
+//#include <directional/vertex_area_mesh.h>
 #include <directional/FEM_suite.h>
 #include <directional/FEM_masses.h>
 
@@ -10,10 +12,10 @@
 #include <directional/glyph_lines_raw.h>
 
 
-Eigen::MatrixXi FMesh, FMidEdge, FField;
+Eigen::MatrixXi FMesh,  FField, FNCMesh, FVAMesh, FEDMesh;
 Eigen::MatrixXi EV, FE, EF;
-Eigen::MatrixXd VMesh, VMidEdge, VField;
-Eigen::MatrixXd CMesh, CField;
+Eigen::MatrixXd VMesh,  VField, VNCMesh, VVAMesh, VEDMesh;
+Eigen::MatrixXd CMesh, CField, CNCMesh, CVAMesh, CEDMesh;
 Eigen::MatrixXd gradField, rotCogradField;
 Eigen::VectorXd fieldDiv, fieldCurl, vScalar, eScalar;
 igl::opengl::glfw::Viewer viewer;
@@ -27,18 +29,15 @@ ViewingModes viewingMode=GRAD_MESH;
 void update_mesh()
 {
   viewer.data_list[0].clear();
-  
-  if ((viewingMode==GRAD_MESH)||(viewingMode==DIV_MESH)){
-    viewer.data_list[0].set_mesh(VMesh, FMesh);
-    viewer.data_list[0].set_colors(viewingMode==GRAD_MESH ? vScalar : fieldDiv);
-    directional::glyph_lines_raw(VMesh, FMesh, gradField, directional::default_glyph_color(),VField, FField, CField,2.0);
-  }else{  //non-conforming mesh
-    viewer.data_list[0].set_mesh(VMesh, FMesh);
-    //viewer.data_list[0].set_mesh(VMidEdge, FMidEdge);
-    //viewer.data_list[0].set_colors(viewingMode==COGRAD_MESH ? eScalar : fieldCurl);
-    directional::glyph_lines_raw(VMesh, FMesh, rotCogradField, directional::default_glyph_color(),VField, FField, CField,2.0);
-    
+  switch(viewingMode){
+    case GRAD_MESH: viewer.data_list[0].set_mesh(VMesh, FMesh); viewer.data_list[0].set_colors(vScalar); break;
+      case DIV_MESH: viewer.data_list[0].set_mesh(VVAMesh, FVAMesh); viewer.data_list[0].set_colors(CVAMesh); break;
+      case COGRAD_MESH: viewer.data_list[0].set_mesh(VNCMesh, FNCMesh); viewer.data_list[0].set_colors(CNCMesh); break;
+      case CURL_MESH: viewer.data_list[0].set_mesh(VEDMesh, FEDMesh); viewer.data_list[0].set_colors(CEDMesh); break;
   }
+  
+  directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==GRAD_MESH ? gradField : rotCogradField), directional::default_glyph_color(),VField, FField, CField,2.0);
+  
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
@@ -67,11 +66,9 @@ int main()
   std::cout <<"3    Rotated cogradient field " << std::endl;
   std::cout <<"4    The curl of the cogradient field " << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/dragon.off", VMesh, FMesh);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
-  directional::midedge_mesh(VMesh, FMesh, EV, FE, EF, VMidEdge, FMidEdge);
- 
   //Procedurally created scalar vertex-based function
   Eigen::Vector3d minV = VMesh.colwise().minCoeff();
   Eigen::Vector3d maxV = VMesh.colwise().maxCoeff();
@@ -87,14 +84,14 @@ int main()
   igl::diag(MfVec,Mf);
   igl::diag(MchiVec,Mchi);
   
-  vScalar = VMesh.col(0);//.cwiseProduct(VMesh.col(1));
-  eScalar = VMidEdge.col(0);//.cwiseProduct(VMidEdge.col(1));
+  vScalar = VMesh.col(0).cwiseProduct(VMesh.col(1));
+  
+  eScalar.resize(EV.rows());
+  for (int i=0;i<EV.rows();i++)
+    eScalar(i) =(VMesh.row(EV(i,0))+VMesh.row(EV(i,1))).norm();
   
   Eigen::VectorXd gradFieldVec = Gv*vScalar;
   Eigen::VectorXd rotCogradFieldVec = J*Ge*eScalar;
-  
-  /*std::cout<<"Gv*VectorXd::Ones(V.rows()): "<<Gv*Eigen::VectorXd::Ones(VMesh.rows())<<std::endl;
-  std::cout<<"Gv*V: "<<Gv*VMesh<<std::endl;*/
   
   gradField.resize(FMesh.rows(),3);
   rotCogradField.resize(FMesh.rows(),3);
@@ -104,12 +101,15 @@ int main()
       rotCogradField(i,j)=rotCogradFieldVec(3*i+j);
     }
   
-  //std::cout<<"gradField: "<<gradField<<std::endl;
-  //std::cout<<"rotCogradField: "<<rotCogradField<<std::endl;
-  
   fieldDiv = D*gradFieldVec;
   fieldCurl = C*rotCogradFieldVec;
   
+  //visualization meshes
+  directional::non_conforming_mesh(VMesh, FMesh, EV, FE, EF, eScalar, VNCMesh, FNCMesh, CNCMesh);
+  //directional::edge_diamond_mesh(VMesh, FMesh, EV, FE, EF, fieldCurl, VEDMesh, FEDMesh);
+  //directional::vertex_area_mesh(VMesh, FMesh, EV, FE, EF, fieldDiv, VVAMesh, FVAMesh);
+  
+  std::cout<<"Structure-preserving sanity check: "<<std::endl;
   std::cout<<"(C*gradField).lpNorm<Infinity>(): "<<(C*gradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   std::cout<<"(D*rotCogradField).lpNorm<Infinity>(): "<<(D*rotCogradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   
