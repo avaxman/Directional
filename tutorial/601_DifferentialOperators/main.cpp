@@ -88,7 +88,7 @@ int main()
   
   eScalar.resize(EV.rows());
   for (int i=0;i<EV.rows();i++)
-    eScalar(i) =(VMesh.row(EV(i,0))+VMesh.row(EV(i,1))).norm();
+    eScalar(i) =(VMesh.row(EV(i,0))+VMesh.row(EV(i,1)))(1)/2.0;
   
   Eigen::VectorXd gradFieldVec = Gv*vScalar;
   Eigen::VectorXd rotCogradFieldVec = J*Ge*eScalar;

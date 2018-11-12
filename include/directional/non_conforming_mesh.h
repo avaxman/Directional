@@ -65,11 +65,11 @@ namespace directional
       6*i+4,6*i+5, 6*i+3,
       6*i+1,6*i+3, 6*i+5;
       
-      funcScalars.segment(6*i,6)<<midEdgeFunc(FE(i,0))+midEdgeFunc(FE(i,2)),
+      funcScalars.segment(6*i,6)<<midEdgeFunc(FE(i,0))+midEdgeFunc(FE(i,2))-midEdgeFunc(FE(i,1)),
       midEdgeFunc(FE(i,0)),
-      midEdgeFunc(FE(i,1))+midEdgeFunc(FE(i,0)),
+      midEdgeFunc(FE(i,1))+midEdgeFunc(FE(i,0))-midEdgeFunc(FE(i,2)),
       midEdgeFunc(FE(i,1)),
-      midEdgeFunc(FE(i,2))+midEdgeFunc(FE(i,1)),
+      midEdgeFunc(FE(i,2))+midEdgeFunc(FE(i,1))-midEdgeFunc(FE(i,0)),
       midEdgeFunc(FE(i,2));
       
       igl::parula(funcScalars, funcScalars.minCoeff(), funcScalars.maxCoeff(), CNCMesh);
