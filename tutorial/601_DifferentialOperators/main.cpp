@@ -2,8 +2,8 @@
 #include <igl/edge_topology.h>
 #include <igl/diag.h>
 #include <directional/non_conforming_mesh.h>
-//#include <directional/edge_diamond_mesh.h>
-//#include <directional/vertex_area_mesh.h>
+#include <directional/edge_diamond_mesh.h>
+#include <directional/vertex_area_mesh.h>
 #include <directional/FEM_suite.h>
 #include <directional/FEM_masses.h>
 
@@ -31,17 +31,17 @@ void update_mesh()
   viewer.data_list[0].clear();
   switch(viewingMode){
     case GRAD_MESH: viewer.data_list[0].set_mesh(VMesh, FMesh); viewer.data_list[0].set_colors(vScalar); break;
-      case DIV_MESH: viewer.data_list[0].set_mesh(VVAMesh, FVAMesh); viewer.data_list[0].set_colors(CVAMesh); break;
-      case COGRAD_MESH: viewer.data_list[0].set_mesh(VNCMesh, FNCMesh); viewer.data_list[0].set_colors(CNCMesh); break;
-      case CURL_MESH: viewer.data_list[0].set_mesh(VEDMesh, FEDMesh); viewer.data_list[0].set_colors(CEDMesh); break;
+    case DIV_MESH: viewer.data_list[0].set_mesh(VVAMesh, FVAMesh); viewer.data_list[0].set_colors(CVAMesh); break;
+    case COGRAD_MESH: viewer.data_list[0].set_mesh(VNCMesh, FNCMesh); viewer.data_list[0].set_colors(CNCMesh); break;
+    case CURL_MESH: viewer.data_list[0].set_mesh(VEDMesh, FEDMesh); viewer.data_list[0].set_colors(CEDMesh); break;
   }
   
-  directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==GRAD_MESH ? gradField : rotCogradField), directional::default_glyph_color(),VField, FField, CField,2.0);
+  directional::glyph_lines_raw(VMesh, FMesh, (viewingMode==GRAD_MESH || viewingMode==DIV_MESH ? gradField : rotCogradField), directional::default_glyph_color(),VField, FField, CField, 1.5);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
-
+  
 }
 
 
@@ -66,7 +66,7 @@ int main()
   std::cout <<"3    Rotated cogradient field " << std::endl;
   std::cout <<"4    The curl of the cogradient field " << std::endl;
   
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", VMesh, FMesh);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/arm.obj", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
   //Procedurally created scalar vertex-based function
@@ -84,11 +84,11 @@ int main()
   igl::diag(MfVec,Mf);
   igl::diag(MchiVec,Mchi);
   
-  vScalar = VMesh.col(0).cwiseProduct(VMesh.col(1));
+  vScalar = sin(VMesh.col(0).array()/(spanV(0))*5.0);
   
   eScalar.resize(EV.rows());
   for (int i=0;i<EV.rows();i++)
-    eScalar(i) =(VMesh.row(EV(i,0))+VMesh.row(EV(i,1)))(1)/2.0;
+    eScalar(i) =sin((VMesh(EV(i,0),0)+VMesh(EV(i,1),0))*5.0);
   
   Eigen::VectorXd gradFieldVec = Gv*vScalar;
   Eigen::VectorXd rotCogradFieldVec = J*Ge*eScalar;
@@ -106,17 +106,17 @@ int main()
   
   //visualization meshes
   directional::non_conforming_mesh(VMesh, FMesh, EV, FE, EF, eScalar, VNCMesh, FNCMesh, CNCMesh);
-  //directional::edge_diamond_mesh(VMesh, FMesh, EV, FE, EF, fieldCurl, VEDMesh, FEDMesh);
-  //directional::vertex_area_mesh(VMesh, FMesh, EV, FE, EF, fieldDiv, VVAMesh, FVAMesh);
+  directional::edge_diamond_mesh(VMesh, FMesh, EV, FE, EF, fieldCurl.cwiseAbs(), VEDMesh, FEDMesh, CEDMesh);
+  directional::vertex_area_mesh(VMesh, FMesh, EV, FE, EF, fieldDiv.cwiseAbs(), VVAMesh, FVAMesh, CVAMesh);
   
   std::cout<<"Structure-preserving sanity check: "<<std::endl;
   std::cout<<"(C*gradField).lpNorm<Infinity>(): "<<(C*gradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   std::cout<<"(D*rotCogradField).lpNorm<Infinity>(): "<<(D*rotCogradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   
- 
+  
   //Triangle mesh
   viewer.data().show_lines = false;
-
+  
   //Raw field
   viewer.append_mesh();
   viewer.data().show_lines = false;
