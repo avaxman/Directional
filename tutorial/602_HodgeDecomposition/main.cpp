@@ -1,51 +1,55 @@
 #include <igl/opengl/glfw/Viewer.h>
+#include <igl/edge_topology.h>
+#include <igl/diag.h>
+#include <directional/non_conforming_mesh.h>
+#include <directional/edge_diamond_mesh.h>
+#include <directional/vertex_area_mesh.h>
+#include <directional/FEM_suite.h>
+#include <directional/FEM_masses.h>
+#include <igl/min_quad_with_fixed.h>
+
 #include <directional/visualization_schemes.h>
 #include <directional/read_raw_field.h>
-#include <directional/read_singularities.h>
-#include <directional/singularity_spheres.h>
 #include <directional/glyph_lines_raw.h>
 
-int N;
-Eigen::MatrixXi FMesh, FField, FSings;
+
+Eigen::MatrixXi FMesh,  FField, FNCMesh, FVAMesh, FEDMesh;
 Eigen::MatrixXi EV, FE, EF;
-Eigen::MatrixXd VMesh, VField, VSings;
-Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField;
-Eigen::VectorXi singVertices, singIndices;
+Eigen::MatrixXd VMesh,  VField, VNCMesh, VVAMesh, VEDMesh;
+Eigen::MatrixXd CMesh, CField, CNCMesh, CVAMesh, CEDMesh;
+Eigen::MatrixXd rawField, gradField, rotCogradField, harmField;
+Eigen::VectorXd exactFunc, coexactFunc;
 igl::opengl::glfw::Viewer viewer;
 
-Eigen::MatrixXd positiveIndexColors, negativeIndexColors;
-Eigen::RowVector3d rawGlyphColor;
-bool drawSingularities=false;
+Eigen::SparseMatrix<double> Gv, Ge, J, Mv, Mchi, Mf, Me, C, D;
 
 
-void create_meshes()
+typedef enum {ORIGINAL_MESH, GRAD_MESH, COGRAD_MESH, HARMONIC_MESH} ViewingModes;
+ViewingModes viewingMode=ORIGINAL_MESH;
+
+void update_mesh()
 {
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
-  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
+  viewer.data_list[0].clear();
   
-  //triangle mesh
-  viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(directional::default_mesh_color());
-  viewer.data().set_face_based(true);
-  viewer.data().show_lines=true;
+  //mesh
+  switch(viewingMode){
+    case ORIGINAL_MESH: viewer.data_list[0].set_mesh(VMesh, FMesh); viewer.data_list[0].set_colors(directional::default_mesh_color()); break;
+    case GRAD_MESH: viewer.data_list[0].set_mesh(VMesh, FMesh); viewer.data_list[0].set_colors(exactFunc); break;
+    case COGRAD_MESH: viewer.data_list[0].set_mesh(VNCMesh, FNCMesh); viewer.data_list[0].set_colors(CNCMesh); break;
+    case HARMONIC_MESH: viewer.data_list[0].set_mesh(VMesh, FMesh); viewer.data_list[0].set_colors(directional::default_mesh_color()); break;
+  }
   
-  //Raw field mesh
-  viewer.append_mesh();
-  viewer.data().set_mesh(VField, FField);
-  viewer.data().set_colors(CField);
-  viewer.data().set_face_based(true);
-  viewer.data().show_lines=false;
-  
-  //Singularities mesh
-  viewer.append_mesh();
-  viewer.data().set_mesh(VSings, FSings);
-  viewer.data().set_colors(CSings);
-  viewer.data().set_face_based(true);
-  viewer.data().show_lines=false;
-  viewer.data().show_faces=false;
-  
-  viewer.selected_data_index=0;  //for all generic libigl commands.
+  //field
+  switch(viewingMode){
+    case ORIGINAL_MESH: directional::glyph_lines_raw(VMesh, FMesh,rawField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
+    case GRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,gradField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
+    case COGRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,rotCogradField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
+    case HARMONIC_MESH: directional::glyph_lines_raw(VMesh, FMesh,harmField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
+  }
+
+  viewer.data_list[1].clear();
+  viewer.data_list[1].set_mesh(VField, FField);
+  viewer.data_list[1].set_colors(CField);
   
 }
 
@@ -55,9 +59,12 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   
   switch (key)
   {
-    case GLFW_KEY_SPACE: drawSingularities=!drawSingularities; viewer.data_list[2].show_faces=!viewer.data_list[2].show_faces; /*update_mesh();*/ break;
-    default: return false;
+    case '1': viewingMode=ORIGINAL_MESH; break;
+    case '2': viewingMode=GRAD_MESH; break;
+    case '3': viewingMode=COGRAD_MESH; break;
+    case '4': viewingMode=HARMONIC_MESH; break;
   }
+  update_mesh();
   return true;
 }
 
@@ -66,12 +73,26 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 int main()
 {
   using namespace Eigen;
-  std::cout <<"<space bar>  Show/hide Singularities" << std::endl;
+  std::cout <<"1    Original field " << std::endl;
+  std::cout <<"2    Exact function + Gradient component " << std::endl;
+  std::cout <<"3    Coexact function + Rotated-cogradient component " << std::endl;
+  std::cout <<"4    Harmonic component " << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
+  int N;
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/rocker-arm2500.rawfield", N, rawField);
+  igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
- 
+  Eigen::Vector3d minV = VMesh.colwise().minCoeff();
+  Eigen::Vector3d maxV = VMesh.colwise().maxCoeff();
+  Eigen::RowVector3d spanV = maxV-minV;
+  
+  Eigen::VectorXd MvVec, MeVec, MfVec, MchiVec;
+  
+  Eigen::VectorXd rawFieldVec(3*FMesh.rows(),1);
+  for (int i=0;i<FMesh.rows();i++)
+    rawFieldVec.segment(3*i,3)=rawField.row(i).transpose();
+  
   directional::FEM_suite(VMesh, FMesh, EV, FE, EF, Gv, Ge, J, C, D);
   directional::FEM_masses(VMesh, FMesh, EV, FE, EF, MvVec, MeVec, MfVec, MchiVec);
   
@@ -80,65 +101,63 @@ int main()
   igl::diag(MfVec,Mf);
   igl::diag(MchiVec,Mchi);
   
-  Lv = D*Gv;   //Gv^T * Mchi * Gv
-  Le = C*J*Ge; //(JGe)^T * Mchi * JGe
+  SparseMatrix<double> Lv = D*Gv;   //Gv^T * Mchi * Gv
+  SparseMatrix<double> Le = C*J*Ge; //(JGe)^T * Mchi * JGe
   
   //solving for exact part
    VectorXd scalarFunc;
   igl::min_quad_with_fixed_data<double> mqwfExact;
   // Linear term is 0
-  VectorXd B = VectorXd::Zero(V.rows(),1);
+  VectorXd B = -D*rawFieldVec;
   VectorXd Beq;
   SparseMatrix<double> Aeq;
   Eigen::VectorXi b(1); b(0)=0;
   Eigen::VectorXd bc(1); bc(0)=0;
   
   igl::min_quad_with_fixed_precompute(Lv,b,Aeq,true,mqwfExact);
-  igl::min_quad_with_fixed_solve(mqwfExact,B,bc,Beq,scalarFunc);
-  
-  VectorXd exactFunc(V.rows());
-  exactFunc<<0.0,scalarFunc;
+  igl::min_quad_with_fixed_solve(mqwfExact,B,bc,Beq,exactFunc);
   
   //solving for coexact part
   igl::min_quad_with_fixed_data<double> mqwfCoexact;
   // Linear term is 0
-  VectorXd B = VectorXd::Zero(V.rows(),1);
-  VectorXd Beq;
-  SparseMatrix<double> Aeq;
-  Eigen::VectorXi b(1); b(0)=0;
-  Eigen::VectorXd bc(1); bc(0)=0;
-  
-  igl::min_quad_with_fixed_precompute(Le,b,Aeq,true,mqwfCoexact);
-  igl::min_quad_with_fixed_solve(mqwfCoexact,B,bc,Beq,scalarFunc);
-  
-  VectorXd exactFunc(V.rows());
-  exactFunc<<0.0,scalarFunc;
+  B = -C*rawFieldVec;
 
+  igl::min_quad_with_fixed_precompute(Le,b,Aeq,true,mqwfCoexact);
+  igl::min_quad_with_fixed_solve(mqwfCoexact,B,bc,Beq,coexactFunc);
   
-  Eigen::VectorXd gradFieldVec = Gv*vScalar;
-  Eigen::VectorXd rotCogradFieldVec = J*Ge*eScalar;
+  Eigen::VectorXd gradFieldVec = Gv*exactFunc;
+  Eigen::VectorXd rotCogradFieldVec = J*Ge*coexactFunc;
+  Eigen::VectorXd harmFieldVec = rawFieldVec - gradFieldVec -rotCogradFieldVec;
   
   gradField.resize(FMesh.rows(),3);
   rotCogradField.resize(FMesh.rows(),3);
+  harmField.resize(FMesh.rows(),3);
   for (int i=0;i<FMesh.rows();i++)
     for (int j=0;j<3;j++){
       gradField(i,j)=gradFieldVec(3*i+j);
       rotCogradField(i,j)=rotCogradFieldVec(3*i+j);
+      harmField(i,j)=harmFieldVec(3*i+j);
     }
   
-  fieldDiv = D*gradFieldVec;
-  fieldCurl = C*rotCogradFieldVec;
-  
   //visualization meshes
-  directional::non_conforming_mesh(VMesh, FMesh, EV, FE, EF, eScalar, VNCMesh, FNCMesh, CNCMesh);
-  directional::edge_diamond_mesh(VMesh, FMesh, EV, FE, EF, fieldCurl.cwiseAbs(), VEDMesh, FEDMesh, CEDMesh);
-  directional::vertex_area_mesh(VMesh, FMesh, EV, FE, EF, fieldDiv.cwiseAbs(), VVAMesh, FVAMesh, CVAMesh);
+  directional::non_conforming_mesh(VMesh, FMesh, EV, FE, EF, coexactFunc, VNCMesh, FNCMesh, CNCMesh);
+
+  //Triangle mesh
+  viewer.data().show_lines = false;
+  
+  //Raw field
+  viewer.append_mesh();
+  viewer.data().show_lines = false;
+  
+  update_mesh();
+  viewer.selected_data_index=0;
   
   std::cout<<"Structure-preserving sanity check: "<<std::endl;
   std::cout<<"(C*gradField).lpNorm<Infinity>(): "<<(C*gradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
+  std::cout<<"(C*harmField).lpNorm<Infinity>(): "<<(C*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   std::cout<<"(D*rotCogradField).lpNorm<Infinity>(): "<<(D*rotCogradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
+  std::cout<<"(D*harmField).lpNorm<Infinity>(): "<<(D*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   
-  create_meshes();
   viewer.callback_key_down = &key_down;
   viewer.launch();
 }
