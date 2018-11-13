@@ -45,6 +45,7 @@ if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_GlyphRendering")
   add_subdirectory("102_PickingEditing")
   add_subdirectory("103_StreamlineTracing")
+  add_subdirectory("104_DynamicStreamlines")
 endif()
 
 # Chapter 2

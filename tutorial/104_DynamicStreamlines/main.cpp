@@ -14,10 +14,10 @@ Eigen::MatrixXi FMesh;
 // Noodles
 directional::noodleData n_data;		//Contains all noodle data
 int streamLengths = 5;				//The number of segments a noodle consists of
-int MaxLifespan = 20;				//The lifespan of a noodle before it respawns
+int MaxLifespan = 10;				//The lifespan of a noodle before it respawns
 
 // Vector field
-int N = 3;							//Degree of the vector field
+int N = 2;							//Degree of the vector field
 
 bool pre_draw(igl::opengl::glfw::Viewer &viewer)
 {
@@ -58,10 +58,8 @@ int main(int argc, char *argv[])
 	Eigen::VectorXi b;
 	Eigen::MatrixXd bc;
 
-	b.resize(1);
-	b << 0;
-	bc.resize(1, 3);
-	bc << 1, 1, 1;
+	b.resize(0);
+	bc.resize(0, 3);
 
 	directional::power_field(VMesh, FMesh, b, bc, N, powerField);
 
@@ -69,7 +67,7 @@ int main(int argc, char *argv[])
 	directional::power_to_raw(VMesh, FMesh, powerField, N, raw, true);
 
 	//Initialize noodles
-	directional::initialize_noodles(n_data, VMesh, CMesh, FMesh, raw, streamLengths, N, MaxLifespan, 1.0);
+	directional::initialize_noodles(n_data, VMesh, CMesh, FMesh, raw, streamLengths, N, MaxLifespan, 4.0);
 
 	// Viewer Settings
 	viewer.callback_pre_draw = &pre_draw;
