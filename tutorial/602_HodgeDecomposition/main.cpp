@@ -41,10 +41,10 @@ void update_mesh()
   
   //field
   switch(viewingMode){
-    case ORIGINAL_MESH: directional::glyph_lines_raw(VMesh, FMesh,rawField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
-    case GRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,gradField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
-    case COGRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,rotCogradField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
-    case HARMONIC_MESH: directional::glyph_lines_raw(VMesh, FMesh,harmField, directional::default_glyph_color(),VField, FField, CField, 2.5); break;
+    case ORIGINAL_MESH: directional::glyph_lines_raw(VMesh, FMesh,rawField, directional::default_glyph_color(),VField, FField, CField, 3.0); break;
+    case GRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,gradField, directional::default_glyph_color(),VField, FField, CField, 3.0); break;
+    case COGRAD_MESH: directional::glyph_lines_raw(VMesh, FMesh,rotCogradField, directional::default_glyph_color(),VField, FField, CField, 3.0); break;
+    case HARMONIC_MESH: directional::glyph_lines_raw(VMesh, FMesh,harmField, directional::default_glyph_color(),VField, FField, CField, 3.0); break;
   }
 
   viewer.data_list[1].clear();
@@ -79,8 +79,8 @@ int main()
   std::cout <<"4    Harmonic component " << std::endl;
   
   int N;
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/rocker-arm2500.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/cup_input_simple_10000.off", VMesh, FMesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cup_input_simple_10000.rawfield", N, rawField);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
   Eigen::Vector3d minV = VMesh.colwise().minCoeff();
@@ -104,6 +104,7 @@ int main()
   SparseMatrix<double> Lv = D*Gv;   //Gv^T * Mchi * Gv
   SparseMatrix<double> Le = C*J*Ge; //(JGe)^T * Mchi * JGe
   
+ 
   //solving for exact part
    VectorXd scalarFunc;
   igl::min_quad_with_fixed_data<double> mqwfExact;
