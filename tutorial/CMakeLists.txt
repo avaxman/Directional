@@ -78,6 +78,20 @@ endif()
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("601_DifferentialOperators")
   add_subdirectory("602_HodgeDecomposition")
+  add_subdirectory("603_HarmonicBasis")
+  add_subdirectory("604_MassMatrices")
+endif()
+
+# Chapter 7
+if(TUTORIALS_CHAPTER5)
+  add_subdirectory("701_OneForms")
+  add_subdirectory("702_HarmonicFormsDesign")
+  add_subdirectory("703_SEC")
+endif()
+
+# Chapter 8
+if(TUTORIALS_CHAPTER5)
+  add_subdirectory("801_OperatorDerivation")
 endif()
 
 

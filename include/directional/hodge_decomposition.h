@@ -74,7 +74,6 @@ namespace directional
     //solving for exact part
     VectorXd scalarFunc;
     igl::min_quad_with_fixed_data<double> mqwfExact;
-    // Linear term is 0
     VectorXd B = -D*rawFieldVec;
     VectorXd Beq;
     SparseMatrix<double> Aeq;
