@@ -11,6 +11,7 @@
 #include <directional/visualization_schemes.h>
 #include <directional/read_raw_field.h>
 #include <directional/glyph_lines_raw.h>
+#include <directional/hodge_decomposition.h>
 
 
 Eigen::MatrixXi FMesh,  FField, FNCMesh, FVAMesh, FEDMesh;
@@ -87,57 +88,19 @@ int main()
   Eigen::Vector3d maxV = VMesh.colwise().maxCoeff();
   Eigen::RowVector3d spanV = maxV-minV;
   
-  Eigen::VectorXd MvVec, MeVec, MfVec, MchiVec;
-  
-  Eigen::VectorXd rawFieldVec(3*FMesh.rows(),1);
-  for (int i=0;i<FMesh.rows();i++)
-    rawFieldVec.segment(3*i,3)=rawField.row(i).transpose();
+  directional::hodge_decomposition(VMesh, FMesh, EV, FE, EF, rawField, exactFunc, coexactFunc, harmField);
   
   directional::FEM_suite(VMesh, FMesh, EV, FE, EF, Gv, Ge, J, C, D);
-  directional::FEM_masses(VMesh, FMesh, EV, FE, EF, MvVec, MeVec, MfVec, MchiVec);
-  
-  igl::diag(MvVec,Mv);
-  igl::diag(MeVec,Me);
-  igl::diag(MfVec,Mf);
-  igl::diag(MchiVec,Mchi);
-  
-  SparseMatrix<double> Lv = D*Gv;   //Gv^T * Mchi * Gv
-  SparseMatrix<double> Le = C*J*Ge; //(JGe)^T * Mchi * JGe
-  
- 
-  //solving for exact part
-   VectorXd scalarFunc;
-  igl::min_quad_with_fixed_data<double> mqwfExact;
-  // Linear term is 0
-  VectorXd B = -D*rawFieldVec;
-  VectorXd Beq;
-  SparseMatrix<double> Aeq;
-  Eigen::VectorXi b(1); b(0)=0;
-  Eigen::VectorXd bc(1); bc(0)=0;
-  
-  igl::min_quad_with_fixed_precompute(Lv,b,Aeq,true,mqwfExact);
-  igl::min_quad_with_fixed_solve(mqwfExact,B,bc,Beq,exactFunc);
-  
-  //solving for coexact part
-  igl::min_quad_with_fixed_data<double> mqwfCoexact;
-  // Linear term is 0
-  B = -C*rawFieldVec;
 
-  igl::min_quad_with_fixed_precompute(Le,b,Aeq,true,mqwfCoexact);
-  igl::min_quad_with_fixed_solve(mqwfCoexact,B,bc,Beq,coexactFunc);
-  
   Eigen::VectorXd gradFieldVec = Gv*exactFunc;
   Eigen::VectorXd rotCogradFieldVec = J*Ge*coexactFunc;
-  Eigen::VectorXd harmFieldVec = rawFieldVec - gradFieldVec -rotCogradFieldVec;
-  
+
   gradField.resize(FMesh.rows(),3);
   rotCogradField.resize(FMesh.rows(),3);
-  harmField.resize(FMesh.rows(),3);
   for (int i=0;i<FMesh.rows();i++)
     for (int j=0;j<3;j++){
       gradField(i,j)=gradFieldVec(3*i+j);
       rotCogradField(i,j)=rotCogradFieldVec(3*i+j);
-      harmField(i,j)=harmFieldVec(3*i+j);
     }
   
   //visualization meshes
@@ -155,9 +118,9 @@ int main()
   
   std::cout<<"Structure-preserving sanity check: "<<std::endl;
   std::cout<<"(C*gradField).lpNorm<Infinity>(): "<<(C*gradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
-  std::cout<<"(C*harmField).lpNorm<Infinity>(): "<<(C*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
+  //std::cout<<"(C*harmField).lpNorm<Infinity>(): "<<(C*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   std::cout<<"(D*rotCogradField).lpNorm<Infinity>(): "<<(D*rotCogradFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
-  std::cout<<"(D*harmField).lpNorm<Infinity>(): "<<(D*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
+  //std::cout<<"(D*harmField).lpNorm<Infinity>(): "<<(D*harmFieldVec).lpNorm<Eigen::Infinity>()<<std::endl;
   
   viewer.callback_key_down = &key_down;
   viewer.launch();
