@@ -81,7 +81,7 @@ namespace directional
     
      SparseMatrix<double> Lv = D*Gv;   //Gv^T * Mchi * Gv
     for (int cycle=basisCycles.rows()-numGenerators;cycle<basisCycles.rows();cycle++){
-      SparseVector<double> singleCycle = basisCycles.row(cycle);
+      SparseVector<double> singleCycle = basisCycles.row(cycle).transpose();
       
       //VectorXi bmask=VectorXi::Zero(V.rows());
       //VectorXd bcall=VectorXd::Zero(V.rows());
@@ -116,7 +116,7 @@ namespace directional
       
       //FIltering exact part
       VectorXd harmFieldVec = candidateFieldVec-Gv*exactFunc;
-      harmFieldVec=harmFieldVec/harmFieldVec.norm();
+      harmFieldVec=harmFieldVec/harmFieldVec.norm()*10.0;
       
       std::cout<<"harmFieldVec.norm(): "<<harmFieldVec.norm()<<std::endl;
       

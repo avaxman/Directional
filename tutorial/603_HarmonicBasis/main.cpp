@@ -31,7 +31,8 @@ void update_field()
 {
 
   //mesh
-  directional::glyph_lines_raw(VMesh, FMesh,harmFields[currField], directional::default_glyph_color(),VField, FField, CField, 25.0);
+  //viewer.data_list[0].set_colors(harmFields[currField].rowwise().norm());
+  directional::glyph_lines_raw(VMesh, FMesh,harmFields[currField], directional::default_glyph_color(),VField, FField, CField,10.0);
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
@@ -56,8 +57,7 @@ int main()
 {
   using namespace Eigen;
   std::cout <<"1    Switch between harmonic basis fields " << std::endl;
-  int N;
-  igl::readOFF(TUTORIAL_SHARED_PATH "/cup_input_simple_10000.off", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/eight.off", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
   directional::harmonic_basis(VMesh, FMesh, EV, FE, EF, harmFields);
