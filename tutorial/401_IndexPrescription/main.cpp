@@ -170,27 +170,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
-      
-      /*Eigen::VectorXi singVertices, singIndices;
-      std::vector<int> singVerticesList, singIndicesList;
-      for (int i=0;i<VMesh.rows();i++)
-        if (cycleIndices(vertex2cycle(i))){
-          singVerticesList.push_back(i);
-          singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
-        }
-      
-      singVertices.resize(singVerticesList.size());
-      singIndices.resize(singIndicesList.size());
-      for (int i=0;i<singVerticesList.size();i++){
-        singVertices(i)=singVerticesList[i];
-        singIndices(i)=singIndicesList[i];
-      }
-      
-      if (directional::write_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices))
-        std::cout << "Saved raw field" << std::endl;
-      else
-        std::cout << "Unable to save raw field. Error: " << errno << std::endl;*/
-      
   }
   return true;
 }

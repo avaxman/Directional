@@ -19,7 +19,7 @@
 #include <directional/glyph_lines_raw.h>
 
 Eigen::VectorXi singVertices,singIndices;
-Eigen::VectorXi prinSingVertices,prinSingIndices;
+Eigen::VectorXi prinSingVertices;
 
 Eigen::SparseMatrix<double> basisCycles;
 Eigen::MatrixXi FMesh, FField, FSings;
