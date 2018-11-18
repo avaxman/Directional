@@ -40,7 +40,7 @@ int eulerChar, numGenerators, numBoundaries;
 int N = 2;
 
 bool drag = false;
-bool select = false;
+bool _select = false;
 
 double globalRotation=0;
 
@@ -117,7 +117,7 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
-    case '0': select=false; break;
+    case '0': _select=false; break;
   }
   return true;
 }
@@ -125,7 +125,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
-    case '0': select=true; break;
+    case '0': _select=true; break;
     case '1':
       globalRotation+=0.314;
       update_raw_field_mesh();
@@ -177,7 +177,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 
 bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
-  if ((key != 0)||(!select))
+  if ((key != 0)||(!_select))
     return false;
   int fid;
   Eigen::Vector3d bc;
