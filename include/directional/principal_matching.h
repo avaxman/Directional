@@ -85,8 +85,6 @@ namespace directional
         Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
         Complex transvecjfc = vecjfc*edgeTransport(i);
         freeCoeff *= (vecjgc / transvecjfc);
-        /*std::cout<<"transvec0fc: "<<transvec0fc<<std::endl;
-         std::cout<<"vecjgc: "<<vecjgc<<std::endl;*/
         double currRotAngle =arg(vecjgc / transvec0fc);
         if (abs(currRotAngle)<abs(minRotAngle)){
           indexMinFromZero=j;
@@ -109,10 +107,8 @@ namespace directional
         Complex transvecjfc = vecjfc*edgeTransport(i);
         currEffort+= arg(vecjgc / transvecjfc);
       }
-      
-      //std::cout<<"(currEffort - effort(i))/(2.0*igl::PI):"<<(currEffort - effort(i))/(2.0*igl::PI)<<std::endl;
-      
-      matching(i)=indexMinFromZero+round((currEffort-effort(i))/(2.0*igl::PI));
+   
+      matching(i)=indexMinFromZero-round((currEffort-effort(i))/(2.0*igl::PI));
       //effort(i)=currEffort+2*igl::PI*(double)(indexMinFromZero-matching(i));
       
     }
