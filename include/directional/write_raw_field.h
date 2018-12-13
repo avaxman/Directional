@@ -16,36 +16,27 @@
 namespace directional
 {
 
-	// Writes a a directional field in raw format to file
-	// Inputs:
-	//   filename: The name used for the mesh and singularity file, without extention
+  // Writes a a directional field in raw format to file
+  // Inputs:
+  //   filename: The name used for the mesh and singularity file, without extention
   //   rawField: #F by 3*N in xyzxyz format (N is derived from F.cols())
   // Returns:
-	//   Whether or not the file was written successfully
-	bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField)
-	{
-    
-  try
+  //   Whether or not the file was written successfully
+  bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField)
   {
-    std::ofstream f(fileName);
-    
-    int N=rawField.cols()/3;
-    assert(3*N==rawField.cols());
-    f<<N<<" "<<rawField.rows()<<std::endl;
-    for (int i=0;i<rawField.rows();i++){
-      for (int j=0;j<rawField.cols();j++)
-        f<<rawField(i,j)<<" ";
-      f<<std::endl;
-    }
-    f.close();
-    return !f.fail();
+      std::ofstream f(fileName);
+      int N = rawField.cols() / 3;
+      assert(3 * N == rawField.cols());
+      f << N << " " << rawField.rows() << std::endl;
+      for (int i=0;i<rawField.rows();i++)
+      {
+        for (int j=0;j<rawField.cols();j++)
+          f << rawField(i,j) << " ";
+        f << std::endl;
+      }
+      f.close();
+      return !f.fail();
   }
-  catch (std::exception e)
-  {
-    return false;
-  }
-}
-  
 }
 
 #endif
