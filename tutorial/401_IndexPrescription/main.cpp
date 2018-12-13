@@ -40,7 +40,7 @@ int eulerChar, numGenerators, numBoundaries;
 int N = 2;
 
 bool drag = false;
-bool select = false;
+bool _select = false;
 
 double globalRotation=0;
 
@@ -117,7 +117,7 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
-    case '0': select=false; break;
+    case '0': _select=false; break;
   }
   return true;
 }
@@ -125,7 +125,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
-    case '0': select=true; break;
+    case '0': _select=true; break;
     case '1':
       globalRotation+=0.314;
       update_raw_field_mesh();
@@ -170,27 +170,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
-      
-      /*Eigen::VectorXi singVertices, singIndices;
-      std::vector<int> singVerticesList, singIndicesList;
-      for (int i=0;i<VMesh.rows();i++)
-        if (cycleIndices(vertex2cycle(i))){
-          singVerticesList.push_back(i);
-          singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
-        }
-      
-      singVertices.resize(singVerticesList.size());
-      singIndices.resize(singIndicesList.size());
-      for (int i=0;i<singVerticesList.size();i++){
-        singVertices(i)=singVerticesList[i];
-        singIndices(i)=singIndicesList[i];
-      }
-      
-      if (directional::write_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices))
-        std::cout << "Saved raw field" << std::endl;
-      else
-        std::cout << "Unable to save raw field. Error: " << errno << std::endl;*/
-      
   }
   return true;
 }
@@ -198,7 +177,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 
 bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
-  if ((key != 0)||(!select))
+  if ((key != 0)||(!_select))
     return false;
   int fid;
   Eigen::Vector3d bc;

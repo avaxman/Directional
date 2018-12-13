@@ -19,7 +19,7 @@
 #include <directional/glyph_lines_raw.h>
 
 Eigen::VectorXi singVertices,singIndices;
-Eigen::VectorXi prinSingVertices,prinSingIndices;
+Eigen::VectorXi prinSingVertices;
 
 Eigen::SparseMatrix<double> basisCycles;
 Eigen::MatrixXi FMesh, FField, FSings;
@@ -134,9 +134,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
       std::cout<<"globalRotation: " <<globalRotation<<std::endl;
       break;
     }
-      
-    default: break;  //dunno why this is needed but it helps...
-      
+    default: break;
   }
   update_directional_field();
   return true;

@@ -29,7 +29,6 @@ Eigen::MatrixXd rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singVertices;
 Eigen::MatrixXd cutUVFull, cutUVRot;
 igl::opengl::glfw::Viewer viewer;
@@ -51,10 +50,10 @@ void setup_line_texture()
   texture_R.setConstant(size, size, 0);
   for (unsigned i=0; i<size; ++i)
     for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255.0;
+      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
   for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
     for (unsigned j=0; j<size; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255.0;
+      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
 }
 
 void update_triangle_mesh()
@@ -99,7 +98,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
       break;
-      //case '2': viewer.data().show_texture=!viewer.data().show_texture; update_mesh(); break;
   }
   update_triangle_mesh();
   update_raw_field_mesh();

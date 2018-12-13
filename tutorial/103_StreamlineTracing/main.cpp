@@ -52,8 +52,6 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   value = value / 0.5;
   igl::parula(value, color[0], color[1], color[2]);
   
-  //CField=color.replicate(FField.rows(),1);
-  
   Eigen::MatrixXd VFieldNew, CFieldNew;
   Eigen::MatrixXi FFieldNew;
   directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1), 4, VFieldNew, FFieldNew, CFieldNew);
@@ -129,7 +127,6 @@ int main(int argc, char *argv[])
   viewer.data().set_mesh(VField, FField);
   viewer.data().set_colors(CField);
   viewer.data().show_lines = false;
-  cout <<
-  "Press [space] to toggle animation" << endl;
+  cout << "Press [space] to toggle animation" << endl;
   viewer.launch();
 }
