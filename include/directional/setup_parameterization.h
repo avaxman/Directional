@@ -124,14 +124,28 @@ namespace directional
     for (int i=1;i<N;i++)
       constParmMatrices[i]=unitPermMatrix*constParmMatrices[i-1];
     
+    
+    VectorXi isSeam=VectorXi::Zero(EV.rows());
+    for (int i=0;i<FE.rows();i++)
+      for (int j=0;j<3;j++)
+        if (pd.face2cut(i,j))
+          isSeam(FE(i,j))=1;
+    
     VectorXi isHEcut=VectorXi::Zero(HE.rows());
-    VectorXi cutValence=VectorXi::Zero(wholeV.rows());
+    
     for (int i=0;i<wholeF.rows();i++)
       for (int j=0;j<3;j++)
         if (pd.face2cut(i,j)){
-          cutValence(wholeF(i,j))++;
           isHEcut(FH(i,j))=1;
         }
+    
+    VectorXi cutValence=VectorXi::Zero(wholeV.rows());
+    for (int i=0;i<EV.rows();i++)
+      if (isSeam(i)){
+        cutValence(EV(i,0))++;
+        cutValence(EV(i,1))++;
+      }
+    
     
     //establishing transition variables by tracing cut curves
     VectorXi Halfedge2TransitionIndices=VectorXi::Constant(HE.rows(),32767);
@@ -198,12 +212,25 @@ namespace directional
       if (((cutValence(i)==2)&&(!isSingular(i)))||(cutValence(i)==0))
         continue;  //either mid-cut curve or non at all
       
-      if (isBoundary(i))
-        continue;  //there is never a need to start with boundary vertices, and boundary curves don't get a transition variable
+      //if (isBoundary(i))
+      //  continue;  //there is never a need to start with boundary vertices, and boundary curves don't get a transition variable
       
       //tracing curves until next node, if not already filled
       int beginH=VH(i);
+      
+      //reseting to first boundary
       int currH=beginH;
+    
+      if (isBoundary(i)){
+        do{
+          if (twinH(currH)==-1)
+            break;
+          currH=nextH(twinH(currH));
+        }while (twinH(currH)!=-1);
+      }
+      
+      beginH=currH;
+    
       int nextHalfedgeInCut=-1;
       do{
         if ((isHEcut(currH)!=0)&&(isHEClaimed(currH)==0)&&(twinH(currH)!=-1)){ //unclaimed inner halfedge
