@@ -98,8 +98,8 @@ int main()
   
   directional::ParameterizationData pd;
   directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField);
-   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
+   //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
  
   std::cout<<"Setting up parameterization"<<std::endl;
   

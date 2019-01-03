@@ -33,7 +33,7 @@ Eigen::VectorXi singIndices, singVertices;
 Eigen::MatrixXd cutUVFull, cutUVRot;
 igl::opengl::glfw::Viewer viewer;
 
-typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION} ViewingModes;
+typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION, UV_COORDS} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 //texture image
@@ -65,7 +65,7 @@ void update_triangle_mesh()
     viewer.data_list[0].set_face_based(false);
     viewer.data_list[0].show_texture=false;
     viewer.data_list[0].show_lines=false;
-  } else {
+  } else if ((viewingMode==ROT_PARAMETERIZATION) || (viewingMode==FULL_PARAMETERIZATION)){
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
@@ -74,12 +74,19 @@ void update_triangle_mesh()
     viewer.data_list[0].set_face_based(true);
     viewer.data_list[0].show_texture=true;
     viewer.data_list[0].show_lines=false;
+  } else {
+    viewer.data_list[0].clear();
+    viewer.data_list[0].set_mesh(cutUVFull, FMeshCut);
+    viewer.data_list[0].set_colors(directional::default_mesh_color());
+    viewer.data_list[0].set_face_based(false);
+    viewer.data_list[0].show_texture=false;
+    viewer.data_list[0].show_lines=true;
   }
 }
 
 void update_raw_field_mesh()
 {
-  for (int i=1;i<=3;i++)  //hide all other meshes
+  for (int i=1;i<=4;i++)  //hide all other meshes
     viewer.data_list[i].show_faces=(viewingMode==FIELD);
 }
 
@@ -93,6 +100,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '1': viewingMode = FIELD; break;
     case '2': viewingMode = ROT_PARAMETERIZATION; break;
     case '3': viewingMode = FULL_PARAMETERIZATION; break;
+    case '4': viewingMode = UV_COORDS; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
@@ -127,8 +135,8 @@ int main()
   
   directional::ParameterizationData pd;
   directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField);
-  directional::curl_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField, combedMatching, combedEffort, curlNorm);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
+  //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField, combedMatching, combedEffort);
   std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
   
   std::cout<<"Setting up parameterization"<<std::endl;
@@ -143,12 +151,12 @@ int main()
   
   isInteger = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUVFull);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,  cutUVFull);
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
   viewer.append_mesh();
-  directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,2.5);
+  directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,1.0);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
@@ -168,6 +176,12 @@ int main()
   
   //seams mesh
   viewer.append_mesh();
+  
+  Eigen::VectorXi isSeam=Eigen::VectorXi::Zero(EV.rows());
+  for (int i=0;i<FE.rows();i++)
+    for (int j=0;j<3;j++)
+      if (pd.face2cut(i,j))
+        isSeam(FE(i,j))=1;
   directional::seam_lines(VMeshWhole, FMeshWhole, EV, combedMatching, VSeams, FSeams, CSeams,2.5);
   
   viewer.data_list[3].clear();
