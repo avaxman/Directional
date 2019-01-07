@@ -147,7 +147,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       if (numBoundaries)
       {
         //Loop through the boundary cycles.
-        if (currCycle >= basisCycles.rows()-numBoundaries-numGenerators && currCycle < basisCycles.rows()-numBoundaries-numGenerators)
+        if (currCycle >= basisCycles.rows()-numBoundaries-numGenerators && currCycle < basisCycles.rows()-numGenerators-1)
           currCycle++;
         else
           currCycle = basisCycles.rows()-numBoundaries-numGenerators;
@@ -247,8 +247,6 @@ int main()
         cycleFaces[it.row()].push_back(f2);
     }
   }
-  
-  
   
   //triangle mesh setup
   viewer.data().set_mesh(VMesh, FMesh);
