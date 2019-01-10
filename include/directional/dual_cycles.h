@@ -80,7 +80,7 @@ namespace directional
     int currGeneratorCycle=0;
     int currBoundaryCycle=0;
     
-    if (numGenerators!=0){
+    if ((numGenerators!=0)||(numBoundaries!=0)){
       MatrixXi reducedEV(EV);
       for (int i = 1; i < reducedEV.rows(); i++)
         if(isBoundary(reducedEV(i,0)) || isBoundary(reducedEV(i, 1)))
@@ -146,7 +146,7 @@ namespace directional
             candidateTriplets.push_back(Triplet<double>(0, currTreeEdge, sign));
             currFace = (EF(currTreeEdge, 0) == currFace ? EF(currTreeEdge, 1) : EF(currTreeEdge, 0));
             currTreeEdge = dualTreeFathers(currFace);
-          };
+          }
         }
 
         //only putting in dual edges that are below the LCA
@@ -164,16 +164,16 @@ namespace directional
             basisCycleTriplets.push_back(trueTriplet);
           }
       }
-      assert(currBoundaryCycle==numBoundaries && currGeneratorCycle==numGenerators);
+      //assert(currBoundaryCycle==numBoundaries && currGeneratorCycle==numGenerators);
     }
     
-    //SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numCycle,numV+numBoundaries+numCycle);
-    //vector<Triplet<double>> sumBoundaryLoopsTriplets;
+    SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numBoundaries+numGenerators);
+    vector<Triplet<double>> sumBoundaryLoopsTriplets;
     vector<int> innerVerticesList, innerEdgesList;
     VectorXi remainRows, remainColumns;
     
     for (int i=0;i<numV;i++){
-      //sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0-isBoundary[i]));
+      sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0-isBoundary[i]));
       if (!isBoundary(i)){
         innerVerticesList.push_back(i);
         vertex2cycle(i)=innerVerticesList.size()-1;
@@ -187,20 +187,20 @@ namespace directional
     //summing up boundary loops
     for (int i=0;i<boundaryLoops.size();i++)
       for (int j=0;j<boundaryLoops[i].size();j++){
-        //sumBoundaryLoopsTriplets.push_back(Triplet<double>(numV+i, boundaryLoops[i][j],1.0));
+        sumBoundaryLoopsTriplets.push_back(Triplet<double>(numV+i, boundaryLoops[i][j],1.0));
         vertex2cycle(boundaryLoops[i][j])=i;
       }
     
     
     //just passing generators through;
-    //for (int i=numV+numBoundaries;i<numV+numBoundaries+numCycle;i++)
-    //  sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0));
+    for (int i=numV+numBoundaries;i<numV+numBoundaries+numGenerators;i++)
+      sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0));
     
-    //sumBoundaryLoops.setFromTriplets(sumBoundaryLoopsTriplets.begin(), sumBoundaryLoopsTriplets.end());
+    sumBoundaryLoops.setFromTriplets(sumBoundaryLoopsTriplets.begin(), sumBoundaryLoopsTriplets.end());
     
     basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
     basisCycles.setFromTriplets(basisCycleTriplets.begin(), basisCycleTriplets.end());
-    //basisCycles=sumBoundaryLoops*basisCycles;
+    basisCycles=sumBoundaryLoops*basisCycles;
     
     //removing rows and columns
     remainRows.resize(innerVerticesList.size()+numBoundaries+numGenerators);
