@@ -436,15 +436,23 @@ namespace directional
    mAfull.resize(rowCounter, N * mB1.rows());
    mAfull.setFromTriplets(AfullTriplets.cbegin(), AfullTriplets.cend());
 
-   TContainer AVarTriplets;
-   extractVarPartOfEnergy(AfullTriplets.cbegin(), AfullTriplets.cend(), OutputIterator(AVarTriplets));
-   mAVar.resize(rowCounter, N * (mB1.rows() - mHardConstrIDs.size()));
-   mAVar.setFromTriplets(AVarTriplets.cbegin(), AVarTriplets.cend());
+   // no need to compute this when no constraints
+   if(softIndices.size() > 0 || constIndices.size() > 0)
+   {
+     TContainer AVarTriplets;
+     extractVarPartOfEnergy(AfullTriplets.cbegin(), AfullTriplets.cend(), OutputIterator(AVarTriplets));
+     mAVar.resize(rowCounter, N * (mB1.rows() - mHardConstrIDs.size()));
+     mAVar.setFromTriplets(AVarTriplets.cbegin(), AVarTriplets.cend());
+   }
 
-   TContainer TSoft;
-   buildSoftConstraintsEnergyMatrix(OutputIterator(TSoft));
-   mASoft.resize(N * (mB1.rows() - mHardConstrIDs.size()), N * (mB1.rows() - mHardConstrIDs.size()));
-   mASoft.setFromTriplets(TSoft.cbegin(), TSoft.cend());
+   // no need to compute this when no constraints
+   if(softIndices.size() > 0)
+   {
+     TContainer TSoft;
+     buildSoftConstraintsEnergyMatrix(OutputIterator(TSoft));
+     mASoft.resize(N * (mB1.rows() - mHardConstrIDs.size()), N * (mB1.rows() - mHardConstrIDs.size()));
+     mASoft.setFromTriplets(TSoft.cbegin(), TSoft.cend());
+   }
  }
 
  void PolyVectorComputer::evalNoConstraints(Eigen::MatrixXcd &polyVectorField)
