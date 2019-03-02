@@ -512,9 +512,9 @@ namespace directional
      evalNoConstraints(polyVectorField);
      return;
    }
-
-   assert(mSolver.rows() != 0);
    mSolver.compute(mAVar.adjoint() * mAVar + mASoft);
+   assert(mSolver.rows() != 0);
+
    Eigen::VectorXcd torhs(N * mB1.rows(), 1);
    torhs.setZero();
    for (size_t i = 0; i < constIndices.size(); i++)
