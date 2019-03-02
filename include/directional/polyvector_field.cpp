@@ -495,7 +495,6 @@ namespace directional
    tagVariables();
    buildEnergyMatrics(EV, EF);
 
-   mSolver.compute(mAVar.adjoint() * mAVar + mASoft);
  }
 
  void PolyVectorComputer::eval(Eigen::MatrixXcd &polyVectorField)
@@ -507,6 +506,7 @@ namespace directional
      return;
    }
 
+   mSolver.compute(mAVar.adjoint() * mAVar + mASoft);
    Eigen::VectorXcd torhs(N * mB1.rows(), 1);
    torhs.setZero();
    for (size_t i = 0; i < constIndices.size(); i++)
