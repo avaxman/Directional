@@ -43,8 +43,12 @@ void update_triangle_mesh()
   viewer.data_list[0].set_colors(CMesh);
 }
 
-void recompute_field(){
-  directional::power_field(VMesh, FMesh, b, bc, N, powerField);
+void recompute_field()
+{
+  Eigen::VectorXi bcSoft;
+  Eigen::MatrixXd wSoft;
+  Eigen::MatrixXd bSoft;
+  directional::power_field(VMesh, FMesh, b, bc, bcSoft, wSoft, bSoft, N, powerField);
 }
 
 void update_raw_field_mesh()
