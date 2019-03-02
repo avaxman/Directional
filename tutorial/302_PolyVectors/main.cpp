@@ -1,7 +1,4 @@
 #include <iostream>
-#include <directional/power_field.h>
-#include <directional/power_to_representative.h>
-#include <directional/power_to_raw.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
@@ -46,7 +43,10 @@ void update_triangle_mesh()
 
 void recompute_field()
 {
-  directional::polyvector_field(VMesh, FMesh, b, bc, N, pvField);
+  Eigen::VectorXi bcSoft;
+  Eigen::MatrixXd wSoft;
+  Eigen::MatrixXd bSoft;
+  directional::polyvector_field(VMesh, FMesh, b, bc, bcSoft, wSoft, bSoft, N, pvField);
 }
 
 void update_raw_field_mesh()
