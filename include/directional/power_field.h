@@ -8,9 +8,7 @@
 #ifndef DIRECTIONAL_POWER_FIELD_H
 #define DIRECTIONAL_POWER_FIELD_H
 
-#include <Eigen/Sparse>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/local_basis.h>
+#include <Eigen/Core>
 #include <directional/polyvector_field.h>
 
 
