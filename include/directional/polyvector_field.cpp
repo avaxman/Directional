@@ -365,7 +365,6 @@ namespace directional
    softWeights.resize(N * mSoftConstrWeights.rows());
    softWeights.setZero();
    softIndices.resize(N * mSoftConstrIDs.size());
-   softIndices.setZero();
    for (unsigned int n = 0; n < N; n++)
    {
      softIndices.segment(mSoftConstrIDs.rows() * n, mSoftConstrIDs.rows()) = mSoftConstrIDs.array() + n * mB1.rows();
@@ -380,7 +379,8 @@ namespace directional
  {
    unsigned int rowCounter = 0;
    // Build the sparse matrix, with an energy term for each edge and degree
-   for (unsigned int n = 0; n < N; n++) {
+   for (unsigned int n = 0; n < N; n++)
+   {
      for (unsigned int i = 0; i < EF.rows(); i++)
      {
        if ((EF(i, 0) == -1) || (EF(i, 1) == -1))
