@@ -499,13 +499,13 @@ namespace directional
 
  void PolyVectorComputer::eval(Eigen::MatrixXcd &polyVectorField)
  {
-   assert(mSolver.rows() != 0);
    if (mHardConstrIDs.size() == 0 && mSoftConstrWeights.size() == 0)
    {
      evalNoConstraints(polyVectorField);
      return;
    }
 
+   assert(mSolver.rows() != 0);
    mSolver.compute(mAVar.adjoint() * mAVar + mASoft);
    Eigen::VectorXcd torhs(N * mB1.rows(), 1);
    torhs.setZero();
