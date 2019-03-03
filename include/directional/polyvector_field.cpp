@@ -16,7 +16,6 @@
 #include <Eigen/Sparse>
 #include <Eigen/Geometry>
 #include <Eigen/SparseCholesky>
-#include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/Polynomials>
 
 #include <igl/triangle_triangle_adjacency.h>
