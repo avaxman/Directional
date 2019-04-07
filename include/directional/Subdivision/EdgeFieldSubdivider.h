@@ -3,7 +3,9 @@
 template<typename CoefficientProvider>
 class EdgeFieldSubdivider
 {
-	SubdivisionBuilder builder;
+	using IndexList = std::vector<int>;
+	using CoefficientList = std::vector<double>;
+	LeveledSparseConstructor builder;
 	CoefficientProvider cp;
 	EdgeData* ED;
 	// Maps edges to next level edges. |E| x 4 elements, with |E| number of original edges.
@@ -15,12 +17,21 @@ class EdgeFieldSubdivider
 	// If the left or right face does not exist (boundary), the index is -1.
 	Eigen::MatrixXi* E0ToEk = nullptr;
 public:
-	EdgeFieldSubdivider(EdgeData& ED) :ED(&ED), builder(ED.faceCount(), ED.faceCount()), cp({})
+	EdgeFieldSubdivider() :cp({}){}
+
+	Eigen::SparseMatrix<double> getMatrix() const
 	{
+		return builder.matrix;
+	}
+
+	void setup(EdgeData& ED)
+	{
+		builder = LeveledSparseConstructor(ED.edgeCount(), ED.edgeCount());
 		builder.makeId();
+		this->ED = &ED;
 	}
 	template<typename...T>
-	void prepareNext(Subdivider<T...>& subdivider)
+	void prepareNext(SubdivisionBuilder<T...>& subdivider)
 	{
 		const int previousECount = builder.rows;
 		builder.cols = builder.rows;
@@ -40,18 +51,18 @@ public:
 		CoefficientList coeffs;
 
 		// All even elements
-		for (int eI : IntRange(0, eCount, 2))
+		for (int eI = 0; eI < eCount; eI += 2)
 		{
 			// Acquire stencil
 			cp.getEvenBoundaryStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(E0ToEk(eI, edgeOrients[eI]), edges[inds[i]], coeffs[i]);
+				builder.addCoeff((*E0ToEk)(eI, edgeOrients[eI]), edges[inds[i]], coeffs[i]);
 			}
 		}
 		// All odd elements
-		for (int eI : IntRange(1, eCount, 2))
+		for (int eI = 1; eI < eCount; eI += 2)
 		{
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
 			if (edgeOrients[eI] == 1) continue;
@@ -60,7 +71,7 @@ public:
 			const int e = edges[eI];
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(E0ToEk(eI, 2 + edgeOrients[eI]), edges[inds[i]], coeffs[i]);
+				builder.addCoeff((*E0ToEk)(eI, 2 + edgeOrients[eI]), edges[inds[i]], coeffs[i]);
 			}
 		}
 	}
@@ -76,28 +87,28 @@ public:
 		CoefficientList coeffs;
 
 		// All even elements
-		for (int eI : IntRange(0, eCount, 2))
+		for (int eI = 0; eI < eCount; eI += 2)
 		{
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
 			if (edgeOrients[eI] == 1) continue;
 			// Acquire stencil
-			cp.getEvenBRegularStencil(valence, eI, inds, coeffs);
+			cp.getEvenRegularStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
-			const int target = E0ToEk(eI, edgeOrients[eI]);
+			const int target = (*E0ToEk)(eI, edgeOrients[eI]);
 			for (int i = 0; i < inds.size(); i++)
 			{
 				builder.addCoeff(target, edges[inds[i]], coeffs[i]);
 			}
 		}
 		// All odd elements
-		for (int eI : IntRange(1, eCount, 2))
+		for (int eI = 1; eI < eCount; eI += 2)
 		{
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
 			if (edgeOrients[eI] == 1) continue;
 			// Acquire stencil
 			cp.getOddRegularStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
-			const int target = E0ToEk(eI, 2 + edgeOrients[eI]);
+			const int target = (*E0ToEk)(eI, 2 + edgeOrients[eI]);
 			for (int i = 0; i < inds.size(); i++)
 			{
 				builder.addCoeff(target, edges[inds[i]], coeffs[i]);

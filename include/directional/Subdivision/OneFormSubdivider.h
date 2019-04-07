@@ -2,103 +2,107 @@
 template<typename CoefficientProvider>
 class OneFormSubdivider
 {
-	SubdivisionBuilder builder;
+	LeveledSparseConstructor builder;
 	CoefficientProvider cp;
 	EdgeData* ED;
+	Eigen::MatrixXi* E0ToEk;
 public:
-	OneFormSubdivider(EdgeData& ED) :ED(&ED), builder(ED.faceCount(), ED.faceCount()), cp({})
+	OneFormSubdivider():cp({}){}
+
+	Eigen::SparseMatrix<double> getMatrix() const
 	{
+		return builder.matrix;
+	}
+	void setup(EdgeData& ED)
+	{
+		this->ED = &ED;
+		builder = LeveledSparseConstructor(ED.edgeCount(), ED.edgeCount());
 		builder.makeId();
 	}
 	template<typename...T>
-	void prepareNext(Subdivider<T...>& subdivider)
+	void prepareNext(SubdivisionBuilder<T...>& subdivider)
 	{
-
+		builder.cols = builder.rows;
+		builder.rows = 2 * subdivider.ED.edgeCount() + 3 * subdivider.ED.faceCount();
+		E0ToEk = &subdivider.E0ToEk;
 	}
 
-	void handleBoundaryRing(const Eigen::VectorXi& edges, const Eigen::VectorXi& edgeOrients)
+	void handleBoundaryRing(const std::vector<int>& edges, const std::vector<int>& edgeOrients)
 	{
 		// Number of faces
 		const int eCount = edges.size();
 		// Valence
 		const int valence = (eCount+1)/2; //One extra boundary vert.
 
-		Eigen::VectorXd signs(edgeOrients.size());
-		signs = Eigen::VectorXd::Constant(eCount, 1.0) - 2.0 * edgeOrients;
+		std::vector<double> signs(edgeOrients.size());
+		signs = Helpers::Constant(eCount, 1.0);
+		for(int i = 0; i < signs.size(); i++) signs[i] -= 2.0 * edgeOrients[i];
 
 		//Face finder helper. Allows circular index lookup.
-		Eigen::VectorXi inds;
-		Eigen::VectorXd coeffs;
+		std::vector<int> inds;
+		std::vector<double> coeffs;
 
 		// All even elements
-		for (int eI : IntRange(0, eCount, 2))
+		for (int eI = 0; eI < eCount; eI +=2)
 		{
-			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients(eI) == 1) continue;
 			// Acquire stencil
 			cp.getEvenBoundaryStencil(valence, eI, inds, coeffs);
-			const int e = edges(eI);
-			const int edgeSign = signs(eI);
+			const int e = edges[eI];
+			const double edgeSign = signs[eI];
 			for(int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(4 * e, edges(inds(i)), sign * signs(inds(i)) * coeffs(i));
+				builder.addCoeff((*E0ToEk)(e,edgeOrients[eI]), edges[inds[i]], edgeSign * signs[inds[i]] * coeffs[i]);
 			}
 		}
 		// All odd elements
-		for (int eI : IntRange(1, eCount, 2))
+		for (int eI = 1; eI < eCount; eI += 2)
 		{
-			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients(eI) == 1) continue;
 			// Acquire stencil
 			cp.getOddBoundaryStencil(valence, eI, inds, coeffs);
-			const int e = edges(eI);
-			const int edgeSign = signs(eI);
+			const int e = edges[eI];
+			const int edgeSign = signs[eI];
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(4 * e, edges(inds(i)), edgeSign * signs(inds(i)) * coeffs(i));
+				builder.addCoeff((*E0ToEk)(e,2+edgeOrients[eI]), edges[inds[i]], edgeSign * signs[inds[i]] * coeffs[i]);
 			}
 		}
 	}
-	void handleRegularRing(const Eigen::VectorXi& edges, const Eigen::VectorXi& edgeOrients)
+	void handleRegularRing(const std::vector<int>& edges, const std::vector<int>& edgeOrients)
 	{
 		// Number of faces
 		const int eCount = edges.size();
 		// Valence
 		const int valence = eCount / 2; //One extra boundary vert.
 
-		Eigen::VectorXd signs(edgeOrients.size());
-		signs = Eigen::VectorXd::Constant(eCount, 1.0) - 2.0 * edgeOrients;
+		std::vector<double> signs = Helpers::Constant(eCount, 1.0);
+		for (int i = 0; i < signs.size(); i++) signs[i] -= 2.0 * edgeOrients[i];
 
 		//Face finder helper. Allows circular index lookup.
-		Eigen::VectorXi inds;
-		Eigen::VectorXd coeffs;
+		std::vector<int> inds;
+		std::vector<double> coeffs;
 
 		// All even elements
-		for (int eI : IntRange(0, eCount, 2))
+		for (int eI = 0 ; eI < eCount; eI += 2)
 		{
-			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients(eI) == 1) continue;
 			// Acquire stencil
-			cp.getEvenBRegularStencil(valence, eI, inds, coeffs);
-			const int e = edges(eI);
-			const int edgeSign = signs(eI);
+			cp.getEvenRegularStencil(valence, eI, inds, coeffs);
+			const int e = edges[eI];
+			const int edgeSign = signs[eI];
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(4 * e, edges(inds(i)), edgeSign * signs(inds(i)) * coeffs(i));
+				builder.addCoeff((*E0ToEk)(e, edgeOrients[eI]), edges[inds[i]], edgeSign * signs[inds[i]] * coeffs[i]);
 			}
 		}
 		// All odd elements
-		for (int eI : IntRange(1, eCount, 2))
+		for (int eI = 1; eI < eCount; eI += 2)
 		{
-			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients(eI) == 1) continue;
 			// Acquire stencil
 			cp.getOddRegularStencil(valence, eI, inds, coeffs);
-			const int e = edges(eI);
-			const int edgeSign = signs(eI);
+			const int e = edges[eI];
+			const int edgeSign = signs[eI];
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff(4 * e, edges(inds(i)), edgeSign * signs(inds(i)) * coeffs(i));
+				builder.addCoeff((*E0ToEk)(e,2+edgeOrients[eI]), edges[inds[i]], edgeSign * signs[inds[i]] * coeffs[i]);
 			}
 		}
 	}
