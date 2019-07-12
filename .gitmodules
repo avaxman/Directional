@@ -1,3 +1,6 @@
 [submodule "external/libigl"]
 	path = external/libigl
 	url = https://github.com/libigl/libigl.git
+[submodule "boost/test"]
+	path = boost/test
+	url = https://github.com/boostorg/test.git

@@ -3575,3 +3575,8 @@ site/file-formats/dmat/index.html
 site/file-formats/rbr/index.html
 site/file-formats/tgf/index.html
 site/file-formats/xml/index.html
+tutorial/bin/
+.vscode/
+matlab/bin/
+*.TMP
+matlab/dist/
