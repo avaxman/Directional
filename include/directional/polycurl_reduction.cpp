@@ -577,7 +577,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_
     error = (data.Hess*direction - rhs).cwiseAbs().maxCoeff();
     if(error> 1e-4)
     {
-      std::cerr<<"PolyCurlReductionSolver -- Could not solve"<<std::endl;
+      std::cerr<<"PolyCurlReductionSolver -- Could not solve, error too large: "<< error << " iso smaller than 1e-4" << std::endl;
     }
 
     // adaptive backtracking

@@ -13,6 +13,7 @@ struct FaceFinder
 		edgeOrient(&edgeOrient),
 		data(data)
 	{}
+	// Lookup values via ring edge. Corner gives the corner of the face adjacent to the central vertex.
 	int face(int ind)
 	{
 		return data->EF(edgeLoop.at(2 * ind + 1), edgeOrient.at(2 * ind + 1));
@@ -77,7 +78,7 @@ public:
 		// Number of faces
 		const int fCount = (edges.size()) / 2;
 		// Valence
-		const int valence = fCount + 1; //One extra boundary vert.
+		const int valence = fCount; //One extra boundary vert.
 
 		//Face finder helper. Allows circular index lookup.
 		FaceFinder ffind(edges, edgeOrients, ED);
@@ -101,6 +102,7 @@ public:
 		s.start();
 		// Get triangle triangle adjacency.
 		Eigen::MatrixXi tt;
+		// Number of adjacent triangles per triangle.
 		Eigen::VectorXi counts;
 		ED->triangleTriangleAdjacency(tt, counts);
 
@@ -109,7 +111,9 @@ public:
 
 		// Pre-acquire stencils
 		std::vector<double> coeffs[4];
+		// Boundary stencils
 		for(int i = 0; i <= 2; i++) cp.getEvenBoundaryStencil(i, inds, coeffs[i]);
+		// Regular stencil
 		cp.getEvenRegularStencil(3, 0, inds, coeffs[3]);
 
 

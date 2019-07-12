@@ -5,20 +5,118 @@
 #include <igl/sort.h>
 #include <igl/sortrows.h>
 #include <directional/Subdivision/RangeHelpers.h>
+#include <directional/dir_assert.h>
 
-
-struct EdgeData
+namespace directional
 {
-	Eigen::MatrixXi sFE;
-	Eigen::MatrixXi EF;
-	Eigen::MatrixXi EI;
-	Eigen::MatrixXi E;
-	Eigen::MatrixXi F;
+	namespace intern
+	{
+		inline void flipEdgeDirection(Eigen::MatrixXi& E,
+			Eigen::MatrixXi& EF,
+			Eigen::MatrixXi& sFE,
+			Eigen::MatrixXi& EI,
+			int e)
+		{
+			std::swap(E(e, 0), E(e, 1));
+			if (EF(e, 0) == -1)
+			{
+				sFE(EF(e, 1), EI(e, 1) + 3) = 1 - sFE(EF(e, 1), EI(e, 1) + 3);
+			}
+			else if (EF(e, 1) == -1)
+			{
+				sFE(EF(e, 0), EI(e, 0) + 3) = 1 - sFE(EF(e, 0), EI(e, 0) + 3);
+			}
+			else
+			{
+				std::swap(sFE(EF(e, 0), EI(e, 0) + 3), sFE(EF(e, 1), EI(e, 1) + 3));
+			}
+			std::swap(EF(e, 0), EF(e, 1));
+			std::swap(EI(e, 0), EI(e, 1));
+		}
+	}
+	/**
+	 * Specific edge topology for subdivision operator constructors for SHC.
+	 */
+	void construct_edge_topology(const Eigen::MatrixXi& F,
+		Eigen::MatrixXi& E,
+		Eigen::MatrixXi& EF,
+		Eigen::MatrixXi& sFE,
+		Eigen::MatrixXi& EI)
+	{
+		assert(F.cols() == 3, "Only triangle meshes supported");
+		sFE.resize(F.rows(), 6);
+		Eigen::MatrixXi rawEdges(3 * F.rows(), 2);
+		for (int f = 0; f < F.rows(); f++)
+		{
+			sFE.row(f) = Eigen::RowVectorXi::Constant(6, -1);
+			const auto& row = F.row(f);
+			rawEdges.row(3 * f) = Eigen::RowVector2i(row(1), row(2));
+			rawEdges.row(3 * f + 1) = Eigen::RowVector2i(row(2), row(0));
+			rawEdges.row(3 * f + 2) = Eigen::RowVector2i(row(0), row(1));
+			// Sort rows ascending. Record swap as opposite orientation.
+			for (int i = 0; i < 3; i++) {
+				if (rawEdges(3 * f + i, 0) > rawEdges(3 * f + i, 1)) {
+					std::swap(rawEdges(3 * f + i, 0), rawEdges(3 * f + i, 1));
+					sFE(f, 3 + i) = 1;
+				}
+				else
+				{
+					sFE(f, 3 + i) = 0;
+				}
+			}
+		}
+		// Sort total rows by first vertex index. Same vertex edges should now be adjacent rows in the matrix
+		Eigen::VectorXi edgeMap;
+		igl::sortrows(rawEdges, true, E, edgeMap);
+		EF = Eigen::MatrixXi::Constant(edgeMap.rows(), 2, -1);
+		EI = Eigen::MatrixXi::Constant(edgeMap.rows(), 2, -1);
+		// Deduplicate edges and construct other matrices.
+		int currId = 0;
+		for (int i = 0; i < edgeMap.rows(); i++)
+		{
+			const int f = edgeMap(i) / 3;
+			const int corner = edgeMap(i) - 3 * f;
+			// Edge is not same as previous edge.
+			if (E.row(i) != E.row(currId))
+			{
+				currId++;
+				// Assign the row to the appropriate row in E.
+				E.row(currId) = E.row(i);
+			}
+			// Update connectivity data.
+			sFE(f, corner) = currId;
+			EF(currId, sFE(f, 3 + corner)) = f;
+			EI(currId, sFE(f, 3 + corner)) = corner;
+		}
+		currId++;
 
-	int boundaryEdgeCount = 0;
-	int vCount = 0;
+		// Resize the edge matrices to the appropriate size
+		E.conservativeResize(currId, 2);
+		EF.conservativeResize(currId, 2);
+		EI.conservativeResize(currId, 2);
 
-	bool isConsistent()
+		//Acquire the boundary edge count
+		//boundaryEdgeCount = 0;
+		//for (int e = 0; e < currId; e++)
+		//{
+		//	if (EF(e, 0) == -1 || EF(e, 1) == -1)boundaryEdgeCount++;
+		//}
+
+		// Fixup boundary
+		for (int e = 0; e < currId; e++)
+		{
+			if (EF(e, 1) == -1)
+			{
+				intern::flipEdgeDirection(E, EF, sFE, EI, e);
+			}
+		}
+	}
+
+	bool is_edgetopology_consistent(const Eigen::MatrixXi& E, 
+		const Eigen::MatrixXi& F, 
+		const Eigen::MatrixXi& EF,
+		const Eigen::MatrixXi& sFE, 
+		const Eigen::MatrixXi& EI)
 	{
 		for (int e = 0; e < E.rows(); e++)
 		{
@@ -26,9 +124,12 @@ struct EdgeData
 			{
 				const int f = EF(e, 0);
 				const int c = EI(e, 0);
+				// Check edge is at the right corner in the sFE matrix
 				if (sFE(f, c) != e) return false;
+				// Check edge has the appropriate orientation
 				if (sFE(f, c + 3) != 0) return false;
-				if (F(f, (c + 1) % 3) != E(e, 0) && F(f, (c + 2) % 3) != E(e, 1))
+				// Check that the vertices in F correspond to the vertices in E.
+				if (F(f, (c + 1) % 3) != E(e, 0) || F(f, (c + 2) % 3) != E(e, 1))
 					return false;
 			}
 			if (EF(e, 1) != -1)
@@ -37,8 +138,106 @@ struct EdgeData
 				const int c = EI(e, 1);
 				if (sFE(f, c) != e) return false;
 				if (sFE(f, c + 3) != 1) return false;
-				if (F(f, (c + 1) % 3) != E(e, 1) && F(f, (c + 2) % 3) != E(e, 0))
+				if (F(f, (c + 1) % 3) != E(e, 1) || F(f, (c + 2) % 3) != E(e, 0))
 					return false;
+			}
+
+		}
+		for (int i = 0; i < sFE.rows(); i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				const int e = sFE(i,j);
+				const int s = sFE(i,j+3);
+				// Check all edges are set.
+				if (e < 0 || e >= EF.rows()) return false;
+				if (EF(e,s) != i ) return false;
+			}
+		}
+		return true;
+	}
+}
+
+struct EdgeData
+{
+	Eigen::MatrixXi sFE;
+	Eigen::MatrixXi FE_O; // Orientations of edges within face. 0 = CCW, 1 = CW.
+	Eigen::MatrixXi EF;
+	Eigen::MatrixXi EI;
+	Eigen::MatrixXi E;
+	Eigen::MatrixXi F;
+
+	int boundaryEdgeCount = 0;
+	int vCount = 0;
+	int eulerChar = 0;
+
+	void getEdgeTopologyCompatibleFE(Eigen::MatrixXi& FE)
+	{
+		FE = Eigen::MatrixXi(sFE.rows(), 3);
+		FE.col(0) = sFE.col(1);
+		FE.col(1) = sFE.col(2);
+		FE.col(2) = sFE.col(0);
+	}
+
+	bool isConsistent(bool verbose = false) const
+	{
+		bool fail = false;
+
+		for (int e = 0; e < E.rows(); e++)
+		{
+			if (EF(e, 0) != -1)
+			{
+				const int f = EF(e, 0);
+				const int c = EI(e, 0);
+				if (sFE(f, c) != e) {
+					if (verbose) {
+						std::cout << "Edge and sFE not the same at e = " << e << ", f,c = (" << f << "," << c << ")" << std::endl;
+						fail = true;
+					}
+					else  return false;
+				}
+				if (sFE(f, c + 3) != 0) {
+					if (verbose) {
+						std::cout << "Corrner of sFE not 0 at e = " << e << ", f,c = (" << f << "," << c << ")" << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
+				if (F(f, (c + 1) % 3) != E(e, 0) && F(f, (c + 2) % 3) != E(e, 1))
+				{
+					if (verbose) {
+						std::cout << "Edge vertices do not concur at e = " << e << ", f,c = (" << f << "," << c << "), E:" << E.row(e) << ", sFE" << sFE.row(f) << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
+			}
+			if (EF(e, 1) != -1)
+			{
+				const int f = EF(e, 1);
+				const int c = EI(e, 1);
+				if (sFE(f, c) != e) {
+					if (verbose) {
+						std::cout << "Edge and sFE not the same at e = " << e << ", f,c = (" << f << "," << c << ")" << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
+				if (sFE(f, c + 3) != 1) {
+					if (verbose) {
+						std::cout << "Corrner of sFE not 1 at e = " << e << ", f,c = (" << f << "," << c << ")" << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
+				if (F(f, (c + 1) % 3) != E(e, 1) && F(f, (c + 2) % 3) != E(e, 0))
+				{
+					if (verbose) {
+						std::cout << "Edge vertices do not concur at e = " << e << ", f,c = (" << f << "," << c << "), E:" << E.row(e) << ", sFE" << sFE.row(f) << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
 			}
 
 		}
@@ -46,10 +245,43 @@ struct EdgeData
 		{
 			for(int j = 0; j < 3; j++)
 			{
-				if (sFE(i, j) < 0 || sFE(i, j) >= EF.rows()) return false;
+				const int e = sFE(i, j);
+				const int s = sFE(i, j + 3);
+				// Check all edges are set.
+				if (e < 0 || e >= EF.rows()) {
+					if (verbose) {
+						std::cout << "Edge index out of bounds: e = " << e << ", at f  = " << i;
+						fail = true;
+					}
+					else return false;
+				}
+				if (EF(e, s) != i) {
+					if (verbose) {
+						std::cout << "Edge flap with e,s = (" << e << ',' << s << ") incorrect face: expected " << i << ", got " << EF(e, s) << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
+				if (EI(e, s) != j) {
+					if (verbose) {
+						std::cout << "Edge flap with e,s = (" << e << ',' << s << ") incorrect corner: expected " << j << ", got " << EI(e, s) << std::endl;
+						fail = true;
+					}
+					else return false;
+				}
 			}
 		}
-		return true;
+		const int vCount = vertexCount();
+		if(eulerChar != vCount - edgeCount() + faceCount())
+		{
+			if(verbose)
+			{
+				std::cout << "Invalid vertex count: " << vCount << ", expected" << (eulerChar + edgeCount() - faceCount()) << std::endl;
+				fail = true;
+			}
+			else return false;
+		}
+		return !fail;
 	}
 
 	/**
@@ -163,16 +395,14 @@ struct EdgeData
 		for (int e = 0; e < currId; e++)
 		{
 			if (EF(e, 0) == -1 || EF(e, 1) == -1)boundaryEdgeCount++;
-		}
-
-		// Fixup boundary
-		for(int e = 0; e < currId; e++)
-		{
-			if(EF(e,1) == -1)
+			// Fixup boundary to have outside at left of edge
+			if (EF(e, 1) == -1)
 			{
 				flipEdgeDirection(e);
 			}
 		}
+		
+		eulerChar = vertexCount() - edgeCount() + faceCount(); // Minus/Plus boundary loop
 	}
 
 	/**
@@ -193,12 +423,17 @@ struct EdgeData
 		return sFE.rows();
 	}
 
+	int vertexCountFast() const
+	{
+		return eulerChar + edgeCount() - faceCount();
+	}
+
 	/**
 	 * \brief Returns the vertex count, deduced from the edge matrix. Cache the result if
 	 * performance is important.
 	 * \return The number of vertices.
 	 */
-	int vertexCount()
+	int vertexCount() const
 	{
 		// Max of all edge indices + 1.
 		return E.colwise().maxCoeff().maxCoeff() + 1;
@@ -291,6 +526,7 @@ struct EdgeData
 	 */
 	void rebuildF()
 	{
+		F.resize(sFE.rows(), 3);
 		for (int f = 0; f < sFE.rows(); f++)
 		{
 			F(f, 1) = E(sFE(f, 0), sFE(f, 3));
@@ -355,7 +591,7 @@ struct EdgeData
 			boundaryEdges(i, 1) = 1; // Right side is empty.
 		}
 	}
-	void vertexToFirstEdge(Eigen::VectorXi& VE)
+	void vertexToFirstEdge(Eigen::VectorXi& VE) const
 	{
 		VE = Eigen::VectorXi::Constant(vertexCount(), -1);
 		for (int e = 0; e < E.rows(); e++)
@@ -365,13 +601,40 @@ struct EdgeData
 		}
 	}
 
+	void vertexValence(Eigen::VectorXi& vertexValence) const
+	{
+		vertexValence.setConstant(vertexCount(), 0);
+		for (int e = 0; e < E.rows(); e++)
+		{
+			vertexValence(E(e, 0)) += 1;
+			vertexValence(E(e, 1)) += 1;
+		}
+	}
+
+	void boundaryVerts(Eigen::VectorXi& BVs) const
+	{
+		BVs.setConstant(vertexCount(), 0);
+		for(int f = 0; f < F.rows();f++)
+		{
+			for(int j =0; j < 3; j++)
+			{
+				BVs(F(f, j)) -= 1;
+			}
+		}
+		for(int e = 0; e < E.rows(); e++)
+		{
+			BVs(E(e, 0)) += 1;
+			BVs(E(e, 1)) += 1;
+		}
+	}
+
 	/**
 	 * \brief Quadrisects the edge data in place.
 	 * \param vCount The current vertex count
 	 * \param E0ToEk Mapping from the original edge to 4 new edges, which are the newly created edges
 	 * that are ''parallel'' in the subdivided edge flap.
 	 */
-	void quadrisect(int vCount, Eigen::MatrixXi& E0ToEk)
+	void quadrisect(int vCount, Eigen::MatrixXi& E0ToEk, EdgeData& newData)
 	{
 		// New number of faces
 		const int newFCount = 4 * F.rows();
@@ -380,8 +643,10 @@ struct EdgeData
 		const int mod3[6] = { 0,1,2,0,1,2 };
 
 		// Quadrisected edge data with elements reserved.
-		EdgeData newData;
 		newData.reserveElements(newFCount, newECount);
+
+		// Topological invariant
+		newData.eulerChar = eulerChar;
 
 		E0ToEk.setConstant(E.rows(), 4, -1);
 
@@ -391,28 +656,19 @@ struct EdgeData
 		// Offset for new vertices
 		for (int e = 0; e < E.rows(); e++)
 		{
+			// Get IDs for new edge elements
 			const int start = currE;
 			const int end = currE + 1;
-			const int leftOdd = EF(e, 0) != -1 ? currE + 2 : 0;
-			const int rightOdd = leftOdd == 0 ? currE + 2 : currE + 3;
+			const int leftOdd = EF(e, 0) != -1 ? currE + 2 : -1;
+			int rightOdd = leftOdd + 1;
+			if (leftOdd == -1) rightOdd = currE + 2;
+			else if (EF(e, 1) == -1) rightOdd = -1;
+			DIR_ASSERT(EF(e, 0) != -1 || EF(e, 1) != -1, "Invalid edge detected, no faces connected");
+			currE = std::max(rightOdd, leftOdd) + 1;
 
-			// Boundary edge
-			if (EF(e, 0) == -1 || EF(e, 1) == -1)
-			{
-				assert(EF(e, 0) != -1 || EF(e, 1) != -1, "Invalid edge detected, no faces connected");
-				E0ToEk.row(e) = Eigen::RowVector4i(currE, currE + 1, currE + 2, -1);
-				if (EF(e, 0) == -1)
-				{
-					std::swap(E0ToEk(e, 2), E0ToEk(e, 3));
-				}
-				currE += 3;
-			}
-			//Regular edge
-			else
-			{
-				E0ToEk.row(e) = Eigen::RowVector4i(currE, currE + 1, currE + 2, currE + 3);
-				currE += 4;
-			}
+			// Update mapping
+			E0ToEk.row(e) = Eigen::RowVector4i(start, end, leftOdd, rightOdd);
+			
 			// Left face not empty
 			if (EF(e, 0) != -1)
 			{
@@ -421,7 +677,9 @@ struct EdgeData
 				const int offset = 4 * f;
 				newData.updateEdge(start, 0, offset + mod3[corn + 1], corn);
 				newData.updateEdge(end, 0, offset + mod3[corn + 2], corn);
+				// Furthest face edge
 				newData.updateEdge(leftOdd, 0, offset + corn, corn);
+				// Center face edge
 				newData.updateEdge(leftOdd, 1, offset + 3, corn);
 
 				// Update vertex
@@ -435,8 +693,10 @@ struct EdgeData
 				const int offset = 4 * f;
 				newData.updateEdge(start, 1, offset + mod3[corn + 2], corn);
 				newData.updateEdge(end, 1, offset + mod3[corn + 1], corn);
-				newData.updateEdge(leftOdd, 1, offset + corn, corn);
-				newData.updateEdge(leftOdd, 0, offset + 3, corn);
+				//Furthest face
+				newData.updateEdge(rightOdd, 1, offset + corn, corn);
+				// Center face
+				newData.updateEdge(rightOdd, 0, offset + 3, corn);
 
 				// Update vertex
 				newData.E(rightOdd, 0) = vCount + sFE(f, mod3[corn + 1]);
@@ -449,6 +709,9 @@ struct EdgeData
 			newData.E(end, 0) = vCount + e; // New odd vertex
 			newData.E(end, 1) = E(e, 1);
 		}
+		DIR_ASSERT(currE == newECount);
+		newData.rebuildF();
+		newData.boundaryEdgeCount = boundaryEdgeCount * 2;
 	}
 };
 #endif

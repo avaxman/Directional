@@ -6,6 +6,9 @@
 #include <directional/Subdivision/EdgeData.h>
 #include <directional/Subdivision/SimpleTimer.h>
 #include <directional/Subdivision/DCEL.h>
+#ifndef DIR_ASSERT(x)
+#define DIR_ASSERT(x) assert(x)
+#endif
 namespace Subdivision
 {
 	using CoefficientList = std::vector<double>;
@@ -57,6 +60,11 @@ struct LeveledSparseConstructor
 	{
 		
 	}
+
+	/**
+	 * Sets up the internal matrix to be the identity matrix, specified by the currently
+	 * known number of rows.
+	 */
 	void makeId()
 	{
 		std::vector<Eigen::Triplet<double>> trips;
@@ -70,7 +78,7 @@ struct LeveledSparseConstructor
 	{
 		SimpleTimer s;
 		s.start();
-		Eigen::SparseMatrix<double,Eigen::RowMajor> newMat(rows, cols);
+		Eigen::SparseMatrix<double> newMat(rows, cols);
 		newMat.setFromTriplets(m_coefficients.begin(), m_coefficients.end());
 		s.stop();
 		std::cout << "Construct from triplet subtime: " << s.elapsed() << " ms" << std::endl;
@@ -80,6 +88,7 @@ struct LeveledSparseConstructor
 		matrix = newMat * matrix;
 		s.stop();
 		std::cout << "Mul subtime: " << s.elapsed() << " ms" << std::endl;
+		m_coefficients.clear();
 	}
 
 	/**
@@ -91,7 +100,7 @@ struct LeveledSparseConstructor
 	 */
 	void addCoeff(int r, int c, double v)
 	{
-		assert(r >= 0 && r < rows && c >= 0 && c < cols);
+		DIR_ASSERT(r >= 0 && r < rows && c >= 0 && c < cols);
 		m_coefficients.emplace_back(r, c, v);
 	}
 };
@@ -194,6 +203,7 @@ struct SubdivisionBuilder
 
 	void constructUpToLevel(int targetLevel)
 	{
+		std::cout << "------- Constructing up to " << targetLevel << std::endl;
 		if(!wasSetup)
 		{
 			wasSetup = true;
@@ -217,19 +227,21 @@ struct SubdivisionBuilder
 			setup();
 		}
 		level++;
-		std::cout << "Constructing level " << level << std::endl;;
+		std::cout << "-- Constructing level " << level << std::endl;;
 
 		SimpleTimer st;
 		st.start();
 		int vCount = ED.vertexCount(); // TODO
-		ED.quadrisect(vCount, E0ToEk);
+		EdgeData newData;
+		ED.quadrisect(vCount, E0ToEk, newData);
 		st.stop();
 		std::cout << "Quadrisect: " << st.elapsed() << " ms" << std::endl;;
-		assert(ED.isConsistent());
+		DIR_ASSERT(ED.isConsistent());
 
 		// Prepare for next step
 		prepareNext(std::index_sequence_for<SubBuilders...>{});
-
+		std::cout << "Starting iterations" << std::endl;
+		// Iterate original rings
 		DCEL dcel(ED);
 
 		SimpleTimer st2;
@@ -240,8 +252,11 @@ struct SubdivisionBuilder
 		std::cout << "Ring iteration : " << st2.elapsed() << " ms" << std::endl;;
 
 		// Finalize construction
+		std::cout << "Starting finalize" << std::endl;
 		st2.reset().start();
 		finalize(std::index_sequence_for<SubBuilders...>{});
+		// Assign new data
+		ED = newData;
 		st2.stop();
 		std::cout << "Finalizing in : " << st2.elapsed() << " ms" << std::endl;
 	}

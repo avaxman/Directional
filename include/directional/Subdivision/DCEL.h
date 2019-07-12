@@ -1,7 +1,7 @@
 #ifndef DIRECTIONAL_DCELSUB_H
 #define  DIRECTIONAL_DCELSUB_H
 #include <Eigen/Eigen>
-#include <cassert>
+#include <directional/dir_assert.h>
 #include <directional/Subdivision/EdgeData.h>
 
 struct DCEL
@@ -59,7 +59,7 @@ struct DCEL
 	{
 		int f = face();
 		int corn = corner();
-		corn = mod3(corn + 3);
+		corn = mod3(corn + 2);
 		setFaceAndCorner(f, corn);
 	}
 
@@ -92,20 +92,20 @@ struct DCEL
 	//  edge.Offset should be in the[0, 3) integer interval.
 	int edgeInFace(int offset  = 0)
 	{
-		assert(offset >= 0 && offset < 3, "Invalid offset");
+		DIR_ASSERT(offset >= 0 && offset < 3, "Invalid offset");
 		return data.sFE(face(), mod3(corner() + offset));
 	}
 
 	int edgeOrientationInFace(int offset = 0)
 	{
-		assert(offset >= 0 && offset < 3, "Invalid offset");
+		DIR_ASSERT(offset >= 0 && offset < 3, "Invalid offset");
 		return data.sFE(face(), mod3(corner() + offset)+3);
 	}
 
 
 	int startVInFace(int offset = 0)
 	{
-		assert(offset >= 0 && offset < 3, "Invalid offset");
+		DIR_ASSERT(offset >= 0 && offset < 3, "Invalid offset");
 		if(offset == 0)
 			return startVertexId();
 		int side = edgeOrientationInFace(offset);
@@ -115,7 +115,7 @@ struct DCEL
 		return data.E(e, 2);
 	}
 	int endVInFace(int offset = 0) {
-		assert(offset >= 0 && offset < 3, "Invalid offset");
+		DIR_ASSERT(offset >= 0 && offset < 3, "Invalid offset");
 		if(offset == 0)
 			return endVertexId();
 		int side = edgeOrientationInFace(offset);
@@ -162,13 +162,15 @@ struct DCEL
 	{
 		Eigen::MatrixXi boundary;
 		data.getBoundaryEdges(boundary);
-		assert(boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0), "Boundary edges are not in canonical position (with boundary at the left)");
+		DIR_ASSERT(boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0), "Boundary edges are not in canonical position (with boundary at the left)");
 
 		// Ideally, find max valence.
 		Eigen::VectorXi VE;
 		data.vertexToFirstEdge(VE);
 
-		const int boundaryEdgeCount = boundary.rows();
+		const auto boundaryEdgeCount = boundary.rows();
+
+		DIR_ASSERT_M(boundaryEdgeCount == data.boundaryEdgeCount, "Found different number of boundary edges");
 
 		//Construct ring per boundary vertex
 		for(int eI = 0; eI < boundaryEdgeCount; eI++)
@@ -180,17 +182,20 @@ struct DCEL
 			setEdge(e, 0);
 			// Mark handled
 			VE(endVertexId()) = -1;
-			assert(face() == -1);
-			assert(twinFace() != -1);
+			DIR_ASSERT(face() == -1);
+			DIR_ASSERT(twinFace() != -1);
 			do
 			{
 				toTwin();
+				const int f = face();
 				edges.push_back(currentEdge());
 				edgeSides.push_back(currentSide());
 				next();
+				DIR_ASSERT(f == face());
 				edges.push_back(currentEdge());
 				edgeSides.push_back(currentSide());
 				next();
+				DIR_ASSERT(f == face());
 			} while (!twinIsOutside());
 
 			// Add the last edge, with the direction pointing away from the central vertex being 0.
@@ -203,23 +208,37 @@ struct DCEL
 		// Handle regular vertex rings.
 		for(int v = 0; v < VE.size(); v++)
 		{
+			// Already handled this vertex, so ignore
 			if (VE(v) < 0) continue;
+
+			// The target edge to start at
 			const int eI = VE(v);
+
+			// Mark handled
+			VE(v) = -1;
+
 			std::vector<int> edges;
 			std::vector<int> edgeSides;
 			// Start at the appropriate halfedge
 			setEdge(eI, 0);
 			if (endVertexId() != v) toTwin();
-			assert(face() != -1);
+			DIR_ASSERT(face() != -1);
+			
+			int prevFace = face();
 			do
 			{
 				toTwin();
+				DIR_ASSERT(twinFace() == prevFace);
+				const int currF = face();
 				edges.push_back(currentEdge());
 				edgeSides.push_back(currentSide());
 				next();
+				DIR_ASSERT(currF == face());
 				edges.push_back(currentEdge());
 				edgeSides.push_back(currentSide());
 				next();
+				DIR_ASSERT(currF == face());
+				prevFace = face();
 			} while (currentEdge() != eI);
 
 			h.handleRegularRing(edges, edgeSides);

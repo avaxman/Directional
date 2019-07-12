@@ -15,6 +15,15 @@ namespace Helpers{
 		for (int i = start; i < endExcl; i++) target[i - start] = i;
 	}
 
+	void setStartRange(std::vector<double>& target, const std::vector<double>& vals, double factor = 1.0)
+    {
+		for (int i = 0; i < vals.size(); i++) target[i] = vals[i] * factor;
+    }
+	void setStartRange(std::vector<int>& target, const std::vector<int>& vals)
+	{
+		for (int i = 0; i < vals.size(); i++) target[i] = vals[i] ;
+	}
+
 	void assignRange(int start, int endExcl, std::vector<int>& target)
 	{
 		target.resize(endExcl - start);
@@ -41,5 +50,13 @@ namespace Helpers{
 		target = std::vector<double>(values.size());
 		for (int i = 0; i < values.size(); i++) target[i] = values[i] * factor;
     }
+	void append(std::vector<double>& target, const std::vector<double>& values, double factor = 1.0)
+	{
+		for (int i = 0; i < values.size(); i++) target.push_back(values[i] * factor);
+	}
+	void append(std::vector<int>& target, const std::vector<int>& values)
+	{
+		for (int i = 0; i < values.size(); i++) target.push_back(values[i]);
+	}
 }
 #endif

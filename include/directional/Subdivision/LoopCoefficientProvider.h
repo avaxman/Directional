@@ -1,3 +1,5 @@
+#ifndef DIRECTIONAL_LOOPCOEFFICIENTPROVIDER_H
+#define DIRECTIONAL_LOOPCOEFFICIENTPROVIDER_H
 #include <Eigen/Eigen>
 #include <directional/Subdivision/EdgeData.h>
 #include <directional/Subdivision/RangeHelpers.h>
@@ -64,22 +66,22 @@ struct LoopCoefficientProvider
 	void getOddBoundaryStencil(int valence, int location, IndexList& inds, CoeffList& coeffs)
 	{
 		//On boundary 
-		if(location == 1)
+		if(location == 1 || location == valence)
 		{
-			inds = { 0, 1 };
-			coeffs = { 0.5, 0.5 };
-		}
-		// On other side boundary
-		else if(location == valence)
-		{
-			inds = { 0, valence };
+			inds = { 0, location };
 			coeffs = { 0.5, 0.5 };
 		}
 		// "Internal"
 		else
 		{
 			inds = { 0, location, location - 1, location + 1 };
-			coeffs = { 3.0 / 8., 3. / 8., 1. / 8.,1. / 8 };
+			Helpers::assign(coeffs,
+				{
+					3.,
+					3.,
+					1.,
+					1.
+				}, 1. / 8.);
 		}
 	}
 	void getEvenRegularStencil(int valence, IndexList& inds, CoeffList& coeffs)
@@ -100,3 +102,4 @@ struct LoopCoefficientProvider
 		coeffs = ODD_COEFFS;
 	}
 };
+#endif

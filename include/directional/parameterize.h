@@ -48,7 +48,7 @@ namespace directional
                                const Eigen::MatrixXi& FE,
                                const Eigen::MatrixXd rawField,
                                const double lengthRatio,
-                               const ParameterizationData& pd,
+                               ParameterizationData& pd,
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
                                const bool roundIntegers,
@@ -233,7 +233,8 @@ namespace directional
       
       fullx = var2AllMat*x.head(numVars-alreadyFixed.sum())+fixedValues;
       //cout<<"(Cfull*fullx).lpNorm<Infinity>(): "<<(Cfull*fullx).lpNorm<Infinity>()<<endl;
-      cout<<"Poisson error: "<<(Efull*fullx-gamma).lpNorm<Infinity>()<<endl;
+	  pd.poissonError = (Efull*fullx - gamma).lpNorm<Infinity>();
+      cout<<"Poisson error: "<<pd.poissonError<<endl;
       
       if ((alreadyFixed-fixedMask).sum()==0)
         break;

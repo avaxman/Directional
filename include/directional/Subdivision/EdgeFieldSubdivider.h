@@ -1,3 +1,6 @@
+#ifndef DIRECTIONAL_EDGEFIELDSUBDIVIDER_H
+#define DIRECTIONAL_EDGEFIELDSUBDIVIDER_H
+
 #include "EdgeData.h"
 #include "SubdivisionBuilder.h"
 template<typename CoefficientProvider>
@@ -54,24 +57,31 @@ public:
 		for (int eI = 0; eI < eCount; eI += 2)
 		{
 			// Acquire stencil
+			inds.clear();
+			coeffs.clear();
 			cp.getEvenBoundaryStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
+			const int target = (*E0ToEk)(e, edgeOrients[eI]);
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff((*E0ToEk)(eI, edgeOrients[eI]), edges[inds[i]], coeffs[i]);
+				builder.addCoeff(target, edges[inds[i]], coeffs[i]);
 			}
 		}
 		// All odd elements
 		for (int eI = 1; eI < eCount; eI += 2)
 		{
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients[eI] == 1) continue;
 			// Acquire stencil
+			inds.clear();
+			coeffs.clear();
 			cp.getOddBoundaryStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
+			const int target = (*E0ToEk)(e, 2 + edgeOrients[eI]);
+			const int other = (*E0ToEk)(e, 3 - edgeOrients[eI]);
+
 			for (int i = 0; i < inds.size(); i++)
 			{
-				builder.addCoeff((*E0ToEk)(eI, 2 + edgeOrients[eI]), edges[inds[i]], coeffs[i]);
+				builder.addCoeff(target, edges[inds[i]], coeffs[i]);
 			}
 		}
 	}
@@ -89,12 +99,14 @@ public:
 		// All even elements
 		for (int eI = 0; eI < eCount; eI += 2)
 		{
+			inds.clear();
+			coeffs.clear();
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients[eI] == 1) continue;
+			//if (edgeOrients[eI] == 1) continue;
 			// Acquire stencil
 			cp.getEvenRegularStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
-			const int target = (*E0ToEk)(eI, edgeOrients[eI]);
+			const int target = (*E0ToEk)(e, edgeOrients[eI]);
 			for (int i = 0; i < inds.size(); i++)
 			{
 				builder.addCoeff(target, edges[inds[i]], coeffs[i]);
@@ -103,12 +115,14 @@ public:
 		// All odd elements
 		for (int eI = 1; eI < eCount; eI += 2)
 		{
+			inds.clear();
+			coeffs.clear();
 			// Avoid duplicates (may remove this by globally scaling by 0.5?)
-			if (edgeOrients[eI] == 1) continue;
+			//if (edgeOrients[eI] == 1) continue;
 			// Acquire stencil
 			cp.getOddRegularStencil(valence, eI, inds, coeffs);
 			const int e = edges[eI];
-			const int target = (*E0ToEk)(eI, 2 + edgeOrients[eI]);
+			const int target = (*E0ToEk)(e, 2 + edgeOrients[eI]);
 			for (int i = 0; i < inds.size(); i++)
 			{
 				builder.addCoeff(target, edges[inds[i]], coeffs[i]);
@@ -120,3 +134,4 @@ public:
 		builder.finalize();
 	}
 };
+#endif

@@ -15,6 +15,7 @@
 #include <igl/igl_inline.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
+#include <igl/diag.h>
 #include <directional/FEM_masses.h>
 #include <igl/per_face_normals.h>
 
@@ -101,6 +102,7 @@ namespace directional
     D = Gv.transpose()*Mchi;
   }
 }
+
 
 #endif
 

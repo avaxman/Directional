@@ -7,7 +7,7 @@
 
 #ifndef DIRECTIONAL_SETUP_PARAMETERIZATION_H
 #define DIRECTIONAL_SETUP_PARAMETERIZATION_H
-
+#include <set>
 #include <queue>
 #include <vector>
 #include <cmath>
@@ -24,7 +24,7 @@
 
 namespace directional
 {
-  
+  // TODO Make this a struct
   class ParameterizationData{
   public:
     Eigen::SparseMatrix<double> vertexTrans2CutMat;
@@ -33,6 +33,8 @@ namespace directional
     Eigen::VectorXi constrainedVertices;
     Eigen::VectorXi integerVars;
     Eigen::MatrixXi face2cut;
+
+	double poissonError = 0;
     
     ParameterizationData(){}
     ~ParameterizationData(){}
@@ -44,14 +46,15 @@ namespace directional
   //  N:          The degree of the field.
   //  wholeV:     #V x 3 vertex coordinates
   //  wholeF:     #F x 3 face vertex indices
-  //  EV:         #E x 2 edges to vertices indices
-  //  EF:         #E x 2 edges to faces indices
+  //  EV:         #E x 2 edges to vertices indices. Edge e points from EV(e,0) to EV(e,1)
+  //  EF:         #E x 2 edges to faces indices EF(e,0) is the left face of e, relative to the global orientation defined by EV
+  //  FE:         #F x 3 faces to edges indices
   // matching:    #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Most matching should be zero due to prior combing.
   // singVertices:list of singular vertices in wholeV.
   // Output:
   //  pd:         parameterization data subsequently used in directional::parameterize();
   //  cutV:       the Vertices of the cut mesh.
-  //  cutF:       The Vaces of the cut mesh.
+  //  cutF:       The Faces of the cut mesh.
   
   IGL_INLINE void setup_parameterization(const int N,
                                          const Eigen::MatrixXd& wholeV,
@@ -74,14 +77,14 @@ namespace directional
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH,prevH,twinH,innerEdges;
-    
+
     VectorXi D=VectorXi::Constant(wholeF.rows(),3);
     VectorXi isSingular=VectorXi::Zero(wholeV.rows());
     for (int i=0;i<singVertices.size();i++)
       isSingular(singVertices(i))=1;
     
     pd.constrainedVertices=VectorXi::Zero(wholeV.rows());
-    
+
     //computing extra topological information
     std::vector<int> innerEdgesVec;
     EFi=Eigen::MatrixXi::Constant(EF.rows(), 2,-1);
@@ -108,7 +111,7 @@ namespace directional
       innerEdges(i)=innerEdgesVec[i];
     
     //hedra::polygonal_edge_topology(D,wholeF,EV,FE,EF,EFi, FEs,innerEdges);
-    hedra::dcel(D,wholeF,EV,EF,EFi,innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH, twinH);
+    hedra::dcel(D,wholeF,EV,EF,EFi,innerEdges, /*Outputs:*/ VH,EH,FH,HV,HE,HF,nextH,prevH, twinH);
     
     VectorXi isBoundary = VectorXi::Zero(wholeV.rows());
     for (int i=0;i<HV.rows();i++)
