@@ -7,7 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <directional/cut_mesh_with_singularities.h>
-#include <directional/dijkstra.h>
+#include <igl/dijkstra.h>
 #include <igl/vertex_triangle_adjacency.h>
 #include <igl/adjacency_list.h>
 #include <igl/triangle_triangle_adjacency.h>
@@ -41,12 +41,12 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
     std::vector<int> path;
     Eigen::VectorXd min_distance;
     Eigen::VectorXi previous;
-    int vertex_found = igl::dijkstra_compute_paths(singularities[i], vertices_in_cut, VV, min_distance, previous);
+    int vertex_found = igl::dijkstra(singularities[i], vertices_in_cut, VV, min_distance, previous);
     if(vertex_found ==-1)
       // this means that there are no cuts
       path.push_back(singularities[i]);
     else
-      igl::dijkstra_get_shortest_path_to(vertex_found, previous, path);
+      igl::dijkstra(vertex_found, previous, path);
     
     vertices_in_cut.insert(path.begin(), path.end());
     
