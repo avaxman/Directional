@@ -134,7 +134,7 @@ IGL_INLINE void directional::streamlines_next(
         
         double u;
         double t;
-        if (igl::segments_intersect(p, r, q, s, t, u))
+        if (igl::segment_segment_intersect(p, r, q, s, t, u))
         {
           // point on next face
           state.end_point.row(j + nsample * i) = p + t * r;

@@ -80,7 +80,7 @@ namespace directional
     int currGeneratorCycle=0;
     int currBoundaryCycle=0;
     
-    if ((numGenerators!=0)||(numBoundaries!=0)){
+    if ((numGenerators!=0)/*||(numBoundaries!=0)*/){
       MatrixXi reducedEV(EV);
       for (int i = 1; i < reducedEV.rows(); i++)
         if(isBoundary(reducedEV(i,0)) || isBoundary(reducedEV(i, 1)))

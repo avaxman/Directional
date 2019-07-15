@@ -23,8 +23,8 @@ namespace directional
   class ConjugateFFSolverData
   {
   public:
-    const Eigen::MatrixXd &V; int numV;
-    const Eigen::MatrixXi &F; int numF;
+    const Eigen::MatrixXd V; int numV;
+    const Eigen::MatrixXi F; int numF;
     
     Eigen::MatrixXi EV; int numE;
     Eigen::MatrixXi F2E;
