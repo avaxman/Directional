@@ -40,7 +40,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
   using namespace Eigen;
   using namespace std;
   
-  if (!viewer.core.is_animating)
+  if (!viewer.core().is_animating)
     return false;
   
   directional::streamlines_next(VMesh, FMesh, sl_data, sl_state);
@@ -51,8 +51,6 @@ bool pre_draw(igl::opengl::glfw::Viewer &viewer)
     value = 1 - value;
   value = value / 0.5;
   igl::parula(value, color[0], color[1], color[2]);
-  
-  //CField=color.replicate(FField.rows(),1);
   
   Eigen::MatrixXd VFieldNew, CFieldNew;
   Eigen::MatrixXi FFieldNew;
@@ -82,7 +80,7 @@ bool key_down(igl::opengl::glfw::Viewer &viewer, unsigned char key, int modifier
 {
   if (key == ' ')
   {
-    viewer.core.is_animating = !viewer.core.is_animating;
+    viewer.core().is_animating = !viewer.core().is_animating;
     return true;
   }
   return false;
@@ -113,8 +111,8 @@ int main(int argc, char *argv[])
   // Viewer Settings
   viewer.callback_pre_draw = &pre_draw;
   viewer.callback_key_down = &key_down;
-  viewer.core.is_animating = false;
-  viewer.core.animation_max_fps = 30.;
+  viewer.core().is_animating = false;
+  viewer.core().animation_max_fps = 30.;
   
   // Draw initial seeds on sample points
   directional::StreamlineState sl_state0;
@@ -129,7 +127,6 @@ int main(int argc, char *argv[])
   viewer.data().set_mesh(VField, FField);
   viewer.data().set_colors(CField);
   viewer.data().show_lines = false;
-  cout <<
-  "Press [space] to toggle animation" << endl;
+  cout << "Press [space] to toggle animation" << endl;
   viewer.launch();
 }

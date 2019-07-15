@@ -75,9 +75,9 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
   
   // Cast a ray in the view direction starting from the mouse position
   double x = viewer.current_mouse_x;
-  double y = viewer.core.viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core.view,
-                               viewer.core.proj, viewer.core.viewport, VMesh, FMesh, fid, baryInFace))
+  double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+                               viewer.core().proj, viewer.core().viewport, VMesh, FMesh, fid, baryInFace))
   {
     
     //choosing face

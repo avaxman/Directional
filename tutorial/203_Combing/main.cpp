@@ -21,11 +21,9 @@ Eigen::MatrixXi FMesh, FField, FSings, FSeams;
 Eigen::MatrixXd VMesh, VField, VSings, VSeams, CSings, CField, CSeams;
 Eigen::MatrixXd rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
-Eigen::RowVector3d rawGlyphColor;
 igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi prinIndices;
 Eigen::VectorXi singIndices, singVertices;
 
 

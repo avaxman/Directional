@@ -101,16 +101,19 @@ namespace directional
                           const Eigen::MatrixXi& faceIsCut,
                           const Eigen::MatrixXd& rawField,
                           const Eigen::VectorXi& matching,
-                          Eigen::MatrixXd& combedField)
+                          Eigen::MatrixXd& combedField,
+                          Eigen::VectorXi& combedMatching)
   {
     using namespace Eigen;
     //flood-filling through the matching to comb field
     combedField.conservativeResize(rawField.rows(), rawField.cols());
+    combedMatching.conservativeResize(EF.rows());
     int N=rawField.cols()/3;
     //dual tree to find combing routes
     VectorXi visitedFaces=VectorXi::Constant(F.rows(),1,0);
     std::queue<std::pair<int,int> > faceMatchingQueue;
     faceMatchingQueue.push(std::pair<int,int>(0,0));
+    VectorXi faceTurns(rawField.rows());
     do{
       std::pair<int,int> currFaceMatching=faceMatchingQueue.front();
       faceMatchingQueue.pop();
@@ -121,6 +124,8 @@ namespace directional
       //combing field to start from the matching index
       combedField.block(currFaceMatching.first, 0, 1, 3*(N-currFaceMatching.second))=rawField.block(currFaceMatching.first, 3*currFaceMatching.second, 1, 3*(N-currFaceMatching.second));
       combedField.block(currFaceMatching.first, 3*(N-currFaceMatching.second), 1, 3*currFaceMatching.second)=rawField.block(currFaceMatching.first, 0, 1, 3*currFaceMatching.second);
+      
+      faceTurns(currFaceMatching.first)=currFaceMatching.second;
       
       for (int i=0;i<3;i++){
         int nextMatching=(matching(FE(currFaceMatching.first,i)));
@@ -133,6 +138,14 @@ namespace directional
       }
       
     }while (!faceMatchingQueue.empty());
+    
+    //giving combed matching
+    for (int i=0;i<EF.rows();i++){
+      if ((EF(i,0)==-1)||(EF(i,1)==-1))
+        combedMatching(i)=-1;
+      else
+        combedMatching(i)=(faceTurns(EF(i,0))-faceTurns(EF(i,1))+matching(i)+1000000*N)%N;
+    }
   }
   
 }

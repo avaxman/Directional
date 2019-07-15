@@ -26,7 +26,6 @@ Eigen::MatrixXd VMeshWhole, VMeshCut, VField, VSings, VSeams;
 Eigen::MatrixXd CField, CSeams, CSings;
 Eigen::MatrixXd rawField, combedField, barycenters;
 Eigen::VectorXd effort, combedEffort;
-Eigen::RowVector3d rawGlyphColor;
 igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
@@ -74,7 +73,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       Eigen::MatrixXd emptyMat;
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/botijo-param.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUV, FMeshCut);
       break;
-    //case '2': viewer.data().show_texture=!viewer.data().show_texture; update_mesh(); break;
   }
   update_triangle_mesh();
   update_raw_field_mesh();
@@ -100,8 +98,8 @@ int main()
   
   directional::ParameterizationData pd;
   directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField);
-   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
+   //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
  
   std::cout<<"Setting up parameterization"<<std::endl;
   
@@ -113,7 +111,7 @@ int main()
   directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUV);
   std::cout<<"Done!"<<std::endl;
   
-  //apending and updating raw field mesh
+  //appending and updating raw field mesh
   viewer.append_mesh();
   directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,2.5);
   

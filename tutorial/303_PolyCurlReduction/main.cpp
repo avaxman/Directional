@@ -170,8 +170,6 @@ int main(int argc, char *argv[])
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", N, rawFieldOrig);
   igl::edge_topology(VMesh, FMesh, EV, FE, EF);
   
-  //global_scale =  .2*igl::avg_edge_length(VMesh, FMesh);
-  //uv_scale = 0.6/igl::avg_edge_length(V, F);
   igl::barycenter(VMesh, FMesh, barycenters);
   
   Eigen::VectorXi prinIndices;
