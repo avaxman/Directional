@@ -31,13 +31,7 @@ This file format described the matching between each two neighboring faces $i$ a
     
   The order is generally compatible with the result of the field ```EF``` in ```igl::edge_topology()``` for the same mesh, but that is not a guarantee. That means the vector $k$ in face $i$ is matched to vector $k+matching_i$ (modulu $Degree$) in face $j$, and the rest in an order-preserving manner. See tutorial for details.
     
-    
-
-
-
-### Singularities and Matching
-
-### Data structures used from libigl:
+### Data structures used from libigl
 
 - [.dmat](./dmat) uncompressed ASCII/binary files for dense matrices
 - [.off](http://wias-berlin.de/software/tetgen/fformats.off.html) Geomview's polyhedral file format
