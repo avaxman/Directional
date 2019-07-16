@@ -220,7 +220,7 @@ where $k_1$ and $k_2$ are the principal curvatures and $d_1$ and $d_2$ are the r
 
 Conjugate vector fields are very important in architectural geometry: their integral lines form, informally speaking, an infinitesimal planar quad mesh. As such, the finite quad mesh that results from discretizing conjugate networks is a good candidate for consequent planarity parameterization [^liu_2011].
 
-Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates beweetn a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304]({{ repo_url }}/tutorial/304_ConjugateFields/main.cpp)).
+Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates between a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304]({{ repo_url }}/tutorial/304_ConjugateFields/main.cpp)).
 
 
 ![([Example 304]({{ repo_url }}/tutorial/304_ConjugateFields/main.cpp)) A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.](images/304_ConjugateFields.png)
