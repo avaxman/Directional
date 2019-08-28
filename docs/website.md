@@ -13,7 +13,7 @@ If you want to preview changes to the Directional website before a commit, you c
    pipenv install requests
    pipenv shell
    ```
-2. Preview the website locally (in the root folder of the libigl project):
+2. Preview the website locally (in the root folder of the Directional project):
    ```bash
    python3 -m mkdocs serve
    ```

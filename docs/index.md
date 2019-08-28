@@ -66,10 +66,11 @@ If you use Directional in your academic projects, please cite the implemented pa
 
 ```
 @misc{Directional,
-title = {{Directional}: directional field synthesis, design, and processing,
-author = {Amir Vaxman and others},
-note = {https://github.com/avaxman/Directional},
-year = {2017},
+author       = {Amir Vaxman and others},
+title        = {{Directional: A library for Directional Field 
+Synthesis, Design, and Processing}},
+doi          = {10.5281/zenodo.3338174},
+url          = {https://doi.org/10.5281/zenodo.3338174}
 }
 ```
 
