@@ -71,6 +71,7 @@ endif()
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("501_SeamlessParameterization")
   add_subdirectory("502_MixedIntegerParameterization")
+  add_subdirectory("503_HexagonalParameterization")
 endif()
 
 

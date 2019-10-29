@@ -24,9 +24,8 @@
 
 namespace directional
 {
-  
-  class ParameterizationData{
-  public:
+  struct ParameterizationData // writing this as a class in C++ is a bit strange struct and class are the same only the default access is opposite
+  {
     Eigen::SparseMatrix<double> vertexTrans2CutMat;
     Eigen::SparseMatrix<double> constraintMat;
     Eigen::SparseMatrix<double> symmMat;
@@ -69,376 +68,463 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    assert(N==4 && "Seamless Parameterization currently only supports N=4");
-    
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
-    VectorXi VH, HV, HE, HF, nextH,prevH,twinH,innerEdges;
+    VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
+
+    // it stores number of edges per face, for now only tirangular
+    VectorXi D = VectorXi::Constant(wholeF.rows(), 3);
+
+    // mark vertices as being a singularity vertex of the vector field
+    VectorXi isSingular = VectorXi::Zero(wholeV.rows());
+    for (int i = 0; i < singVertices.size(); i++)
+      isSingular(singVertices(i)) = 1;
     
-    VectorXi D=VectorXi::Constant(wholeF.rows(),3);
-    VectorXi isSingular=VectorXi::Zero(wholeV.rows());
-    for (int i=0;i<singVertices.size();i++)
-      isSingular(singVertices(i))=1;
-    
-    pd.constrainedVertices=VectorXi::Zero(wholeV.rows());
+    pd.constrainedVertices = VectorXi::Zero(wholeV.rows());
     
     //computing extra topological information
-    std::vector<int> innerEdgesVec;
-    EFi=Eigen::MatrixXi::Constant(EF.rows(), 2,-1);
-    FEs=Eigen::MatrixXd::Zero(FE.rows(),FE.cols());
-    for (int i=0;i<EF.rows();i++)
-      for (int k=0;k<2;k++){
-        if (EF(i,k)==-1)
+    std::vector<int> innerEdgesVec; // collects ids of inner edges
+    EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
+
+    /* used later for internal edges there is 1 or  -1 ie if two faces are adjacent then for a given edge we
+     * will have 1 in the frst face and -1 in the second
+     */
+    FEs = Eigen::MatrixXd::Zero(FE.rows(), FE.cols());
+
+    /*
+     * here we collect information about position of an edge inside each face containing it. Each triangular face
+     * has three edges of ids 0, 1, 2. So EFi(i, k) = j means that the edge i is inside the face k \in [0,1]
+     * at the position j.
+     */
+    for(int i = 0; i < EF.rows(); i++)
+    {
+      for (int k = 0; k < 2; k++)
+      {
+        if (EF(i, k) == -1)
           continue;
-        
-        for (int j=0;j<D(EF(i,k));j++)
-          if (FE(EF(i,k),j)==i)
-            EFi(i,k)=j;
+        for (int j = 0; j < D(EF(i, k)); j++)
+          if (FE(EF(i, k), j) == i)
+            EFi(i, k) = j;
       }
-    
-    for (int i=0;i<EF.rows();i++){
-      if (EFi(i,0)!=-1) FEs(EF(i,0),EFi(i,0))=1.0;
-      if (EFi(i,1)!=-1) FEs(EF(i,1),EFi(i,1))=-1.0;
-      if ((EF(i,0)!=-1)&&(EF(i,1)!=-1))
+    }
+
+    // collect information about inner edges
+    for(int i = 0; i < EF.rows(); i++)
+    {
+      if(EFi(i, 0) != -1)
+        FEs(EF(i, 0), EFi(i, 0)) = 1.0;
+      if(EFi(i,1) != -1)
+        FEs(EF(i, 1), EFi(i, 1)) = -1.0;
+      if ((EF(i, 0) !=-1) && (EF(i,1)!=-1))
         innerEdgesVec.push_back(i);
     }
-    
+
+    // copy the information into  Eigen vector
     innerEdges.resize(innerEdgesVec.size());
-    for (int i=0;i<innerEdgesVec.size();i++)
-      innerEdges(i)=innerEdgesVec[i];
-    
-    //hedra::polygonal_edge_topology(D,wholeF,EV,FE,EF,EFi, FEs,innerEdges);
-    hedra::dcel(D,wholeF,EV,EF,EFi,innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH, twinH);
-    
+    for (int i = 0; i < innerEdgesVec.size(); i++)
+      innerEdges(i) = innerEdgesVec[i];
+
+    // compute the half-edge representation
+    hedra::dcel(D, wholeF, EV, EF, EFi, innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
+
+    // find boundary vertices and mark them
     VectorXi isBoundary = VectorXi::Zero(wholeV.rows());
-    for (int i=0;i<HV.rows();i++)
-      if (twinH(i)==-1)
-        isBoundary(HV(i))=1;
-    
+    for (int i = 0; i < HV.rows(); i++)
+      if (twinH(i) == -1)
+        isBoundary(HV(i)) = 1;
+
+    // here we compute a permutation matrix
     vector<MatrixXi> constParmMatrices(N);
-    MatrixXi unitPermMatrix=MatrixXi::Zero(N,N);
-    for (int i=0;i<N;i++)
-      unitPermMatrix((i+1)%N,i)=1;
-    
-    constParmMatrices[0]=MatrixXi::Identity(N,N);
-    for (int i=1;i<N;i++)
-      constParmMatrices[i]=unitPermMatrix*constParmMatrices[i-1];
-    
-    
-    VectorXi isSeam=VectorXi::Zero(EV.rows());
-    for (int i=0;i<FE.rows();i++)
-      for (int j=0;j<3;j++)
-        if (pd.face2cut(i,j))
-          isSeam(FE(i,j))=1;
-    
-    VectorXi isHEcut=VectorXi::Zero(HE.rows());
-    
-    for (int i=0;i<wholeF.rows();i++)
-      for (int j=0;j<3;j++)
-        if (pd.face2cut(i,j)){
-          isHEcut(FH(i,j))=1;
-        }
-    
-    VectorXi cutValence=VectorXi::Zero(wholeV.rows());
-    for (int i=0;i<EV.rows();i++)
-      if (isSeam(i)){
-        cutValence(EV(i,0))++;
-        cutValence(EV(i,1))++;
+    MatrixXi unitPermMatrix = MatrixXi::Zero(N, N);
+    for (int i = 0; i < N; i++)
+      unitPermMatrix((i + 1) % N, i) = 1;
+
+    // generate all the members of the permutation group
+    constParmMatrices[0] = MatrixXi::Identity(N, N);
+    for (int i = 1; i < N; i++)
+      constParmMatrices[i] = unitPermMatrix * constParmMatrices[i - 1];
+
+    // each edge which is on the cut seam is marked by 1 and 0 otherwise
+    VectorXi isSeam = VectorXi::Zero(EV.rows());
+    for(int i = 0; i < FE.rows(); i++)
+    {
+      for (int j = 0; j < 3; j++)
+        if (pd.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
+          isSeam(FE(i, j)) = 1;
+    }
+
+    // do the same for the half-edges, mark edges which correspond to the cut seam
+    VectorXi isHEcut = VectorXi::Zero(HE.rows());
+    for(int i = 0; i < wholeF.rows(); i++)
+    {
+      for (int j = 0; j < 3; j++)
+        if (pd.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
+          isHEcut(FH(i, j)) = 1; // FH is face to half-edge mapping
+    }
+
+    // calculate valency of the vertices which lay on the seam
+    VectorXi cutValence = VectorXi::Zero(wholeV.rows());
+    for(int i = 0; i < EV.rows(); i++)
+    {
+      if (isSeam(i))
+      {
+        cutValence(EV(i, 0))++;
+        cutValence(EV(i, 1))++;
       }
-    
-    
+    }
+
+
     //establishing transition variables by tracing cut curves
-    VectorXi Halfedge2TransitionIndices=VectorXi::Constant(HE.rows(),32767);
+    VectorXi Halfedge2TransitionIndices = VectorXi::Constant(HE.rows(), 32767);
     VectorXi Halfedge2Matching(HE.rows());
-    VectorXi isHEClaimed=VectorXi::Zero(HE.rows());
-    //matching: EF(i,0)->EF(i,1), halfedge on i get the incoming matching, and so opposite.
-    
-    for (int i=0;i<HE.rows();i++){
-      Halfedge2Matching(i)=(EH(HE(i),0)==i ? -matching(HE(i)) : matching(HE(i)));
-      while (Halfedge2Matching(i)<0) Halfedge2Matching(i)+=N;
-      //while (Halfedge2Matching(i)>=N/2) Halfedge2Matching(i)-=N;
+    VectorXi isHEClaimed = VectorXi::Zero(HE.rows());
+
+    // here we convert the matching that was calculated for the vector field over edges to half-edges
+    for (int i = 0; i < HE.rows(); i++)
+    {
+      // HE is a map between half-edges to edges, but it does not carry the direction
+      // EH edge to half-edge mapping
+      Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -matching(HE(i)) : matching(HE(i)));
+      if(Halfedge2Matching(i) < 0)
+        Halfedge2Matching(i) = (N + (Halfedge2Matching(i) % N)) % N;
     }
     
-    int currTransition=1;
+    int currTransition = 1;
     
-    //cutting mesh and creating map between wholeF and cutF
+    /*
+    * Next steps: cutting mesh and creating map between wholeF and cutF
+    */
+
     //cutting the mesh
     vector<int> cut2whole;
     vector<RowVector3d> cutVlist;
     cutF.conservativeResize(wholeF.rows(),3);
-    for (int i=0;i<VH.rows();i++){
+    for (int i = 0; i < VH.rows(); i++)
+    {
       //creating corners whereever we have non-trivial matching
-      int beginH=VH(i);
-      int currH=beginH;
+      int beginH = VH(i);
+      int currH = beginH;
       
       //reseting to first cut or first boundary, if exists
-      
-      if (!isBoundary(i)){
-        do{
+      if (!isBoundary(i))
+      {
+        do
+        {
           if (isHEcut(currH)!=0)
             break;
           currH=nextH(twinH(currH));
-        }while (beginH!=currH);
-      } else {
-        do{
+        } while (beginH!=currH);
+      }
+      else
+      {
+        do
+        {
           if (twinH(currH)==-1)
             break;
           currH=nextH(twinH(currH));
-        }while (twinH(currH)!=-1);
+        } while(twinH(currH)!=-1);
       }
       
-      beginH=currH;
+      beginH = currH;
       
-      do{
-        if ((isHEcut(currH)!=0)||(beginH==currH)){
+      do
+      {
+        if ((isHEcut(currH) != 0) || (beginH == currH))
+        {
           cut2whole.push_back(i);
           cutVlist.push_back(wholeV.row(i));
         }
         
-        for (int j=0;j<3;j++)
-          if (wholeF(HF(currH),j)==i)
-            cutF(HF(currH),j)=cut2whole.size()-1;
-        
-        currH=twinH(prevH(currH));
-      }while ((beginH!=currH)&&(currH!=-1));
+        for (int j = 0; j < 3; j++)
+          if (wholeF(HF(currH), j) == i)
+            cutF(HF(currH), j) = cut2whole.size() - 1;
+        currH = twinH(prevH(currH));
+      } while((beginH != currH) && (currH != -1));
     }
     
-    cutV.conservativeResize(cutVlist.size(),3);
-    for (int i=0;i<cutVlist.size();i++)
-      cutV.row(i)=cutVlist[i];
+    cutV.conservativeResize(cutVlist.size(), 3);
+    for(int i = 0; i < cutVlist.size(); i++)
+      cutV.row(i) = cutVlist[i];
     
     //starting from each cut-graph node, we trace cut curves
-    for (int i=0;i<wholeV.rows();i++){
-      if (((cutValence(i)==2)&&(!isSingular(i)))||(cutValence(i)==0))
+    for(int i = 0;  i < wholeV.rows(); i++)
+    {
+      if (((cutValence(i) == 2) && (!isSingular(i))) || (cutValence(i) == 0))
         continue;  //either mid-cut curve or non at all
       
-      //if (isBoundary(i))
-      //  continue;  //there is never a need to start with boundary vertices, and boundary curves don't get a transition variable
-      
       //tracing curves until next node, if not already filled
-      int beginH=VH(i);
+      int beginH = VH(i);
       
       //reseting to first boundary
-      int currH=beginH;
+      int currH = beginH;
     
-      if (isBoundary(i)){
-        do{
-          if (twinH(currH)==-1)
+      if (isBoundary(i))
+      {
+        do
+        {
+          if (twinH(currH) == -1)
             break;
-          currH=nextH(twinH(currH));
-        }while (twinH(currH)!=-1);
+          currH = nextH(twinH(currH));
+        } while(twinH(currH) != -1);
       }
       
-      beginH=currH;
+      beginH = currH;
     
-      int nextHalfedgeInCut=-1;
-      do{
-        if ((isHEcut(currH)!=0)&&(isHEClaimed(currH)==0)&&(twinH(currH)!=-1)){ //unclaimed inner halfedge
-          nextHalfedgeInCut=currH;
-          Halfedge2TransitionIndices(nextHalfedgeInCut)=currTransition;
-          Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=-currTransition;
-          isHEClaimed(nextHalfedgeInCut)=1;
-          isHEClaimed(twinH(nextHalfedgeInCut))=1;
+      int nextHalfedgeInCut = -1;
+      do
+      {
+        //unclaimed inner halfedge
+        if ((isHEcut(currH) != 0) && (isHEClaimed(currH) == 0) && (twinH(currH) != -1))
+        {
+          nextHalfedgeInCut = currH;
+          Halfedge2TransitionIndices(nextHalfedgeInCut) = currTransition;
+          Halfedge2TransitionIndices(twinH(nextHalfedgeInCut)) = -currTransition;
+          isHEClaimed(nextHalfedgeInCut) = 1;
+          isHEClaimed(twinH(nextHalfedgeInCut)) = 1;
           int nextCutVertex=HV(nextH(nextHalfedgeInCut));
           //advancing on the cut until next node
-          while ((cutValence(nextCutVertex)==2)&&(!isSingular(nextCutVertex))&&(!isBoundary(nextCutVertex))){
-            int beginH=VH(nextCutVertex);
-            int currH=beginH;
-            int nextHalfedgeInCut=-1;
-            do{
-              if ((isHEcut(currH)!=0)&&(isHEClaimed(currH)==0)) { //unclaimed cut halfedge
-                nextHalfedgeInCut=currH;
+          while ((cutValence(nextCutVertex) == 2) && (!isSingular(nextCutVertex)) && (!isBoundary(nextCutVertex)))
+          {
+            int beginH = VH(nextCutVertex);
+            int currH = beginH;
+            int nextHalfedgeInCut = -1;
+            do
+            {
+              //unclaimed cut halfedge
+              if ((isHEcut(currH) != 0) && (isHEClaimed(currH) == 0))
+              {
+                nextHalfedgeInCut = currH;
                 break;
               }
               currH=twinH(prevH(currH));
-            }while (beginH!=currH);
-            Halfedge2TransitionIndices(nextHalfedgeInCut)=currTransition;
-            Halfedge2TransitionIndices(twinH(nextHalfedgeInCut))=-currTransition;
-            isHEClaimed(nextHalfedgeInCut)=1;
-            isHEClaimed(twinH(nextHalfedgeInCut))=1;
-            nextCutVertex=HV(nextH(nextHalfedgeInCut));
+            } while (beginH != currH);
+            Halfedge2TransitionIndices(nextHalfedgeInCut) = currTransition;
+            Halfedge2TransitionIndices(twinH(nextHalfedgeInCut)) = -currTransition;
+            isHEClaimed(nextHalfedgeInCut) = 1;
+            isHEClaimed(twinH(nextHalfedgeInCut)) = 1;
+            nextCutVertex = HV(nextH(nextHalfedgeInCut));
           }
-          
           currTransition++;
         }
-        currH=twinH(prevH(currH));
-      }while ((beginH!=currH)&&(currH!=-1));
+        currH = twinH(prevH(currH));
+      } while((beginH != currH) && (currH != -1));
     }
-    
-    int numTransitions=currTransition-1;
-    
+    // end of cutting
+
+    int numTransitions = currTransition - 1;
     vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets;
-  
     //forming the constraints and the singularity positions
-    int currConst=0;
-    for (int i=0;i<VH.rows();i++){
+    int currConst = 0;
+    // this loop set up the transtions (vector field matching) across the cuts
+    for (int i = 0; i < VH.rows(); i++)
+    {
       std::vector<MatrixXi> permMatrices;
       std::vector<int> permIndices;  //in the space #V + #transitions
       //The initial corner gets the identity without any transition
-      permMatrices.push_back(MatrixXi::Identity(N,N));
+      permMatrices.push_back(MatrixXi::Identity(N, N));
       permIndices.push_back(i);
-      int beginH=VH(i);
-      int currH=beginH;
+
+      int beginH = VH(i);
+      int currH = beginH;
       
       //reseting to first cut or boundary, if exists
-      if (!isBoundary(i)){
-        do{
-          if (isHEcut(currH)!=0)
+      if (!isBoundary(i))
+      {
+        // travel throu the start of the vertex and stop once the edge on the cut is found
+        do
+        {
+          if (isHEcut(currH) != 0)
             break;
-          currH=nextH(twinH(currH));
-        }while (beginH!=currH);
-      } else {
-        do{
-          if (twinH(currH)==-1)
-            break;
-          currH=nextH(twinH(currH));
-        }while (twinH(currH)!=-1);
+          currH = nextH(twinH(currH));
+        } while(beginH != currH);
       }
+      else
+      {
+        do
+        {
+          // travel until an edge without a twin is found, i.e., boundary
+          if (twinH(currH) == -1)
+            break;
+          currH = nextH(twinH(currH));
+        } while(twinH(currH) != -1);
+      }
+
+      // set the beginning to the edge on the cut or on the boundary
+      beginH = currH;
       
-      beginH=currH;
-      
-      int currCutVertex=-1;
-      do{
-        int currFace=HF(currH);
-        int newCutVertex=-1;
-        for (int j=0;j<3;j++)
-          if (wholeF(currFace,j)==i)
-            newCutVertex=cutF(currFace,j);
+      int currCutVertex = -1;
+      do
+      {
+        int currFace = HF(currH); // face containing the half-edge
+        int newCutVertex = -1;
+        //find position of the vertex i in the face of the initial mesh
+        for (int j = 0; j < 3; j++)
+        {
+          if (wholeF(currFace, j) == i)
+            newCutVertex = cutF(currFace, j);
+        }
         
         //currCorner gets the permutations so far
-        if (newCutVertex!=currCutVertex){
-          currCutVertex=newCutVertex;
-          
-          for (int i=0;i<permIndices.size();i++)
-            for (int j=0;j<N;j++)
-              for (int k=0;k<N;k++)
-                vertexTrans2CutTriplets.push_back(Triplet<double>(N*currCutVertex+j, N*permIndices[i]+k, (double)permMatrices[i](j,k)));
-          
+        if (newCutVertex != currCutVertex)
+        {
+          currCutVertex = newCutVertex;
+          for(int i = 0; i < permIndices.size(); i++)
+          {
+            // place the perumtation matrix in a bigger matrix, we need to know how things are connected along the cut, no?
+            for(int j = 0; j < N; j++)
+              for(int k = 0; k < N; k++)
+                vertexTrans2CutTriplets.emplace_back(N * currCutVertex + j, N * permIndices[i] + k, (double) permMatrices[i](j, k));
+          }
         }
+
         //updating the matrices for the next corner
-        int nextHalfedge=twinH(prevH(currH));
-        if (nextHalfedge==-1){  //reached a boundary
-          currH=nextHalfedge;
+        int nextHalfedge = twinH(prevH(currH));
+        //reached a boundary
+        if(nextHalfedge == -1)
+        {
+          currH = nextHalfedge;
           continue;
         }
-        MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge)%N];
-        if (isHEcut(nextHalfedge)==0) { //no update needed
-          currH=nextHalfedge;
+
+        // constParmMatrices contains all the members of the permutation group
+        MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge) % N];
+        //no update needed
+        if(isHEcut(nextHalfedge) == 0)
+        {
+          currH = nextHalfedge;
           continue;
         }
         
         //otherwise, updating matrices with transition
         int nextTransition = Halfedge2TransitionIndices(nextHalfedge);
-        if (nextTransition>0){  //Pe*f + Je
-          for (int j=0;j<permMatrices.size();j++)
-            permMatrices[j]=nextPermMatrix*permMatrices[j];
-          
+        //Pe*f + Je
+        if(nextTransition > 0)
+        {
+          for(int j = 0; j < permMatrices.size(); j++)
+            permMatrices[j] = nextPermMatrix * permMatrices[j];
+
           //and identity on the fresh transition
-          permMatrices.push_back(MatrixXi::Identity(N,N));
-          permIndices.push_back(wholeV.rows()+nextTransition-1);
-        } else { // (Pe*(f-Je))  matrix is already inverse since halfedge matching is minused
-          //reverse order
-          permMatrices.push_back(-MatrixXi::Identity(N,N));
-          permIndices.push_back(wholeV.rows()-nextTransition-1);
-          
-          for (int j=0;j<permMatrices.size();j++)
-            permMatrices[j]=nextPermMatrix*permMatrices[j];
-          
+          permMatrices.push_back(MatrixXi::Identity(N, N));
+          permIndices.push_back(wholeV.rows() + nextTransition - 1);
         }
-        currH=nextHalfedge;
-      }while((currH!=beginH)&&(currH!=-1));
+        // (Pe*(f-Je))  matrix is already inverse since halfedge matching is minused
+        else
+        {
+          //reverse order
+          permMatrices.push_back(-MatrixXi::Identity(N, N));
+          permIndices.push_back(wholeV.rows() - nextTransition - 1);
+          
+          for(int j = 0; j < permMatrices.size(); j++)
+            permMatrices[j] = nextPermMatrix * permMatrices[j];
+        }
+        currH = nextHalfedge;
+      } while((currH != beginH) && (currH != -1));
       
-      //cleaning parmMatrices and permIndices to see if there is a constraint or reveal singularity-from-ransition
+      //cleaning parmMatrices and permIndices to see if there is a constraint or reveal singularity-from-transition
       std::set<int> cleanPermIndicesSet(permIndices.begin(), permIndices.end());
       std::vector<int> cleanPermIndices(cleanPermIndicesSet.begin(), cleanPermIndicesSet.end());
       std::vector<MatrixXi> cleanPermMatrices(cleanPermIndices.size());
       
-      for (int j=0;j<cleanPermIndices.size();j++){
-        cleanPermMatrices[j]=MatrixXi::Zero(N,N);
-        for (int k=0;k<permIndices.size();k++)
-          if (cleanPermIndices[j]==permIndices[k])
-            cleanPermMatrices[j]+=permMatrices[k];
-        if (cleanPermIndices[j]==i)
-          cleanPermMatrices[j]-=MatrixXi::Identity(N,N);
+      for (int j = 0; j < cleanPermIndices.size(); j++)
+      {
+        cleanPermMatrices[j] = MatrixXi::Zero(N, N);
+        for(int k = 0;k < permIndices.size(); k++)
+          if(cleanPermIndices[j] == permIndices[k])
+            cleanPermMatrices[j] += permMatrices[k];
+        if(cleanPermIndices[j] == i)
+          cleanPermMatrices[j] -= MatrixXi::Identity(N, N);
       }
       
       //if not all matrices are zero, there is a constraint
-      bool isConstraint=false;
-      for (int j=0;j<cleanPermMatrices.size();j++)
-        if (cleanPermMatrices[j].cwiseAbs().maxCoeff()!=0)
-          isConstraint=true;
+      bool isConstraint = false;
+      for(int j = 0; j < cleanPermMatrices.size(); j++)
+        if (cleanPermMatrices[j].cwiseAbs().maxCoeff() != 0)
+          isConstraint = true;
       
-      if ((isConstraint)&&(!isBoundary(i))){
-        for (int j=0;j<cleanPermMatrices.size();j++)
-          for (int k=0;k<N;k++)
-            for (int l=0;l<N;l++)
-              constTriplets.push_back(Triplet<double>(N*currConst+k, N*cleanPermIndices[j]+l, (double)cleanPermMatrices[j](k,l)));
+      if((isConstraint) && (!isBoundary(i)))
+      {
+        for(int j = 0; j < cleanPermMatrices.size(); j++)
+        {
+          for(int k = 0; k < N; k++)
+            for(int l = 0; l < N; l++)
+              constTriplets.emplace_back(N * currConst + k, N * cleanPermIndices[j] + l, (double) cleanPermMatrices[j](k, l));
+        }
         currConst++;
-        pd.constrainedVertices(i)=1;
+        pd.constrainedVertices(i) = 1;
       }
     }
-    
-    vector<Triplet<double>> cleanTriplets;
+
+    vector< Triplet< double > > cleanTriplets;
    
-    pd.vertexTrans2CutMat.conservativeResize(N*cutV.rows(), N*(wholeV.rows()+numTransitions));
+    pd.vertexTrans2CutMat.conservativeResize(N * cutV.rows(), N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
-    for (int i=0;i<vertexTrans2CutTriplets.size();i++)
-      if (vertexTrans2CutTriplets[i].value()!=0.0)
+    for(int i = 0; i < vertexTrans2CutTriplets.size(); i++)
+      if((float)vertexTrans2CutTriplets[i].value() != 0.0f)
         cleanTriplets.push_back(vertexTrans2CutTriplets[i]);
     pd.vertexTrans2CutMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
-    pd.constraintMat.conservativeResize(N*currConst, N*(wholeV.rows()+numTransitions));
+    pd.constraintMat.conservativeResize(N * currConst, N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
-    for (int i=0;i<constTriplets.size();i++)
-      if (constTriplets[i].value()!=0.0)
+    for(int i = 0; i < constTriplets.size(); i++)
+      if((float)constTriplets[i].value() != 0.0f)
         cleanTriplets.push_back(constTriplets[i]);
     pd.constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
     //filtering out sign symmetry
-    pd.symmMat.conservativeResize(N*(wholeV.rows()+numTransitions), N*(wholeV.rows()+numTransitions)/2);
-    vector<Triplet<double>> symmMatTriplets;
-    for (int i=0;i<N*(wholeV.rows()+numTransitions);i+=N){
-      for (int j=0;j<N/2;j++){
-        symmMatTriplets.push_back(Triplet<double>(i+j, i/2+j, 1.0));
-        symmMatTriplets.push_back(Triplet<double>(i+j+N/2, i/2+j, -1.0));
+    // symmetry between (u, v, w) and (-u, -v, -w)
+    pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), (int)(N * (wholeV.rows() + numTransitions) / 2.));
+    vector<Triplet<double> > symmMatTriplets;
+    for(int i = 0; i < N * (wholeV.rows() + numTransitions); i += N)
+    {
+     for(int j = 0; j < N / 2.; j++)
+      {
+        symmMatTriplets.emplace_back(i + j, (int)(i / 2. + j), 1.0);
+        symmMatTriplets.emplace_back(i + j + (int)(N / 2.), (int)(i / 2. + j), -1.0);
       }
     }
-    
     pd.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
     
     
     //in this case, also doing UV->UVW packing. This only works for N=6.
-    /*if (N==6){
-      SparseMatrix<double> baryMat(N*(wholeV.rows()+numTransitions)/2, N*(wholeV.rows()+numTransitions)/3);
-      vector<Triplet<double>> baryMatTriplets;
-      for (int i=0;i<N*(wholeV.rows()+numTransitions)/2;i+=N/2){
-        baryMatTriplets.push_back(Triplet<double>(i, (i*2)/3, 1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+1, (i*2)/3+1, 1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+2, (i*2)/3, -1.0));
-        baryMatTriplets.push_back(Triplet<double>(i+2, (i*2)/3+1, 1.0));
+    if(N == 6)
+    {
+      /* this is just conversion between axial and cube coordinate systems, with the exception that
+       * normally in the axial corrdianetes r is w and q is x then y is -r -q
+       */
+      SparseMatrix<double> baryMat((int)(N * (wholeV.rows() + numTransitions) / 2.), (int)(N * (wholeV.rows() + numTransitions) / 3.));
+      vector<Triplet<double> > baryMatTriplets;
+      for(int i = 0; i < N * (wholeV.rows() + numTransitions) / 2; i += (int)(N / 2.))
+      {
+        baryMatTriplets.emplace_back(i, (int)((i * 2.) / 3.), 1.0);
+        baryMatTriplets.emplace_back(i + 1, (int)((i * 2.) / 3. + 1.), 1.0);
+
+        baryMatTriplets.emplace_back(i + 2, (int)((i * 2.) / 3.), -1.0);
+        baryMatTriplets.emplace_back(i + 2, (int)((i * 2.) / 3. + 1), 1.0);
       }
       baryMat.setFromTriplets(baryMatTriplets.begin(), baryMatTriplets.end());
-      symmMat = symmMat*baryMat;
+      pd.symmMat = pd.symmMat * baryMat;
       
-      //cout<<"symmMat*VectorXd::Constant(symmMat.cols(),1.0): "<<symmMat*VectorXd::Constant(symmMat.cols(),1.0)<<endl;
-      
-      integerVars.conservativeResize(N*numTransitions/3);
-      integerVars.setZero();
-      for (int i=0;i<numTransitions;i++)
-        for (int j=0;j<N/3;j++)
-          integerVars(N*i/3+j) = N/3*(wholeV.rows()+i)+j;
-    } else {*/
-      pd.integerVars.conservativeResize(N*numTransitions/2);
+      pd.integerVars.conservativeResize((int)(N / 3. * numTransitions));
       pd.integerVars.setZero();
-      for (int i=0;i<numTransitions;i++)
-        for (int j=0;j<N/2;j++)
-          pd.integerVars(N*i/2+j) = N/2*(wholeV.rows()+i)+j;
-    //}
+      for(int i = 0; i < numTransitions; i++)
+      {
+        for (int j = 0; j < N / 3.; j++)
+          pd.integerVars(N / 3 * i + j) = (int)(N / 3.) * (wholeV.rows() + i) + j;
+      }
+    }
+    else
+    {
+      pd.integerVars.conservativeResize((int)(N / 2. * numTransitions));
+      pd.integerVars.setZero();
+      for(int i = 0; i < numTransitions; i++)
+      {
+        for (int j = 0; j < N / 2.; j++)
+          pd.integerVars((int)(N / 2. * i) + j) = (int)(N / 2.) * (wholeV.rows() + i) + j;
+
+      }
+    }
   }
 }
-
-
-
 
 #endif
 
