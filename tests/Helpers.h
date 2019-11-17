@@ -2,36 +2,87 @@
 #define DIRECTIONAL_TEST_HELPERS_H
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <boost/test/data/test_case.hpp>
-#include <boost/test/data/monomorphic.hpp>
+#include <gtest/gtest.h>
+
+// Gtest does not support testing outside of test class...
+//#define DIR_ASSERT(x) ASSERT_TRUE(x) << "Failed condition " << #x  << " at " << __FILE__;
+//#define DIR_ASSERT_M(x, m) ASSERT_TRUE(x) << (m);
+// So, we will just disable it then...
+#define DIR_ASSERT(x) 
+#define DIR_ASSERT_M(x, m) 
+
 #include <igl/read_triangle_mesh.h>
 #include <directional/Gamma_suite.h>
 #include <vector>
 #include <tuple>
+#include <directional/Subdivision/EdgeData.h>
 
-
-namespace helpers{
-
+namespace directional_fixtures
+{
 	struct Mesh
 	{
 		Eigen::MatrixXd V;
 		Eigen::MatrixXi F;
 		std::string fileName;
+
+		EdgeData getED()
+		{
+			return EdgeData(F);
+		}
+		int faceCount() const
+		{
+			return F.rows();
+		}
+		int vertCount() const
+		{
+			return V.rows();
+		}
 	};
+	/**
+	 * \brief Mesh test with parameter the file with a mesh.
+	 */
+	class MeshTestFixture : public testing::TestWithParam<const char*>
+	{
+	protected:
+		Mesh m_mesh;
+		void SetUp() override
+		{
+			// Resolve against shared path
+			m_mesh.fileName = std::string(TEST_SHARED_PATH) + "/";
+			m_mesh.fileName = m_mesh.fileName + GetParam();
+			bool success = igl::read_triangle_mesh(m_mesh.fileName, m_mesh.V, m_mesh.F);
+			ASSERT_TRUE(success);
+			ASSERT_GT(m_mesh.F.rows(), 0) << "No faces in mesh";
+		}
+		void TearDown() override
+		{
+			
+		}
+	};
+}
+
+namespace helpers{
+
+	inline std::string description(const Eigen::SparseMatrix<double>& mat)
+	{
+		std::stringstream str;
+		str << "Cols:" << mat.cols() << ", rows: " << mat.rows();
+		return str.str();
+	}
 
 	struct FEM_Ops
 	{
 		using SparseMat = Eigen::SparseMatrix<double>;
 		SparseMat Gv, Ge, J, C, D;
 
-		FEM_Ops(const helpers::Mesh& m)
+		FEM_Ops(const directional_fixtures::Mesh& m)
 		{
 			EdgeData ED;
 			directional::construct_edge_topology(m.F, ED.E, ED.EF, ED.sFE, ED.EI);
 			directional::FEM_suite(m.V, m.F, ED.E, ED.sFE, ED.EF, Gv, Ge, J, C, D);
 		}
 		FEM_Ops() {}
-		void constructOperators(const EdgeData& ED, const helpers::Mesh& m)
+		void constructOperators(const EdgeData& ED, const directional_fixtures::Mesh& m)
 		{
 			directional::FEM_suite(m.V, m.F, ED.E, ED.sFE, ED.EF, Gv, Ge, J, C, D);
 		}
@@ -46,20 +97,20 @@ namespace helpers{
 		SparseMat Gv, Ge, J, C, D, Gamma2_To_Oneform, G2_To_Decomp, Decomp_To_G2, Chi_To_Gamma2, Gamma2_To_Chi,
 			G2ToG3, G3ToG2;
 
-		Gamma2_Ops(const helpers::Mesh& m)
+		Gamma2_Ops(const directional_fixtures::Mesh& m)
 		{
 			EdgeData ED(m.F);
 			constructOperators(ED, m);
 		}
 		Gamma2_Ops(const EdgeData& ED, const Eigen::MatrixXd& V)
 		{
-			helpers::Mesh m;
+			directional_fixtures::Mesh m;
 			m.F = ED.F;
 			m.V = V;
 			constructOperators(ED, m);
 		}
 		Gamma2_Ops() {}
-		void constructOperators(const EdgeData& ED, const helpers::Mesh& m)
+		void constructOperators(const EdgeData& ED, const directional_fixtures::Mesh& m)
 		{
 			directional::Gamma2_suite(m.V, m.F, ED.E, ED.EI, ED.sFE, ED.EF, Gv, Ge, J, C, D, Gamma2_To_Oneform, G2_To_Decomp,Decomp_To_G2);
 			// Gamma2 to decmposition into oneform and curl component (average and half curl of the gamma's).
@@ -79,7 +130,7 @@ namespace helpers{
 		using SparseMat = Eigen::SparseMatrix<double>;
 		SparseMat Gv, Ge, J, C, D, Gamma3_To_Oneform, G3_To_Decomp, Decomp_To_G3, Chi_To_Gamma3, Gamma3_To_Chi;
 
-		Gamma3_Ops(const helpers::Mesh& m)
+		Gamma3_Ops(const directional_fixtures::Mesh& m)
 		{
 			EdgeData ED;
 			directional::construct_edge_topology(m.F, ED.E, ED.EF, ED.sFE, ED.EI);
@@ -88,13 +139,13 @@ namespace helpers{
 		}
 		Gamma3_Ops(const EdgeData& ED, const Eigen::MatrixXd& V)
 		{
-			helpers::Mesh m;
+			directional_fixtures::Mesh m;
 			m.F = ED.F;
 			m.V = V;
 			constructOperators(ED, m);
 		}
 		Gamma3_Ops() {}
-		void constructOperators(const EdgeData& ED, const helpers::Mesh& m)
+		void constructOperators(const EdgeData& ED, const directional_fixtures::Mesh& m)
 		{
 			SparseMat G2ToG3, G3ToG2;
 			directional::Gamma2_To_Gamma3(ED.sFE, G2ToG3);
@@ -109,7 +160,7 @@ namespace helpers{
 		}
 	};
 
-	std::ostream& operator<<(std::ostream& str, const Mesh& m)
+	std::ostream& operator<<(std::ostream& str, const directional_fixtures::Mesh& m)
 	{
 		str << m.fileName;
 		return str;
@@ -119,52 +170,6 @@ namespace helpers{
 #else
 #define MD_SEP "\\"
 #endif
-
-	/**
-	 * \brief Struct for a mesh dataset to apply tests on. Loads the elements from the specified folder
-	 */
-	struct MeshDataset
-	{
-		using sample = Mesh;
-		enum { arity = 1 };
-		std::string m_folder;
-		std::vector<std::string> m_fileNames;
-
-		MeshDataset(const std::string& folder, const std::vector<std::string>& files) : m_folder(folder), m_fileNames(files)
-		{
-			// Read available meshes from folder.
-		}
-		struct iterator
-		{
-			int curr = 0;
-			const MeshDataset& dataset;
-			iterator(const MeshDataset& dataset) : dataset(dataset) {}
-			Mesh operator*()const
-			{
-				Mesh m;
-				std::string fullFile = dataset.m_folder + MD_SEP + dataset.m_fileNames[curr];
-				bool success = igl::read_triangle_mesh(fullFile, m.V, m.F);
-				m.fileName = dataset.m_fileNames[curr];
-				return m;
-				;
-			}
-			iterator& operator++()
-			{
-				curr++;
-				return *this;
-			}
-		};
-
-		boost::unit_test::data::size_t size() const
-		{
-			return m_fileNames.size();
-		}
-
-		iterator begin() const
-		{
-			return iterator(*this);
-		}
-	};
 
 	inline Eigen::VectorXd random_edgefield()
 	{
@@ -270,7 +275,7 @@ namespace helpers{
 				 }
 			 }
 		 }
-		 BOOST_TEST_MESSAGE("Failures: " << cnt << "/" << mat.nonZeros());
+		 //std::cout << "Failures: " << cnt << "/" << mat.nonZeros();
 		 return ret;
 	 }
 
@@ -293,18 +298,5 @@ namespace helpers{
 		return str.str();
 	}
  }
-
-// Register the MeshDataset class as a dataset in the boost test framework.
-namespace boost {
-	namespace unit_test {
-		namespace data {
-			namespace monomorphic {
-				// registering fibonacci_dataset as a proper dataset
-				template <>
-				struct is_dataset<helpers::MeshDataset> : boost::mpl::true_ {};
-			}
-		}
-	}
-}
 
 #endif
