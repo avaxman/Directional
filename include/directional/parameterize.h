@@ -219,13 +219,15 @@ namespace directional
 
       fullx = var2AllMat * x.head(numVars - alreadyFixed.sum()) + fixedValues;
 
+#ifndef NDEBUG
       cout << "(Cfull * fullx).lpNorm<Infinity>(): "<< (Cfull * fullx).lpNorm<Infinity>() << endl;
       cout << "Poisson error: " << (Efull * fullx - gamma).lpNorm<Infinity>() << endl;
-      
+#endif
+
       if((alreadyFixed - fixedMask).sum() == 0)
         break;
       
-      double minIntDiff = 5000.0;
+      double minIntDiff = std::numeric_limits<double>::max();
       int minIntDiffIndex = -1;
       for (int i = 0; i < numVars; i++)
       {
@@ -239,14 +241,16 @@ namespace directional
           }
         }
       }
-      
+
+#ifndef NDEBUG
       cout << "Integer variable: " << minIntDiffIndex << endl;
       cout << "Integer error: " << minIntDiff << endl;
+#endif
       
-      if (minIntDiffIndex!=-1)
+      if (minIntDiffIndex != -1)
       {
         alreadyFixed(minIntDiffIndex) = 1;
-        fixedValues(minIntDiffIndex) =std::round(0.5 * fullx(minIntDiffIndex)) * 2;
+        fixedValues(minIntDiffIndex) = std::round(0.5 * fullx(minIntDiffIndex)) * 2;
       }
       
       xprev.resize(x.rows() - 1);
