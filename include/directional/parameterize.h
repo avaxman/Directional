@@ -94,16 +94,10 @@ namespace directional
     //the variables that should be fixed in the end
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
-    if(N == 6)
-    {
-      for(int i = 0; i < N / 3.; i++)
+
+    for(int i = 0; i < 2; i++)
       fixedMask(i) = 1;  //first vertex is always (0,0)
-    }
-    else
-    {
-      for (int i = 0; i < N / 2.; i++)
-        fixedMask(i) = 1;  //first vertex is always (0,0)
-    }
+
     
     if(roundIntegers)
     {
@@ -114,16 +108,9 @@ namespace directional
     //the variables that were already fixed in the previous iteration
     VectorXi alreadyFixed(numVars);
     alreadyFixed.setZero();
-    if(N == 6)
-    {
-      for(int i = 0; i < N / 3.; i++)
-        alreadyFixed(i) = 1;  //first vertex is always (0,0)
-    }
-    else
-    {
-      for(int i = 0; i < N / 2.; i++)
-        alreadyFixed(i) = 1;  //first vertex is always (0,0)
-    }
+
+    for(int i = 0; i < 2; i++)
+      alreadyFixed(i) = 1;  //first vertex is always (0,0)
 
     //the values for the fixed variables (size is as all variables)
     VectorXd fixedValues(numVars);
