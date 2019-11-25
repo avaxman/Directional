@@ -489,7 +489,7 @@ namespace directional
     if(N == 6)
     {
       /* this is just conversion between axial and cube coordinate systems, with the exception that
-       * normally in the axial corrdianetes r is w and q is x then y is -r -q
+       * normally in the axial corrdianetes r is z and q is x then y is -r -q
        */
       SparseMatrix<double> baryMat(3 * (wholeV.rows() + numTransitions), 2 * (wholeV.rows() + numTransitions));
       vector<Triplet<double> > baryMatTriplets;
