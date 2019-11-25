@@ -490,6 +490,7 @@ namespace directional
     {
       /* this is just conversion between axial and cube coordinate systems, with the exception that
        * normally in the axial corrdianetes r is z and q is x then y is -r -q
+       * In fact the plane has here the equation x - y + z = 0 and NOT as usually x + y + z = 0.
        */
       SparseMatrix<double> baryMat(3 * (wholeV.rows() + numTransitions), 2 * (wholeV.rows() + numTransitions));
       vector<Triplet<double> > baryMatTriplets;
