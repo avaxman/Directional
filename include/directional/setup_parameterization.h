@@ -491,9 +491,9 @@ namespace directional
       /* this is just conversion between axial and cube coordinate systems, with the exception that
        * normally in the axial corrdianetes r is w and q is x then y is -r -q
        */
-      SparseMatrix<double> baryMat((int)(N * (wholeV.rows() + numTransitions) / 2.), (int)(N * (wholeV.rows() + numTransitions) / 3.));
+      SparseMatrix<double> baryMat(3 * (wholeV.rows() + numTransitions), 2 * (wholeV.rows() + numTransitions));
       vector<Triplet<double> > baryMatTriplets;
-      for(int i = 0; i < N * (wholeV.rows() + numTransitions) / 2; i += (int)(N / 2.))
+      for(int i = 0; i < 3 * (wholeV.rows() + numTransitions); i += 3)
       {
         baryMatTriplets.emplace_back(i, (int)((i * 2.) / 3.), 1.0);
         baryMatTriplets.emplace_back(i + 1, (int)((i * 2.) / 3. + 1.), 1.0);
@@ -504,12 +504,12 @@ namespace directional
       baryMat.setFromTriplets(baryMatTriplets.begin(), baryMatTriplets.end());
       pd.symmMat = pd.symmMat * baryMat;
       
-      pd.integerVars.conservativeResize((int)(N / 3. * numTransitions));
+      pd.integerVars.conservativeResize(2 * numTransitions);
       pd.integerVars.setZero();
       for(int i = 0; i < numTransitions; i++)
       {
-        for (int j = 0; j < N / 3.; j++)
-          pd.integerVars(N / 3 * i + j) = (int)(N / 3.) * (wholeV.rows() + i) + j;
+        for (int j = 0; j < 2; j++)
+          pd.integerVars(2 * i + j) = 2 * (wholeV.rows() + i) + j;
       }
     }
     else
