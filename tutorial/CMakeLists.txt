@@ -13,6 +13,10 @@ option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
 
+option(LIBIGL_WITH_PNG       "Use PNG"          ON)
+set(LIBIGL_WITH_PNG CACHE BOOL ON)
+
+
 ### Adding libIGL and Directional: choose the path to your local copy
 find_package(LIBIGL REQUIRED QUIET)
 include(Directional)
@@ -71,6 +75,7 @@ endif()
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("501_SeamlessParameterization")
   add_subdirectory("502_MixedIntegerParameterization")
+  add_subdirectory("503_HexagonalParameterization")
 endif()
 
 
