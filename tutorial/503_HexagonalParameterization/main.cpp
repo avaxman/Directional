@@ -157,7 +157,13 @@ int main()
     Eigen::Vector2d t = cutUVFull.row(i);
     cutUVFull.row(i) = c * t;
   }
-  
+
+  for(int i = 0; i < cutUVRot.rows(); i++)
+  {
+    Eigen::Vector2d t = cutUVRot.row(i);
+    cutUVRot.row(i) = c * t;
+  }
+
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
