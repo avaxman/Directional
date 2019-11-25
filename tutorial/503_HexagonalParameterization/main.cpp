@@ -150,7 +150,7 @@ int main()
   
   // convert UVs for opengl
   Eigen::Matrix2d c;
-  c << sqrt(3.)  / sqrt(3.), -sqrt(3.) / 2./ sqrt(3.), 0. , -3. / 2.;
+  c << 1., -1. / 2., 0. , -3. / 2.;
 
   for(int i = 0; i < cutUVFull.rows(); i++)
   {
