@@ -32,6 +32,7 @@ Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
 Eigen::MatrixXd cutUVFull, cutUVRot;
+Eigen::MatrixXd cutUVFullDisp, cutUVRotDisp;
 igl::opengl::glfw::Viewer viewer;
 
 typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION, UV_COORDS} ViewingModes;
@@ -64,14 +65,14 @@ void update_triangle_mesh()
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
-    viewer.data_list[0].set_uv(viewingMode==ROT_PARAMETERIZATION ? cutUVRot : cutUVFull);
+    viewer.data_list[0].set_uv(viewingMode==ROT_PARAMETERIZATION ? cutUVRotDisp : cutUVFullDisp);
     viewer.data_list[0].set_texture(texture_R, texture_G, texture_B);
     viewer.data_list[0].set_face_based(true);
     viewer.data_list[0].show_texture=true;
     viewer.data_list[0].show_lines=false;
   } else {
     viewer.data_list[0].clear();
-    viewer.data_list[0].set_mesh(cutUVFull, FMeshCut);
+    viewer.data_list[0].set_mesh(cutUVFullDisp, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].set_face_based(false);
     viewer.data_list[0].show_texture=false;
@@ -147,21 +148,24 @@ int main()
   isInteger = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless parameterization"<<std::endl;
   directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,  cutUVFull);
-  
+
+  cutUVFullDisp = cutUVFull;
+  cutUVRotDisp = cutUVRot;
+
   // convert UVs for opengl
   Eigen::Matrix2d c;
   c << 1., -1. / 2., 0. , -3. / 2.;
 
-  for(int i = 0; i < cutUVFull.rows(); i++)
+  for(int i = 0; i < cutUVFullDisp.rows(); i++)
   {
-    Eigen::Vector2d t = cutUVFull.row(i);
-    cutUVFull.row(i) = c * t;
+    Eigen::Vector2d t = cutUVFullDisp.row(i);
+    cutUVFullDisp.row(i) = c * t;
   }
 
-  for(int i = 0; i < cutUVRot.rows(); i++)
+  for(int i = 0; i < cutUVRotDisp.rows(); i++)
   {
-    Eigen::Vector2d t = cutUVRot.row(i);
-    cutUVRot.row(i) = c * t;
+    Eigen::Vector2d t = cutUVRotDisp.row(i);
+    cutUVRotDisp.row(i) = c * t;
   }
 
   std::cout<<"Done!"<<std::endl;
