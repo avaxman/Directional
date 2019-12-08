@@ -16,6 +16,7 @@
 #include <vector>
 #include <tuple>
 #include <directional/Subdivision/EdgeData.h>
+#include <directional/Subdivision_new/shm_edge_topology.h>
 
 namespace directional_fixtures
 {
@@ -125,6 +126,47 @@ namespace helpers{
 	/**
 	 * \brief Helper struct that constructs all gamma2 related operators
 	 */
+	struct Gamma2_Ops_New
+	{
+		using SparseMat = Eigen::SparseMatrix<double>;
+		SparseMat Gv, Ge, J, C, D, Gamma2_To_Oneform, G2_To_Decomp, Decomp_To_G2, Chi_To_Gamma2, Gamma2_To_Chi,
+			G2ToG3, G3ToG2;
+
+		Gamma2_Ops_New(const directional_fixtures::Mesh& m)
+		{
+			Eigen::MatrixXi E, EF, EI, SFE;
+			directional::shm_edge_topology(m.F, m.V.rows(), E, EF, EI, SFE);
+			constructOperators(m, E, EF, EI, SFE);
+		}
+		Gamma2_Ops_New(const directional_fixtures::Mesh& m,
+			const Eigen::MatrixXi& E,
+			const Eigen::MatrixXi& EF,
+			const Eigen::MatrixXi& EI,
+			const Eigen::MatrixXi& SFE)
+		{
+			constructOperators(m, E, EF, EI, SFE);
+		}
+		Gamma2_Ops_New() {}
+		void constructOperators(
+			const directional_fixtures::Mesh& m, 
+			const Eigen::MatrixXi& E, 
+			const Eigen::MatrixXi& EF, 
+			const Eigen::MatrixXi& EI, 
+			const Eigen::MatrixXi& SFE)
+		{
+			directional::Gamma2_suite(m.V, m.F, E, EI, SFE, EF, Gv, Ge, J, C, D, Gamma2_To_Oneform, G2_To_Decomp, Decomp_To_G2);
+			// Gamma2 to decmposition into oneform and curl component (average and half curl of the gamma's).
+			directional::Gamma2_projector(m.V, m.F, E, SFE, EF, Chi_To_Gamma2);
+			directional::Gamma2_reprojector(m.V, m.F, E, SFE, EF, Gamma2_To_Chi);
+
+			directional::Gamma2_To_Gamma3(SFE, G2ToG3);
+			directional::Gamma3_To_Gamma2(SFE, G3ToG2);
+		}
+	};
+
+	/**
+	 * \brief Helper struct that constructs all gamma2 related operators
+	 */
 	struct Gamma3_Ops
 	{
 		using SparseMat = Eigen::SparseMatrix<double>;
@@ -188,7 +230,52 @@ namespace helpers{
 		}
 		return currMax;
 	}
+	inline bool isSame(const Eigen::MatrixXi& m0, const Eigen::MatrixXi& m1)
+	{
+		if (m0.rows() != m1.rows() || m0.cols() != m1.cols()) return false;
+		for(int i = 0; i < m0.rows(); i++)
+		{
+			for(int j = 0; j < m0.cols(); j++)
+			{
+				if (m0(i, j) != m1(i, j)) return false;
+			}
+		}
+		return true;
+	}
 
+	inline bool isApprox(double d1, double d2, double tol = 0.0000001)
+	{
+		return std::abs(d1 - d2) < tol;
+	}
+	
+	inline bool isSame(const std::vector<int>& t1, const std::vector<int>& t2)
+	{
+		if (t1.size() != t2.size())return false;
+		for(int i = 0; i < t1.size(); i++)
+		{
+			if (t1[i] != t2[i]) return false;
+		}
+		return true;
+	}
+	template<typename T>
+	inline std::string printCombos(const std::vector<T>& a1, const std::vector<T>& a2)
+	{
+		std::stringstream ss;
+		for(int i = 0; i < a1.size(); i++)
+		{
+			ss << "(" << a1[i] << "," << a2[i] << ") ";
+		}
+		return ss.str();
+	}
+	inline bool isSame(const std::vector<double>& t1, const std::vector<double>& t2)
+	{
+		if (t1.size() != t2.size())return false;
+		for (int i = 0; i < t1.size(); i++)
+		{
+			if (!isApprox(t1[i],t2[i])) return false;
+		}
+		return true;
+	}
 
      template<typename DataType, int Opts>
      inline bool isApproximatelyDiagonal(const Eigen::SparseMatrix<DataType, Opts>& mat, DataType threshold){
