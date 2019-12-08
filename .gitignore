@@ -3580,3 +3580,4 @@ tutorial/bin/
 matlab/bin/
 *.TMP
 matlab/dist/
+tests/gtest_bin/
