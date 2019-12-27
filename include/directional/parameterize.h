@@ -43,7 +43,7 @@ namespace directional
   //  cutF:         #F x 3 faces of the cut mesh.
   //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to double integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be double integer.
   // Output:
-  //  cutUV:        #cV x 2 (u,v) coordinates per cut vertex.
+  //  paramFuncs        #cV x d parameterization functions per cut vertex.
   IGL_INLINE void parameterize(const Eigen::MatrixXd& wholeV,
                                const Eigen::MatrixXi& wholeF,
                                const Eigen::MatrixXi& FE,
@@ -53,7 +53,7 @@ namespace directional
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
                                const bool roundIntegers,
-                               Eigen::MatrixXd& cutUV)
+                               Eigen::MatrixXd& paramFuncs)
   
   
   {
@@ -63,9 +63,32 @@ namespace directional
     VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff() + 1, 1.0);
     double length = igl::bounding_box_diagonal(wholeV) * lengthRatio;
     
+    //creating projection operator for N-packet. This is probably extremely redundant process....
+    MatrixXd pinvSymm = (pd.symmFunc.transpose()*pd.symmFunc).inverse()*pd.symmFunc.transpose();
+    MatrixXd symmConst = pd.symmFunc*pinvSymm-MatrixXd::Identity(pd.symmFunc.rows(),pd.symmFunc.rows());
+    
+    ColPivHouseholderQR<MatrixXd> denseqrsolver(symmConst.transpose());
+    denseqrsolver.compute(symmConst.transpose());
+    int SRank = denseqrsolver.rank();
+
+    //creating sliced permutation matrix
+    VectorXi PIndices = denseqrsolver.colsPermutation().indices();
+    //cout<<"PIndices: "<<PIndices<<endl;
+    MatrixXd symmConstReduced(SRank, symmConst.cols());
+    for (int i=0;i<SRank;i++)
+      symmConstReduced.row(i) =symmConst.row(PIndices(i));
+
+    MatrixXd projMat = symmConstReduced.transpose()*(symmConstReduced*symmConstReduced.transpose()).inverse()*symmConstReduced+MatrixXd::Identity(pd.N, pd.N);
+    
+  
+    //cout<<"symmConst: "<<symmConst<<endl;
+    //cout<<"symmConst: "<<symmConst<<endl;
+    //cout<<"symmConstReduced: "<<symmConstReduced<<endl;
+    //cout<<"projMat: "<<projMat<<endl;
+    
     //TODO: in vertex space, not corner...
-    int N = rawField.cols() / 3;
-    int numVars = pd.symmMat.cols();
+    int N = pd.N; //rawField.cols() / 3;
+    int numVars = pd.symmMat.cols()/pd.d;
     //constructing face differentials
     vector<Triplet<double> >  d0Triplets;
     vector<Triplet<double> > M1Triplets;
@@ -95,25 +118,21 @@ namespace directional
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
 
-    for(int i = 0; i < 2; i++)
-      fixedMask(i) = 1;  //first vertex is always (0,0)
+    fixedMask(0) = 1;  //first vertex is always (0,0)
 
-    
     if(roundIntegers)
-    {
       for(int i = 0; i < pd.integerVars.size(); i++)
         fixedMask(pd.integerVars(i)) = 1;
-    }
+    
     
     //the variables that were already fixed in the previous iteration
     VectorXi alreadyFixed(numVars);
     alreadyFixed.setZero();
 
-    for(int i = 0; i < 2; i++)
-      alreadyFixed(i) = 1;  //first vertex is always (0,0)
+    alreadyFixed(0) = 1;  //first vertex is always (0,0)
 
     //the values for the fixed variables (size is as all variables)
-    VectorXd fixedValues(numVars);
+    VectorXd fixedValues(pd.d*numVars);
     fixedValues.setZero();
     
     SparseMatrix<double> Efull = d0 * pd.vertexTrans2CutMat * pd.symmMat;
@@ -128,7 +147,7 @@ namespace directional
     int CRank = qrsolver.rank();
 
     //creating sliced permutation matrix
-    VectorXi PIndices = qrsolver.colsPermutation().indices();
+    PIndices = qrsolver.colsPermutation().indices();
 
     vector<Triplet<double> > CTriplets;
     for(int k = 0; k < Cfull.outerSize(); ++k)
@@ -144,17 +163,20 @@ namespace directional
     Cfull.resize(CRank, Cfull.cols());
     Cfull.setFromTriplets(CTriplets.begin(), CTriplets.end());
     SparseMatrix<double> var2AllMat;
-    VectorXd fullx(numVars); fullx.setZero();
+    VectorXd fullx(pd.d*numVars); fullx.setZero();
     for(int intIter = 0; intIter < fixedMask.sum(); intIter++)
     {
       //the non-fixed variables to all variables
-      var2AllMat.resize(numVars, numVars - alreadyFixed.sum());
+      var2AllMat.resize(pd.d*numVars, pd.d*numVars - pd.d*alreadyFixed.sum());
       int varCounter = 0;
       vector<Triplet<double> > var2AllTriplets;
       for(int i = 0; i < numVars; i++)
       {
-        if (!alreadyFixed(i))
-          var2AllTriplets.emplace_back(i, varCounter++, 1.0);
+        if (!alreadyFixed(i)){
+          for (int j=0;j<pd.d;j++)
+            var2AllTriplets.emplace_back(pd.d*i+j, varCounter++, 1.0);
+        }
+          
       }
       var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
       
@@ -204,6 +226,7 @@ namespace directional
       
       A.setFromTriplets(ATriplets.begin(), ATriplets.end());
       
+      //Right-hand side with fixed values
       VectorXd b = VectorXd::Zero(EtE.rows() + Cpart.rows());
       b.segment(0, EtE.rows())= Epart.transpose() * M1 * (gamma + torhs);
       VectorXd bfull = -Cfull * fixedValues;
@@ -217,12 +240,12 @@ namespace directional
         throw std::runtime_error("LU decomposition failed!");
       x = lusolver.solve(b);
 
-      fullx = var2AllMat * x.head(numVars - alreadyFixed.sum()) + fixedValues;
+      fullx = var2AllMat * x.head(pd.d*numVars - pd.d*alreadyFixed.sum()) + fixedValues;
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
       cout << "(Cfull * fullx).lpNorm<Infinity>(): "<< (Cfull * fullx).lpNorm<Infinity>() << endl;
       cout << "Poisson error: " << (Efull * fullx - gamma).lpNorm<Infinity>() << endl;
-#endif
+//#endif
 
       if((alreadyFixed - fixedMask).sum() == 0)
         break;
@@ -233,7 +256,10 @@ namespace directional
       {
         if ((fixedMask(i)) && (!alreadyFixed(i)))
         {
-          double currIntDiff = std::fabs(0.5 * fullx(i) - std::round(0.5 * fullx(i)));
+          double currIntDiff =0;
+          VectorXd func = pd.symmFunc*fullx.segment(pd.d*i,pd.d);
+          for (int j=0;j<pd.N;j++)
+            currIntDiff += std::fabs(0.5 * func(j) - std::round(0.5 * func(j)));
           if (currIntDiff < minIntDiff)
           {
             minIntDiff = currIntDiff;
@@ -242,34 +268,47 @@ namespace directional
         }
       }
 
-#ifndef NDEBUG
-      cout << "Integer variable: " << minIntDiffIndex << endl;
-      cout << "Integer error: " << minIntDiff << endl;
-#endif
+//#ifndef NDEBUG
+      cout << "d-segment index: " << minIntDiffIndex << endl;
+      cout << "N-segment Integer average error: " << minIntDiff/(double)pd.d << endl;
+//#endif
       
       if (minIntDiffIndex != -1)
       {
         alreadyFixed(minIntDiffIndex) = 1;
-        fixedValues(minIntDiffIndex) = std::round(0.5 * fullx(minIntDiffIndex)) * 2;
+        VectorXd func = pd.symmFunc*fullx.segment(pd.d*minIntDiffIndex,pd.d);
+        VectorXd funcInteger(pd.N);
+        //cout<<"fullx.segment(pd.d*minIntDiffIndex,pd.d): "<<fullx.segment(pd.d*minIntDiffIndex,pd.d)<<endl;
+        //cout<<"func: "<<func<<endl;
+       
+        for (int n=0;n<pd.N;n++)
+          funcInteger(n)=std::round(0.5*func(n))*2.0;
+         //cout<<"funcInteger: "<<funcInteger<<endl;
+        fixedValues.segment(pd.d*minIntDiffIndex,pd.d) = pinvSymm*projMat*funcInteger;
+        //cout<<" fixedValues.segment(pd.d*minIntDiffIndex,pd.d): "<< fixedValues.segment(pd.d*minIntDiffIndex,pd.d)<<endl;
       }
       
-      xprev.resize(x.rows() - 1);
+      xprev.resize(x.rows() - pd.d);
       varCounter = 0;
       for(int i = 0; i < numVars; i++)
-      {
         if (!alreadyFixed(i))
-          xprev(varCounter++) = fullx(i);
-      }
+          xprev.segment(pd.d*varCounter++,pd.d) = fullx.segment(pd.d*i,pd.d);
+      
       xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());
     }
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd cutUVVec = pd.vertexTrans2CutMat * pd.symmMat * fullx;
-    cutUV.conservativeResize(cutV.rows(), 2);
-
-    for(int i = 0; i < cutV.rows(); i++)
-      cutUV.row(i) << cutUVVec.segment(N * i, 2).transpose();
+    VectorXd paramFuncsVec = pd.vertexTrans2CutMat * pd.symmMat * fullx;
+    paramFuncs.conservativeResize(cutV.rows(), pd.N);
+    for(int i = 0; i < paramFuncs.rows(); i++)
+      paramFuncs.row(i) << paramFuncsVec.segment(pd.N * i, N).transpose();
+    
+    //cout<<"fullx: "<<fullx<<endl;
   }
+
+
+
+
 }
   
 #endif

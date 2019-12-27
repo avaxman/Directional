@@ -24,11 +24,14 @@
 
 namespace directional
 {
-  struct ParameterizationData // writing this as a class in C++ is a bit strange struct and class are the same only the default access is opposite
+  struct ParameterizationData
   {
+    int N;  //num of parametric functions
+    int d;  //actual dimension of problem (for surfaces always 2)
+    Eigen::MatrixXd symmFunc;
     Eigen::SparseMatrix<double> vertexTrans2CutMat;
     Eigen::SparseMatrix<double> constraintMat;
-    Eigen::SparseMatrix<double> symmMat;
+    Eigen::SparseMatrix<double> symmMat;  //in fact, using it for the general reduction of degrees of freedom
     Eigen::VectorXi constrainedVertices;
     Eigen::VectorXi integerVars;
     Eigen::MatrixXi face2cut;
@@ -40,7 +43,7 @@ namespace directional
   
   // Setting up the seamless parameterization algorithm
   // Input:
-  //  N:          The degree of the field.
+  // symmFunc:    #N x d matrix that describes the transformation between the physical "d"" dofs and the N functions parameterized to. This should not depend on the mesh.
   //  wholeV:     #V x 3 vertex coordinates
   //  wholeF:     #F x 3 face vertex indices
   //  EV:         #E x 2 edges to vertices indices
@@ -50,9 +53,9 @@ namespace directional
   // Output:
   //  pd:         parameterization data subsequently used in directional::parameterize();
   //  cutV:       the Vertices of the cut mesh.
-  //  cutF:       The Vaces of the cut mesh.
+  //  cutF:       The Faces of the cut mesh.
   
-  IGL_INLINE void setup_parameterization(const int N,
+  IGL_INLINE void setup_parameterization(const Eigen::MatrixXd& symmFunc,
                                          const Eigen::MatrixXd& wholeV,
                                          const Eigen::MatrixXi& wholeF,
                                          const Eigen::MatrixXi& EV,
@@ -67,6 +70,12 @@ namespace directional
     
     using namespace Eigen;
     using namespace std;
+    
+    int N = symmFunc.rows();
+    int d = symmFunc.cols();
+    pd.N=N;
+    pd.d=d;
+    pd.symmFunc = symmFunc;
     
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
@@ -470,29 +479,45 @@ namespace directional
         cleanTriplets.push_back(constTriplets[i]);
     pd.constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     
-    //filtering out sign symmetry
-    // symmetry between (u, v, w) and (-u, -v, -w)
-    pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), (int)(N * (wholeV.rows() + numTransitions) / 2.));
+    //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include d dof for the surface
+    //this assumes d divides N!
+    pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > symmMatTriplets;
-    for(int i = 0; i < N * (wholeV.rows() + numTransitions); i += N)
-    {
-     for(int j = 0; j < N / 2.; j++)
+    for(int i = 0; i < N*(wholeV.rows() + numTransitions); i +=N)
+        for(int k = 0; k < N; k++)
+          for(int l = 0; l < d; l++){
+            if(abs(symmFunc(k,l))>10e-9)
+                symmMatTriplets.emplace_back(i + k, i*d/N + l, symmFunc(k,l));
+          }
+          
+     pd.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
+    
+    //test: if you get the same
+    /*pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), (int)(N * (wholeV.rows() + numTransitions) / 2.));
+      symmMatTriplets.clear();
+      for(int i = 0; i < N * (wholeV.rows() + numTransitions); i += N)
       {
-        symmMatTriplets.emplace_back(i + j, (int)(i / 2. + j), 1.0);
-        symmMatTriplets.emplace_back(i + j + (int)(N / 2.), (int)(i / 2. + j), -1.0);
+       for(int j = 0; j < N / 2.; j++)
+        {
+          symmMatTriplets.emplace_back(i + j, (int)(i / 2. + j), 1.0);
+          symmMatTriplets.emplace_back(i + j + (int)(N / 2.), (int)(i / 2. + j), -1.0);
+           cout<<i + j<<","<<(int)(i / 2. + j)<<",1.0"<<endl;
+          cout<<i + j + (int)(N / 2.)<<","<<(int)(i / 2. + j)<<",-1.0"<<endl;
+        }
       }
-    }
-    pd.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
+      pd.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());*/
     
-    
+    //TODO: How to do integers?
+    //still waiting for answer
+    //For now: trying to round entire set of variable
     //in this case, also doing UV->UVW packing. This only works for N=6.
-    if(N == 6)
+    /*if(N == 6)
     {
-      /* this is just conversion between axial and cube coordinate systems, with the exception that
-       * normally in the axial corrdianetes r is z and q is x then y is -r -q
-       * In fact the plane has here the equation x - y + z = 0 and NOT as usually x + y + z = 0,
-       * therefore q is x and r is y. More information can be found here: https://www.redblobgames.com/grids/hexagons/
-       */
+      // this is just conversion between axial and cube coordinate systems, with the exception that
+       // normally in the axial corrdianetes r is z and q is x then y is -r -q
+       // In fact the plane has here the equation x - y + z = 0 and NOT as usually x + y + z = 0,
+       // therefore q is x and r is y. More information can be found here: https://www.redblobgames.com/grids/hexagons/
+       
       SparseMatrix<double> baryMat(3 * (wholeV.rows() + numTransitions), 2 * (wholeV.rows() + numTransitions));
       vector<Triplet<double> > baryMatTriplets;
       for(int i = 0; i < 3 * (wholeV.rows() + numTransitions); i += 3)
@@ -515,16 +540,14 @@ namespace directional
       }
     }
     else
-    {
-      pd.integerVars.conservativeResize((int)(N / 2. * numTransitions));
-      pd.integerVars.setZero();
-      for(int i = 0; i < numTransitions; i++)
-      {
-        for (int j = 0; j < N / 2.; j++)
-          pd.integerVars((int)(N / 2. * i) + j) = (int)(N / 2.) * (wholeV.rows() + i) + j;
-
-      }
-    }
+    {*/
+      
+     
+    //integer variables are per single "d" packet, and the rounding is done for the N functions with projection over symmFunc
+    pd.integerVars.conservativeResize(numTransitions);
+    pd.integerVars.setZero();
+    for(int i = 0; i < numTransitions; i++)
+        pd.integerVars(i) = wholeV.rows() + i;
   }
 }
 
