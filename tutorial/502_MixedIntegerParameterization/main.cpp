@@ -141,17 +141,26 @@ int main()
   
   std::cout<<"Setting up parameterization"<<std::endl;
   
-  directional::setup_parameterization(N, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+  Eigen::MatrixXd symmFunc(4,2);
+  symmFunc<<1.0,0.0,
+  0.0,1.0,
+  -1.0,0.0,
+  0.0,-1.0;
+  
+  directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
   double lengthRatio=0.01;
   bool isInteger = false;  //do not do translational seamless.
   std::cout<<"Solving rotationally-seamless parameterization"<<std::endl;
   directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUVRot);
+  
+  cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   isInteger = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless parameterization"<<std::endl;
   directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,  cutUVFull);
+  cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
