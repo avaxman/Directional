@@ -43,7 +43,7 @@ namespace directional
           f>>rawField(i,j);
       
       f.close();
-      return f.fail();
+      return f.good();
     }
     catch (std::exception e)
     {
