@@ -32,6 +32,9 @@ namespace directional
     try
     {
       std::ifstream f(fileName);
+      if (!f.is_open()) {
+          return false;
+      }
       int numF;
       f>>N;
       f>>numF;
