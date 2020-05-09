@@ -44,7 +44,7 @@ namespace directional
       M.col(N - 1) = -polyVectorField.row(f).transpose();
       Eigen::VectorXcd roots = M.eigenvalues();
       
-      std::sort(roots.data(), roots.data() + roots.size(), [](std::complex<double> a, std::complex<double> b){return arg(a) > arg(b);});
+      std::sort(roots.data(), roots.data() + roots.size(), [](std::complex<double> a, std::complex<double> b){return arg(a) < arg(b);});
       for (int i = 0; i < N; i++)
       {
         std::complex<double> root = roots(i);
