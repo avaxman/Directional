@@ -188,7 +188,7 @@ namespace directional
     for (int i=0;i<boundaryLoops.size();i++)
       for (int j=0;j<boundaryLoops[i].size();j++){
         sumBoundaryLoopsTriplets.push_back(Triplet<double>(numV+i, boundaryLoops[i][j],1.0));
-        vertex2cycle(boundaryLoops[i][j])=numV+i;
+        vertex2cycle(boundaryLoops[i][j])=innerVerticesList.size()+i;
       }
     
     
