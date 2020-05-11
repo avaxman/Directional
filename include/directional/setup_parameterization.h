@@ -28,13 +28,18 @@ namespace directional
   {
     int N;  //num of parametric functions
     int d;  //actual dimension of problem (for surfaces always 2)
-    Eigen::MatrixXd symmFunc;
+    Eigen::MatrixXi symmFunc;
     Eigen::SparseMatrix<double> vertexTrans2CutMat;
     Eigen::SparseMatrix<double> constraintMat;
     Eigen::SparseMatrix<double> symmMat;  //in fact, using it for the general reduction of degrees of freedom
     Eigen::VectorXi constrainedVertices;
     Eigen::VectorXi integerVars;
     Eigen::MatrixXi face2cut;
+    
+    //integer versions, for pure seamless parameterizations
+    Eigen::SparseMatrix<int> vertexTrans2CutMatInteger;
+    Eigen::SparseMatrix<int> constraintMatInteger;
+    Eigen::SparseMatrix<int> symmMatInteger;  //in fact, using it for the general reduction of degrees of freedom
     
     ParameterizationData(){}
     ~ParameterizationData(){}
@@ -55,7 +60,7 @@ namespace directional
   //  cutV:       the Vertices of the cut mesh.
   //  cutF:       The Faces of the cut mesh.
   
-  IGL_INLINE void setup_parameterization(const Eigen::MatrixXd& symmFunc,
+  IGL_INLINE void setup_parameterization(const Eigen::MatrixXi& symmFunc,
                                          const Eigen::MatrixXd& wholeV,
                                          const Eigen::MatrixXi& wholeF,
                                          const Eigen::MatrixXi& EV,
@@ -322,6 +327,7 @@ namespace directional
 
     int numTransitions = currTransition - 1;
     vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets;
+    vector<Triplet<int> > vertexTrans2CutTripletsInteger, constTripletsInteger;
     //forming the constraints and the singularity positions
     int currConst = 0;
     // this loop set up the transtions (vector field matching) across the cuts
@@ -381,8 +387,10 @@ namespace directional
           {
             // place the perumtation matrix in a bigger matrix, we need to know how things are connected along the cut, no?
             for(int j = 0; j < N; j++)
-              for(int k = 0; k < N; k++)
+              for(int k = 0; k < N; k++){
                 vertexTrans2CutTriplets.emplace_back(N * currCutVertex + j, N * permIndices[i] + k, (double) permMatrices[i](j, k));
+                vertexTrans2CutTripletsInteger.emplace_back(N * currCutVertex + j, N * permIndices[i] + k, permMatrices[i](j, k));
+              }
           }
         }
 
@@ -455,8 +463,10 @@ namespace directional
         for(int j = 0; j < cleanPermMatrices.size(); j++)
         {
           for(int k = 0; k < N; k++)
-            for(int l = 0; l < N; l++)
+            for(int l = 0; l < N; l++){
               constTriplets.emplace_back(N * currConst + k, N * cleanPermIndices[j] + l, (double) cleanPermMatrices[j](k, l));
+              constTripletsInteger.emplace_back(N * currConst + k, N * cleanPermIndices[j] + l, cleanPermMatrices[j](k, l));
+            }
         }
         currConst++;
         pd.constrainedVertices(i) = 1;
@@ -464,33 +474,51 @@ namespace directional
     }
 
     vector< Triplet< double > > cleanTriplets;
+    vector< Triplet< int > > cleanTripletsInteger;
    
     pd.vertexTrans2CutMat.conservativeResize(N * cutV.rows(), N * (wholeV.rows() + numTransitions));
+    pd.vertexTrans2CutMatInteger.conservativeResize(N * cutV.rows(), N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
-    for(int i = 0; i < vertexTrans2CutTriplets.size(); i++)
+    cleanTripletsInteger.clear();
+    for(int i = 0; i < vertexTrans2CutTriplets.size(); i++){
       if((float)vertexTrans2CutTriplets[i].value() != 0.0f)
         cleanTriplets.push_back(vertexTrans2CutTriplets[i]);
+      if(vertexTrans2CutTripletsInteger[i].value() != 0)
+          cleanTripletsInteger.push_back(vertexTrans2CutTripletsInteger[i]);
+    }
     pd.vertexTrans2CutMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
+    pd.vertexTrans2CutMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     pd.constraintMat.conservativeResize(N * currConst, N * (wholeV.rows() + numTransitions));
+    pd.constraintMatInteger.conservativeResize(N * currConst, N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
-    for(int i = 0; i < constTriplets.size(); i++)
+    cleanTripletsInteger.clear();
+    for(int i = 0; i < constTriplets.size(); i++){
       if((float)constTriplets[i].value() != 0.0f)
         cleanTriplets.push_back(constTriplets[i]);
+    if(constTripletsInteger[i].value() != 0)
+        cleanTripletsInteger.push_back(constTripletsInteger[i]);
+    }
     pd.constraintMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
+    pd.constraintMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include d dof for the surface
     //this assumes d divides N!
     pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
+    pd.symmMatInteger.conservativeResize(N * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > symmMatTriplets;
+    vector<Triplet<int> > symmMatTripletsInteger;
     for(int i = 0; i < N*(wholeV.rows() + numTransitions); i +=N)
         for(int k = 0; k < N; k++)
           for(int l = 0; l < d; l++){
-            if(abs(symmFunc(k,l))>10e-9)
-                symmMatTriplets.emplace_back(i + k, i*d/N + l, symmFunc(k,l));
+            if (symmFunc(k,l)!=0){
+              symmMatTriplets.emplace_back(i + k, i*d/N + l, (double)symmFunc(k,l));
+              symmMatTripletsInteger.emplace_back(i + k, i*d/N + l, symmFunc(k,l));
+            }
           }
           
      pd.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
+     pd.symmMatInteger.setFromTriplets(symmMatTripletsInteger.begin(), symmMatTripletsInteger.end());
     
     //test: if you get the same
     /*pd.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), (int)(N * (wholeV.rows() + numTransitions) / 2.));

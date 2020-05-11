@@ -36,14 +36,16 @@ namespace directional
   //  wholeV:       #V x 3 vertex coordinates of the original mesh.
   //  wholeF:       #F x 3 face vertex indices of the original mesh.
   //  FE:           #F x 3 faces to edges indices.
-  //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size. (currently only supporting sign-symmetric 4-fields).
+  //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size.
   //  lengthRatio   #edgeLength/bounding_box_diagonal of quad mesh (scaling the gradient).
   //  pd:           Parameterization data obtained from directional::setup_parameterization.
   //  cutV:         #cV x 3 vertices of the cut mesh.
   //  cutF:         #F x 3 faces of the cut mesh.
   //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to double integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be double integer.
   // Output:
-  //  paramFuncs        #cV x d parameterization functions per cut vertex.
+  //  paramFuncsd             #cV x d parameterization functions per cut vertex (the compact version)
+  //  paramFuncsN             #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
+  // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
   IGL_INLINE void parameterize(const Eigen::MatrixXd& wholeV,
                                const Eigen::MatrixXi& wholeF,
                                const Eigen::MatrixXi& FE,
@@ -53,7 +55,9 @@ namespace directional
                                const Eigen::MatrixXd& cutV,
                                const Eigen::MatrixXi& cutF,
                                const bool roundIntegers,
-                               Eigen::MatrixXd& paramFuncs)
+                               Eigen::MatrixXd& paramFuncsd,
+                               Eigen::MatrixXd& paramFuncsN,
+                               Eigen::MatrixXd& wholeCornerParamFuncsN)
   
   
   {
@@ -64,7 +68,7 @@ namespace directional
     double length = igl::bounding_box_diagonal(wholeV) * lengthRatio;
     
     //creating projection operator for N-packet. This is probably extremely redundant process....
-    MatrixXd pinvSymm = (pd.symmFunc.transpose()*pd.symmFunc).inverse()*pd.symmFunc.transpose();
+    /*MatrixXd pinvSymm = (pd.symmFunc.transpose()*pd.symmFunc).inverse()*pd.symmFunc.transpose();
     MatrixXd symmConst = pd.symmFunc*pinvSymm-MatrixXd::Identity(pd.symmFunc.rows(),pd.symmFunc.rows());
     
     ColPivHouseholderQR<MatrixXd> denseqrsolver(symmConst.transpose());
@@ -78,7 +82,7 @@ namespace directional
     for (int i=0;i<SRank;i++)
       symmConstReduced.row(i) =symmConst.row(PIndices(i));
 
-    MatrixXd projMat = symmConstReduced.transpose()*(symmConstReduced*symmConstReduced.transpose()).inverse()*symmConstReduced+MatrixXd::Identity(pd.N, pd.N);
+    MatrixXd projMat = symmConstReduced.transpose()*(symmConstReduced*symmConstReduced.transpose()).inverse()*symmConstReduced+MatrixXd::Identity(pd.N, pd.N);*/
     
   
     //cout<<"symmConst: "<<symmConst<<endl;
@@ -147,7 +151,7 @@ namespace directional
     int CRank = qrsolver.rank();
 
     //creating sliced permutation matrix
-    PIndices = qrsolver.colsPermutation().indices();
+    VectorXi PIndices = qrsolver.colsPermutation().indices();
 
     vector<Triplet<double> > CTriplets;
     for(int k = 0; k < Cfull.outerSize(); ++k)
@@ -257,9 +261,9 @@ namespace directional
         if ((fixedMask(i)) && (!alreadyFixed(i)))
         {
           double currIntDiff =0;
-          VectorXd func = pd.symmFunc*fullx.segment(pd.d*i,pd.d);
-          for (int j=0;j<pd.N;j++)
-            currIntDiff += std::fabs(0.5 * func(j) - std::round(0.5 * func(j)));
+          VectorXd func = fullx.segment(pd.d*i,pd.d);
+          for (int j=0;j<pd.d;j++)
+            currIntDiff += std::fabs(0.5 * fullx(i) - std::round(0.5 * fullx(j)));
           if (currIntDiff < minIntDiff)
           {
             minIntDiff = currIntDiff;
@@ -270,21 +274,21 @@ namespace directional
 
 //#ifndef NDEBUG
       cout << "d-segment index: " << minIntDiffIndex << endl;
-      cout << "N-segment Integer average error: " << minIntDiff/(double)pd.d << endl;
+      cout << "d-segment Integer error: " << minIntDiff/pd.d << endl;
 //#endif
       
       if (minIntDiffIndex != -1)
       {
         alreadyFixed(minIntDiffIndex) = 1;
-        VectorXd func = pd.symmFunc*fullx.segment(pd.d*minIntDiffIndex,pd.d);
-        VectorXd funcInteger(pd.N);
+        VectorXd func = fullx.segment(pd.d*minIntDiffIndex,pd.d);
+        VectorXd funcInteger(pd.d);
         //cout<<"fullx.segment(pd.d*minIntDiffIndex,pd.d): "<<fullx.segment(pd.d*minIntDiffIndex,pd.d)<<endl;
         //cout<<"func: "<<func<<endl;
        
-        for (int n=0;n<pd.N;n++)
-          funcInteger(n)=std::round(0.5*func(n))*2.0;
+        for (int d=0;d<pd.d;d++)
+          funcInteger(d)=std::round(0.5*func(d))*2.0;
          //cout<<"funcInteger: "<<funcInteger<<endl;
-        fixedValues.segment(pd.d*minIntDiffIndex,pd.d) = pinvSymm*projMat*funcInteger;
+        fixedValues.segment(pd.d*minIntDiffIndex,pd.d) = /*pinvSymm*projMat**/funcInteger;
         //cout<<" fixedValues.segment(pd.d*minIntDiffIndex,pd.d): "<< fixedValues.segment(pd.d*minIntDiffIndex,pd.d)<<endl;
       }
       
@@ -299,9 +303,19 @@ namespace directional
 
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     VectorXd paramFuncsVec = pd.vertexTrans2CutMat * pd.symmMat * fullx;
-    paramFuncs.conservativeResize(cutV.rows(), pd.N);
-    for(int i = 0; i < paramFuncs.rows(); i++)
-      paramFuncs.row(i) << paramFuncsVec.segment(pd.N * i, N).transpose();
+    paramFuncsN.conservativeResize(cutV.rows(), pd.N);
+    for(int i = 0; i < paramFuncsN.rows(); i++)
+      paramFuncsN.row(i) << paramFuncsVec.segment(pd.N * i, N).transpose();
+    
+    //cout<<"paramFuncsN: "<<paramFuncsN<<endl;
+    
+    paramFuncsd = fullx;
+    
+    //allocating per corner
+    wholeCornerParamFuncsN.conservativeResize(wholeF.rows(), N*3);
+    for (int i=0;i<wholeF.rows();i++)
+      for (int j=0;j<3;j++)
+        wholeCornerParamFuncsN.block(i, N*j, 1, N) = paramFuncsN.row(cutF(i,j));
     
     //cout<<"fullx: "<<fullx<<endl;
   }
