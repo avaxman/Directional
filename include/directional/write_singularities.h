@@ -30,7 +30,7 @@ namespace directional
                                       const Eigen::VectorXi &singIndices)
   {
       std::ofstream f(fileName, std::ios::trunc);
-      f << N << " " << singIndices.size() < <std::endl;
+      f << N << " " << singIndices.size() << std::endl;
       
       for (int i=0;i<singIndices.rows();i++)
         f << singVertices(i) << " " << singIndices(i) << std::endl;
