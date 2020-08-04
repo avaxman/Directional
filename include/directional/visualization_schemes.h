@@ -8,6 +8,7 @@
 #define DIRECTIONAL_VISUALIZATION_SCHEMES_H
 
 #include <Eigen/Core>
+#include <igl/jet.h>
 
 
 //This file contains the default libdirectional visualization paradigms

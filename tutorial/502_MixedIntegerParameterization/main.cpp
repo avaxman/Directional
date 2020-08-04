@@ -30,7 +30,7 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUVFull, cutUVRot;
+Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV, cutReducedUV;
 igl::opengl::glfw::Viewer viewer;
 
 typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION, UV_COORDS} ViewingModes;
@@ -141,25 +141,25 @@ int main()
   
   std::cout<<"Setting up parameterization"<<std::endl;
   
-  Eigen::MatrixXd symmFunc(4,2);
-  symmFunc<<1.0,0.0,
-  0.0,1.0,
-  -1.0,0.0,
-  0.0,-1.0;
+  Eigen::MatrixXi symmFunc(4,2);
+  symmFunc<<1,0,
+  0,1,
+  -1,0,
+  0,-1;
   
   directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
   double lengthRatio=0.01;
   bool isInteger = false;  //do not do translational seamless.
   std::cout<<"Solving rotationally-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUVRot);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutReducedUV, cutUVRot, cornerWholeUV);
   
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   isInteger = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,  cutUVFull);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,   cutReducedUV, cutUVFull, cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

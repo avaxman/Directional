@@ -30,7 +30,7 @@ igl::opengl::glfw::Viewer viewer;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUV;
+Eigen::MatrixXd cutReducedUV, cutFullUV, cornerWholeUV;
 
 
 typedef enum {FIELD, PARAMETERIZATION} ViewingModes;
@@ -48,7 +48,7 @@ void update_triangle_mesh()
   } else {
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
-    viewer.data_list[0].set_uv(cutUV);
+    viewer.data_list[0].set_uv(cutFullUV);
     viewer.data_list[0].show_texture=true;
     viewer.data_list[0].show_lines=false;
   }
@@ -71,7 +71,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '2': viewingMode = PARAMETERIZATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/botijo-param.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUV, FMeshCut);
+      igl::writeOBJ(TUTORIAL_SHARED_PATH "/botijo-param.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutReducedUV, FMeshCut);
       break;
   }
   update_triangle_mesh();
@@ -103,19 +103,19 @@ int main()
  
   std::cout<<"Setting up parameterization"<<std::endl;
   
-  Eigen::MatrixXd symmFunc(4,2);
-  symmFunc<<1.0,0.0,
-  0.0,1.0,
-  -1.0,0.0,
-  0.0,-1.0;
+  Eigen::MatrixXi symmFunc(4,2);
+  symmFunc<<1,0,
+  0,1,
+  -1,0,
+  0,-1;
   
   directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
   double lengthRatio=0.01;
   bool isInteger = false;  //do not do translational seamless.
   std::cout<<"Solving parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUV);
-  cutUV=cutUV.block(0,0,cutUV.rows(),2);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutReducedUV,  cutFullUV,cornerWholeUV);
+  cutFullUV=cutFullUV.block(0,0,cutFullUV.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   //appending and updating raw field mesh
