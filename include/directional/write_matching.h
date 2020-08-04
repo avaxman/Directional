@@ -22,12 +22,14 @@ namespace directional
 	//   fileName:  The to be loaded file.
     //   matching:  The matching per edge 
     //   EF:        The edge to face matching
+    //   EV:        The edge to vertices matching
 	//   N:         The degree of the field
 	// Return:
 	//   Whether or not the file was written successfully
   bool IGL_INLINE write_matching(const std::string &fileName,
                                 const Eigen::VectorXi& matching,
                                 const Eigen::MatrixXi& EF,
+                                const Eigen::MatrixXi& EV,
                                 int N)
 	{
 		try
@@ -41,7 +43,7 @@ namespace directional
 			
             f << N << " " << numEdges << std::endl;
             for (int i = 0; i < numEdges; i++)
-                f << EF(i,0) << " " << EF(i,1) << " " << matching(i) << std::endl;
+                f << EF(i,0) << " " << EF(i,1) << " " << EV(i, 0) << " " << EV(i, 1) << " " << matching(i) << std::endl;
       
 			f.close();
 			return f.fail();
