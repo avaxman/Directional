@@ -29,6 +29,7 @@ namespace directional
   bool IGL_INLINE read_matching(const std::string &fileName,
                                 Eigen::VectorXi& matching,
                                 Eigen::MatrixXi& EF,
+                                Eigen::MatrixXi& EV,
                                 int & N)
 	{
 		try
@@ -38,9 +39,10 @@ namespace directional
 			f >> N >> numEdges;
             matching.conservativeResize(numEdges);
             EF.conservativeResize(numEdges,2);
+            EV.conservativeResize(numEdges,2);
             
             for (int i=0;i<numEdges;i++)
-                f >> EF(i,0)>> EF(i,1) >> matching(i);
+                f >> EF(i,0)>> EF(i,1) >> EV(i, 0) >> EV(i, 1) >> matching(i);
       
 			f.close();
 			return f.fail();

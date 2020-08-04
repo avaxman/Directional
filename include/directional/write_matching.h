@@ -28,6 +28,7 @@ namespace directional
   bool IGL_INLINE write_matching(const std::string &fileName,
                                 const Eigen::VectorXi& matching,
                                 const Eigen::MatrixXi& EF,
+                                const Eigen::MatrixXi& EV,
                                 int N)
 	{
 		try
@@ -41,7 +42,7 @@ namespace directional
 			
             f << N << " " << numEdges << std::endl;
             for (int i = 0; i < numEdges; i++)
-                f << EF(i,0) << " " << EF(i,1) << " " << matching(i) << std::endl;
+                f << EF(i,0) << " " << EF(i,1) << " " << EV(i, 0) << " " << EV(i, 1) << " " << matching(i) << std::endl;
       
 			f.close();
 			return f.fail();
