@@ -22,6 +22,7 @@ namespace directional
 	//   fileName:  The to be loaded file.
     //   matching:  The matching per edge 
     //   EF:        The edge to face matching
+    //   EV:        The edge to vertices matching
 	//   N:         The degree of the field
 	// Return:
 	//   Whether or not the file was written successfully
