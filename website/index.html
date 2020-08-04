@@ -291,8 +291,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#todo" class="md-nav__link">
-    TODO
+  <a href="#prerequisites" class="md-nav__link">
+    Prerequisites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-mkdocs" class="md-nav__link">
+    Using mkdocs
   </a>
   
 </li>
@@ -360,8 +367,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#todo" class="md-nav__link">
-    TODO
+  <a href="#prerequisites" class="md-nav__link">
+    Prerequisites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-mkdocs" class="md-nav__link">
+    Using mkdocs
   </a>
   
 </li>
@@ -395,36 +409,33 @@
                 <h1 id="building-the-website">Building the Website<a class="headerlink" href="#building-the-website" title="Permanent link">&para;</a></h1>
 <p>For developers who want to contribute to the website/documentation of Directional.
 If you want to preview changes to the Directional website before a commit, you can follow the instructions below.</p>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Install mkdocs and the material theme
-   <div class="codehilite"><pre><span></span>pip3 install -U --user mkdocs mkdocs-material
-</pre></div>
-   Alternatively, use <code>pipenv</code> to install the dependencies:
-   <div class="codehilite"><pre><span></span>pip3 install -U --user pipenv
-pipenv install requests
-pipenv shell
+<li>If you do not already have it, install conda on your machine. We recommend using <a href="https://docs.conda.io/en/latest/miniconda.html">miniconda3</a>. On Linux you can run:
+    <div class="codehilite"><pre><span></span>wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
 </pre></div></li>
-<li>Preview the website locally (in the root folder of the Directional project):
-   <div class="codehilite"><pre><span></span>python3 -m mkdocs serve
+<li>Install the conda environment for the website:
+   <div class="codehilite"><pre><span></span>conda env create -f libigl-website.yml
 </pre></div></li>
-<li>Build the website to generate the html locally (optional):
-   <div class="codehilite"><pre><span></span>python3 -m mkdocs build
+</ol>
+<h3 id="using-mkdocs">Using mkdocs<a class="headerlink" href="#using-mkdocs" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Activate the conda environment installed on the previous step:
+   <div class="codehilite"><pre><span></span>conda activate libigl-website
+</pre></div></li>
+<li>Preview the website locally
+   (run this command in the root folder of the libigl project):
+   <div class="codehilite"><pre><span></span>mkdocs serve
 </pre></div></li>
 </ol>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Dead links can be checked using the <a href="https://wummel.github.io/linkchecker/">LinkChecker</a> tool. Run the website locally, then run LinkChecker on it:
-<div class="codehilite"><pre><span></span>linkchecker http://127.0.0.1:8000
-</pre></div></p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The reason we are using <code>python -m mkdocs serve</code> instead of <code>mkdocs serve</code> directly is because we are using local extensions for mkdocs. Those extensions are located in the <code>scripts/</code> folder of libigl. Running <code>mkdocs</code> as a module adds the current directory to the <code>PYTHONPATH</code>, allowing us to load those extensions without installing them on the system or in a virtualenv.</p>
 </div>
-<h2 id="todo">TODO<a class="headerlink" href="#todo" title="Permanent link">&para;</a></h2>
-<ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Use virtualenv to run a specific version of mkdocs/mkdocs-material, to avoid incompatible changes from breaking the build&hellip;</li>
-</ul>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="http://www.mkdocs.org/">MkDocs</a></li>
