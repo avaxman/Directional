@@ -8,6 +8,7 @@
 #include <limits>
 #include <iostream>
 #include <sstream>
+#include "FuncArgs.h"
 
 #ifndef VERBOSE
 #define dir_LOGLN(expr) 
@@ -424,9 +425,10 @@ namespace mexhelpers {
 		static mxArray* toMex(const T& t)
 		{
 			std::stringstream ss;
-			ss << "MexConvert::toMex not implemented for " << typeid(T).name() << "!";
+			ss << "MexConvert::toMex not implemented! " << typeid(T).name();
 			//static_assert(false, "MexConvert::toMax should be implemented");
 			throw std::runtime_error(ss.str().c_str());
+			
 		}
 	};
 
@@ -496,7 +498,7 @@ namespace mexhelpers {
 			this->target = mxCreateStructArray(2, sz, fieldNum, fields);
 			*target = this->target;
 			std::cout << "Struct array set up" << std::endl;
-			mxAssert(mxGetNumberOfFields(*target) == fieldNum, "Invalid fieldnum");
+			mxAssert(mxGetNumberOfFields(*target) == fieldNum, "Invalid fiedlnum");
 		}
 		MexStructure(const char** fields, int fieldNum)
 		{
@@ -532,6 +534,55 @@ namespace mexhelpers {
 		return str.target;
 	}
 
+    class MexFunction
+	{
+	protected:
+        mexhelpers::FuncArgs m_args;
+        // To be overridden
+        virtual void apply(const mexhelpers::FuncArgs& funcArgs) = 0;
+
+        /**
+         * \brief Throws an error with the given message if the given condition does not hold
+         * \param num Number of expected outputs
+         */
+        void failIf(bool condition, const std::string& msg)
+        {
+            if (condition)
+            {
+                throw std::runtime_error(msg.c_str());
+            }
+        }
+        void verifyInputCount(int num, const char* errId, const char* errmMsg)
+        {
+            if (m_args.rhsCount != num)
+            {
+                mexErrMsgIdAndTxt(errId, errmMsg);
+            }
+        }
+        void verifyOutputCount(int num, const char* errId, const char* errmMsg)
+        {
+            if (rhsCount != num)
+            {
+                mexErrMsgIdAndTxt(errId, errmMsg);
+            }
+        }
+	public:
+        virtual ~MexFunction() = default;
+
+        void execute(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+        {
+            try
+            {
+                mexhelpers::FuncArgs args(plhs, nlhs, prhs, nrhs);
+                apply(args);
+            }
+            catch (const std::exception& e)
+            {
+                mexErrMsgTxt(e.what());
+            }
+            
+        }
+	};
 #define MEX_ENTRY(clsName) void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])\
     {\
         runner.execute(nlhs, plhs, nrhs, prhs);\

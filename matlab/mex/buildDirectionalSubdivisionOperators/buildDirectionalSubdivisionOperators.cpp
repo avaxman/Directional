@@ -61,7 +61,7 @@ void indicesFromMatching(EdgeData& ED, const Eigen::MatrixXi& matching, int N, i
 
 enum Input
 {
-	In_F,
+	In_F = 0,
 	In_SubdivLevel,
 	In_Matching,
 	In_N,
@@ -70,7 +70,7 @@ enum Input
 };
 enum Output
 {
-	Out_ED0,
+	Out_ED0 = 0,
 	Out_EDK,
 	Out_SubdivisionStruct,
 	Out_Matching,
