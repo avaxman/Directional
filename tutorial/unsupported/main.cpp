@@ -6,6 +6,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
 #include <igl/cut_mesh.h>
+#include <igl/png/readPNG.h>
 #include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/seam_lines.h>
@@ -30,7 +31,8 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV, cutReducedUV;
+Eigen::MatrixXd cutUVFull, cutUVRot;
+Eigen::MatrixXd cutUVFullDisp, cutUVRotDisp;
 igl::opengl::glfw::Viewer viewer;
 
 typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION, UV_COORDS} ViewingModes;
@@ -39,22 +41,16 @@ ViewingModes viewingMode=FIELD;
 //texture image
 Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
 
+
 // Create a texture that hides the integer translation in the parametrization
-void setup_line_texture()
+void hexline_texture(Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_R,
+                     Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_G,
+                     Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> &texture_B)
 {
-  unsigned size = 128;
-  unsigned size2 = size/2;
-  unsigned lineWidth = 5;
-  texture_B.setConstant(size, size, 0);
-  texture_G.setConstant(size, size, 0);
-  texture_R.setConstant(size, size, 0);
-  for (unsigned i=0; i<size; ++i)
-    for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
-  for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
-    for (unsigned j=0; j<size; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
+   Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A;
+   igl::png::readPNG(TUTORIAL_SHARED_PATH "/hexpattern2.png", texture_R, texture_G, texture_B, A);
 }
+
 
 void update_triangle_mesh()
 {
@@ -69,14 +65,14 @@ void update_triangle_mesh()
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
-    viewer.data_list[0].set_uv(viewingMode==ROT_PARAMETERIZATION ? cutUVRot : cutUVFull);
+    viewer.data_list[0].set_uv(viewingMode==ROT_PARAMETERIZATION ? cutUVRotDisp : cutUVFullDisp);
     viewer.data_list[0].set_texture(texture_R, texture_G, texture_B);
     viewer.data_list[0].set_face_based(true);
     viewer.data_list[0].show_texture=true;
     viewer.data_list[0].show_lines=false;
   } else {
     viewer.data_list[0].clear();
-    viewer.data_list[0].set_mesh(cutUVFull, FMeshCut);
+    viewer.data_list[0].set_mesh(cutUVFullDisp, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].set_face_based(false);
     viewer.data_list[0].show_texture=false;
@@ -103,8 +99,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '4': viewingMode = UV_COORDS; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
+      igl::writeOBJ(TUTORIAL_SHARED_PATH "/aqua-center-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
+      igl::writeOBJ(TUTORIAL_SHARED_PATH "/aqua-center-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
       break;
   }
   update_triangle_mesh();
@@ -121,9 +117,9 @@ int main()
   "  3  Show textured fully-seamless parameterization mesh" << std::endl <<
   "  W  Save parameterized OBJ file "<< std::endl;
   
-  setup_line_texture();
-  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", N, rawField);
+  hexline_texture(texture_R, texture_G, texture_B);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/aqua-center.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/aqua-center.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
@@ -141,26 +137,37 @@ int main()
   
   std::cout<<"Setting up parameterization"<<std::endl;
   
-  Eigen::MatrixXi symmFunc(4,2);
-  symmFunc<<1,0,
-  0,1,
-  -1,0,
-  0,-1;
+  directional::setup_parameterization(N, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
-  directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
-  
-  double lengthRatio=0.01;
+  double lengthRatio=0.007;
   bool isInteger = false;  //do not do translational seamless.
   std::cout<<"Solving rotationally-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutReducedUV, cutUVRot, cornerWholeUV);
-  
-  cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUVRot);
   std::cout<<"Done!"<<std::endl;
   
   isInteger = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,   cutReducedUV, cutUVFull, cornerWholeUV);
-  cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
+  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,  cutUVFull);
+
+  cutUVFullDisp = cutUVFull;
+  cutUVRotDisp = cutUVRot;
+
+  // convert UVs for opengl
+  Eigen::Matrix2d c;
+  c << 1., -1. / 2., 0. , -3. / 2.;
+
+  for(int i = 0; i < cutUVFullDisp.rows(); i++)
+  {
+    Eigen::Vector2d t = cutUVFullDisp.row(i);
+    cutUVFullDisp.row(i) = c * t;
+  }
+
+  for(int i = 0; i < cutUVRotDisp.rows(); i++)
+  {
+    Eigen::Vector2d t = cutUVRotDisp.row(i);
+    cutUVRotDisp.row(i) = c * t;
+  }
+
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh

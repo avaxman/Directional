@@ -23,21 +23,15 @@ Where ```index_i``` are integers, and the actual fractional index for vertex $i$
 
 ### Matching (```.matching```)
 
-This file format described the matching between each two neighboring faces $i$ and $j$ (across a dual edge) as follows:
+This file format described the matching between each two neighboring faces $i$ and $j$ (across a dual edge: ([vertex_e], [vertex_f])) as follows:
 
     [Degree]  [#dual_edges]
-    [face_i] [face_j] [matching_i]
+    [face_i] [face_j] [vertex_e] [vertex_f] [matching_k]
     ... #dual_edges rows
     
   The order is generally compatible with the result of the field ```EF``` in ```igl::edge_topology()``` for the same mesh, but that is not a guarantee. That means the vector $k$ in face $i$ is matched to vector $k+matching_i$ (modulu $Degree$) in face $j$, and the rest in an order-preserving manner. See tutorial for details.
     
-    
-
-
-
-### Singularities and Matching
-
-### Data structures used from libigl:
+### Data structures used from libigl
 
 - [.dmat](./dmat) uncompressed ASCII/binary files for dense matrices
 - [.off](http://wias-berlin.de/software/tetgen/fformats.off.html) Geomview's polyhedral file format

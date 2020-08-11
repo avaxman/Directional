@@ -1,3 +1,4 @@
+---
 site_name: Directional
 site_url: 'https://avaxman.github.io/Directional/'
 repo_name: 'Directional'
@@ -19,16 +20,24 @@ extra:
   social:
     - type: 'github'
       link: 'https://github.com/avaxman'
+extra_javascript:
+      - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
+extra_css:
+  - 'css/style.css'
+  - 'css/pygments.css'
 markdown_extensions:
-  - codehilite
+  - codehilite:
+      guess_lang: false
   - footnotes
   - admonition
   - toc:
       permalink: true
-  - scripts.figureAltCaption
+  - figureAltCaption
   - markdown.extensions.smarty
   - markdown.extensions.toc:
       permalink: true
+  - markdown.extensions.wikilinks:
+      base_url: https://github.com/libigl/libigl/tree/master
   - pymdownx.arithmatex
   - pymdownx.betterem:
       smart_enable: all
@@ -39,17 +48,20 @@ markdown_extensions:
   - pymdownx.magiclink:
       repo_url_shorthand: true
       repo_url_shortener: true
-      user: avaxman
-      repo: Directional
+      user: libigl
+      repo: libigl
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.superfences
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
-  - scripts.fixPaths:
+  - urlprocessor:
       variables:
         repo_url: 'https://github.com/avaxman/Directional/tree/master'
+plugins:
+  - search
+
 extra_javascript:
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
 extra_css:

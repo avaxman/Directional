@@ -32,6 +32,9 @@ namespace directional
     try
     {
       std::ifstream f(fileName);
+      if (!f.is_open()) {
+          return false;
+      }
       int numF;
       f>>N;
       f>>numF;
@@ -43,7 +46,7 @@ namespace directional
           f>>rawField(i,j);
       
       f.close();
-      return f.fail();
+      return f.good();
     }
     catch (std::exception e)
     {

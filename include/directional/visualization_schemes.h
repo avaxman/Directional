@@ -8,6 +8,7 @@
 #define DIRECTIONAL_VISUALIZATION_SCHEMES_H
 
 #include <Eigen/Core>
+#include <igl/jet.h>
 
 
 //This file contains the default libdirectional visualization paradigms
@@ -42,7 +43,7 @@ namespace directional
   //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
   Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field){
     
-    Eigen::Matrix<double, 9,3> glyphPrincipalColors;
+    Eigen::Matrix<double, 15,3> glyphPrincipalColors;
     glyphPrincipalColors<<1.0,0.0,0.5,
     1.0,0.5,0.0,
     0.0,1.0,0.5,
@@ -51,7 +52,14 @@ namespace directional
     0.5,1.0,0.0,
     1.0,0.5,0.5,
     0.5,1.0,0.5,
-    0.5,0.5,1.0;
+    0.5,0.5,1.0,
+    0.5,1.0,1.0,
+    1.0,0.5,1.0,
+    1.0,1.0,0.5,
+    0.0,1.0,1.0,
+    1.0,0.0,1.0,
+    1.0,1.0,0.0;
+    
     
     Eigen::MatrixXd fullGlyphColors(field.rows(),field.cols());
     int N = field.cols()/3;
