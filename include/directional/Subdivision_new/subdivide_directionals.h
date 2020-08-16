@@ -66,9 +66,9 @@ namespace directional
 
         auto Sv_provider = triplet_provider_wrapper<coeffProv>(loop_coefficients, Sv_triplet_provider<coeffProv>);
         auto Sc_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_halfcurl_coefficients, Sc_directional_triplet_provider<coeffProv>);
-        auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_halfcurl_coefficients, Sc_directional_triplet_provider<coeffProv>);
+        auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_oneform_coefficients, Se_directional_triplet_provider<coeffProv>);
         build_directional_subdivision_operators(V, F, E, EF, EI, SFE, matching, initialSizes, targetLevel, N,
-            Fk, EVK, EFK, EIK, SFEK, matchingK, out, Sc_directional_provider, Se_directional_provider);
+            Fk, EVK, EFK, EIK, SFEK, matchingK, out, Se_directional_provider, Sc_directional_provider);
         // Construct regular vertex subdivision
         build_subdivision_operators(V, F, E, EF, EI, SFE, std::vector<int>({(int)V.rows()}), targetLevel, Fk, EVK, EFK, EIK, SFEK, svOut, Sv_provider);
 
@@ -87,28 +87,14 @@ namespace directional
             directional::block_diag(base, Matched_Gamma2_To_PCVF_K);
         }
 
-        directional::block_diag({ &out[1],&out[0] }, S_Decomp);
+        directional::block_diag({ &out[0],&out[1] }, S_Decomp);
         S_Gamma_directional = Decomp_To_G2K * S_Decomp*G2_To_Decomp_0;
 
         Eigen::VectorXd columnDirectional, fineDirectional;
         directional::columndirectional_to_gamma2_matrix(V, F, E, SFE, EF, N, columnDirectional_To_G2);
 
         rawfield_to_columndirectional(rawField, N, columnDirectional);
-
-        auto printDims = [](auto el)
-        {
-            std::cout << "Rows x cols: " << el.rows() << "," << el.cols() << std::endl;
-        };
-        std::cout << "Coarse V,F,E: " << V.rows() << "," << F.rows() << "," << E.rows() << std::endl;
-        std::cout << "Fine V,F,E: " << Vk.rows() << "," << Fk.rows() << "," << EVK.rows() << std::endl;
-        std::cout << "Gamma2_To_PCVF_K: ";
-        printDims(Gamma2_To_PCVF_K);
-        std::cout << "Rest: ";
-        printDims(columnDirectional);
-        printDims(columnDirectional_To_G2);
-        printDims(S_Gamma_directional);
-        printDims(Matched_Gamma2_To_PCVF_K);
-
+        
         fineDirectional = Matched_Gamma2_To_PCVF_K * S_Gamma_directional * columnDirectional_To_G2 * columnDirectional;
 
         columndirectional_to_rawfield(fineDirectional, N, rawFieldK);

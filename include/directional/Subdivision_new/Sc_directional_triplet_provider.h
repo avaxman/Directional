@@ -29,6 +29,7 @@ namespace directional{
         {
             const auto oldEdgeCount = E0.rows();
             const auto newEdgeCount = 2 * E0.rows() + 3 * SFE0.rows();
+            maxRow = newEdgeCount * N;
 
             // For the time being, we assume that there is no boundary
             
@@ -50,7 +51,7 @@ namespace directional{
                     inds.clear();
                     coeffs.clear();
                     auto isOdd = eI & 1;
-                    // Isboundary, isEven, valence, location, output indices, output coefficients 
+                    // Arguments: Isboundary, isEven, valence, location, output indices, output coefficients 
                     coeffProvider(false, !isOdd, valence, eI, inds, coeffs);
                     const int e = edges[eI];
                     const int target = E0ToEk(e, 2 * isOdd + edgeOrients[eI]);
