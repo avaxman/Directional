@@ -41,7 +41,7 @@ namespace directional{
             auto Se_provider = triplet_provider_wrapper<coeffProv>(shm_oneform_coefficients, Se_triplet_provider<coeffProv>);
             auto Sc_provider = triplet_provider_wrapper<coeffProv>(shm_halfcurl_coefficients, Sc_triplet_provider<coeffProv>);
             auto Sf_provider = triplet_provider_wrapper<coeffProv>(hbspline_coefficients, Sf_triplet_provider<coeffProv>);
-            build_subdivision_operators(F0,V0,E0,EF0,EI0,SFE0,initialSizes,level, FK, EK, EFK, EIK, SFEK, output, Sv_provider, Se_provider, Sc_provider, Sf_provider);
+            build_subdivision_operators(V0,F0,E0,EF0,EI0,SFE0,initialSizes,level, FK, EK, EFK, EIK, SFEK, output, Sv_provider, Se_provider, Sc_provider, Sf_provider);
             Sv = output[0];
             Se = output[1];
             Sc = output[2];

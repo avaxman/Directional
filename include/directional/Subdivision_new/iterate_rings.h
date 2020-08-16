@@ -2,6 +2,8 @@
 #define DIRECTIONAL_ITERATE_RINGS_H
 #include <Eigen/Eigen>
 #include <directional/dir_assert.h>
+#include <vector>
+
 namespace directional
 {
 	/**
@@ -11,7 +13,7 @@ namespace directional
 	 * boundary is to the left of the oriented edge (0) or to the right (1).
 	 * \param boundaryEdges Matrix of |BE| x 2 size, describing the boundary edges.
 	 */
-	void boundary_edges(const Eigen::MatrixXi& EF, Eigen::MatrixXi& boundaryEdges)
+	inline void boundary_edges(const Eigen::MatrixXi& EF, Eigen::MatrixXi& boundaryEdges)
 	{
 		// Count number of boundary edges
 		int leftCount = 0;
@@ -94,7 +96,7 @@ namespace directional
 			std::vector<int> edges;
 			std::vector<int> edgeSides;
 			// Set edge oriented along outside of boundary
-			edge = e; side = 0;
+			edge = e; side = 0; //side = boundary(eI,1);
 			// Mark handled
 			VE(E(edge,1)) = -1;
 			//DIR_ASSERT(face() == -1);
@@ -119,6 +121,7 @@ namespace directional
 			edges.push_back(edge);
 			edgeSides.push_back(1 - side);
 
+            // Invoke visitor
 			h(edges, edgeSides);
 		}
 
@@ -158,6 +161,7 @@ namespace directional
 				//prevFace = face();
 			} while (edge != eI); //Continue until we made a full loop
 
+            // Invoke visitor
 			h(edges, edgeSides);
 		}
 	}

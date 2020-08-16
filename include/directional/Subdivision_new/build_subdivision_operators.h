@@ -8,18 +8,18 @@ namespace directional{
 
 	// Type of a triplet provider
 	template<typename CoeffProvider>
-	using triplet_provider_t = void(*)(const int&,
-			const Eigen::MatrixXi&,
-			const Eigen::MatrixXi&,
-			const Eigen::MatrixXi&,
-			const Eigen::MatrixXi&,
-			const Eigen::MatrixXi&,
-			const Eigen::MatrixXi&,
-			const std::vector<int>&,
-			const std::vector<int>&,
-			const CoeffProvider&,
-			std::vector<Eigen::Triplet<double>>&,
-			int&);
+	using triplet_provider_t = void(*)(const int&, //Vertex count
+			const Eigen::MatrixXi&, // F0
+			const Eigen::MatrixXi&, // SFE0
+			const Eigen::MatrixXi&, // E0 
+			const Eigen::MatrixXi&, // EI0
+			const Eigen::MatrixXi&, // EF0
+			const Eigen::MatrixXi&, // E0ToEk
+			const std::vector<int>&, // edges
+			const std::vector<int>&, // edge orientations
+			const CoeffProvider&, //Coefficient provider
+			std::vector<Eigen::Triplet<double>>&, // Output triplets
+			int&); //Maximum row number assigned
 
 	//(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs)
 	using coefficient_provider_t = void(*)(bool, bool, int, int, std::vector<int>&, std::vector<double>&);
@@ -62,7 +62,7 @@ namespace directional{
 		std::index_sequence<Is...>
 	)
 	{
-		// Hack to apply the construtor as functor on the given edge data.
+		// Hack to apply the triplet providers as functor on the given edge data.
 		using exp = int[];
 		(void) exp{
 			(std::get<Is>(tripletProviders)(vertexCount, F0, SFE0, E0, EI0, EF0, E0ToEk, edges,edgeSides, output[Is], rowSizes[Is]), 0)...
@@ -71,8 +71,8 @@ namespace directional{
 
 	template<typename...TripletProviders>
     void build_subdivision_operators(
+        const Eigen::MatrixXd& V0,
 		const Eigen::MatrixXi& F0,
-		const Eigen::MatrixXd& V0,
 		const Eigen::MatrixXi& E0,
 		const Eigen::MatrixXi& EF0,
 		const Eigen::MatrixXi& EI0,
@@ -89,6 +89,7 @@ namespace directional{
 	)
 	{
 		constexpr int N = sizeof...(TripletProviders);
+        
 
 		// Matrices representing geometry connectivity.
 		Eigen::MatrixXi Fs[2] = { F0,{} };
@@ -150,7 +151,7 @@ namespace directional{
 		// multiplying the operator for the different levels.
 		for(int i = 0; i < N; i++)
 		{
-			output.push_back(Eigen::SparseMatrix<double>(initialSizes[i],initialSizes[i]));
+			output.emplace_back(initialSizes[i],initialSizes[i]);
 			output.back().setIdentity();
 		}
 

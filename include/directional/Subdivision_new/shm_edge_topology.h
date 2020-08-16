@@ -3,7 +3,23 @@
 #include <Eigen/Eigen>
 #include <igl/sortrows.h>
 namespace directional{
-    void shm_edge_topology(
+	struct EdgeData{
+		// Source to target connections per edge
+        Eigen::MatrixXi E;
+		// Edge to face connection, with left face in column 0,
+		// right face in column 1
+        Eigen::MatrixXi EF;
+		// Edge index in face, given as the corner number of the
+		// vertex opposite the edge in the face
+        Eigen::MatrixXi EI;
+		// Face to edge connection, with the index of the edge opposite
+		// corner c in column c. In addition, stores the orientation 
+		// relative to the face at 3 + c, where 0 indicates CCW and 1
+		// indicates clockwise.
+        Eigen::MatrixXi SFE;
+	};
+
+    inline void shm_edge_topology(
         const Eigen::MatrixXi& F,
         const int& vertexCount,
         Eigen::MatrixXi& E,
@@ -79,6 +95,14 @@ namespace directional{
                 std::swap(EI(e, 0), EI(e, 1));
 			}
 		}
+	}
+
+    inline void shm_edge_topology(
+		const Eigen::MatrixXi& F,
+        const int& vertexCount,
+		EdgeData& data
+	){
+		shm_edge_topology(F, vertexCount, data.E, data.EF, data.EI, data.SFE);
 	}
 }
 #endif

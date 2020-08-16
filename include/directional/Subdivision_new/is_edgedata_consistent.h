@@ -3,7 +3,8 @@
 #include <iostream>
 #include <Eigen/Eigen>
 namespace directional{
-    bool is_edgedata_consistent(
+
+    inline bool is_edgedata_consistent(
         const Eigen::MatrixXi& F,
         const Eigen::MatrixXi& E,
         const Eigen::MatrixXi& EF,

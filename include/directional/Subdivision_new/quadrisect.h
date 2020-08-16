@@ -119,5 +119,17 @@ namespace directional
 			F1(f, 0) = E1(SFE1(f, 2), SFE1(f, 5));
 		}
 	}
+	void quadrisect(
+		const Eigen::MatrixXi& F0,
+		const int& vCount,
+		const EdgeData& edgeData0,
+		Eigen::MatrixXi& E0ToEk, 
+		Eigen::MatrixXi& F1,
+		EdgeData& edgeData1
+	)
+	{
+		quadrisect(F0, vCount, edgeData0.E, edgeData0.SFE, edgeData0.EF, edgeData0.EI,
+			E0ToEk, F1, edgeData1.E, edgeData1.SFE,edgeData1.EF, edgeData1.EI );
+	}
 }
 #endif

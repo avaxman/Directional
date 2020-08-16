@@ -6,9 +6,12 @@
 namespace directional{
     namespace subdivision{
         void shm_oneform_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
-            const int maxEdgeIndex = 2 * valence - 1 - isBoundary;
+            // Filled DOF for stencils
             const double z = 3. / 32.;
+            // Total edges
             const int eCount = 2 * valence - isBoundary;
+            // The last edge index in the one-ring
+            const int maxEdgeIndex = eCount - 1;
 
             // Helper functions
             // Adds the range [min, maxExcl) to the given vector of indices
@@ -124,7 +127,7 @@ namespace directional{
                     const double alfa = loop_factor(valence);
                     // Halfbox spline subdivision factor
                     const double beta = hbspline_factor(valence);
-
+                    // Beta divided by 8
                     const double b8 = beta / 8.;
 
                     switch(valence)

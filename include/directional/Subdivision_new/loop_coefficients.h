@@ -4,12 +4,12 @@
 namespace directional{
 namespace subdivision{
 
-	double loop_factor(int valence)
+    inline double loop_factor(int valence)
 	{
 		return valence == 3 ? 3. / 16. : 3. / (8. * valence);
 	}
 
-	void loop_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs)
+	inline void loop_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs)
 	{
 		// Loop subdivision factor
 		const double factor = loop_factor(valence);

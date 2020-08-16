@@ -41,6 +41,15 @@ namespace directional
 
 	}
 
+    inline void columndirectional_to_gamma2_matrix(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXi& E, const Eigen::MatrixXi&SFE, const Eigen::MatrixXi&EF, int N,
+        Eigen::SparseMatrix<double>& projector)
+	{
+        Eigen::SparseMatrix<double> P;
+        directional::Gamma2_projector(V, F, E, SFE, EF, P);
+        std::vector< Eigen::SparseMatrix<double>*> parts(N, &P);
+        directional::block_diag(parts, projector);
+	}
+
 	/**
 	 * Converts Gamma2 elements to Gamma3 elements for a degree N directional field.
 	 * Input:
@@ -98,7 +107,7 @@ namespace directional
 	 * Output:
 	 *  - Matched directional curl operator
 	 */
-	void Matched_Curl(
+	inline void Matched_Curl(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -175,7 +184,7 @@ namespace directional
 		Curl_To_Gamma2 = G3ToG2_N * Curl_To_Gamma2;
 	}
 
-	void Matched_A_To_Gamma3(
+	inline void Matched_A_To_Gamma3(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -185,13 +194,9 @@ namespace directional
 		Eigen::SparseMatrix<double>& A_To_Gamma3
 	)
 	{
-		std::cout << "Starting Matched_A_To_Gamma3" << std::endl;
-		std::cout << "Matching rows:" << Matching.rows() << ", vs es " << EF.rows() << "," << EI.rows() << std::endl;
 		const int edgeCount = EF.rows();
 		const int gammaCount = 3 * faceCount;
-		std::cout << "Edge count:" << edgeCount << std::endl;
 		SparseHelper sh(N * gammaCount, edgeCount * N, N * edgeCount * 2);
-		std::cout << "Starting its" << std::endl;
 		for(int f = 0; f < sFE.rows(); f++)
 		{
 			for(int j = 0; j < 3; j++)
@@ -239,7 +244,17 @@ namespace directional
 		A_To_Gamma2 = G3ToG2_N * A_To_Gamma2;
 	}
 
-	void Matched_Gamma2_To_E(
+    /**
+	 * \brief Trivially copies each edge field value to the left and right gamma nex to it. Follows the matching for selecting appropriate levels.
+	 * \param EI 
+	 * \param EF 
+	 * \param sFE 
+	 * \param Matching 
+	 * \param faceCount 
+	 * \param N 
+	 * \param Gamma2_To_A 
+	 */
+	inline void Matched_Gamma2_To_E(
 		const Eigen::MatrixXi& EI,
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,

@@ -6,6 +6,7 @@
 #include "loop_coefficients.h"
 namespace directional{
 	namespace subdivision {
+
 	template<typename CoefficientProvider>
 		void Sf_triplet_provider(
 			const int& vertexCount,

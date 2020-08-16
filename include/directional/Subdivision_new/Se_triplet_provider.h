@@ -2,6 +2,7 @@
 #define DIRECTIONAL_ONEFORM_SUBDIVISION_H
 #include <vector>
 #include <Eigen/Eigen>
+#include <Eigen/Sparse>
 #include "build_subdivision_operators.h"
 #include "loop_coefficients.h"
 namespace directional{
