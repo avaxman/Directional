@@ -29,7 +29,7 @@ namespace directional
         const int fCount = rawField.rows();
         for(int n = 0; n < N; ++n)
         {
-            for(int f = 0; f < rawField.size(); ++f)
+            for(int f = 0; f < fCount; ++f)
             {
                 rawField(f, n * 3) = columnDirectional(n*fCount + 3 * f);
                 rawField(f, n * 3 + 1) = columnDirectional(n*fCount + 3 * f  + 1);
@@ -41,7 +41,7 @@ namespace directional
     {
         columnDirectional.resize(rawField.rows() * rawField.cols());
         const int fCount = rawField.rows();
-        for (int f = 0; f < rawField.size(); ++f)
+        for (int f = 0; f < fCount; ++f)
         {
             for (int n = 0; n < N; ++n)
             {
@@ -60,7 +60,7 @@ namespace directional
         const int N = rawField.cols() / 3;
         Eigen::MatrixXi E, EF, EI, SFE, EIK, SFEK;
         shm_edge_topology(F, V.rows(), E, EF, EI, SFE);
-        std::vector<int> initialSizes = std::vector<int>({ (int)N * E.rows(), (int)N * E.rows() });
+        std::vector<int> initialSizes = std::vector<int>({ (int)(N * E.rows()), (int)(N * E.rows()) });
         std::vector<Eigen::SparseMatrix<double>> out, svOut;
         using coeffProv = coefficient_provider_t;
 
@@ -82,7 +82,11 @@ namespace directional
         directional::Gamma2_reprojector(Vk, Fk, EVK, SFEK, EFK, Gamma2_To_PCVF_K);
         // Construct the full reprojection for all directionals. Since gammas are face local,
         // the matching is not needed
-        igl::repmat(Gamma2_To_PCVF_K, N, 1, Matched_Gamma2_To_PCVF_K);
+        {
+            std::vector<Eigen::SparseMatrix<double>*> base(N, &Gamma2_To_PCVF_K);
+            directional::block_diag(base, Matched_Gamma2_To_PCVF_K);
+        }
+
         directional::block_diag({ &out[1],&out[0] }, S_Decomp);
         S_Gamma_directional = Decomp_To_G2K * S_Decomp*G2_To_Decomp_0;
 
@@ -91,7 +95,21 @@ namespace directional
 
         rawfield_to_columndirectional(rawField, N, columnDirectional);
 
-        fineDirectional = Matched_Gamma2_To_PCVF_K * S_Gamma_directional * G2_To_Decomp_0 * columnDirectional_To_G2 * columnDirectional;
+        auto printDims = [](auto el)
+        {
+            std::cout << "Rows x cols: " << el.rows() << "," << el.cols() << std::endl;
+        };
+        std::cout << "Coarse V,F,E: " << V.rows() << "," << F.rows() << "," << E.rows() << std::endl;
+        std::cout << "Fine V,F,E: " << Vk.rows() << "," << Fk.rows() << "," << EVK.rows() << std::endl;
+        std::cout << "Gamma2_To_PCVF_K: ";
+        printDims(Gamma2_To_PCVF_K);
+        std::cout << "Rest: ";
+        printDims(columnDirectional);
+        printDims(columnDirectional_To_G2);
+        printDims(S_Gamma_directional);
+        printDims(Matched_Gamma2_To_PCVF_K);
+
+        fineDirectional = Matched_Gamma2_To_PCVF_K * S_Gamma_directional * columnDirectional_To_G2 * columnDirectional;
 
         columndirectional_to_rawfield(fineDirectional, N, rawFieldK);
     }

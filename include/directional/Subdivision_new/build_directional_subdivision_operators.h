@@ -3,6 +3,7 @@
 #include <Eigen/Eigen>
 #include "quadrisect.h"
 #include "iterate_rings.h"
+#include "iterate_branched_rings.h"
 #include <Eigen/Sparse>
 
 namespace directional {
@@ -222,6 +223,7 @@ namespace directional {
         FK = Fs[outputInd];
         EK = Es[outputInd];
         EIK = EIs[outputInd];
+        MatchingK = Matchings[outputInd];
     }
 }
 

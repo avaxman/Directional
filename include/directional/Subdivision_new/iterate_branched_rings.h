@@ -1,5 +1,5 @@
-#ifndef DIRECTIONAL_ITERATE_RINGS_H
-#define DIRECTIONAL_ITERATE_RINGS_H
+#ifndef DIRECTIONAL_ITERATE_BRANCHED_RINGS_H
+#define DIRECTIONAL_ITERATE_BRANCHED_RINGS_H
 #include <Eigen/Eigen>
 #include <directional/dir_assert.h>
 #include <vector>
@@ -45,7 +45,7 @@ namespace directional
         const auto singularValence = wraps * originalValence;
         // Levels for face-based fields
         faceLevels = Eigen::MatrixXi::Zero(N/wraps, singularValence);
-        faceLevels.col(0) = Eigen::VectorXi::LinSpaced(N, 0, N / wraps-1);
+        faceLevels.col(0) = Eigen::VectorXi::LinSpaced(N/wraps, 0, N / wraps-1);
 
         // Make all matchings positive. The exact sign is immaterial to our subdivision, the amount of levels we jump is, i.e.
         // the amount of the circular shift of the directinal indices in the face.
@@ -62,7 +62,7 @@ namespace directional
             auto match = positiveMatching(e);
             auto levelJump = edgeSigns[e] == 1 ? match : (N - match);
             faceLevels.col(i) = faceLevels.col(i - 1) + Eigen::VectorXi::Ones(faceLevels.rows(), 1) * levelJump;
-            meshF =(meshF+1) % originalValence;
+            meshF = (meshF+1) % originalValence;
         }
         // Apply modulo N to get correct positive levels
         faceLevels = faceLevels.unaryExpr([&N](const int val) {return val % N; });
@@ -75,10 +75,10 @@ namespace directional
         int lastJump = edgeSigns[0] == 0 ? N - positiveMatching[0] : positiveMatching[0];
         for(auto j = 0; j < originalValence; ++j)
         {
-            int jump = edgeSigns[2 * j] == 0 ? 0 : (N - positiveMatching[2 * j]);
+            int jump = edgeSigns[2 * j] == 0 ? 0 : (N - positiveMatching(2 * j));
             edgeLevels(0, 2 * j) = faceLevels(0, j) + jump;
 
-            int jump2 = edgeSigns[2 * j + 1] == 0 ? 0 : (N - positiveMatching[2 * j + 1]);
+            int jump2 = edgeSigns[2 * j + 1] == 0 ? 0 : (N - positiveMatching(2 * j + 1));
             edgeLevels(0, 2 * j + 1) = faceLevels(0, j) + jump2;
         }
         // Do the other wraps
@@ -143,7 +143,6 @@ namespace directional
 		const Eigen::MatrixXi& EI,
 		const Eigen::MatrixXi& SFE,
 		int N,
-		const Eigen::MatrixXi& indices,
         const Eigen::VectorXi& matching,
 		Handler& h)
 	{
@@ -160,21 +159,12 @@ namespace directional
 
 		int edge = 0;
         // The current ''level'' of the field: one of the [0,N-1] values that describe the N vectors in the face.
-        int level = 0;
 		int side = 0;
 		int face = -1;
 		int corner = -1;
 
-		auto toTwin = [&edge,&side,&face,&corner,&level,&matching, &EF, &EI] ()
+		auto toTwin = [&edge,&side,&face,&corner,&matching, &EF, &EI] ()
 		{
-            if(side == 0)
-            {
-                level = (level + matching(edge)) % N;
-            }
-            else
-            {
-                level = (level + N - matching(edge)) % N;
-            }
 			side = 1 - side;
 			face = EF(edge, side);
 			corner = EI(edge, side);
@@ -203,7 +193,6 @@ namespace directional
             Eigen::MatrixXi faceLevels,edgeLevels;
 			// Start at the appropriate halfedge
 			edge = eI; side = 0;
-            level = 0;
 
 			// Make sure the halfedge we start with points away from the vertex in question
 			if (E(edge,1-side) != v) toTwin();
@@ -223,7 +212,7 @@ namespace directional
             // Compute index for ring
             for(int i = 0; i < edges.size(); i += 2)
             {
-                totalTransport += matching(edges[i], 1 - edgeSides[i]);
+                totalTransport += edgeSides[i] == 0 ? N - matching(edges[i]) : matching(edges[i]);
             }
             while (totalTransport < 0) totalTransport += N;
             totalTransport = totalTransport % N;
@@ -232,7 +221,7 @@ namespace directional
             // Determine associated number of branched functions
             const int branches = N / wraps;
             // Get levels for edges and faces
-            unwrapField(edges, edgeSides, matching, branches, wraps, faceLevels, edgeLevels);
+            unwrapField(edges, edgeSides, matching, N, wraps, faceLevels, edgeLevels);
             // Apply handler
             // Invoke visitor once
             h(edges, edgeSides, edgeLevels, wraps, branches);

@@ -29,6 +29,22 @@ namespace directional
 		}
 	};
 
+    /**
+     * \brief Mathematical modulo operator that maps value to [0, modValue) in the integer realm. Allows
+     * for negative values.
+     * \param value 
+     * \param modValue 
+     * \return 
+     */
+    inline int modulo(int value, int modValue)
+    {
+        while(value < 0)
+        {
+            value += modValue;
+        }
+        return value % modValue;
+    }
+
 	/**
 	 * TODO
 	 */
@@ -111,7 +127,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int faceCount,
 		int N,
 		Eigen::SparseMatrix<double>& Curl
@@ -130,7 +146,7 @@ namespace directional
 				trips.emplace_back(e + n * EF.rows(), lGamma + n * faceCount * 3, -1);
 
 				//Right gamma has to be compensated for.
-				const int matchedLevel = (Matching(e, 0) + n) % N;
+				const int matchedLevel = modulo(Matching(e) + n, N);
 				trips.emplace_back(e + n * EF.rows(), rGamma + matchedLevel * faceCount * 3, 1);
 			}
 		}
@@ -146,7 +162,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int N,
 		Eigen::SparseMatrix<double>& Curl_To_Gamma3
 	)
@@ -162,7 +178,7 @@ namespace directional
 			for(int n = 0; n < N; n++)
 			{
 				sh.addCoeff(lGamma + n * gammaCount, e + n * edgeCount, -1);
-				const int level = (n + Matching(e, 0)) % N;
+				const int level = modulo(n + Matching(e), N);
 				sh.addCoeff(rGamma + level * gammaCount, e + n * edgeCount, 1);
 			}
 		}
@@ -172,7 +188,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int N,
 		Eigen::SparseMatrix<double>& Curl_To_Gamma2
 	)
@@ -188,7 +204,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int faceCount,
 		int N,
 		Eigen::SparseMatrix<double>& A_To_Gamma3
@@ -215,7 +231,7 @@ namespace directional
 				{
 					for (int n = 0; n < N; n++)
 					{
-						const int level = (n+Matching(e, 0)) % N;
+						const int level = modulo(n+Matching(e),N);
 						sh.addCoeff(gam + level * gammaCount, e + n * edgeCount, 1);
 					}
 				}
@@ -230,7 +246,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int faceCount,
 		int N,
 		Eigen::SparseMatrix<double>& A_To_Gamma2
@@ -258,7 +274,7 @@ namespace directional
 		const Eigen::MatrixXi& EI,
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int faceCount,
 		int N,
 		Eigen::SparseMatrix<double>& Gamma2_To_A
@@ -274,7 +290,7 @@ namespace directional
 			for(int n = 0; n < N; n++)
 			{
 				sh.addCoeff(e + n * edgeCount, gL + n * gammaCount, 1);
-				const int rLevel = (n + Matching(e, 0)) % N;
+				const int rLevel = modulo(n + Matching(e), N);
 				sh.addCoeff(e + n  * edgeCount, gL + rLevel * gammaCount, 1);
 			}
 		}
@@ -287,7 +303,7 @@ namespace directional
 		const Eigen::MatrixXi& sFE,
 		int edgeCount,
 		int N,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		Eigen::SparseMatrix<double>& A_C_To_F
 	)
 	{
@@ -313,7 +329,7 @@ namespace directional
 				{
 					for (int n = 0; n < N; n++)
 					{
-						const int level = (n + N - Matching(e, 1)) % N;
+                        const int level = modulo(n + N - Matching(e), N);
 						// Level of curl corresponds to that of the face.
 						sh.addCoeff(n * faceCount + f, e + level * edgeCount, 1);
 					}
@@ -327,7 +343,7 @@ namespace directional
 		const Eigen::MatrixXi& sFE,
 		int edgeCount,
 		int N,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		Eigen::SparseMatrix<double>& D1
 	)
 	{
@@ -353,7 +369,7 @@ namespace directional
 				{
 					for (int n = 0; n < N; n++)
 					{
-						const int level = (n + N - Matching(e, 1)) % N;
+						const int level = modulo(n + N - Matching(e), N);
 						// Level of curl corresponds to that of the face.
 						sh.addCoeff(n * faceCount + f, e + level * edgeCount, -1);
 					}
@@ -368,7 +384,7 @@ namespace directional
 		const Eigen::MatrixXi& EI,
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int N,
 		Eigen::SparseMatrix<double>& G2ToAC
 	)
@@ -377,9 +393,6 @@ namespace directional
 		Eigen::SparseMatrix<double> Gamma2_To_A, Curl;
 		Matched_Gamma2_To_E(EI, EF, sFE, Matching, faceCount, N, Gamma2_To_A);
 		Matched_Curl(EF, sFE, EI, Matching, faceCount, N, Curl);
-		std::cout << "G2 To AC ops sizes: " <<
-			Gamma2_To_A.rows() << "," << Gamma2_To_A.cols() << " && " <<
-			Curl.rows() << "," << Curl.cols() << std::endl;
 		G2ToAC = 0.5* igl::cat(1, Gamma2_To_A, Curl);
 	}
 
@@ -387,7 +400,7 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int N,
 		Eigen::SparseMatrix<double>& AC_To_Gamma3
 	)
@@ -402,23 +415,16 @@ namespace directional
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& Matching,
+		const Eigen::VectorXi& Matching,
 		int N,
 		Eigen::SparseMatrix<double>& AC_To_Gamma2
 	)
 	{
 		const int faceCount = sFE.rows();
 		Eigen::SparseMatrix<double> A_To_Gamma2, C_To_Gamma2;
-		std::cout << "Building A to G2" << std::endl;
 		Matched_A_To_Gamma2(EF, sFE, EI, Matching, faceCount, N, A_To_Gamma2);
-		std::cout << "Building C to G2" << std::endl;
 		Matched_Curl_To_Gamma2(EF, sFE, EI, Matching, N, C_To_Gamma2);
-		std::cout << "Combining, sizes: " << 
-			C_To_Gamma2.rows() << "," << C_To_Gamma2.cols() << " && " <<
-			A_To_Gamma2.rows() << "," << A_To_Gamma2.cols() <<
-			std::endl;
 		AC_To_Gamma2 = igl::cat(2, A_To_Gamma2, C_To_Gamma2);
-		std::cout << "Done" << std::endl;
 	}
 }
 #endif
