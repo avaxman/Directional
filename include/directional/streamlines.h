@@ -29,7 +29,6 @@ namespace directional
     //      the vector set in a is matched to vector #mab[i] in b)
     // Eigen::MatrixXi match_ba;   //  #E by N matrix, describing the inverse relation to match_ab
     Eigen::VectorXi matching;
-    Eigen::VectorXd effort;
     int nsample;                //  #S, number of sample points
     int degree;                 //  #N, degrees of the vector field
   };

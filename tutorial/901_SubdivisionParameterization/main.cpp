@@ -252,12 +252,12 @@ void update_view()
         //singularity mesh
         directional::singularity_spheres(VMesh_coarse, FMesh_coarse, N, (viewingMode == ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode == ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings, 1.5);
 
-        resetMeshData(viewer.data_list[2], VSings, FSings, CSings, true, false);
+          resetMeshData(viewer.data_list[DisplayMeshes::Singularities], VSings, FSings, CSings, true, false);
 
         //seam mesh
         directional::seam_lines(VMesh_coarse, FMesh_coarse, EV_coarse, (viewingMode == ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams, 2.0);
 
-        resetMeshData(viewer.data_list[2], VSeams, FSeams, CSeams, true, false);
+        resetMeshData(viewer.data_list[DisplayMeshes::Seams], VSeams, FSeams, CSeams, true, false);
         viewer.data_list[Mesh].set_colors(directional::default_mesh_color());
         break;
         }
@@ -278,12 +278,12 @@ void update_view()
         //singularity mesh
         directional::singularity_spheres(VMesh_coarse, FMesh_coarse, N, (viewingMode == ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode == ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings, 1.5);
 
-        resetMeshData(viewer.data_list[2], VSings, FSings, CSings, true, false);
+        resetMeshData(viewer.data_list[DisplayMeshes::Singularities], VSings, FSings, CSings, true, false);
 
         //seam mesh
         directional::seam_lines(VMesh_coarse, FMesh_coarse, EV_coarse, (viewingMode == ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams, 2.0);
 
-        resetMeshData(viewer.data_list[2], VSeams, FSeams, CSeams, true, false);
+        resetMeshData(viewer.data_list[DisplayMeshes::Seams], VSeams, FSeams, CSeams, true, false);
         viewer.data_list[Mesh].set_colors(directional::default_mesh_color());
         break;
     }
@@ -399,6 +399,7 @@ int main(int argc, char *argv[])
     keyAction("2", "Show L2 norm of original-field curl.");
     keyAction("3", "Show Curl-reduced field.");
     keyAction("4", "Show Curl of curl-reduced field.");
+    keyAction("S", "Subdivide and parameterize.");
     keyAction("5", "Show subdivided curl-reduced field.");
     keyAction("6", "Show L2 norm of subdivided curl-reduced field curl.");
     keyAction("7", "Show coarse parameterization of curl-reduced field.");
