@@ -7,6 +7,7 @@
 #include "shm_oneform_coefficients.h"
 #include "Sc_directional_triplet_provider.h"
 #include "Se_directional_triplet_provider.h"
+#include <directional/Gamma_suite.h>
 #include "Sv_triplet_provider.h"
 #include "build_subdivision_operators.h"
 #include <directional/DirectionalGamma_Suite.h>
@@ -31,12 +32,13 @@ namespace directional
         {
             for(int f = 0; f < fCount; ++f)
             {
-                rawField(f, n * 3) = columnDirectional(n*fCount + 3 * f);
-                rawField(f, n * 3 + 1) = columnDirectional(n*fCount + 3 * f  + 1);
-                rawField(f, n * 3 + 2) = columnDirectional(n*fCount + +3 * f + 2);
+                rawField(f, n * 3) = columnDirectional(n * 3 * fCount + 3 * f);
+                rawField(f, n * 3 + 1) = columnDirectional(n * 3 * fCount + 3 * f + 1);
+                rawField(f, n * 3 + 2) = columnDirectional(n * 3 * fCount + 3 * f + 2);
             }
         }
     }
+
     inline void rawfield_to_columndirectional(const Eigen::MatrixXd& rawField, int N, Eigen::VectorXd& columnDirectional)
     {
         columnDirectional.resize(rawField.rows() * rawField.cols());
@@ -45,9 +47,9 @@ namespace directional
         {
             for (int n = 0; n < N; ++n)
             {
-                columnDirectional(n * 3 * fCount) = rawField(f, n * 3);
-                columnDirectional(n * 3 * fCount + 1) = rawField(f, n * 3 + 1);
-                columnDirectional(n * 3 * fCount + 2) = rawField(f, n * 3 + 2);
+                columnDirectional(n * 3 * fCount + 3 * f) = rawField(f, n * 3);
+                columnDirectional(n * 3 * fCount + 3 * f + 1) = rawField(f, n * 3 + 1);
+                columnDirectional(n * 3 * fCount + 3 * f + 2) = rawField(f, n * 3 + 2);
             }
         }
     }
@@ -69,6 +71,7 @@ namespace directional
         auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_oneform_coefficients, Se_directional_triplet_provider<coeffProv>);
         build_directional_subdivision_operators(V, F, E, EF, EI, SFE, matching, initialSizes, targetLevel, N,
             Fk, EVK, EFK, EIK, SFEK, matchingK, out, Se_directional_provider, Sc_directional_provider);
+
         // Construct regular vertex subdivision
         build_subdivision_operators(V, F, E, EF, EI, SFE, std::vector<int>({(int)V.rows()}), targetLevel, Fk, EVK, EFK, EIK, SFEK, svOut, Sv_provider);
 
@@ -88,15 +91,21 @@ namespace directional
         }
 
         directional::block_diag({ &out[0],&out[1] }, S_Decomp);
-        S_Gamma_directional = Decomp_To_G2K * S_Decomp*G2_To_Decomp_0;
 
         Eigen::VectorXd columnDirectional, fineDirectional;
+
+        // Convert rawfield to column directional for applying subdivision
+        rawfield_to_columndirectional(rawField, N, columnDirectional);
+        // Get matrix to convert column directional to gamma2 elements
         directional::columndirectional_to_gamma2_matrix(V, F, E, SFE, EF, N, columnDirectional_To_G2);
 
-        rawfield_to_columndirectional(rawField, N, columnDirectional);
-        
+        // The directional gamma subdivision operator
+        S_Gamma_directional = Decomp_To_G2K * S_Decomp*G2_To_Decomp_0;
+
+        // Compute the fine directional
         fineDirectional = Matched_Gamma2_To_PCVF_K * S_Gamma_directional * columnDirectional_To_G2 * columnDirectional;
 
+        // Convert resulting column directional in fine level back to rawfield format
         columndirectional_to_rawfield(fineDirectional, N, rawFieldK);
     }
     }

@@ -20,6 +20,7 @@ namespace directional {
         const std::vector<int>&, // edges
         const std::vector<int>&, // edge orientations
         const Eigen::MatrixXi&, // edge levels
+        const Eigen::MatrixXi&, // face levels
         const CoeffProvider&, //Coefficient provider
         int, // number of wraps
         int, // number of local unique branch functions
@@ -45,11 +46,12 @@ namespace directional {
             const std::vector<int>& edges,
             const std::vector<int>& edgeOrients,
             const Eigen::MatrixXi& edgeLevels,
+            const Eigen::MatrixXi& faceLevels,
             int wraps,
-            int branches,
+            int N,
             std::vector<Eigen::Triplet<double>>& output,
             int& maxRowSize) {
-            provider(vertexCount, F0, SFE0, E0, EI0, EF0, E0ToEk, edges, edgeOrients,edgeLevels, coeffProvider, wraps, branches, output, maxRowSize);
+            provider(vertexCount, F0, SFE0, E0, EI0, EF0, E0ToEk, edges, edgeOrients,edgeLevels, faceLevels, coeffProvider, wraps, N, output, maxRowSize);
         };
     }
 
@@ -65,6 +67,7 @@ namespace directional {
         const std::vector<int>& edges,
         const std::vector<int>& edgeSides,
         const Eigen::MatrixXi& edgeLevels,
+        const Eigen::MatrixXi& faceLevels,
         int wraps,
         int branches,
         std::vector<std::vector<Eigen::Triplet<double>>>& output,
@@ -76,7 +79,7 @@ namespace directional {
         // Hack to apply the triplet providers as functor on the given edge data.
         using exp = int[];
         (void)exp {
-            (std::get<Is>(tripletProviders)(vertexCount, F0, SFE0, E0, EI0, EF0, E0ToEk, edges, edgeSides, edgeLevels, wraps, branches, output[Is], rowSizes[Is]), 0)...
+            (std::get<Is>(tripletProviders)(vertexCount, F0, SFE0, E0, EI0, EF0, E0ToEk, edges, edgeSides, edgeLevels,faceLevels, wraps, branches, output[Is], rowSizes[Is]), 0)...
         };
     }
 
@@ -124,17 +127,18 @@ namespace directional {
         std::tuple<TripletProviders...> constructors = std::make_tuple(tripletProviders...);
 
         // The triplets
-        std::vector<std::vector<Eigen::Triplet<double>>> triplets(N, std::vector<Eigen::Triplet<double>>{});
+        std::vector<std::vector<Eigen::Triplet<double>>> triplets(ProviderNum, std::vector<Eigen::Triplet<double>>{});
 
         // The row sizes for the jump level subdivision operator
-        std::vector<int> rowSizes(N, 0);
+        std::vector<int> rowSizes(ProviderNum, 0);
 
         // Function to handle a new ring
-        auto ringHandler = [&Fs, &SFEs, &Es, &EFs, &EIs, &E0ToEK, &Matchings, &triplets, &constructors, &currentVCount, &toFill, &rowSizes](
-            const std::vector<int>& edges, const std::vector<int>& edgeSides, const Eigen::MatrixXi& edgeLevels, int wraps, int localBranchCount)
+        auto ringHandler = [&Fs, &SFEs, &Es, &EFs, &EIs, &E0ToEK, &triplets, &constructors, &currentVCount, &toFill, &rowSizes](
+            const std::vector<int>& edges, const std::vector<int>& edgeSides, const Eigen::MatrixXi& edgeLevels, const Eigen::MatrixXi& faceLevels, int wraps, int N)
         {
             const int filled = 1 - toFill;
-            /*const int& vertexCount,
+            /*
+                const int& vertexCount,
                 const Eigen::MatrixXi& F0,
                 const Eigen::MatrixXi& SFE0,
                 const Eigen::MatrixXi& E0,
@@ -146,7 +150,8 @@ namespace directional {
                 std::vector<std::vector<Eigen::Triplet<double>>>& output,
                 std::vector<int>& rowSizes,
                 std::tuple<TripletProviders...> tripletProviders,
-                std::index_sequence<Is...>*/
+                std::index_sequence<Is...>
+            */
             handleRing_directionals(currentVCount,
                 Fs[filled],
                 SFEs[filled],
@@ -157,8 +162,9 @@ namespace directional {
                 edges,
                 edgeSides,
                 edgeLevels,
+                faceLevels,
                 wraps,
-                localBranchCount,
+                N,
                 triplets,
                 rowSizes,
                 constructors, std::index_sequence_for<TripletProviders...>{});
@@ -193,6 +199,7 @@ namespace directional {
             {
                 // Construct the operator to move one subdivision level up
                 Eigen::SparseMatrix<double> levelJumpMat(rowSizes[j], output[j].rows());
+
                 levelJumpMat.setFromTriplets(triplets[j].begin(), triplets[j].end());
 
                 // Apply the operator to the previous subdivision operator
@@ -205,7 +212,7 @@ namespace directional {
 
             // Update matching for finer level
             Matchings[toFill] = Eigen::VectorXi::Zero(Es[toFill].rows(), 1);
-            for (int e = 0; e < Es[filled].rows(); ++e)
+            for (int e = 0; e < Matchings[filled].rows(); ++e)
             {
                 // Copy the matching for even edges. For all odd edges, set it to zero.
                 Matchings[toFill](E0ToEK(e, 0)) = Matchings[filled](e);

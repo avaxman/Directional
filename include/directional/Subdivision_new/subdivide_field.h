@@ -20,6 +20,15 @@ namespace directional
     inline void subdivide_field(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXd& pcvf, int level, Eigen::MatrixXd& subdividedPcvf, Eigen::MatrixXd& VK, Eigen::MatrixXi& FK)
     {
         Eigen::SparseMatrix<double> gammaSubdivision, pcvfToG3, G3ToG2, Sv, G2KToPcvf;
+        Eigen::VectorXd columnField(pcvf.rows() * pcvf.cols()), columnFieldK;
+        for(int f = 0; f < pcvf.rows(); ++f)
+        {
+            for(int i = 0; i < 3; ++i)
+            {
+                columnField(3 * f + i) = pcvf(f, i);
+            }
+        }
+
         // Coarse level topology
         Eigen::MatrixXi E, EF, SFE, EI, EK, EFK, SFEK, EIK;
         directional::shm_edge_topology(F, V.rows(), E, EF, EI, SFE);
@@ -29,7 +38,15 @@ namespace directional
         // Subdivide vertices
         VK = Sv * V;
         directional::Gamma2_reprojector(VK, FK, EK, SFEK, EFK, G2KToPcvf);
-        subdividedPcvf = G2KToPcvf * gammaSubdivision * G3ToG2 * pcvfToG3 * pcvf;
+        columnFieldK  = G2KToPcvf * gammaSubdivision * G3ToG2 * pcvfToG3 * columnField;
+        subdividedPcvf.resize(columnFieldK.size() / 3, 3);
+        for (int f = 0; f < subdividedPcvf.rows(); ++f)
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                subdividedPcvf(f, i) = columnFieldK(3 * f + i);
+            }
+        }
     }
 }
 #endif 

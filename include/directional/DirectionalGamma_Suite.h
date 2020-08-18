@@ -31,10 +31,10 @@ namespace directional
 
     /**
      * \brief Mathematical modulo operator that maps value to [0, modValue) in the integer realm. Allows
-     * for negative values.
-     * \param value 
-     * \param modValue 
-     * \return 
+     * for negative values. Given value, finds x such that value + n * modValue = x and x \in [0, modValue) for some integer n.
+     * \param value The value to apply the operator to
+     * \param modValue The modulo value
+     * \return The new value in range [0, modValue)
      */
     inline int modulo(int value, int modValue)
     {
@@ -57,6 +57,16 @@ namespace directional
 
 	}
 
+    /**
+     * \brief Computes the matrix to move from a column directional to a gamma2 field. 
+     * \param V 
+     * \param F 
+     * \param E 
+     * \param SFE 
+     * \param EF 
+     * \param N 
+     * \param projector 
+     */
     inline void columndirectional_to_gamma2_matrix(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXi& E, const Eigen::MatrixXi&SFE, const Eigen::MatrixXi&EF, int N,
         Eigen::SparseMatrix<double>& projector)
 	{
@@ -74,7 +84,7 @@ namespace directional
 	 * Output:
 	 * - G2ToG3_N: 3 N |F| x 2 N |F| matrix converting the gamma2 directional field to a gamma3 directional field.
 	 */
-	void Matched_G2_To_G3(
+	inline void Matched_G2_To_G3(
 		const Eigen::MatrixXi& sFE,
 		int N,
 		Eigen::SparseMatrix<double>& G2ToG3_N
@@ -84,8 +94,7 @@ namespace directional
 		directional::Gamma2_To_Gamma3(sFE, G2ToG3);
 
 		// Convert gamma2 to gamma3, then apply operator. Note that gamma2 to gamma3 does not require matching.
-		std::vector<Eigen::SparseMatrix<double>*> refs;
-		for (int i = 0; i < N; i++) refs.push_back(&G2ToG3);
+		std::vector<Eigen::SparseMatrix<double>*> refs(N, &G2ToG3);
 		directional::block_diag(refs, G2ToG3_N);
 	}
 	/**
@@ -96,7 +105,7 @@ namespace directional
 	 * Output:
 	 * - G3ToG2_N: 2 N |F| x 3 N |F| matrix converting the gamma2 directional field to a gamma3 directional field.
 	 */
-	void Matched_G3_To_G2(
+	inline void Matched_G3_To_G2(
 		const Eigen::MatrixXi& sFE,
 		int N,
 		Eigen::SparseMatrix<double>& G2ToG3_N
@@ -106,8 +115,7 @@ namespace directional
 		directional::Gamma3_To_Gamma2(sFE, G3ToG2);
 
 		// Convert gamma2 to gamma3, then apply operator. Note that gamma2 to gamma3 does not require matching.
-		std::vector<Eigen::SparseMatrix<double>*> refs;
-		for (int i = 0; i < N; i++) refs.push_back(&G3ToG2);
+		std::vector<Eigen::SparseMatrix<double>*> refs(N, &G3ToG2);
 		directional::block_diag(refs, G2ToG3_N);
 	}
 
@@ -133,7 +141,6 @@ namespace directional
 		Eigen::SparseMatrix<double>& Curl
 	)
 	{
-		std::cout << "Building matched curl" << std::endl;
 		std::vector<Eigen::Triplet<double>> trips;
 		trips.reserve(2 * N * EF.rows());
 		for (int e = 0; e < EF.rows(); e++)
@@ -158,7 +165,7 @@ namespace directional
 		std::cout << "Built matched curl" << std::endl;
 	}
 
-	void Matched_Curl_To_Gamma3(
+	inline void Matched_Curl_To_Gamma3(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -184,7 +191,7 @@ namespace directional
 		}
 		Curl_To_Gamma3 = sh.toMat();
 	}
-	void Matched_Curl_To_Gamma2(
+	inline void Matched_Curl_To_Gamma2(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -219,6 +226,7 @@ namespace directional
 			{
 				const int e = sFE(f, j);
 				const int s = sFE(f, j+3);
+
 				const int gam = 3 * f + j;
 				if(s == 0)
 				{
@@ -242,7 +250,7 @@ namespace directional
 	}
 
 
-	void Matched_A_To_Gamma2(
+	inline void Matched_A_To_Gamma2(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -282,16 +290,19 @@ namespace directional
 	{
 		const int edgeCount = EI.rows();
 		const int gammaCount = 3 * faceCount;
-		SparseHelper sh(N * edgeCount, N * 3 * faceCount, 2 * 3 * N * faceCount);
+		SparseHelper sh(N * edgeCount, N * gammaCount, 2 * N * gammaCount);
 		for(int e = 0; e < EI.rows(); e++)
 		{
+            // Indices of left and right gamma's without levels
 			const int gL = 3 * EF(e, 0) + EI(e, 0);
 			const int gR = 3 * EF(e, 1) + EI(e, 1);
+
 			for(int n = 0; n < N; n++)
 			{
 				sh.addCoeff(e + n * edgeCount, gL + n * gammaCount, 1);
+                // Follow matching to get to right element
 				const int rLevel = modulo(n + Matching(e), N);
-				sh.addCoeff(e + n  * edgeCount, gL + rLevel * gammaCount, 1);
+				sh.addCoeff(e + n  * edgeCount, gR + rLevel * gammaCount, 1);
 			}
 		}
 		Eigen::SparseMatrix<double> G2ToG3_N;
@@ -308,7 +319,7 @@ namespace directional
 	)
 	{
 		const int faceCount = sFE.rows();
-		SparseHelper sh(N * sFE.rows(), edgeCount, 3 * sFE.rows() * N);
+		SparseHelper sh(N * sFE.rows(), N*edgeCount, 3 * sFE.rows() * N);
 		for(int f = 0; f < sFE.rows(); f++)
 		{
 			for(int j = 0; j < 3; j++)
@@ -348,7 +359,7 @@ namespace directional
 	)
 	{
 		const int faceCount = sFE.rows();
-		SparseHelper sh(N * sFE.rows(), edgeCount, 3 * sFE.rows() * N);
+		SparseHelper sh(N * sFE.rows(), N*edgeCount, 3 * sFE.rows() * N);
 		for (int f = 0; f < sFE.rows(); f++)
 		{
 			for (int j = 0; j < 3; j++)
@@ -380,7 +391,7 @@ namespace directional
 	}
 
 
-	void Matched_Gamma2_To_AC(
+	inline void Matched_Gamma2_To_AC(
 		const Eigen::MatrixXi& EI,
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
@@ -393,10 +404,13 @@ namespace directional
 		Eigen::SparseMatrix<double> Gamma2_To_A, Curl;
 		Matched_Gamma2_To_E(EI, EF, sFE, Matching, faceCount, N, Gamma2_To_A);
 		Matched_Curl(EF, sFE, EI, Matching, faceCount, N, Curl);
-		G2ToAC = 0.5* igl::cat(1, Gamma2_To_A, Curl);
+        Gamma2_To_A *= 0.5;
+        Curl *= 0.5;
+        // Concat matrices in column direction
+		igl::cat(1, Gamma2_To_A, Curl, G2ToAC);
 	}
 
-	void Matched_AC_To_Gamma3(
+	inline void Matched_AC_To_Gamma3(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -409,9 +423,9 @@ namespace directional
 		Eigen::SparseMatrix<double> A_To_Gamma3, C_To_Gamma3;
 		Matched_A_To_Gamma3(EF, sFE, EI, Matching, faceCount, N, A_To_Gamma3);
 		Matched_Curl_To_Gamma3(EF, sFE, EI, Matching, N, C_To_Gamma3);
-		AC_To_Gamma3 = igl::cat(2, A_To_Gamma3, C_To_Gamma3);
+		igl::cat(2, A_To_Gamma3, C_To_Gamma3, AC_To_Gamma3);
 	}
-	void Matched_AC_To_Gamma2(
+    inline void Matched_AC_To_Gamma2(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& sFE,
 		const Eigen::MatrixXi& EI,
@@ -424,6 +438,7 @@ namespace directional
 		Eigen::SparseMatrix<double> A_To_Gamma2, C_To_Gamma2;
 		Matched_A_To_Gamma2(EF, sFE, EI, Matching, faceCount, N, A_To_Gamma2);
 		Matched_Curl_To_Gamma2(EF, sFE, EI, Matching, N, C_To_Gamma2);
+        // Concat in row direction
 		AC_To_Gamma2 = igl::cat(2, A_To_Gamma2, C_To_Gamma2);
 	}
 }

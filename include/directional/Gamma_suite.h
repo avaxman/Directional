@@ -27,7 +27,7 @@ namespace directional
 	/**
 	 * Gamma3 based curl.
 	 */
-	void Gamma3_Curl(
+    inline void Gamma3_Curl(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& EI,
 		int faceCount,
@@ -185,9 +185,12 @@ namespace directional
 		{
 			RowVector3d localN = N.row(f);
 			const int e0ind = sFE(f, 0), e1ind = sFE(f, 1);
+            // Compute gamma signs
 			const double s0 = 1.0 - 2.0 * sFE(f, 3), s1 = 1.0 - 2.0 * sFE(f, 4);
+            // Get the edges
 			RowVector3d e0 = V.row(EV(e0ind, 1)) - V.row(EV(e0ind, 0));
 			RowVector3d e1 = V.row(EV(e1ind, 1)) - V.row(EV(e1ind, 0));
+            // Compute basis elements
 			RowVector3d vals0 = localN.cross(e0) / DA(f);
 			RowVector3d vals1 = -localN.cross(e1) / DA(f);
 			const double signProd = s0 * s1;
@@ -302,7 +305,7 @@ namespace directional
 		//G2_To_OneForm.setFromTriplets(trips.begin(), trips.end());
 	}
 	
-	void Gamma3_To_Decomp(const Eigen::MatrixXi& EF, const Eigen::MatrixXi& EI, int faceCount, Eigen::SparseMatrix<double>& G3ToDC)
+	inline void Gamma3_To_Decomp(const Eigen::MatrixXi& EF, const Eigen::MatrixXi& EI, int faceCount, Eigen::SparseMatrix<double>& G3ToDC)
 	{
 		using SMat = Eigen::SparseMatrix<double>;
 		SMat G3ToOneForm, C;
@@ -311,7 +314,15 @@ namespace directional
 		DIR_ASSERT(C.rows() == G3ToOneForm.rows());
 		igl::cat(1, G3ToOneForm, Eigen::SparseMatrix<double>(0.5 * C), G3ToDC);
 	}
-	void Decomp_To_Gamma3(const Eigen::MatrixXi& EF, const Eigen::MatrixXi& EI, int faceCount, Eigen::SparseMatrix<double>& DCToG3)
+
+    /**
+     * \brief Projects the average oneform-half curl decomposition back to a gamma3 field.
+     * \param EF The edge-to-face connectivity
+     * \param EI The edge indexing in its adjacent faces
+     * \param faceCount The number of faces
+     * \param DCToG3 Output decomposition-to-gamma3 matrix operator
+     */
+    inline void Decomp_To_Gamma3(const Eigen::MatrixXi& EF, const Eigen::MatrixXi& EI, int faceCount, Eigen::SparseMatrix<double>& DCToG3)
 	{
 		using SMat = Eigen::SparseMatrix<double>;
 		SMat OneFormToG3(3 * faceCount,EF.rows()), CToG3(3*faceCount, EF.rows());
@@ -440,7 +451,7 @@ namespace directional
 		Eigen::SparseMatrix<double>& G3ToDC,
 		Eigen::SparseMatrix<double>& DCToG3)
 	{
-
+        
 		using namespace Eigen;
 		using namespace std;
 		SparseMatrix<double> G2ToG3, G3ToG2;
