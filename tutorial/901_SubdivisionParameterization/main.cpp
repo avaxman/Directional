@@ -26,11 +26,10 @@
 #include <directional/write_raw_field.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
-#include <directional/Subdivision_new/subdivide_directionals.h>
+#include <directional/subdivide_directionals.h>
 
 #include "tutorial_shared_path.h"
 #include "directional/cut_mesh_with_singularities.h"
-#include "directional/Subdivision_new/subdivide_field.h"
 #include <unordered_set>
 
 using namespace std;
@@ -50,6 +49,8 @@ Eigen::MatrixXd CMesh, CField, CSings, CSeams;
 Eigen::MatrixXd rawFieldOrig, rawFieldCF;
 Eigen::MatrixXd combedFieldOrig, combedFieldCF;
 Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
+
+// The igl viewer
 igl::opengl::glfw::Viewer viewer;
 
 Eigen::VectorXi singVerticesOrig, singVerticesCF;
@@ -74,7 +75,7 @@ directional::polycurl_reduction_parameters params;
 // Solver data (needed for precomputation)
 directional::PolyCurlReductionSolverData pcrdata;
 
-
+//Viewing modes
 typedef enum
 {
     ORIGINAL_FIELD, 
@@ -87,6 +88,7 @@ typedef enum
     FINE_PARAM 
 } ViewingModes;
 
+// The visualization meshes
 enum DisplayMeshes
 {
     Mesh = 0,
@@ -100,6 +102,7 @@ enum DisplayMeshes
     DisplayMeshCount
 };
 
+// Meshes to show for each view
 std::vector<unordered_set<DisplayMeshes>> meshesPerView = {
     {Mesh, Rawfield, Singularities, Seams},
     {Mesh},
@@ -114,6 +117,7 @@ std::vector<unordered_set<DisplayMeshes>> meshesPerView = {
 // Active view mode
 ViewingModes viewingMode = ORIGINAL_FIELD;
 
+// Helper for resetting viewer data on the Viewer object.
 void resetMeshData(igl::opengl::ViewerData& target, const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXd& C, bool showFaces, bool showLines)
 {
     target.clear();
@@ -123,7 +127,7 @@ void resetMeshData(igl::opengl::ViewerData& target, const Eigen::MatrixXd& V, co
     target.show_lines = showLines;
 }
 
-
+// Parameterize a curlfree optimized field
 void parameterize_cf(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXi& EV, const Eigen::MatrixXi& EF, const Eigen::MatrixXi& FE,
     const Eigen::VectorXi& singVertices, const Eigen::MatrixXd& rawField, const Eigen::VectorXi& matching, igl::opengl::ViewerData& output)
 {
@@ -160,6 +164,7 @@ void parameterize_cf(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const E
     output.show_lines = false;
 }
 
+// Compute curl statistics on directional
 void computeDirectionalCurl(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const Eigen::MatrixXi& EV, const Eigen::MatrixXi& EF, const Eigen::MatrixXd& rawField, const Eigen::VectorXi& matching, 
     Eigen::VectorXd& curlColumn, double& maxSqNorm, Eigen::VectorXd& l2CurlOnFaces)
 {
@@ -169,13 +174,13 @@ void computeDirectionalCurl(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, 
     directional::Matched_Curl(EF, SFE_local, EI_local, matching, F.rows(), N, C);
     directional::columndirectional_to_gamma2_matrix(V, F, EV, SFE_local, EF, N, columndirectional_to_g2);
     Eigen::VectorXd columnDirectionalFine;
-    directional::subdivision::rawfield_to_columndirectional(rawField, N, columnDirectionalFine);
+    directional::rawfield_to_columndirectional(rawField, N, columnDirectionalFine);
     // Output
     curlColumn = C * columndirectional_to_g2 * columnDirectionalFine;
 
     // Compute l2 norm
     Eigen::MatrixXd curlPerEdge;
-    directional::subdivision::columnfunction_to_rawfunction(curlColumn, N, 1, curlPerEdge);
+    directional::columnfunction_to_rawfunction(curlColumn, N, 1, curlPerEdge);
     auto sqNorm = curlPerEdge.rowwise().norm();
     maxSqNorm = sqNorm.maxCoeff();
     // Copy to faces
@@ -183,6 +188,7 @@ void computeDirectionalCurl(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, 
     l2CurlOnFaces = avgToFaces * sqNorm;
 }
 
+// Compute subdivision of coarse optimized field and apply parameterization
 void construct_fine_level_parameterization()
 {
     {
@@ -192,7 +198,7 @@ void construct_fine_level_parameterization()
         
         std::cout << "Coarse max l2 curl before: " << maxSqNorm << std::endl;
     }
-    directional::subdivision::subdivide_directionals(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, combedFieldCF, combedMatchingCF, targetLevel, VMesh_fine, FMesh_fine,
+    directional::subdivide_directionals(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, combedFieldCF, combedMatchingCF, targetLevel, VMesh_fine, FMesh_fine,
         EV_fine, EF_fine, rawfield_fine, matchingCF_fine);
 
     {
@@ -229,7 +235,9 @@ void construct_fine_level_parameterization()
     parameterize_cf(VMesh_fine, FMesh_fine, EV_fine, EF_fine, FE_fine, singVerticesCF, rawfield_fine, matchingCF_fine, viewer.data_list[DisplayMeshes::FineParam]);
 }
 
-
+/*
+ * Update meshes for view and make the appropriate meshes visible
+ */
 void update_view()
 {
     switch(viewingMode)
@@ -324,55 +332,6 @@ void update_view()
     
 }
 
-
-void update_raw_field_mesh()
-{
-    using namespace std;
-    using namespace Eigen;
-
-    if ((viewingMode == ORIGINAL_CURL) || (viewingMode == OPTIMIZED_CURL)) {
-        for (int i = 1; i < DisplayMeshCount; i++) {  //hide all other meshes
-            viewer.data_list[i].show_faces = false;
-            viewer.data_list[i].show_lines = false;
-        }
-    }
-    else if((viewingMode == COARSE_PARAM || viewingMode==FINE_PARAM))
-    {
-        viewer.data_list[Rawfield].show_faces = false;
-    }
-    else if(viewingMode == FINE_FIELD)
-    {
-        Eigen::MatrixXd fieldV,fieldC;
-        Eigen::MatrixXi fieldF;
-        directional::glyph_lines_raw(VMesh_fine, FMesh_fine, rawfield_fine,
-            directional::indexed_glyph_colors(rawfield_fine), fieldV, fieldF, fieldC, 2.0);
-        // Reset the mesh data for the field
-        resetMeshData(viewer.data_list[1], fieldV, fieldF, fieldC, true, false);
-        //seam mesh
-        directional::seam_lines(VMesh_fine, FMesh_fine, EV_fine, matchingCF_fine, VSeams, FSeams, CSeams, 2.0);
-
-        resetMeshData(viewer.data_list[2], VSeams, FSeams, CSeams, true, false);
-    }
-    else {
-        directional::glyph_lines_raw(VMesh_coarse, FMesh_coarse, (viewingMode == ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF),
-            directional::indexed_glyph_colors((viewingMode == ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF)), VField, FField, CField, 2.0);
-        // Reset the mesh data for the field
-        resetMeshData(viewer.data_list[1], VField, FField, CField, true, false);
-
-        //singularity mesh
-        directional::singularity_spheres(VMesh_coarse, FMesh_coarse, N, (viewingMode == ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode == ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF), VSings, FSings, CSings, 1.5);
-
-        resetMeshData(viewer.data_list[2], VSings, FSings, CSings, true, false);
-
-        //seam mesh
-        directional::seam_lines(VMesh_coarse, FMesh_coarse, EV_coarse, (viewingMode == ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF), VSeams, FSeams, CSeams, 2.0);
-
-        resetMeshData(viewer.data_list[2], VSeams, FSeams, CSeams, true, false);
-    }
-
-}
-
-
 bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier)
 {
     // Set the view mode
@@ -416,9 +375,9 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
         construct_fine_level_parameterization();
     }
 
-    // Write the current field to file.
+    // Write the current coarse field to file.
     if (key == 'W') {
-        if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", rawFieldCF))
+        if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-subdivision-cf.rawfield", rawFieldCF))
             std::cout << "Saved raw field" << std::endl;
         else
             std::cout << "Unable to save raw field. " << std::endl;
@@ -431,21 +390,29 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 
 int main(int argc, char *argv[])
 {
-
-    std::cout <<
-        "  A      Optimize 5 batches for curl reduction." << std::endl <<
-        "  1      Original field" << std::endl <<
-        "  2      L2 norm of original-field curl" << std::endl <<
-        "  3      Curl-reduced field" << std::endl <<
-        "  4      Curl of curl-reduced field." << std::endl;
+    auto keyAction = [](const std::string& key, const std::string& description)
+    {
+        std::cout << "  " << key << "      " << description << std::endl;
+    };
+    keyAction("A", "Optimize 60 batches for curl reduction.");
+    keyAction("1", "Show original field.");
+    keyAction("2", "Show L2 norm of original-field curl.");
+    keyAction("3", "Show Curl-reduced field.");
+    keyAction("4", "Show Curl of curl-reduced field.");
+    keyAction("5", "Show subdivided curl-reduced field.");
+    keyAction("6", "Show L2 norm of subdivided curl-reduced field curl.");
+    keyAction("7", "Show coarse parameterization of curl-reduced field.");
+    keyAction("8", "Show fine parameterization of subdivided curl-reduced field.");
 
     // Load a mesh
     igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka-subdivision.off", VMesh_coarse, FMesh_coarse);
     directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-subdivision.rawfield", N, rawFieldOrig);
     igl::edge_topology(VMesh_coarse, FMesh_coarse, EV_coarse, FE_coarse, EF_coarse);
 
+    // compute barycenters
     igl::barycenter(VMesh_coarse, FMesh_coarse, barycenters);
 
+    // Setup initial mathcing and determine singularities
     Eigen::VectorXi prinIndices;
     directional::curl_matching(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, FE_coarse, rawFieldOrig, matchingOrig, effortOrig, curlOrig);
     directional::effort_to_indices(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, effortOrig, matchingOrig, N, singVerticesOrig, singIndicesOrig);
@@ -460,6 +427,7 @@ int main(int argc, char *argv[])
     Eigen::VectorXi b; b.resize(1); b << 0;
     Eigen::MatrixXd bc; bc.resize(1, 6); bc << rawFieldOrig.row(0).head(6);
     Eigen::VectorXi blevel; blevel.resize(1); b << 1;
+    // Precompute polycurl reduction data.
     directional::polycurl_reduction_precompute(VMesh_coarse, FMesh_coarse, b, bc, blevel, rawFieldOrig, pcrdata);
 
     rawFieldCF = rawFieldOrig;
@@ -473,7 +441,7 @@ int main(int argc, char *argv[])
     singIndicesCF = singIndicesOrig;
 
 
-    //triangle mesh setup
+    //Setup coarse mesh
     viewer.data().set_mesh(VMesh_coarse, FMesh_coarse);
     viewer.data().set_colors(directional::default_mesh_color());
     viewer.data().show_lines = false;
@@ -485,9 +453,9 @@ int main(int argc, char *argv[])
         viewer.append_mesh();
     }
 
-    //update_triangle_mesh();
+    // Update view
     update_view();
-    //update_raw_field_mesh();
+
     viewer.selected_data_index = 0;
 
     //creating the AE2F operator
