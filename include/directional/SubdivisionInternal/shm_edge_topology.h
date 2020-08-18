@@ -127,7 +127,7 @@ namespace directional{
         Eigen::MatrixXi& SFE
     )
 	{
-		assert(F.cols() == 3, "Only triangle meshes supported");
+		assert((F.cols() == 3) &&  "Only triangle meshes supported");
 		SFE.resize(F.rows(), 6);
 		Eigen::MatrixXi rawEdges(3 * F.rows(), 2);
 		for (int f = 0; f < F.rows(); f++)

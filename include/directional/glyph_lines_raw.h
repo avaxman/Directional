@@ -38,9 +38,9 @@ namespace directional
                                   const Eigen::MatrixXi &F,
                                   const Eigen::MatrixXd &rawField,
                                   const Eigen::MatrixXd &glyphColor,
-                                  double lengthRatio,
-                                  double widthRatio,
-                                  double heightRatio,
+                                  double width,
+                                  double length,
+                                  double height,
                                   Eigen::MatrixXd &fieldV,
                                   Eigen::MatrixXi &fieldF,
                                   Eigen::MatrixXd &fieldC)
@@ -58,16 +58,15 @@ namespace directional
     P2.resize(F.rows() * N, 3);
     vectorColors.resize(F.rows() * N, 3);
     
-    //normals.array() *= widthRatio;
+    normals.array() *= width;
     //barycenters += normals;
     P1 = barycenters.replicate(N, 1);
     
     for (int i = 0; i < N; i++)
       P2.middleRows(F.rows()*i, F.rows()) = rawField.middleCols(3*i, 3);
     
-    P2.array() *= lengthRatio;
+    P2.array() *= length;
     P2 += P1;
-    
     
     // Duplicate colors so each cylinder gets the proper color
     if (glyphColor.rows() == 1)
@@ -82,7 +81,7 @@ namespace directional
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
     // Draw boxes
-    directional::line_boxes(P1, P2, vectNormals, widthRatio, heightRatio, vectorColors, fieldV, fieldF, fieldC);
+    directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, fieldV, fieldF, fieldC);
     
     
   }
@@ -98,7 +97,7 @@ namespace directional
                                   const double sizeRatio = 1.25)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColors, l, 0.1,0.01, fieldV, fieldF, fieldC);
+    glyph_lines_raw(V, F, rawField, glyphColors, l/30, l/6, l/50, fieldV, fieldF, fieldC);
   }
   
 }

@@ -31,8 +31,8 @@ namespace directional
   IGL_INLINE bool line_boxes(const Eigen::MatrixXd& P1,
                              const Eigen::MatrixXd& P2,
                              const Eigen::MatrixXd& normals,
-                             const double& widthRatio,
-                             const double& heightRatio,
+                             const double& width,
+                             const double& height,
                              const Eigen::MatrixXd& boxColors,
                              Eigen::MatrixXd& V,
                              Eigen::MatrixXi& T,
@@ -54,7 +54,7 @@ namespace directional
     0.0, 1.0, 1.0,
     
     TBox<<0,1,2,
-    2,3,0,
+    2,3,1,
     2,1,5,
     5,6,2,
     7,6,5,
@@ -72,13 +72,12 @@ namespace directional
     C.resize(NewColorSize,3);
  
     for (int i=0;i<P1.rows();i++){
-      double P12Length =(P2.row(i)-P1.row(i)).norm();
-      RowVector3d YAxis=(P2.row(i)-P1.row(i))/P12Length;
+      RowVector3d YAxis=(P2.row(i)-P1.row(i));
       RowVector3d ZAxis=normals.row(i);
       RowVector3d XAxis =YAxis.cross(ZAxis);
-      XAxis*=P12Length;
-      YAxis*=P12Length*widthRatio;
-      ZAxis*=P12Length*heightRatio;
+      XAxis.rowwise().normalize();
+      XAxis*=width;
+      ZAxis*=height;
       
       Matrix3d R; R<<XAxis, YAxis, ZAxis;
       

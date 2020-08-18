@@ -1,6 +1,7 @@
 #ifndef DIRECTIONAL_QUADRISECT_H
 #define DIRECTIONAL_QUADRISECT_H
 #include <Eigen/Eigen>
+#include <cassert>
 
 namespace directional
 {
@@ -62,7 +63,7 @@ namespace directional
 			int rightOdd = leftOdd + 1;
 			if (leftOdd == -1) rightOdd = currE + 2;
 			else if (EF0(e, 1) == -1) rightOdd = -1;
-			assert(EF0(e, 0) != -1 || EF0(e, 1) != -1, "Invalid edge detected, no faces connected");
+			assert((EF0(e, 0) != -1 || EF0(e, 1) != -1) && "Invalid edge detected, no faces connected");
 			currE = std::max(rightOdd, leftOdd) + 1;
 
 			// Update mapping

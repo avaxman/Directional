@@ -31,15 +31,14 @@ namespace directional
                                     const Eigen::MatrixXd& B2,
                                     const Eigen::MatrixXcd& polyVectorField,
                                     const int N,
-                                    Eigen::MatrixXd& rawField,
-                                    bool signSymmetry=false)
+                                    Eigen::MatrixXd& rawField)
   {
     rawField.resize(B1.rows(), 3 * N);
     
     for (int f = 0; f < B1.rows(); f++)
     {
       Eigen::VectorXcd roots(N);
-      if (!signSymmetry){
+      if (N%2!=0){
         // Find the roots of p(t) = (t - c0)^n using
         // https://en.wikipedia.org/wiki/Companion_matrix
         Eigen::MatrixXcd M = Eigen::MatrixXcd::Zero(N, N);
@@ -73,12 +72,11 @@ namespace directional
                                     const Eigen::MatrixXi& F,
                                     const Eigen::MatrixXcd& polyVectorField,
                                     const int N,
-                                    Eigen::MatrixXd& rawField,
-                                    bool signSymmetry=false)
+                                    Eigen::MatrixXd& rawField)
   {
     Eigen::MatrixXd B1, B2, x;
     igl::local_basis(V, F, B1, B2, x);
-    polyvector_to_raw(B1, B2, polyVectorField, N, rawField, signSymmetry);
+    polyvector_to_raw(B1, B2, polyVectorField, N, rawField);
   }
 }
 #endif

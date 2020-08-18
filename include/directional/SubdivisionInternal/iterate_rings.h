@@ -2,6 +2,8 @@
 #define DIRECTIONAL_ITERATE_RINGS_H
 #include <Eigen/Eigen>
 #include <vector>
+#include <cassert>
+
 
 namespace directional
 {
@@ -22,7 +24,7 @@ namespace directional
 		{
 			if (EF(i, 0) == -1) leftBoundary.push_back(i);
 			if (EF(i, 1) == -1) rightBoundary.push_back(i);
-			assert(EF(i, 0) != -1 || EF(i, 1) != -1, "Invalid edge found while looking for boundary edges. Edge has no faces");
+			assert((EF(i, 0) != -1 || EF(i, 1) != -1) && "Invalid edge found while looking for boundary edges. Edge has no faces");
 		}
 		boundaryEdges.resize(leftBoundary.size() + rightBoundary.size(), 2);
 
@@ -52,7 +54,7 @@ namespace directional
 		// Retrieve the boundary edges along with their side
 		Eigen::MatrixXi boundary;
 		boundary_edges(EF, boundary);
-		assert(boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0), "Boundary edges are not in canonical position (with boundary at the left)");
+		assert((boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0)) && "Boundary edges are not in canonical position (with boundary at the left)");
 
 		// Ideally, find max valence.
 		Eigen::VectorXi VE;

@@ -37,7 +37,7 @@ namespace directional
                                 const Eigen::MatrixXi& F,
                                 const Eigen::MatrixXi& EV,
                                 const Eigen::MatrixXi& EF,
-                                const Eigen::MatrixXi& FE, // TODO unused
+                                const Eigen::MatrixXi& FE,
                                 const Eigen::MatrixXd& rawField,
                                 Eigen::VectorXi& matching,
                                 Eigen::VectorXd& effort,
