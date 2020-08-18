@@ -4,7 +4,7 @@
 #include <igl/max.h>
 #include <directional/Gamma_suite.h>
 #include <directional/block_diag.h>
-#define SIMPLE_FILES {"bimba.off", "horser.off","chipped-torus.obj"}
+#define SIMPLE_FILES {"bimba.off", "horser.off","chipped-torus.obj","cheburashka-subdivision.off"}
 
 // New subdivision code
 #include <directional/Subdivision_new/shm_edge_topology.h>

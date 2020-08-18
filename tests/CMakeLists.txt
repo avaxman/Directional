@@ -11,7 +11,7 @@ option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 
 # Path to models to perform tests on
-set(TEST_SHARED_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../tutorials/shared CACHE PATH "location of resources for testing")
+set(TEST_SHARED_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../tests/shared CACHE PATH "location of resources for testing")
 
 
 # Add google test
@@ -21,13 +21,13 @@ add_subdirectory(${GTEST_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/gtest_bin)
 
 ### Adding libIGL and Directional: choose the path to your local copy
 find_package(LIBIGL REQUIRED QUIET)
-include(Directional)
+include(Directional RESULT_VARIABLE DIRECTIONAL_FOUND)
 
 # Enables testing
 enable_testing()
 
 # The libraries to link against.
-set(LINK_LIBS igl::core igl::opengl_glfw gtest)
+set(LINK_LIBS igl::core gtest)
 
 # Commutation tests
 add_executable(CommutationsTests CommutationTests.cpp)
@@ -44,4 +44,10 @@ target_link_libraries(OperatorTests PUBLIC ${LINK_LIBS})
 target_sources(OperatorTests PRIVATE Helpers.h DCELFixture.h)
 target_compile_definitions(OperatorTests PUBLIC "-DTEST_SHARED_PATH=\"${TEST_SHARED_PATH}\"")
 add_test(NAME OperatorTests COMMAND OperatorTests)
-
+# Operator tests
+add_executable(DirectionalOperatorTests DirectionalOperatorTests.cpp)
+target_include_directories(DirectionalOperatorTests INTERFACE ${DIRECTIONAL_SOURCE_DIR} ${GTEST_INCLUDE_DIR})
+target_link_libraries(DirectionalOperatorTests PUBLIC ${LINK_LIBS})
+target_sources(DirectionalOperatorTests PRIVATE Helpers.h DCELFixture.h)
+target_compile_definitions(DirectionalOperatorTests PUBLIC "-DTEST_SHARED_PATH=\"${TEST_SHARED_PATH}\"")
+add_test(NAME DirectionalOperatorTests COMMAND DirectionalOperatorTests)
