@@ -13,6 +13,8 @@
 #include <igl/cat.h>
 #define SIMPLE_FILES {"bimba.off", "horser.off", "chipped-torus.obj"}
 
+#include <directional/DirectionalGamma_Suite.h>
+
 #include <directional/FEM_suite.h>
 #include <directional/Gamma_suite.h>
 
@@ -114,93 +116,25 @@
 //}
 
 
-//double tolerance = 1e-7;
+double tolerance = 1e-7;
+
+using SparseMat = Eigen::SparseMatrix<double>;
+
 //
-//using SparseMat = Eigen::SparseMatrix<double>;
+// Prints dimensions of
 //
-//std::string description(const Eigen::SparseMatrix<double>& mat)
-//{
-//	std::stringstream str;
-//	str << "Cols:" << mat.cols() << ", rows: " << mat.rows();
-//	return str.str();
-//}
-//
-//using namespace directional_fixtures;
-//
+std::string printDimensions(const Eigen::SparseMatrix<double>& mat)
+{
+	std::stringstream str;
+	str << "Cols:" << mat.cols() << ", rows: " << mat.rows();
+	return str.str();
+}
+
+using namespace directional_fixtures;
+
 ///**
 // * Test for verifying that the DCEL works properly
 // */
-//TEST_P(DCELTestFixture, DCELTest)
-//{
-//	// Test the initial 
-//	DCEL dcel(ED);
-//	dcel.iterateRings(*this);
-//	// Check all nodes and edges are visited
-//	this->checkVisit();
-//
-//	EdgeData EDL;
-//	Eigen::MatrixXi E0ToEk;
-//	ED.quadrisect(m_mesh.V.rows(), E0ToEk, EDL);
-//	// Replace the edge data locally
-//
-//	EdgeData localED = ED;
-//	this->ED = EDL;
-//
-//	// Run again on quadrisected stuff
-//	DCEL dcel2(EDL);
-//	dcel2.iterateRings(*this);
-//	checkVisit();
-//
-//	this->ED = localED;
-//
-//	// Check that boundary is preserved
-//	Eigen::VectorXi vIsBoundary;
-//	ED.boundaryVerts(vIsBoundary);
-//	Eigen::VectorXi vKIsBoundary;
-//	EDL.boundaryVerts(vKIsBoundary);
-//	for(int e = 0; e < E0ToEk.rows(); e++)
-//	{
-//		const int bCount = vIsBoundary(ED.E(e, 0)) + vIsBoundary(ED.E(e, 1));
-//		const int sBound = vIsBoundary(ED.E(e, 0));
-//		const int eBound = vIsBoundary(ED.E(e, 1));
-//		const int lBound = ED.EF(e, 0) == -1 ? -1 : vIsBoundary(ED.F(ED.EF(e,0),ED.EI(e, 0)));
-//		const int rBound = ED.EF(e, 1) == -1 ? -1 : vIsBoundary(ED.F(ED.EF(e, 1), ED.EI(e, 1)));
-//
-//		// Iterate over all subdivided edge types: per edge flap, the initial edge is split into a ''start'' and ''end'' edge
-//		// In addition, the left and right faces are subdivided, giving the ''left'' and ''right'' edges that are ''parallel'' to the
-//		// initial edge
-//		for(int j = 0; j < 4; j++)
-//		{
-//			if (E0ToEk(e, j) != -1) {
-//				const int eIn = E0ToEk(e, j);
-//				int bCountInner = vKIsBoundary(EDL.E(eIn, 0)) + vKIsBoundary(EDL.E(eIn, 1));
-//				const int fullBound = lBound == -1 || rBound == -1;
-//				switch(j)
-//				{
-//					// ''Start'' edge
-//				case 0:
-//					EXPECT_TRUE(bCountInner == sBound + fullBound) << "Invalid boundary at start edge: " << bCountInner << " vs " << sBound + fullBound;
-//					break;
-//					// ''End'' edge
-//				case 1:
-//					EXPECT_TRUE(bCountInner == eBound + fullBound) << "Invalid boundary at end edge: " << bCountInner << " vs " << eBound + fullBound;
-//					break;
-//					// ''Left'' edge
-//				case 2:
-//					EXPECT_TRUE(bCountInner == (sBound & lBound) + (eBound & lBound)) << "Invalid boundary at left edge: " << bCountInner << " vs " << (sBound & lBound) + (eBound & lBound);
-//					break;
-//					// ''Right'' edge
-//				case 3:
-//					EXPECT_TRUE(bCountInner == (sBound & rBound) + (eBound & rBound)) << "Invalid boundary at right edge: " << bCountInner << " vs " << (sBound & rBound) + (eBound & rBound);
-//					break;
-//				default:
-//					break;
-//				}
-//			}
-//		}
-//	}
-//}
-//
 //TEST_P(MeshTestFixture, DECTests)
 //{
 //	using SMat = Eigen::SparseMatrix<double>;
@@ -213,18 +147,20 @@
 //	EXPECT_TRUE(els.size() == 0) << std::string("d1 d0 is not zero") + helpers::tripletsToString(els);
 //}
 //
-//TEST_P(MeshTestFixture, GammaInverseTest)
-//{
-//	using SMat = Eigen::SparseMatrix<double>;
-//
-//	// Construct gamma operators
-//	helpers::Gamma2_Ops ops_Gamma(m_mesh);
-//
-//	SMat possiblyId = ops_Gamma.Chi_To_Gamma2 * ops_Gamma.Gamma2_To_Chi;
-//	auto diffs = helpers::getDifferenceFromIdentity(possiblyId, tolerance);
-//	EXPECT_TRUE(diffs.size() == 0) << std::string("P P^Inv is not identity for Gamma2:") + helpers::tripletsToString(diffs);
-//	// Note that P^Inv P is not identity by definition but a normal component remover.
-//}
+TEST_P(MeshTestFixture, GammaInverseTest)
+{
+
+    directional::Matched_
+	using SMat = Eigen::SparseMatrix<double>;
+
+	// Construct gamma operators
+	helpers::Gamma2_Ops ops_Gamma(m_mesh);
+
+	SMat possiblyId = ops_Gamma.Chi_To_Gamma2 * ops_Gamma.Gamma2_To_Chi;
+	auto diffs = helpers::getDifferenceFromIdentity(possiblyId, tolerance);
+	EXPECT_TRUE(diffs.size() == 0) << std::string("P P^Inv is not identity for Gamma2:") + helpers::tripletsToString(diffs);
+	// Note that P^Inv P is not identity by definition but a normal component remover.
+}
 //
 //TEST_P(MeshTestFixture, G2G3ConversionTest)
 //{
@@ -317,12 +253,12 @@
 //	val = helpers::maxAbs(diff2);
 //	EXPECT_TRUE(val < tolerance) << std::string("D_Gamma differs from D_Chi * PInv: ") + std::to_string(val);
 //}
-//
-//INSTANTIATE_TEST_SUITE_P(OperatorTests, MeshTestFixture,
-//	testing::ValuesIn(SIMPLE_FILES));
-//
-//int main(int argc, char **argv) {
-//
-//	::testing::InitGoogleTest(&argc, argv);
-//	return RUN_ALL_TESTS();
-//}
+
+INSTANTIATE_TEST_SUITE_P(OperatorTests, MeshTestFixture,
+	testing::ValuesIn(SIMPLE_FILES));
+
+int main(int argc, char **argv) {
+
+	::testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
+}
