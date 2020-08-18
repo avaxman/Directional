@@ -1,24 +1,19 @@
 #ifndef DIRECTIONAL_SUBDIVIDE_DIRECTIONALS_H
 #define DIRECTIONAL_SUBDIVIDE_DIRECTIONALS_H
 #include <Eigen/Eigen>
-#include "build_directional_subdivision_operators.h"
-#include "shm_edge_topology.h"
-#include "shm_halfcurl_coefficients.h"
-#include "shm_oneform_coefficients.h"
-#include "Sc_directional_triplet_provider.h"
-#include "Se_directional_triplet_provider.h"
-#include <directional/Gamma_suite.h>
-#include "Sv_triplet_provider.h"
-#include "build_subdivision_operators.h"
-#include <directional/DirectionalGamma_Suite.h>
+#include <directional/SubdivisionInternal/build_directional_subdivision_operators.h>
+#include <directional/SubdivisionInternal/shm_edge_topology.h>
+#include <directional/SubdivisionInternal/shm_halfcurl_coefficients.h>
+#include <directional/SubdivisionInternal/shm_oneform_coefficients.h>
+#include <directional/SubdivisionInternal/Sc_directional_triplet_provider.h>
+#include <directional/SubdivisionInternal/Se_directional_triplet_provider.h>
+#include <directional/SubdivisionInternal/Gamma_suite.h>
+#include <directional/SubdivisionInternal/Sv_triplet_provider.h>
+#include <directional/SubdivisionInternal/build_subdivision_operators.h>
+#include <directional/SubdivisionInternal/DirectionalGamma_Suite.h>
 
 namespace directional
 {
-    namespace subdivision
-    {
-
-        /**
-     */
         inline void columnfunction_to_rawfunction(const Eigen::VectorXd& columnFunction, int N, int elementsPerN, Eigen::MatrixXd& rawFunction)
         {
             rawFunction.resize(columnFunction.size() / (N * elementsPerN), N * elementsPerN);
@@ -109,9 +104,9 @@ namespace directional
         std::vector<Eigen::SparseMatrix<double>> out, svOut;
         using coeffProv = coefficient_provider_t;
 
-        auto Sv_provider = triplet_provider_wrapper<coeffProv>(loop_coefficients, Sv_triplet_provider<coeffProv>);
-        auto Sc_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_halfcurl_coefficients, Sc_directional_triplet_provider<coeffProv>);
-        auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(shm_oneform_coefficients, Se_directional_triplet_provider<coeffProv>);
+        auto Sv_provider = triplet_provider_wrapper<coeffProv>(subdivision::loop_coefficients, subdivision::Sv_triplet_provider<coeffProv>);
+        auto Sc_directional_provider = directional_triplet_provider_wrapper<coeffProv>(subdivision::shm_halfcurl_coefficients, subdivision::Sc_directional_triplet_provider<coeffProv>);
+        auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(subdivision::shm_oneform_coefficients, subdivision::Se_directional_triplet_provider<coeffProv>);
         build_directional_subdivision_operators(V, F, EV, EF, EI, SFE, matching, initialSizes, targetLevel, N,
             Fk, EVK, EFK, EI_fine, SFE_fine, matchingK, out, Se_directional_provider, Sc_directional_provider);
 
@@ -152,7 +147,6 @@ namespace directional
 
         // Convert resulting column directional in fine level back to rawfield format
         columndirectional_to_rawfield(fineDirectional, N, rawFieldK);
-    }
     }
 }
 #endif 

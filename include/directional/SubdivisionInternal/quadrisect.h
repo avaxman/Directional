@@ -1,6 +1,5 @@
 #ifndef DIRECTIONAL_QUADRISECT_H
 #define DIRECTIONAL_QUADRISECT_H
-#include <directional/dir_assert.h>
 #include <Eigen/Eigen>
 
 namespace directional
@@ -63,7 +62,7 @@ namespace directional
 			int rightOdd = leftOdd + 1;
 			if (leftOdd == -1) rightOdd = currE + 2;
 			else if (EF0(e, 1) == -1) rightOdd = -1;
-			DIR_ASSERT_M(EF0(e, 0) != -1 || EF0(e, 1) != -1, "Invalid edge detected, no faces connected");
+			assert(EF0(e, 0) != -1 || EF0(e, 1) != -1, "Invalid edge detected, no faces connected");
 			currE = std::max(rightOdd, leftOdd) + 1;
 
 			// Update mapping
@@ -109,7 +108,7 @@ namespace directional
 			E1(end, 0) = vCount + e; // New odd vertex
 			E1(end, 1) = E0(e, 1);
 		}
-		DIR_ASSERT(currE == newECount);
+		assert(currE == newECount);
 
 		// Reconstruct the F matrix for the quadrisected mesh
 		for (int f = 0; f < SFE1.rows(); f++)

@@ -1,7 +1,6 @@
 #ifndef DIRECTIONAL_ITERATE_RINGS_H
 #define DIRECTIONAL_ITERATE_RINGS_H
 #include <Eigen/Eigen>
-#include <directional/dir_assert.h>
 #include <vector>
 
 namespace directional
@@ -53,7 +52,7 @@ namespace directional
 		// Retrieve the boundary edges along with their side
 		Eigen::MatrixXi boundary;
 		boundary_edges(EF, boundary);
-		DIR_ASSERT_M(boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0), "Boundary edges are not in canonical position (with boundary at the left)");
+		assert(boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0), "Boundary edges are not in canonical position (with boundary at the left)");
 
 		// Ideally, find max valence.
 		Eigen::VectorXi VE;

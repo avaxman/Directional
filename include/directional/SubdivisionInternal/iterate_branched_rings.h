@@ -1,8 +1,7 @@
 #ifndef DIRECTIONAL_ITERATE_BRANCHED_RINGS_H
 #define DIRECTIONAL_ITERATE_BRANCHED_RINGS_H
 #include <Eigen/Eigen>
-#include <directional/dir_assert.h>
-#include "directional/DirectionalGamma_Suite.h"
+#include "directional/SubdivisionInternal/DirectionalGamma_Suite.h"
 #include <vector>
 
 namespace directional

@@ -19,7 +19,6 @@
 #include <igl/per_face_normals.h>
 #include <directional/FEM_suite.h>
 #include <igl/cat.h>
-#include <directional/dir_assert.h>
 
 
 namespace directional
@@ -311,7 +310,7 @@ namespace directional
 		SMat G3ToOneForm, C;
 		Gamma3_To_Oneform(EF, EI , faceCount, G3ToOneForm);
 		Gamma3_Curl(EF, EI, faceCount, C);
-		DIR_ASSERT(C.rows() == G3ToOneForm.rows());
+		assert(C.rows() == G3ToOneForm.rows());
 		igl::cat(1, G3ToOneForm, Eigen::SparseMatrix<double>(0.5 * C), G3ToDC);
 	}
 

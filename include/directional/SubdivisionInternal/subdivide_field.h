@@ -2,7 +2,7 @@
 #define DIRECTIONAL_SUBDIVIDE_FIELD_H
 #include <Eigen/Eigen>
 #include "gamma_subdivision_matrix.h"
-#include <directional/Gamma_suite.h>
+#include <directional/SubdivisionInternal/Gamma_suite.h>
 namespace directional
 {
     /**
