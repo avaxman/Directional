@@ -97,6 +97,6 @@ endif()
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("801_OperatorDerivation")
 endif()
-
+add_subdirectory("901_SubdivisionParameterization")
 
 
