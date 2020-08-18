@@ -18,6 +18,105 @@ namespace directional{
 		// indicates clockwise.
         Eigen::MatrixXi SFE;
 	};
+    inline void shm_edge_topology(
+        const Eigen::MatrixXi& F,
+        const Eigen::MatrixXi& E,
+        const Eigen::MatrixXi& EF,
+        Eigen::MatrixXi& EI,
+        Eigen::MatrixXi& SFE
+    )
+    {
+        SFE = Eigen::MatrixXi::Constant(F.rows(), 6, -1);
+        EI = Eigen::MatrixXi::Constant(EF.rows(), 2,-1);
+        for (int e = 0; e < EF.rows(); ++e)
+        {
+            auto leftF = EF(e, 0);
+            if(leftF != -1)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    auto v = F(leftF, j);
+                    if (E(e, 0) != v && E(e, 1) != v)
+                    {
+                        SFE(leftF, j) = e;
+                        SFE(leftF, 3 + j) = 0;
+                        EI(e, 0) = j;
+                    }
+                }
+            }
+            
+            auto rightF = EF(e, 1);
+            if(rightF != -1)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    auto v = F(rightF, j);
+                    if (E(e, 0) != v && E(e, 1) != v)
+                    {
+                        SFE(rightF, j) = e;
+                        SFE(rightF, 3 + j) = 1;
+                        EI(e, 1) = j;
+                    }
+                }
+            }
+        }
+    }
+
+    inline void shm_edge_topology(
+        const Eigen::MatrixXi& F,
+        const Eigen::MatrixXi& E,
+        const Eigen::MatrixXi& EF,
+        const Eigen::MatrixXi& FE,
+        bool isEdgeTopologyBased,
+        Eigen::MatrixXi& EI,
+        Eigen::MatrixXi& SFE
+    )
+    {
+        SFE = Eigen::MatrixXi(EF.rows(), 6);
+        for(int f = 0; f < FE.rows(); ++f)
+        {
+            // SHM follows edge_flaps based stuff, so compensate
+            // Difference: edge FE(f,0) of edgetopology is between F(f,0) and F(f,0)
+            // instead of opposite corner F(f,0), i.e. between vertices F(f,1) and F(f,2) (possibly flipped)
+            if(isEdgeTopologyBased)
+            {
+                SFE(f, 2) = FE(f, 0);
+                SFE(f, 0) = FE(f, 1);
+                SFE(f, 1) = FE(f, 2);
+            }
+            else
+            {
+                SFE.block(f, 0, 1, 3) = FE.row(f);
+            }
+            for(int j = 0; j < 3; ++j)
+            {
+                SFE(f, 3 + j) = F(f, (j + 1) % 3) == E(SFE(f, j), 0) ? 0 : 1;
+                // Update EI
+                EI(SFE(f, j), SFE(f, 3 + j)) = j;
+            }
+        }
+    }
+    inline void shm_edge_topology_to_igledgetopology(
+        const Eigen::MatrixXi& F,
+        const Eigen::MatrixXi& E,
+        const Eigen::MatrixXi& EF,
+        const Eigen::MatrixXi& SFE,
+        bool isEdgeTopologyBased,
+        Eigen::MatrixXi& EI,
+        Eigen::MatrixXi& FE
+    )
+    {
+        FE = Eigen::MatrixXi(EF.rows(), 3);
+        for (int f = 0; f < FE.rows(); ++f)
+        {
+            for(int j = 0; j <3; ++j)
+            {
+                auto e = SFE(f, j);
+                FE(f, (j + 1) % 3) = e;
+                EI(e, EF(e, 0) == f ? 0 : 1) = (j + 1) % 3;
+            }
+        }
+    }
 
     inline void shm_edge_topology(
         const Eigen::MatrixXi& F,
