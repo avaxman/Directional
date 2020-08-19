@@ -226,7 +226,7 @@ void parameterize_mesh(const Eigen::MatrixXd& VWhole,
   std::cout << "Solving parameterization" << std::endl;
   Eigen::MatrixXd cutReducedUV,  cornerWholeUV;
   directional::parameterize(VWhole, FWhole, FE, combedField, lengthRatio, pd, VCut, FCut, isInteger, cutReducedUV, cutFullUV, cornerWholeUV);
-  cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2);
+  cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2).eval();
   std::cout << "Done!" << std::endl;
   
   /*output.clear();
