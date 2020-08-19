@@ -101,6 +101,41 @@ namespace directional
         columndirectional_to_rawfield(fineDirectional, N, rawField_fine);
     }
 
+    /**
+     * Subdivides a raw field directional on a coarse mesh defined by V,F to a raw field directional in subdivision level 'targetLevel', 
+     * on the mesh as given by output V_fine, F_fine. Determines the matching for the directional field by applying directional::curl_matching
+     * on the coarse mesh and field, and fixing this during subdivision.
+     * Input:
+     * - V |V| x 3 matrix of vertex coordinates
+     * - F |F| x  3 matrix of face to vertex connectivity, given in CCW order relative to the normal
+     * - rawField |F| x (3 * N) matrix containing the N-directional raw field representation
+     * - targetLevel The target subdivision level to subdivide to
+     * Output:
+     * - V_fine |V_fine| x 3 matrix of fine mesh vertex coordinates
+     * - F_fine |F_fine| x 3 matrix of face to vertex connectivity of fine mesh
+     * - rawField_fine |F_fine| x (3 * N) matrix containing the fine level N-directional raw field
+     */
+    inline void subdivide_directionals(
+        const Eigen::MatrixXd& V,
+        const Eigen::MatrixXi& F,
+        const Eigen::MatrixXd& rawField,
+        int targetLevel,
+        Eigen::MatrixXd& V_fine,
+        Eigen::MatrixXi& F_fine,
+        Eigen::MatrixXd& rawField_fine)
+    {
+        // Compute internal edge topology
+        Eigen::MatrixXi EV, EF, EI, SFE, EI_et, FE_et, EI_fine, SFE_fine;
+        shm_edge_topology(F, V.rows(), EV, EF, EI, SFE);
+        shm_edge_topology_to_igledgetopology(F, EV, EF, SFE, EI_et, FE_et);
+        // Compute curl matching
+        Eigen::VectorXi matching, matching_fine;
+        {
+            Eigen::VectorXd effort, curlNorm;
+            directional::curl_matching(V, F, EV, EF, FE_et, rawField, matching, effort, curlNorm);
+        }
+
+        subdivide_directionals(V, F, EV, EF, rawField, matching, targetLevel, V_fine, F_fine, EV_fine, EF_fine, rawField_fine, matching_fine);
     }
 }
 #endif 
