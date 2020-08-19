@@ -3,21 +3,7 @@
 #include <Eigen/Eigen>
 #include <igl/sortrows.h>
 namespace directional{
-	struct EdgeData{
-		// Source to target connections per edge
-        Eigen::MatrixXi E;
-		// Edge to face connection, with left face in column 0,
-		// right face in column 1
-        Eigen::MatrixXi EF;
-		// Edge index in face, given as the corner number of the
-		// vertex opposite the edge in the face
-        Eigen::MatrixXi EI;
-		// Face to edge connection, with the index of the edge opposite
-		// corner c in column c. In addition, stores the orientation 
-		// relative to the face at 3 + c, where 0 indicates CCW and 1
-		// indicates clockwise.
-        Eigen::MatrixXi SFE;
-	};
+	
     inline void shm_edge_topology(
         const Eigen::MatrixXi& F,
         const Eigen::MatrixXi& E,
@@ -96,12 +82,31 @@ namespace directional{
             }
         }
     }
+
+    /**
+     * TODO remove this in favour of centralized approach to edge topology
+     * Converts the edge topology as used in the subdivision construction to igl::edge_topology compliant matrices.
+     * The main difference is that the face-to-edge connectivity in igl::edge_topology makes it so that edge FE(f,0) 
+     * is the edge between vertices F(f,0) and F(f,1), whereas the subdivision topology uses SFE, where edge SFE(f,0)
+     * is the edge between vertices F(f,1,) and F(f,2), i.e. opposite corner (vertex) 0 of the face.
+     * 
+     * Input:
+     * - F |F| x 3 matrix of face to vertex connectivity
+     * - E |E| x 2 matrix of edge to vertex connectivity, with edge e directed from vertex E(e,0) to E(e,1).
+     * - EF |E| x 2 matrix of edge to face connectivity. Given the direction as described by matrix E, EF(e,0) is the face
+     * left of edge e and EF(e,1) the face to the right
+     * - SFE |F| x 6 matrix of face to edge connectivity, such that edge SFE(f,c) is opposite corner c in face f. In addition,
+     * contains orientations of the edges, such that edge SFE(f,c) is CCW with respect to f if SFE(f,c+3) = 0, and CW if this is 1.
+     * Output:
+     * - EI |E| x 2 matrix such that for edge e, EI(e,i) is the index of edge e in face EF(e,i). Note that this is different for
+     * shm topology and igl::edge_topology, since this depends on FE/SFE.
+     * - FE |F| x 3 matrix of face to edge connectivity such that edge FE(f,c) is between vertices F(f,c) and F(f,(c+1)%3).  
+     */
     inline void shm_edge_topology_to_igledgetopology(
         const Eigen::MatrixXi& F,
         const Eigen::MatrixXi& E,
         const Eigen::MatrixXi& EF,
         const Eigen::MatrixXi& SFE,
-        bool isEdgeTopologyBased,
         Eigen::MatrixXi& EI,
         Eigen::MatrixXi& FE
     )
@@ -194,14 +199,6 @@ namespace directional{
                 std::swap(EI(e, 0), EI(e, 1));
 			}
 		}
-	}
-
-    inline void shm_edge_topology(
-		const Eigen::MatrixXi& F,
-        const int& vertexCount,
-		EdgeData& data
-	){
-		shm_edge_topology(F, vertexCount, data.E, data.EF, data.EI, data.SFE);
 	}
 }
 #endif

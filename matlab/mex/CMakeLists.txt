@@ -1,8 +1,0 @@
-add_subdirectory(buildSubdivisionOperators)
-add_subdirectory(exportSubdivisionOperators)
-add_subdirectory(curlFreeParametrization)
-add_subdirectory(buildDirectionalSubdivisionOperators)
-add_subdirectory(findMatchingAndSings)
-add_subdirectory(curlFreeOptimization)
-add_subdirectory(edgeTopology)
-add_subdirectory(buildSv)
