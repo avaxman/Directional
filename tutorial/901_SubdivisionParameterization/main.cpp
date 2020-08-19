@@ -179,8 +179,11 @@ void computeDirectionalCurl(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, 
     curlColumn = C * columndirectional_to_g2 * columnDirectionalFine;
 
     // Compute l2 norm
-    Eigen::MatrixXd curlPerEdge;
-    directional::columnfunction_to_rawfunction(curlColumn, N, 1, curlPerEdge);
+    Eigen::MatrixXd curlPerEdge(curlColumn.rows() / N, N);
+    for(int n = 0; n < N; ++n)
+    {
+        curlPerEdge.col(n) = curlColumn.segment(n*curlPerEdge.rows(), curlPerEdge.rows());
+    }
     auto sqNorm = curlPerEdge.rowwise().norm();
     maxSqNorm = sqNorm.maxCoeff();
     // Copy to faces
