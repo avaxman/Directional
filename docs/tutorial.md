@@ -306,6 +306,14 @@ Mixed-integer parameterization is demonstrated in [Example 502]({{ repo_url }}/t
 
 ![([Example 502]({{ repo_url }}/tutorial/502_MixedIntegerParameterization/main.cpp)) Left to right: directional field,  rotationally-seamless parameterization (before rounding), fully-seamless parameterization.](images/502_MixedIntegerParameterization.png)
 
+## Chapter 6: Subdivision Fields
+
+### 601 Subdivision Directional Fields
+
+Directional fields can be used with subdivision surfaces in a manner which is *structure preserving*. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  [^Custers_2020], which we demonstrate in [Example 601]({{repo_url }}/tutorial/601_SubdivisionFields/main.cpp). We optimize for a curl free field ```rawFieldCoarse```, subdivide it into ```rawFieldFine``` using ```subdivide_field()```, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  [Example 303](#303-polycurl-reduction)), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process. 
+
+![([Example 601]({{ repo_url }}/tutorial/601_SubdivisionFields/main.cpp)) Left to right: coarse (curl-free directional field, coarse parameterization, fine subdivided field, fine parameterization](images/601_SubdivisionFields.png)
+
 
 ## Outlook for continuing development
 
@@ -342,3 +350,4 @@ Directional is a budding project, and there are many algorithms in the state-of-
 [^solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf), 2017.
 [^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
+[^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf), 2020.
