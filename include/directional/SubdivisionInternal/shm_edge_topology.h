@@ -112,6 +112,7 @@ namespace directional{
     )
     {
         FE = Eigen::MatrixXi(EF.rows(), 3);
+        EI = Eigen::MatrixXi(EF.rows(), 2);
         for (int f = 0; f < FE.rows(); ++f)
         {
             for(int j = 0; j <3; ++j)

@@ -522,7 +522,8 @@ int main(int argc, char *argv[])
   
   //directional::subdivide_field(VCoarse, FCoarse, EVCoarse, EFCoarse, combedFieldCoarse, combedMatchingCoarse, targetLevel, VFine, FFine, EVFine, EFFine, rawFieldFine, matchingFine);
 
-  
+  igl::edge_topology(VFine, FFine, EVFine, FEFine, EFFine);
+    
   directional::curl_matching(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, effortFine, curlFine);
   directional::effort_to_indices(VFine, FFine, EVFine, EFFine, effortFine, matchingFine, N, singVerticesFine, singIndicesFine);
   directional::combing(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, combedFieldFine);
