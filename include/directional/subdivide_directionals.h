@@ -11,78 +11,31 @@
 #include <directional/SubdivisionInternal/Sv_triplet_provider.h>
 #include <directional/SubdivisionInternal/build_subdivision_operators.h>
 #include <directional/SubdivisionInternal/DirectionalGamma_Suite.h>
+#include <directional/rawfield_to_columndirectional.h>
+#include <directional/columndirectional_to_rawfield.h>
 
 namespace directional
 {
-        inline void columnfunction_to_rawfunction(const Eigen::VectorXd& columnFunction, int N, int elementsPerN, Eigen::MatrixXd& rawFunction)
-        {
-            rawFunction.resize(columnFunction.size() / (N * elementsPerN), N * elementsPerN);
-            const int rows = rawFunction.rows();
-            for (int n = 0; n < N; ++n)
-            {
-                for (int i = 0; i < rows; ++i)
-                {
-                    for(int j = 0; j < elementsPerN; ++j)
-                    {
-                        rawFunction(i, n * elementsPerN + j) = columnFunction(n * elementsPerN * rows + elementsPerN * i + j);
-                    }
-                }
-            }
-        }
-        /**
-     */
-        inline void rawfunction_to_columnfunction(const Eigen::MatrixXd& rawFunction, int N, int elementsPerN, Eigen::VectorXd& columnFunction)
-        {
-            columnFunction.resize(rawFunction.rows() * rawFunction.cols());
-            const int rowCount = rawFunction.rows();
-            for (int r = 0; r < rowCount; ++r)
-            {
-                for (int n = 0; n < N; ++n)
-                {
-                    for(int j = 0; j < elementsPerN; ++j)
-                    {
-                        columnFunction(n * elementsPerN * rowCount + elementsPerN * r) = rawFunction(r, n * elementsPerN);
-                    }
-                }
-            }
-        }
     /**
-     * \brief Reshapes a column directional, given as [x1y1z1x2y2z2...]' per directional, stacked vertically, to 
-     * a raw form with  [x1y1z1_0, x1y1z1_1,..] per row so that the row has all directionals per face
-     * \param columnDirectional N * F * 3 x 1 matrix of directional field in column form
-     * \param N Number of directional fields
-     * \param rawField F x N * 3 marix containing raw field representation.
+     * Subdivides a raw field directional on a coarse mesh defined by V,F to a raw field directional in subdivision level 'targetLevel', 
+     * on the mesh as given by output V_fine, F_fine. Assumes a matching is given, this matching will be fixed during subdivision.
+     * Input:
+     * - V |V| x 3 matrix of vertex coordinates
+     * - F |F| x  3 matrix of face to vertex connectivity, given in CCW order relative to the normal
+     * - EV |E| x  2 matrix of edge to vertex connectivity, such that edge e is between vertices EV(e,0) and EV(e,1).
+     * - EF |E| x  2 matrix of edge to face connectivity, such that face EF(e,0) is to the left of e and EF(e,1) is to the right of e.
+     * - rawField |F| x (3 * N) matrix containing the N-directional raw field representation
+     * - matching |E| x 1 vector describing the directional matching over edge e such that directional k in face EF(e,0) matches to 
+     * directional (matching(e)+k)% N in face EF(e,1).
+     * - targetLevel The target subdivision level to subdivide to
+     * Output:
+     * - V_fine |V_fine| x 3 matrix of fine mesh vertex coordinates
+     * - F_fine |F_fine| x 3 matrix of face to vertex connectivity of fine mesh
+     * - EV_fine |E| x  2 matrix of edge to vertex connectivity for fine mesh.
+     * - EF_fine |E| x  2 matrix of edge to face connectivity fine mesh.
+     * - rawField_fine |F_fine| x (3 * N) matrix containing the fine level N-directional raw field
+     * - matching_fine |E_fine| x 1 vector containing the fine matching.
      */
-    inline void columndirectional_to_rawfield(const Eigen::VectorXd& columnDirectional, int N, Eigen::MatrixXd& rawField)
-    {
-        rawField.resize(columnDirectional.size() / (N * 3), N * 3);
-        const int fCount = rawField.rows();
-        for(int n = 0; n < N; ++n)
-        {
-            for(int f = 0; f < fCount; ++f)
-            {
-                rawField(f, n * 3) = columnDirectional(n * 3 * fCount + 3 * f);
-                rawField(f, n * 3 + 1) = columnDirectional(n * 3 * fCount + 3 * f + 1);
-                rawField(f, n * 3 + 2) = columnDirectional(n * 3 * fCount + 3 * f + 2);
-            }
-        }
-    }
-
-    inline void rawfield_to_columndirectional(const Eigen::MatrixXd& rawField, int N, Eigen::VectorXd& columnDirectional)
-    {
-        columnDirectional.resize(rawField.rows() * rawField.cols());
-        const int fCount = rawField.rows();
-        for (int f = 0; f < fCount; ++f)
-        {
-            for (int n = 0; n < N; ++n)
-            {
-                columnDirectional(n * 3 * fCount + 3 * f) = rawField(f, n * 3);
-                columnDirectional(n * 3 * fCount + 3 * f + 1) = rawField(f, n * 3 + 1);
-                columnDirectional(n * 3 * fCount + 3 * f + 2) = rawField(f, n * 3 + 2);
-            }
-        }
-    }
-     
     inline void subdivide_directionals(const Eigen::MatrixXd& V, 
         const Eigen::MatrixXi& F, 
         const Eigen::MatrixXi& EV,
@@ -90,12 +43,12 @@ namespace directional
         const Eigen::MatrixXd& rawField,
         const Eigen::VectorXi& matching, 
         int targetLevel, 
-        Eigen::MatrixXd& Vk,
-        Eigen::MatrixXi& Fk,
-        Eigen::MatrixXi& EVK,
-        Eigen::MatrixXi& EFK,
-        Eigen::MatrixXd& rawFieldK, 
-        Eigen::VectorXi& matchingK)
+        Eigen::MatrixXd& V_fine,
+        Eigen::MatrixXi& F_fine,
+        Eigen::MatrixXi& EV_fine,
+        Eigen::MatrixXi& EF_fine,
+        Eigen::MatrixXd& rawField_fine, 
+        Eigen::VectorXi& matching_fine)
     {
         Eigen::MatrixXi EI, SFE, EI_fine, SFE_fine;
         shm_edge_topology(F, EV, EF, EI,SFE);
@@ -108,19 +61,20 @@ namespace directional
         auto Sc_directional_provider = directional_triplet_provider_wrapper<coeffProv>(subdivision::shm_halfcurl_coefficients, subdivision::Sc_directional_triplet_provider<coeffProv>);
         auto Se_directional_provider = directional_triplet_provider_wrapper<coeffProv>(subdivision::shm_oneform_coefficients, subdivision::Se_directional_triplet_provider<coeffProv>);
         build_directional_subdivision_operators(V, F, EV, EF, EI, SFE, matching, initialSizes, targetLevel, N,
-            Fk, EVK, EFK, EI_fine, SFE_fine, matchingK, out, Se_directional_provider, Sc_directional_provider);
+            F_fine, EV_fine, EF_fine, EI_fine, SFE_fine, matching_fine, out, Se_directional_provider, Sc_directional_provider);
 
         // Construct regular vertex subdivision
-        build_subdivision_operators(V, F, EV, EF, EI, SFE, std::vector<int>({(int)V.rows()}), targetLevel, Fk, EVK, EFK, EI_fine, SFE_fine, svOut, Sv_provider);
+        build_subdivision_operators(V, F, EV, EF, EI, SFE, std::vector<int>({(int)V.rows()}), targetLevel, 
+        F_fine, EV_fine, EF_fine, EI_fine, SFE_fine, svOut, Sv_provider);
 
         // Get fine level vertices
-        Vk = svOut[0] * V;
+        V_fine = svOut[0] * V;
 
         Eigen::SparseMatrix<double> G2_To_Decomp_0, Gamma2_To_PCVF_K, Matched_Gamma2_To_PCVF_K, S_Gamma_directional, S_Decomp, Decomp_To_G2K, columnDirectional_To_G2;
         // Construct fine gamma operator
         directional::Matched_Gamma2_To_AC(EI, EF, SFE, matching, N, G2_To_Decomp_0);
-        directional::Matched_AC_To_Gamma2(EFK, SFE_fine, EI_fine, matchingK, N, Decomp_To_G2K);
-        directional::Gamma2_reprojector(Vk, Fk, EVK, SFE_fine, EFK, Gamma2_To_PCVF_K);
+        directional::Matched_AC_To_Gamma2(EF_fine, SFE_fine, EI_fine, matching_fine, N, Decomp_To_G2K);
+        directional::Gamma2_reprojector(V_fine, F_fine, EV_fine, SFE_fine, EF_fine, Gamma2_To_PCVF_K);
         // Construct the full reprojection for all directionals. Since gammas are face local,
         // the matching is not needed
         {
@@ -140,13 +94,13 @@ namespace directional
         // The directional gamma subdivision operator
         S_Gamma_directional = Decomp_To_G2K * S_Decomp*G2_To_Decomp_0;
 
-        Eigen::VectorXd subdivAc = S_Decomp * G2_To_Decomp_0 * columnDirectional_To_G2 * columnDirectional;
-        std::cout << "Max C after subdivision:" << subdivAc.block(subdivAc.rows() / 2, 0, subdivAc.rows() / 2, 0).maxCoeff() << std::endl;
         // Compute the fine directional
         fineDirectional = Matched_Gamma2_To_PCVF_K * S_Gamma_directional * columnDirectional_To_G2 * columnDirectional;
 
         // Convert resulting column directional in fine level back to rawfield format
-        columndirectional_to_rawfield(fineDirectional, N, rawFieldK);
+        columndirectional_to_rawfield(fineDirectional, N, rawField_fine);
+    }
+
     }
 }
 #endif 
