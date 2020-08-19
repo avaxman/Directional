@@ -104,7 +104,7 @@ namespace directional
     /**
      * Subdivides a raw field directional on a coarse mesh defined by V,F to a raw field directional in subdivision level 'targetLevel', 
      * on the mesh as given by output V_fine, F_fine. Determines the matching for the directional field by applying directional::curl_matching
-     * on the coarse mesh and field, and fixing this during subdivision.
+     * on the coarse mesh and field, and keeping it fixed during subdivision.
      * Input:
      * - V |V| x 3 matrix of vertex coordinates
      * - F |F| x  3 matrix of face to vertex connectivity, given in CCW order relative to the normal
