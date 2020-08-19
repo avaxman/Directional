@@ -26,7 +26,7 @@
 #include <directional/write_raw_field.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
-#include <directional/subdivide_directionals.h>
+#include <directional/subdivide_field.h>
 
 #include "tutorial_shared_path.h"
 #include "directional/cut_mesh_with_singularities.h"
@@ -201,7 +201,7 @@ void construct_fine_level_parameterization()
         
         std::cout << "Coarse max l2 curl before: " << maxSqNorm << std::endl;
     }
-    directional::subdivide_directionals(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, combedFieldCF, combedMatchingCF, targetLevel, VMesh_fine, FMesh_fine,
+    directional::subdivide_field(VMesh_coarse, FMesh_coarse, EV_coarse, EF_coarse, combedFieldCF, combedMatchingCF, targetLevel, VMesh_fine, FMesh_fine,
         EV_fine, EF_fine, rawfield_fine, matchingCF_fine);
 
     {
