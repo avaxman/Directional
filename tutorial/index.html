@@ -487,6 +487,26 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chapter-6-subdivision-fields" class="md-nav__link">
+    Chapter 6: Subdivision Fields
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#601-subdivision-directional-fields" class="md-nav__link">
+    601 Subdivision Directional Fields
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#outlook-for-continuing-development" class="md-nav__link">
     Outlook for continuing development
   </a>
@@ -802,6 +822,26 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chapter-6-subdivision-fields" class="md-nav__link">
+    Chapter 6: Subdivision Fields
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#601-subdivision-directional-fields" class="md-nav__link">
+    601 Subdivision Directional Fields
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#outlook-for-continuing-development" class="md-nav__link">
     Outlook for continuing development
   </a>
@@ -1069,6 +1109,13 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 <figure><img src="../images/502_MixedIntegerParameterization.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/502_MixedIntegerParameterization/main.cpp">Example 502</a>) Left to right: directional field,  rotationally-seamless parameterization (before rounding), fully-seamless parameterization.</figcaption>
 </figure>
 </p>
+<h2 id="chapter-6-subdivision-fields">Chapter 6: Subdivision Fields<a class="headerlink" href="#chapter-6-subdivision-fields" title="Permanent link">&para;</a></h2>
+<h3 id="601-subdivision-directional-fields">601 Subdivision Directional Fields<a class="headerlink" href="#601-subdivision-directional-fields" title="Permanent link">&para;</a></h3>
+<p>Directional fields can be used with subdivision surfaces in a manner which is <em>structure preserving</em>. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  <sup id="fnref:Custers_2020"><a class="footnote-ref" href="#fn:Custers_2020">17</a></sup>, which we demonstrate in <a href="{{repo_url }}/tutorial/601_SubdivisionFields/main.cpp">Example 601</a>. We optimize for a curl free field <code>rawFieldCoarse</code>, subdivide it into <code>rawFieldFine</code> using <code>subdivide_field()</code>, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  <a href="#303-polycurl-reduction">Example 303</a>), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process. </p>
+<p>
+<figure><img src="../images/601_SubdivisionFields.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/601_SubdivisionFields/main.cpp">Example 601</a>) Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.</figcaption>
+</figure>
+</p>
 <h2 id="outlook-for-continuing-development">Outlook for continuing development<a class="headerlink" href="#outlook-for-continuing-development" title="Permanent link">&para;</a></h2>
 <p>Directional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:</p>
 <ol>
@@ -1145,6 +1192,9 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 </li>
 <li id="fn:vaxman_2016">
 <p>Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, <a href="https://github.com/avaxman/DirectionalFieldSynthesis">Directional Field Synthesis, Design, and Processing</a>, 2016.&#160;<a class="footnote-backref" href="#fnref:vaxman_2016" title="Jump back to footnote 16 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:vaxman_2016" title="Jump back to footnote 16 in the text">&#8617;</a></p>
+</li>
+<li id="fn:Custers_2020">
+<p>Bram Custers, Amir Vaxman, <a href="https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf">Subdivision Directional Fields</a>, 2020.&#160;<a class="footnote-backref" href="#fnref:Custers_2020" title="Jump back to footnote 17 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
