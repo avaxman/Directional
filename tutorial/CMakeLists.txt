@@ -35,6 +35,7 @@ option(TUTORIALS_CHAPTER2 "Compile chapter 2" ON)
 option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
 option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
 option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
+option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
 
 
 # Store location of tutorial/shared directory
@@ -49,7 +50,6 @@ if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_GlyphRendering")
   add_subdirectory("102_PickingEditing")
   add_subdirectory("103_StreamlineTracing")
-  add_subdirectory("104_DynamicStreamlines")
 endif()
 
 # Chapter 2
@@ -79,24 +79,8 @@ if(TUTORIALS_CHAPTER5)
 endif()
 
 # Chapter 6
-if(TUTORIALS_CHAPTER5)
-  add_subdirectory("601_DifferentialOperators")
-  add_subdirectory("602_HodgeDecomposition")
-  add_subdirectory("603_HarmonicBasis")
-  add_subdirectory("604_MassMatrices")
+if(TUTORIALS_CHAPTER6)
+add_subdirectory("601_SubdivisionFields")
 endif()
-
-# Chapter 7
-if(TUTORIALS_CHAPTER5)
-  add_subdirectory("701_OneForms")
-  add_subdirectory("702_HarmonicFormsDesign")
-  add_subdirectory("703_SEC")
-endif()
-
-# Chapter 8
-if(TUTORIALS_CHAPTER5)
-  add_subdirectory("801_OperatorDerivation")
-endif()
-add_subdirectory("901_SubdivisionParameterization")
 
 

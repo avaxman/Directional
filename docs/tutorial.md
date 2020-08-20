@@ -312,7 +312,7 @@ Mixed-integer parameterization is demonstrated in [Example 502]({{ repo_url }}/t
 
 Directional fields can be used with subdivision surfaces in a manner which is *structure preserving*. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  [^Custers_2020], which we demonstrate in [Example 601]({{repo_url }}/tutorial/601_SubdivisionFields/main.cpp). We optimize for a curl free field ```rawFieldCoarse```, subdivide it into ```rawFieldFine``` using ```subdivide_field()```, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  [Example 303](#303-polycurl-reduction)), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process. 
 
-![([Example 601]({{ repo_url }}/tutorial/601_SubdivisionFields/main.cpp)) Left to right: coarse (curl-free directional field, coarse parameterization, fine subdivided field, fine parameterization](images/601_SubdivisionFields.png)
+![([Example 601]({{ repo_url }}/tutorial/601_SubdivisionFields/main.cpp)) Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.](images/601_SubdivisionFields.png)
 
 
 ## Outlook for continuing development
