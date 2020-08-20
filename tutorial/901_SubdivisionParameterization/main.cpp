@@ -109,7 +109,7 @@ void update_view()
   if (viewingMode==COARSE_CURL){
     viewer.data_list[0].set_mesh(VCoarse, FCoarse);
     Eigen::VectorXd faceCurl = AE2FCoarse*curlCoarse;
-    igl::jet(faceCurl, 0.0,0.005, CMeshCoarse);
+    igl::jet(faceCurl, 0.0,0.01, CMeshCoarse);
     viewer.data_list[0].set_colors(CMeshCoarse);
     viewer.data_list[0].show_texture=false;
   }
@@ -148,7 +148,7 @@ void update_view()
   if (viewingMode==FINE_CURL){
     viewer.data_list[0].set_mesh(VFine, FFine);
     Eigen::VectorXd faceCurl = AE2FFine*curlFine;
-    igl::jet(faceCurl, 0.0,0.005, CMeshFine);
+    igl::jet(faceCurl, 0.0,0.01, CMeshFine);
     viewer.data_list[0].set_colors(CMeshFine);
     viewer.data_list[0].show_texture=false;
   }
@@ -218,7 +218,7 @@ void parameterize_mesh(const Eigen::MatrixXd& VWhole,
   
   directional::setup_parameterization(symmFunc, VWhole, FWhole, EV, EF, FE, combedMatching, singVertices, pd, VCut, FCut);
   
-  double lengthRatio = 0.01;
+  double lengthRatio = 0.03;
   bool isInteger = false;  //do not do translational seamless.
   std::cout << "Solving parameterization" << std::endl;
   Eigen::MatrixXd cutReducedUV,  cornerWholeUV;
