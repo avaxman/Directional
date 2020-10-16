@@ -248,23 +248,6 @@ namespace directional
       }
     }
     
-    cout<<"allAngles.sum()-igl::PI*|F|: "<<allAngles.sum()-igl::PI*F.rows()<<endl;
-    //cornerAngleSum(i,0/1) is the sum of the two angles at EV(i,0/1) respectively
-    /*MatrixXd cornerAngleSum(innerEdges.size(),2);
-    for (int i=0;i<innerEdges.rows();i++){
-      int inFace1=0;
-      while (F(EF(innerEdges(i),0),inFace1)!=EV(innerEdges(i),0))
-        inFace1=(inFace1+1)%3;
-      int inFace2=0;
-      while (F(EF(innerEdges(i),1),inFace2)!=EV(innerEdges(i),1))
-        inFace2=(inFace2+1)%3;
-      
-      cornerAngleSum(i,0)=allAngles(EF(innerEdges(i),0),inFace1);//+allAngles(EF(innerEdges(i),1),(inFace2+1)%3);
-      cornerAngleSum(i,1)=/*allAngles(EF(innerEdges(i),0),(inFace1+1)%3)+allAngles(EF(innerEdges(i),1),inFace2);
-    }
-    
-     cout<<"cornerAngleSum.sum()-igl::PI*|F|: "<<cornerAngleSum.sum()-igl::PI*F.rows()<<endl;*/
-    
     //for each cycle, summing up all its internal angles negatively  + either 2*pi*|cycle| for internal cycles or pi*|cycle| for boundary cycles.
     cycleCurvature=VectorXd::Zero(basisCycles.rows());
     VectorXi isBigCycle=VectorXi::Ones(basisCycles.rows());  //TODO: retain it rather then reverse-engineer...
@@ -272,21 +255,6 @@ namespace directional
     for (int i=0;i<V.rows();i++)  //inner cycles
       if (!isBoundary(i))
         isBigCycle(vertex2cycle(i))=0;
-    
-    //cout<<"isBigCycle: "<<isBigCycle<<endl;
-    /*for (int i=basisCycles.rows()-numGenerators;i<basisCycles.rows();i++)  //generators
-      pior2pi(vertex2cycle(i))=2*igl::PI;*/
-    
-    //cout<<"pior2pi: "<<pior2pi<<endl;
-    
-    //for both vertex and boundary cycles, just giving the angle defects
-    /*for (int i=0;i<F.rows();i++)
-      for (int j=0;j<3;j++)
-        cycleCurvature(vertex2cycle(F(i,j)))-=allAngles(i,j);
-    
-    //adding 2*pi or pi according to boundary
-    for (int i=0;i<numV;i++)
-      cycleCurvature(vertex2cycle(i))+=(isBoundary(i) ? igl::PI : 2.0*igl::PI);*/
     
     //getting the 4 corners of each edge to allocated later to cycles according to the sign of the edge.
     vector<set<int>> cornerSets(basisCycles.rows());
@@ -322,29 +290,7 @@ namespace directional
         cycleCurvature(i)-=allAngles(*si);
     }
      
-        
     
-    //cout<<"cycleCurvature.sum()+igl::PI*|F|: "<<cycleCurvature.sum()+igl::PI*F.rows()<<endl;
-    
-    //cycleCurvature.segment(0,basisCycles.rows()-numGenerators)+=pior2pi.segment(0,basisCycles.rows()-numGenerators);
-          
-      
-    //for every vertex on the cycle, we are adding pior2pi(vertex)-cornerAnglesum(vertex)
-    /*for (int k=0; k<basisCycles.outerSize(); ++k)
-      for (SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it)
-        cycleCurvature(it.row())+=pior2pi(it.row())-cornerAngleSum(it.col(), it.value()<0 ? 0 : 1);*/
-    
-    /*cout<<"cycleCurvature.sum(): "<<cycleCurvature.segment(0,basisCycles.rows()-numGenerators).sum()<<endl;
-    
-    //sanity check with Gaussian curvature
-    VectorXd K;
-    igl::gaussian_curvature(V,F,K);
-    for (int i=0;i<numV;i++)
-      if ((!isBoundary[i])&&(abs(K(i)-cycleCurvature(vertex2cycle(i)))>10e-6))
-        cout<<"For vertex "<<i<<" K="<<K(i)<<" and cycleCurvature="<<cycleCurvature(vertex2cycle(i))<<endl;*/
-    
-    
-
     /***********************Deprecated***************************/
     //Explanation: currently computing holonomy as curvature.
     /*VectorXd edgeParallelAngleChange(basisCycles.cols());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
@@ -369,7 +315,7 @@ namespace directional
       while (cycleCurvature(i) < -M_PI) cycleCurvature(i) += 2.0*M_PI;
     }*/
     
-    /***************End of "SHOULD BE DEPRECATED"****************/
+    /***************End of "DEPRECATED"****************/
   
   }
 }
