@@ -239,12 +239,12 @@ namespace directional
     
     //Correct computation of cycle curvature by adding angles
     //getting corner angle sum
-    MatrixXd allAngles(F.rows(),3);
+    VectorXd allAngles(3*F.rows());
     for (int i=0;i<F.rows();i++){
       for (int j=0;j<3;j++){
         RowVector3d edgeVec12=V.row(F(i,(j+1)%3))-V.row(F(i,j));
         RowVector3d edgeVec13=V.row(F(i,(j+2)%3))-V.row(F(i,j));
-        allAngles(i,j)=acos(edgeVec12.normalized().dot(edgeVec13.normalized()));
+        allAngles(3*i+j)=acos(edgeVec12.normalized().dot(edgeVec13.normalized()));
       }
     }
     
@@ -267,24 +267,61 @@ namespace directional
     
     //for each cycle, summing up all its internal angles negatively  + either 2*pi*|cycle| for internal cycles or pi*|cycle| for boundary cycles.
     cycleCurvature=VectorXd::Zero(basisCycles.rows());
-    VectorXd pior2pi=VectorXd::Constant(V.rows(),igl::PI);
+    VectorXi isBigCycle=VectorXi::Ones(basisCycles.rows());  //TODO: retain it rather then reverse-engineer...
 
     for (int i=0;i<V.rows();i++)  //inner cycles
       if (!isBoundary(i))
-        pior2pi(i)=2*igl::PI;
+        isBigCycle(vertex2cycle(i))=0;
+    
+    //cout<<"isBigCycle: "<<isBigCycle<<endl;
     /*for (int i=basisCycles.rows()-numGenerators;i<basisCycles.rows();i++)  //generators
       pior2pi(vertex2cycle(i))=2*igl::PI;*/
     
     //cout<<"pior2pi: "<<pior2pi<<endl;
     
     //for both vertex and boundary cycles, just giving the angle defects
-    for (int i=0;i<F.rows();i++)
+    /*for (int i=0;i<F.rows();i++)
       for (int j=0;j<3;j++)
         cycleCurvature(vertex2cycle(F(i,j)))-=allAngles(i,j);
     
     //adding 2*pi or pi according to boundary
     for (int i=0;i<numV;i++)
-      cycleCurvature(vertex2cycle(i))+=(isBoundary(i) ? igl::PI : 2.0*igl::PI);
+      cycleCurvature(vertex2cycle(i))+=(isBoundary(i) ? igl::PI : 2.0*igl::PI);*/
+    
+    //getting the 4 corners of each edge to allocated later to cycles according to the sign of the edge.
+    vector<set<int>> cornerSets(basisCycles.rows());
+    vector<set<int>> vertexSets(basisCycles.rows());
+    MatrixXi edgeCorners(innerEdges.size(),4);
+    for (int i=0;i<innerEdges.rows();i++){
+      int inFace1=0;
+      while (F(EF(innerEdges(i),0),inFace1)!=EV(innerEdges(i),0))
+        inFace1=(inFace1+1)%3;
+      int inFace2=0;
+      while (F(EF(innerEdges(i),1),inFace2)!=EV(innerEdges(i),1))
+        inFace2=(inFace2+1)%3;
+      
+      edgeCorners(i,0)=EF(innerEdges(i),0)*3+inFace1;
+      edgeCorners(i,1)=EF(innerEdges(i),1)*3+(inFace2+1)%3;
+      edgeCorners(i,2)=EF(innerEdges(i),0)*3+(inFace1+1)%3;
+      edgeCorners(i,3)=EF(innerEdges(i),1)*3+inFace2;
+    }
+    
+    for (int k=0; k<basisCycles.outerSize(); ++k)
+      for (SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it){
+        cornerSets[it.row()].insert(edgeCorners(it.col(),it.value()<0 ? 0 : 2));
+        cornerSets[it.row()].insert(edgeCorners(it.col(),it.value()<0 ? 1 : 3));
+        vertexSets[it.row()].insert(EV(innerEdges(it.col()), it.value()<0 ? 0 : 1));
+      }
+    
+    for (int i=0;i<cornerSets.size();i++){
+      if (isBigCycle(i))
+        cycleCurvature(i)=igl::PI*(double)(vertexSets[i].size());
+      else
+        cycleCurvature(i)=2.0*igl::PI;
+      for (set<int>::iterator si=cornerSets[i].begin();si!=cornerSets[i].end();si++)
+        cycleCurvature(i)-=allAngles(*si);
+    }
+     
         
     
     //cout<<"cycleCurvature.sum()+igl::PI*|F|: "<<cycleCurvature.sum()+igl::PI*F.rows()<<endl;
@@ -297,16 +334,15 @@ namespace directional
       for (SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it)
         cycleCurvature(it.row())+=pior2pi(it.row())-cornerAngleSum(it.col(), it.value()<0 ? 0 : 1);*/
     
-    cout<<"cycleCurvature.sum(): "<<cycleCurvature.sum()<<endl;
+    /*cout<<"cycleCurvature.sum(): "<<cycleCurvature.segment(0,basisCycles.rows()-numGenerators).sum()<<endl;
     
     //sanity check with Gaussian curvature
-    /*VectorXd K;
+    VectorXd K;
     igl::gaussian_curvature(V,F,K);
     for (int i=0;i<numV;i++)
       if ((!isBoundary[i])&&(abs(K(i)-cycleCurvature(vertex2cycle(i)))>10e-6))
         cout<<"For vertex "<<i<<" K="<<K(i)<<" and cycleCurvature="<<cycleCurvature(vertex2cycle(i))<<endl;*/
     
-    //TODO: generators
     
 
     /***********************Deprecated***************************/
