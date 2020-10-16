@@ -40,6 +40,9 @@ namespace directional
     using namespace std;
     Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
     
+    //cout<<"dIndices: "<<dIndices<<endl;
+    //cout<<"cycleCurvature.sum(): "<<cycleCurvature.sum()<<endl;
+    //cout<<"basisCycles * effort: "<<basisCycles * effort<<endl;
     //Eigen::VectorXd matchingIndices = basisCycles*matching.cast<double>();
     
     //cout<<"dIndices - matchingIndices: "<<dIndices-matchingIndices<<endl;
@@ -53,6 +56,8 @@ namespace directional
     indices.conservativeResize(dIndices.size());
     for (int i=0;i<indices.size();i++)
       indices(i)=std::round(dIndices(i));
+    
+     //cout<<"indices: "<<indices<<endl;
   
   }
   
@@ -78,9 +83,13 @@ namespace directional
       effortInner(i)=effort(innerEdges(i));
     Eigen::VectorXi fullIndices;
     directional::effort_to_indices(basisCycles, effortInner, matching, cycleCurvature, N, fullIndices);
-    Eigen::VectorXi indices(V.size());
+    std::cout<<"fullIndices: "<<fullIndices<<std::endl;
+    Eigen::VectorXi indices(V.rows());
     for (int i=0;i<V.rows();i++)
       indices(i)=fullIndices(vertex2cycle(i));
+    
+    std::cout<<"vertex2cycle: "<<vertex2cycle<<std::endl;
+     std::cout<<"indices: "<<indices<<std::endl;
     
     std::vector<int> singVerticesList;
     std::vector<int> singIndicesList;
