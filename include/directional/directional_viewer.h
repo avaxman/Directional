@@ -19,7 +19,7 @@
 
 //This file contains the default libdirectional visualization paradigms
 namespace directional
-{
+  {
   
 #define NUMBER_OF_SUBMESHES 5  //triangle mesh, field, singularities, seams, streamlines
   
@@ -52,18 +52,20 @@ namespace directional
         
         selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
         
+        data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(V,F);
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
         
         if (VMesh.size()<meshNum+1){
-          VMesh.reserve(meshNum+1);
-          FMesh.reserve(meshNum+1);
-          CMesh.reserve(meshNum+1);
+          VMesh.resize(meshNum+1);
+          FMesh.resize(meshNum+1);
+          CMesh.resize(meshNum+1);
           
           VMesh[meshNum]=V;
           FMesh[meshNum]=F;
           CMesh[meshNum]=C;
         }
+        
       }
     }
     
@@ -92,6 +94,7 @@ namespace directional
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
       directional::glyph_lines_raw(VMesh[meshNum], FMesh[meshNum], rawField, fieldColors, VField, FField, CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
@@ -105,6 +108,7 @@ namespace directional
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
       directional::singularity_spheres(VMesh[meshNum], FMesh[meshNum], N, singVertices, singIndices, VSings, FSings, CSings);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+2].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_colors(CSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_lines=false;
@@ -118,6 +122,7 @@ namespace directional
       Eigen::MatrixXd VSeams, CSeams;
       Eigen::MatrixXi FSeams;
       directional::seam_lines(VMesh[meshNum],FMesh[meshNum],EV,combedMatching, VSeams,FSeams,CSeams);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+3].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_mesh(VSeams, FSeams);
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_colors(CSeams);
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_lines = false;
@@ -131,21 +136,9 @@ namespace directional
     {
       Eigen::MatrixXd VStream, CStream;
       Eigen::MatrixXi FStream;
-      directional::line_cylinders(P1,P2, width, C.replicate(P1.rows(),1), 4, VStream, FStream, CStream);
+      directional::line_cylinders(P1,P2, width, C, 4, VStream, FStream, CStream);
       
-      //extending current streamline mesh
-      /*FField.conservativeResize(FField.rows()+FFieldNew.rows(),3);
-      FField.block(FField.rows()-FFieldNew.rows(),0,FFieldNew.rows(),3)=FFieldNew.array()+VField.rows();
-      
-      VField.conservativeResize(VField.rows()+VFieldNew.rows(),3);
-      VField.block(VField.rows()-VFieldNew.rows(),0,VFieldNew.rows(),3) = VFieldNew;
-      
-      CField.conservativeResize(CField.rows()+CFieldNew.rows(),3);
-      CField.block(CField.rows()-CFieldNew.rows(),0,CFieldNew.rows(),3) = CFieldNew;*
-       
-      
-      
-      viewer.selected_data_index=1;  //streamline mesh*/
+      data_list[NUMBER_OF_SUBMESHES*meshNum+4].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_mesh(VStream, FStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_colors(CStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_lines = false;
@@ -164,8 +157,8 @@ namespace directional
     }
     
     void toggle_streamlines(const int meshNum=0){
-         data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces;
-       }
+      data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces;
+    }
     
     //static functions for default values
     //Mesh colors
@@ -241,7 +234,7 @@ namespace directional
     
   };  //of DirectionalViewer class
   
-}
+  }
 
 
 #endif

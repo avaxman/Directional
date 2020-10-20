@@ -24,6 +24,7 @@ Eigen::MatrixXd V;
 Eigen::MatrixXi F;
 Eigen::MatrixXcd powerField;
 Eigen::MatrixXd rawField;
+Eigen::MatrixXd P1,P2;
 
 directional::StreamlineData sl_data;
 directional::StreamlineState sl_state;
@@ -52,7 +53,14 @@ bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
   value = value / 0.5;
   igl::parula(value, color[0], color[1], color[2]);
   
-  directional_viewer->set_streamlines(sl_state.start_point, sl_state.end_point, color.replicate(sl_state.start_point.rows(),1));
+  P1.conservativeResize(P1.rows()+sl_state.start_point.rows(),3);
+  P2.conservativeResize(P2.rows()+sl_state.end_point.rows(),3);
+  P1.block(P1.rows()-sl_state.start_point.rows(),0,sl_state.start_point.rows(),3)=sl_state.start_point;
+  P2.block(P2.rows()-sl_state.end_point.rows(),0,sl_state.end_point.rows(),3)=sl_state.end_point;
+  
+  directional_viewer->set_streamlines(P1, P2, color.replicate(P2.rows(),1));
+  
+  
   
   anim_t += anim_t_dir;
   
@@ -88,6 +96,7 @@ int main(int argc, char *argv[])
   
   //triangle mesh
   viewer.set_mesh(V,F);
+  viewer.data().show_lines=false;
   
   // Viewer Settings
   viewer.callback_pre_draw = &pre_draw;
@@ -103,7 +112,10 @@ int main(int argc, char *argv[])
   v.rowwise().normalize();
   
   //streamline mesh
-  viewer.set_streamlines(sl_state0.start_point, sl_state0.start_point + 0.0005 * v, Eigen::MatrixXd::Constant(sl_state0.start_point.rows(),3,1.0));
+  P1=sl_state0.start_point;
+  P2=sl_state0.start_point + 0.0005 * v;
+  viewer.set_streamlines(P1, P2, Eigen::MatrixXd::Constant(sl_state0.start_point.rows(),3,1.0));
+  
   
   cout << "Press [space] to toggle animation" << endl;
   viewer.launch();
