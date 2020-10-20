@@ -1,29 +1,25 @@
-#include <igl/opengl/glfw/Viewer.h>
 #include <igl/readOFF.h>
 #include <igl/edge_topology.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/euler_characteristic.h>
 #include <igl/readDMAT.h>
 #include <igl/writeDMAT.h>
-#include <directional/visualization_schemes.h>
-#include <directional/dual_cycles.h>
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
-#include <directional/effort_to_indices.h>
 #include <directional/index_prescription.h>
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
 #include <directional/power_field.h>
-#include <directional/singularity_spheres.h>
-#include <directional/glyph_lines_raw.h>
+#include <directional/directional_viewer.h>
 
+
+Eigen::MatrixXd V;
+Eigen::MatrixXi F;
 Eigen::VectorXi singVertices,singIndices;
-Eigen::VectorXi prinSingVertices;
+Eigen::VectorXi prinSingVertices, prinSingIndices;
 
 Eigen::SparseMatrix<double> basisCycles;
-Eigen::MatrixXi FMesh, FField, FSings;
-Eigen::MatrixXd VMesh, VField, VSings;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::MatrixXd barycenters, faceNormals;
 Eigen::VectorXi matching;
@@ -41,7 +37,7 @@ double globalRotation=0.0;
 typedef enum {TRIVIAL_ONE_SING, TRIVIAL_PRINCIPAL_MATCHING, IMPLICIT_FIELD} ViewingModes;
 ViewingModes viewingMode=TRIVIAL_ONE_SING;
 
-igl::opengl::glfw::Viewer viewer;
+directional::DirectionalViewer viewer;
 
 
 void update_directional_field()
@@ -50,22 +46,21 @@ void update_directional_field()
   using namespace Eigen;
   using namespace std;
   VectorXd rotationAngles;
-  VectorXi prinSingIndices=VectorXi::Zero(basisCycles.rows());
+  prinSingIndices=VectorXi::Zero(basisCycles.rows());
   for (int i=0;i<singVertices.size();i++)
     prinSingIndices(singVertices[i])=singIndices[i];
   
-  double TCError;
+  double IPError;
   Eigen::VectorXi currIndices;
-  directional::index_prescription(VMesh,FMesh,innerEdges, basisCycles,cycleCurvature,prinSingIndices,N,rotationAngles, TCError);
+  directional::index_prescription(V,F,innerEdges, basisCycles,cycleCurvature,prinSingIndices,N,rotationAngles, IPError);
   
   Eigen::MatrixXd representative;
-  directional::rotation_to_representative(VMesh, FMesh,EV,EF,rotationAngles,N,globalRotation, representative);
-  directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
+  directional::rotation_to_representative(V, F,EV,EF,rotationAngles,N,globalRotation, representative);
+  directional::representative_to_raw(V,F,representative,N, rawField);
   
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING){
     Eigen::VectorXd effort;
-    directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
-    directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,prinSingVertices, prinSingIndices);
+    directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort,prinSingVertices, prinSingIndices);
   }
   
   if (viewingMode==IMPLICIT_FIELD){
@@ -75,31 +70,21 @@ void update_directional_field()
     
     Eigen::VectorXd effort;
     Eigen::MatrixXcd powerField;
-    directional::power_field(VMesh, FMesh, b, bc, N, powerField);
-    directional::power_to_representative(VMesh,FMesh, powerField,N,representative);
+    directional::power_field(V, F, b, bc, N, powerField);
+    directional::power_to_representative(V,F, powerField,N,representative);
     representative.rowwise().normalize();
-    directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
-    directional::principal_matching(VMesh, FMesh,EV,EF,FE,rawField, matching, effort);
-    directional::effort_to_indices(VMesh,FMesh,EV,EF,effort,matching,N,prinSingVertices, prinSingIndices);
+    directional::representative_to_raw(V,F,representative,N, rawField);
+    directional::principal_matching(V, F,EV,EF,FE,rawField, matching, effort,prinSingVertices, prinSingIndices);
   }
   
-  Eigen::MatrixXd CField, CSings;
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
+  viewer.set_field(rawField);
   
   if (viewingMode==TRIVIAL_ONE_SING)
-    directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices,  VSings, FSings, CSings);
-  
+    viewer.set_singularities(N, singVertices, singIndices);
+   
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    directional::singularity_spheres(VMesh, FMesh, N, prinSingVertices, prinSingIndices,  VSings, FSings, CSings);
+    viewer.set_singularities(N, prinSingVertices, prinSingIndices);
   
-  
-  viewer.data_list[1].clear();
-  viewer.data_list[1].set_mesh(VField, FField);
-  viewer.data_list[1].set_colors(CField);
-  
-  viewer.data_list[2].clear();
-  viewer.data_list[2].set_mesh(VSings, FSings);
-  viewer.data_list[2].set_colors(CSings);
 }
 
 
@@ -148,12 +133,12 @@ int main()
   "6        Change global rotation" << std::endl;
   using namespace Eigen;
   using namespace std;
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", VMesh, FMesh);
-  igl::edge_topology(VMesh, FMesh, EV,FE,EF);
-  igl::barycenter(VMesh,FMesh,barycenters);
-  igl::per_face_normals(VMesh,FMesh,faceNormals);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", V, F);
+  igl::edge_topology(V, F, EV,FE,EF);
+  igl::barycenter(V,F,barycenters);
+  igl::per_face_normals(V,F,faceNormals);
   
-  directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   
   igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",b);
   
@@ -165,18 +150,12 @@ int main()
   singIndices(1)=N;
   
   //triangle mesh
-  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  Eigen::MatrixXd C=directional::default_mesh_color().replicate(F.rows(),1);
   
   for (int i = 0; i < b.rows(); i++)
-    CMesh.row(b(i)) = directional::selected_face_color();
+    C.row(b(i)) = directional::selected_face_color();
   
-  viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(CMesh);
-  
-  //directional & singularities meshes
-  viewer.append_mesh();
-  viewer.data().show_lines=false;
-  viewer.append_mesh();
+  viewer.set_mesh(V, F, C);
   viewer.data().show_lines=false;
   update_directional_field();
   

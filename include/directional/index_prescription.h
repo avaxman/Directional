@@ -89,6 +89,8 @@ namespace directional
   }
 }
 
+//TODO: version that doesn't expose any cycles.
+
 
 
 

@@ -1,20 +1,17 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
-#include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
-#include <directional/effort_to_indices.h>
-#include <directional/singularity_spheres.h>
+#include <directional/directional_viewer.h>
 
 
 int currF=0, N;
-Eigen::MatrixXi FMesh, FField, FSings;
-Eigen::MatrixXd VMesh, VField, VSings;
+Eigen::MatrixXi F, FField, FSings;
+Eigen::MatrixXd V, VField, VSings;
 Eigen::MatrixXd CMesh, CField, CSings;
 Eigen::MatrixXd rawField, barycenters;
 Eigen::VectorXd effort;
@@ -22,20 +19,21 @@ Eigen::VectorXi matching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
 
-igl::opengl::glfw::Viewer viewer;
+directional::DirectionalViewer viewer;
 
 bool zeroPressed=false;
 
 void update_triangle_mesh()
 {
-  
-  CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  //TODO: allow automatic picked-face highlighting
+  CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
   CMesh.row(currF)=directional::selected_face_color();
-  viewer.data_list[0].set_colors(CMesh);
+  viewer.set_mesh_colors(CMesh);
 }
 
 void update_raw_field_mesh()
 {
+  //TODO: allow default combed colorings in faces
   Eigen::Vector3i otherFaces;
   Eigen::Vector3i zeroInFace;
   for (int i=0;i<3;i++){
@@ -43,17 +41,14 @@ void update_raw_field_mesh()
     zeroInFace(i)=(EF(FE(currF,i),0)==currF ? matching(FE(currF,i)) : -matching(FE(currF,i)));
   }
   
-  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
+  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(F.rows(),N);
   glyphColors.row(currF)=directional::indexed_glyph_colors(rawField.row(currF));
   for (int i=0;i<N;i++)
     for (int j=0;j<3;j++)
       glyphColors.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphColors.row(currF).segment(3*i,3);
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors, VField, FField, CField);
+  viewer.set_field(rawField, glyphColors);
   
-  viewer.data_list[1].set_mesh(VField, FField);
-  viewer.data_list[1].set_colors(CField);
-  viewer.data_list[1].show_lines=false;
 }
 
 
@@ -69,32 +64,37 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 // Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+  directional::DirectionalViewer* directional_viewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
       // Select vector
     case '0': zeroPressed=true; break;
     case GLFW_KEY_SPACE:
-      viewer.data_list[2].show_faces=!viewer.data_list[2].show_faces;
+      directional_viewer->toggle_singularities();
       break;
   }
   return true;
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
 {
+  //TODO: encapsulated picking
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+   directional::DirectionalViewer* directional_viewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   if (!zeroPressed)
     return false;
   int fid;
   Eigen::Vector3d baryInFace;
   
   // Cast a ray in the view direction starting from the mouse position
-  double x = viewer.current_mouse_x;
-  double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, VMesh, FMesh, fid, baryInFace))
+  double x = directional_viewer->current_mouse_x;
+  double y = directional_viewer->core().viewport(3) - directional_viewer->current_mouse_y;
+  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), directional_viewer->core().view,
+                               directional_viewer->core().proj, directional_viewer->core().viewport, V, F, fid, baryInFace))
   {
     
     //choosing face
@@ -113,31 +113,20 @@ int main()
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
   "  <space>  Show/hide singularities" << std::endl;
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", VMesh, FMesh);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", V, F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
-  igl::edge_topology(VMesh, FMesh, EV, FE, EF);
-  igl::barycenter(VMesh, FMesh, barycenters);
+  igl::edge_topology(V, F, EV, FE, EF);
+  igl::barycenter(V, F, barycenters);
   
-  directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,singVertices,singIndices);
-  
+  directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
+
   //triangle mesh setup
-  viewer.data().set_mesh(VMesh, FMesh);
+  viewer.set_mesh(V, F);
   update_triangle_mesh();
-  
-  //apending and updating raw field mesh
-  viewer.append_mesh();
   update_raw_field_mesh();
   
   //singularity mesh
-  viewer.append_mesh();
-  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
-  viewer.data().set_mesh(VSings, FSings);
-  viewer.data().set_colors(CSings);
-  viewer.data_list[2].show_faces = true;
-  viewer.data_list[2].show_lines = false;
-  
-  viewer.selected_data_index=0;
+  viewer.set_singularities(N, singVertices, singIndices);
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
