@@ -17,9 +17,10 @@
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
 #include <directional/representative_to_raw.h>
+#include <directional/effort_to_indices.h>
 
 namespace directional
-{
+  {
   // Takes a field in raw form and computes both the curl-matching effort and the consequent curl matching on every edge.
   // Important: if the Raw field in not CCW ordered, the result is meaningless.
   // Input:
@@ -32,7 +33,8 @@ namespace directional
   // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
   //  effort: #E principal matching efforts.
   // curlNorm: the L2-norm of the curl vector
-
+  //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
+  //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N).
   IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
                                 const Eigen::MatrixXi& F,
                                 const Eigen::MatrixXi& EV,
@@ -41,7 +43,9 @@ namespace directional
                                 const Eigen::MatrixXd& rawField,
                                 Eigen::VectorXi& matching,
                                 Eigen::VectorXd& effort,
-                                Eigen::VectorXd& curlNorm)
+                                Eigen::VectorXd& curlNorm,
+                                Eigen::VectorXi& singVertices,
+                                Eigen::VectorXi& singIndices)
   {
     
     typedef std::complex<double> Complex;
@@ -101,34 +105,38 @@ namespace directional
         RowVector3d vecjg = rawField.block(EF(i, 1), 3 * ((matching(i)+j+N)%N), 1, 3);
         Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
         Complex transvecjfc = vecjfc*edgeTransport(i);
-         //cout<<"transvecjfc, vecjgc: "<<transvecjfc<<","<<vecjgc<<endl;
+        //cout<<"transvecjfc, vecjgc: "<<transvecjfc<<","<<vecjgc<<endl;
         currEffort+= arg(vecjgc / transvecjfc);
         //cout<<"arg(vecjgc / transvecjfc): "<<arg(vecjgc / transvecjfc)<<endl;
       }
       
       effort(i) = currEffort;
-
+      
     }
     
+    //Getting final singularities and their indices
+    effort_to_indices(V,F,EV, EF, effort,matching,N,singVertices,singIndices);
   }
   
   //version with representative vector (for N-RoSy) as input.
   IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
-                                     const Eigen::MatrixXi& F,
-                                     const Eigen::MatrixXi& EV,
-                                     const Eigen::MatrixXi& EF,
-                                     const Eigen::MatrixXi& FE,
-                                     const Eigen::MatrixXd& representativeField,
-                                     const int N,
-                                     Eigen::VectorXi& matching,
-                                     Eigen::VectorXd& effort,
-                                     Eigen::VectorXd& curlNorm)
+                                const Eigen::MatrixXi& F,
+                                const Eigen::MatrixXi& EV,
+                                const Eigen::MatrixXi& EF,
+                                const Eigen::MatrixXi& FE,
+                                const Eigen::MatrixXd& representativeField,
+                                const int N,
+                                Eigen::VectorXi& matching,
+                                Eigen::VectorXd& effort,
+                                Eigen::VectorXd& curlNorm,
+                                Eigen::VectorXi& singVertices,
+                                Eigen::VectorXi& singIndices)
   {
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
-    curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm);
+    curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm,singVertices, singIndices);
   }
-}
+  }
 
 
 

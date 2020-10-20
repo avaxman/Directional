@@ -1,4 +1,10 @@
 #include <iostream>
+#include <Eigen/Core>
+#include <igl/read_triangle_mesh.h>
+#include <igl/per_face_normals.h>
+#include <igl/unproject_onto_mesh.h>
+#include <igl/boundary_loop.h>
+#include <igl/edge_topology.h>
 #include <directional/power_field.h>
 #include <directional/power_to_representative.h>
 #include <directional/power_to_raw.h>
@@ -6,27 +12,18 @@
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
 #include <directional/effort_to_indices.h>
-#include <directional/glyph_lines_raw.h>
-#include <directional/singularity_spheres.h>
 #include <directional/write_raw_field.h>
-#include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
-#include <igl/unproject_onto_mesh.h>
-#include <igl/boundary_loop.h>
-#include <igl/edge_topology.h>
+#include <directional/directional_viewer.h>
 
 int currF, currVec;
 Eigen::VectorXi b, matching, singVertices, singIndices;
 Eigen::VectorXd effort;
-Eigen::MatrixXi FMesh, FField, FSings;
-Eigen::MatrixXi EV, EF, FE;
-Eigen::MatrixXd VMesh, VField, VSings, barycenters;
-Eigen::MatrixXd CMesh, CField, CSings;
+Eigen::MatrixXi F, EV, EF, FE;
+Eigen::MatrixXd V, barycenters;
+Eigen::MatrixXd CMesh;
 Eigen::MatrixXd rawField,representative, bc;
 Eigen::MatrixXcd pvField;
-igl::opengl::glfw::Viewer viewer;
+directional::DirectionalViewer viewer;
 
 int N = 3;
 
@@ -37,62 +34,37 @@ bool zeroPressed = false;
 
 void update_triangle_mesh()
 {
-  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(F.rows(),1);
   for (int i = 0; i < b.rows(); i++)
     CMesh.row(b(i)) = directional::selected_face_color();
   
-  viewer.data_list[0].set_colors(CMesh);
+  viewer.set_mesh_colors(CMesh);
 }
 
 void recompute_field()
 {
-  directional::polyvector_field(VMesh, FMesh, b, bc, N, pvField);
+  directional::polyvector_field(V, F, b, bc, N, pvField);
 }
 
 void update_raw_field_mesh()
 {
-  directional::polyvector_to_raw(VMesh, FMesh, pvField, N, rawField);
+  directional::polyvector_to_raw(V, F, pvField, N, rawField);
   if (normalized)
     for(int n = 0; n < N; n++)
       rawField.middleCols(n*3, 3).rowwise().normalize();
   
-  directional::principal_matching(VMesh, FMesh, EV, EF, FE, rawField, matching, effort);
-  directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching, N, singVertices, singIndices);
+  directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
   
-  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
-  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
+  viewer.set_singularities(N, singVertices, singIndices);
+  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(F.rows(),N);
   if (b.rows()!=0){
     glyphColors.row(b(b.rows()-1))=directional::selected_face_glyph_color().replicate(1,N);
     glyphColors.block(b(b.rows()-1),3*currVec,1,3)=directional::selected_vector_glyph_color();
   }
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors,  VField, FField, CField);
+  viewer.set_field(rawField, glyphColors);
   
-  if (viewer.data_list.size()<2){
-    
-    //apending and updating raw field mesh
-    viewer.append_mesh();
-    viewer.data_list[1].show_faces = true;
-    viewer.data_list[1].show_lines = false;
-    
-    viewer.append_mesh();
-    viewer.data_list[2].show_faces = true;
-    viewer.data_list[2].show_lines = false;
-    
-    viewer.selected_data_index = 0;
-  }
-  
-  viewer.data_list[1].clear();
-  viewer.data_list[1].set_mesh(VField, FField);
-  viewer.data_list[1].set_colors(CField);
-  
-  viewer.data_list[2].clear();
-  viewer.data_list[2].set_mesh(VSings, FSings);
-  viewer.data_list[2].set_colors(CSings);
 }
-
-
-
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
@@ -153,7 +125,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
   double x = viewer.current_mouse_x;
   double y = viewer.core().viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, VMesh, FMesh, fid, baryInFace))
+                               viewer.core().proj, viewer.core().viewport, V, F, fid, baryInFace))
   {
     
     //checking if face already exists
@@ -183,9 +155,9 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
     //moving vector within face
     if (((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Right)&&(currConst!=b.rows())){
       // Calculate direction from the center of the face to the mouse
-      Eigen::RowVector3d newVec =(VMesh.row(FMesh(fid, 0)) * baryInFace(0) +
-                                  VMesh.row(FMesh(fid, 1)) * baryInFace(1) +
-                                  VMesh.row(FMesh(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
+      Eigen::RowVector3d newVec =(V.row(F(fid, 0)) * baryInFace(0) +
+                                  V.row(F(fid, 1)) * baryInFace(1) +
+                                  V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
       
       bc.block(currConst, currVec*3, 1,3)=newVec;
       recompute_field();
@@ -208,18 +180,15 @@ int main()
   "  N          Toggle field normalization" << std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", VMesh, FMesh);
-  igl::edge_topology(VMesh, FMesh, EV, FE, EF);
-  igl::barycenter(VMesh, FMesh, barycenters);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", V, F);
+  igl::edge_topology(V, F, EV, FE, EF);
+  igl::barycenter(V, F, barycenters);
   
   b.resize(0);
   bc.resize(0, 3*N);
   
   //triangle mesh setup
-  viewer.data_list[0].set_mesh(VMesh, FMesh);
-  viewer.data_list[0].set_colors(directional::default_mesh_color());
-  
-  viewer.selected_data_index = 0;
+  viewer.set_mesh(V, F);
   recompute_field();
   update_raw_field_mesh();
   

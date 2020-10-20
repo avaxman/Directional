@@ -1,0 +1,12 @@
+viewer encapsulation branch TODO:
+
+1. toggle mesh edges
+2. index_prescription without basis cycles
+3. picked faces coloring
+4. picked vectors coloring
+5. nasty callback thing?
+6. power_field normalization option + remove _representative_ relation.
+7. Partial PV constraints
+8. scalar coloring of mesh
+9. Explicit choise of seams
+10. toggling with true/false control
