@@ -8,6 +8,8 @@ viewer encapsulation branch TODO:
 6. power_field normalization option + remove _representative_ relation.
 7. Partial PV constraints
 8. scalar coloring of mesh
-9. Explicit choise of seams
+9. Explicit choice of seams
 10. toggling with true/false control
 11. Configuring sizes and width in the viewer
+12. parameterization quiet mode
+13. allow toggling colors

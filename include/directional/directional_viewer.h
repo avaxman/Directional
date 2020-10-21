@@ -34,10 +34,10 @@ namespace directional
     DirectionalViewer(){}
     ~DirectionalViewer(){}
     
-    void set_mesh(const Eigen::MatrixXd& V,
-                  const Eigen::MatrixXi& F,
-                  const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                  const int meshNum=0)
+    void IGL_INLINE set_mesh(const Eigen::MatrixXd& V,
+                             const Eigen::MatrixXi& F,
+                             const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+                             const int meshNum=0)
     {
       Eigen::MatrixXd meshColors;
       if (C.rows()==0)
@@ -69,8 +69,8 @@ namespace directional
       }
     }
     
-    void set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                         const int meshNum=0)
+    void IGL_INLINE set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+                                    const int meshNum=0)
     {
       Eigen::MatrixXd meshColors;
       if (C.rows()==0)
@@ -82,9 +82,9 @@ namespace directional
       CMesh[meshNum]=C;
     }
     
-    void set_field(const Eigen::MatrixXd& rawField,
-                   const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                   const int meshNum=0)
+    void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
+                              const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+                              const int meshNum=0)
     
     {
       Eigen::MatrixXd fieldColors=C;
@@ -100,10 +100,10 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
     }
     
-    void set_singularities(const int N,
-                           const Eigen::VectorXi& singVertices,
-                           const Eigen::VectorXi& singIndices,
-                           const int meshNum=0)
+    void IGL_INLINE set_singularities(const int N,
+                                      const Eigen::VectorXi& singVertices,
+                                      const Eigen::VectorXi& singIndices,
+                                      const int meshNum=0)
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
@@ -115,9 +115,9 @@ namespace directional
       
     }
     
-    void set_seams(const Eigen::MatrixXi& EV,
-                   const Eigen::VectorXi& combedMatching,
-                   const int meshNum=0)
+    void IGL_INLINE set_seams(const Eigen::MatrixXi& EV,
+                              const Eigen::VectorXi& combedMatching,
+                              const int meshNum=0)
     {
       Eigen::MatrixXd VSeams, CSeams;
       Eigen::MatrixXi FSeams;
@@ -128,11 +128,11 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_lines = false;
     }
     
-    void set_streamlines(const Eigen::MatrixXd& P1,
-                         const Eigen::MatrixXd& P2,
-                         const Eigen::MatrixXd& C,
-                         const int meshNum=0,
-                         const double width=0.0005)
+    void IGL_INLINE set_streamlines(const Eigen::MatrixXd& P1,
+                                    const Eigen::MatrixXd& P2,
+                                    const Eigen::MatrixXd& C,
+                                    const int meshNum=0,
+                                    const double width=0.0005)
     {
       Eigen::MatrixXd VStream, CStream;
       Eigen::MatrixXi FStream;
@@ -144,21 +144,51 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_lines = false;
     }
     
-    void toggle_field(const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_faces;
+    void IGL_INLINE set_uv(const Eigen::MatrixXd UV,
+                           const int meshNum=0)
+    {
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_uv(UV);
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=true;
     }
     
-    void toggle_singularities(const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_faces;
+    void IGL_INLINE set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& textureMat, const int meshNum=0)
+    {
+      int textureSize=textureMat.rows()/3;
+      
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_texture(textureMat.block(0,0,textureSize,textureMat.cols()),
+                                                         textureMat.block(textureSize,0,textureSize,textureMat.cols()),
+                                                         textureMat.block(2*textureSize,0,textureSize,textureMat.cols()));
     }
     
-    void toggle_seams(const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_faces;
+    void IGL_INLINE set_active(const bool active, const int meshNum=0){
+      for (int i=NUMBER_OF_SUBMESHES*meshNum;i<NUMBER_OF_SUBMESHES*meshNum+NUMBER_OF_SUBMESHES;i++)
+        data_list[i].show_faces=active;
     }
     
-    void toggle_streamlines(const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=!data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces;
+    void IGL_INLINE toggle_mesh_edges(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
     }
+    
+    void IGL_INLINE toggle_field(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_faces=active;
+    }
+    
+    void IGL_INLINE toggle_singularities(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_faces=active;
+    }
+    
+    void IGL_INLINE toggle_seams(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_faces=active;
+    }
+    
+    void IGL_INLINE toggle_streamlines(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=active;
+    }
+    
+    void IGL_INLINE toggle_uv(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
+    }
+    
     
     //static functions for default values
     //Mesh colors
@@ -230,6 +260,26 @@ namespace directional
     //Colors for emphasized edges, mostly seams and cuts
     static Eigen::RowVector3d IGL_INLINE default_seam_color(){
       return Eigen::RowVector3d(0.0,0.0,0.0);
+    }
+    
+    static Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> IGL_INLINE default_texture(){
+      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R,texture_G,texture_B;
+      unsigned size = 128;
+      unsigned size2 = size/2;
+      unsigned lineWidth = 5;
+      texture_B.setConstant(size, size, 0);
+      texture_G.setConstant(size, size, 0);
+      texture_R.setConstant(size, size, 0);
+      for (unsigned i=0; i<size; ++i)
+        for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
+          texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
+      for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
+        for (unsigned j=0; j<size; ++j)
+          texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
+      
+      Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> fullTexMat(size*3,size);
+      fullTexMat<<texture_R, texture_G, texture_B;
+      return fullTexMat;
     }
     
   };  //of DirectionalViewer class
