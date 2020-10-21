@@ -13,3 +13,5 @@ viewer encapsulation branch TODO:
 11. Configuring sizes and width in the viewer
 12. parameterization quiet mode
 13. allow toggling colors
+14. Automatic creation of barycentric meshes
+15. Set default values to be default if not specified.. 

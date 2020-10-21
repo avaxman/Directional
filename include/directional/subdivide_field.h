@@ -133,10 +133,10 @@ namespace directional
     shm_edge_topology(FCoarse, VCoarse.rows(), EVCoarse, EFCoarse, EI, SFE);
     shm_edge_topology_to_igledgetopology(FCoarse, EVCoarse, EFCoarse, SFE, EI_et, FE_et);
     // Compute curl matching
-    Eigen::VectorXi matchingCoarse, matchingFine;
+    Eigen::VectorXi matchingCoarse, matchingFine, singVertices, singIndices;
     {
       Eigen::VectorXd effort, curlNorm;
-      directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FE_et, rawFieldCoarse, matchingCoarse, effort, curlNorm);
+      directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FE_et, rawFieldCoarse, matchingCoarse, effort, curlNorm,singVertices, singIndices);
     }
     
     subdivide_field(VCoarse, FCoarse, EVCoarse, EFCoarse, rawFieldCoarse, matchingCoarse, targetLevel, VFine, FFine, EVFine, EFFine, rawFieldFine, matchingFine);
