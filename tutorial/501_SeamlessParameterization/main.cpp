@@ -91,7 +91,6 @@ int main()
   viewer.toggle_mesh_edges(false,0);
   viewer.set_active(true,0);
   
-  std::cout<<"before setting second mesh"<<std::endl;
   viewer.set_mesh(VCut, FCut,directional::default_mesh_color(),1);
   viewer.set_texture(directional::DirectionalViewer::default_texture(),1);
   viewer.set_uv(cutFullUV,1);

@@ -1,6 +1,6 @@
 viewer encapsulation branch TODO:
 
-1. toggle mesh edges
+1. toggle mesh edges - done
 2. index_prescription without basis cycles (and encapsulating all the rest of the technical data).
 3. picked faces coloring
 4. picked vectors coloring
@@ -9,7 +9,7 @@ viewer encapsulation branch TODO:
 7. Partial PV constraints
 8. scalar coloring of mesh
 9. Explicit choice of seams
-10. toggling with true/false control
+10. toggling with true/false control - done
 11. Configuring sizes and width in the viewer
 12. parameterization quiet mode
 13. allow toggling colors
