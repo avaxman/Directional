@@ -1,22 +1,19 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
-#include <directional/visualization_schemes.h>
 #include <directional/dual_cycles.h>
 #include <directional/index_prescription.h>
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
 #include <directional/power_field.h>
-#include <directional/singularity_spheres.h>
-#include <directional/glyph_lines_raw.h>
 #include <directional/write_raw_field.h>
 #include <directional/read_singularities.h>
+#include <directional/directional_viewer.h>
 
 
 Eigen::VectorXi cycleIndices;
@@ -25,15 +22,15 @@ Eigen::SparseMatrix<double> basisCycles;
 Eigen::VectorXi vertex2cycle, innerEdges;
 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
 
-Eigen::MatrixXi FMesh, FSings, FField, EV, FE, EF;
-Eigen::MatrixXd VMesh, VSings, VField, BC, FN;
-Eigen::MatrixXd CMesh, CSings, CField;
+Eigen::MatrixXi F, EV, FE, EF;
+Eigen::MatrixXd V, BC, FN;
+Eigen::MatrixXd CMesh;
 Eigen::MatrixXd rawField;
 Eigen::VectorXd rotationField;
 std::vector<std::vector<int>> cycleFaces;
 int currCycle=0;
 
-igl::opengl::glfw::Viewer viewer;
+directional::DirectionalViewer viewer;
 
 int eulerChar, numGenerators, numBoundaries;
 
@@ -46,16 +43,15 @@ double globalRotation=0;
 
 void update_triangle_mesh()
 {
-  
-  CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
+  CMesh=directional::default_mesh_color().replicate(F.rows(),1);
   
   for (int i=0;i<cycleFaces[currCycle].size();i++)
     CMesh.row(cycleFaces[currCycle][i])<<directional::selected_face_color();
   
-  viewer.data_list[0].set_colors(CMesh);
+  viewer.set_mesh_colors(CMesh);
 }
 
-void update_raw_field_mesh()
+void update_raw_field()
 {
   using namespace Eigen;
   VectorXd rotationAngles;
@@ -69,28 +65,21 @@ void update_raw_field_mesh()
     std::cout << "Expected: " << eulerChar*N<<"/"<<N<< std::endl;
   }
   
-  directional::index_prescription(VMesh,FMesh,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
+  directional::index_prescription(V,F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices,ldltSolver, N,rotationAngles, linfError);
   std::cout<<"Index prescription linfError: "<<linfError<<std::endl;
   
   Eigen::MatrixXd representative;
-  directional::rotation_to_representative(VMesh, FMesh,EV,EF,rotationAngles,N,globalRotation, representative);
-  directional::representative_to_raw(VMesh,FMesh,representative,N, rawField);
+  directional::rotation_to_representative(V, F,EV,EF,rotationAngles,N,globalRotation, representative);
+  directional::representative_to_raw(V,F,representative,N, rawField);
   
-  directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField, 2.5);
-  
-  viewer.data_list[1].clear();
-  viewer.data_list[1].set_mesh(VField, FField);
-  viewer.data_list[1].show_faces = true;
-  viewer.data_list[1].show_lines = false;
-  viewer.data_list[1].set_colors(CField);
-  
+  viewer.set_field(rawField);
 }
 
-void update_singularities_mesh()
+void update_singularities()
 {
   Eigen::VectorXi singVertices, singIndices;
   std::vector<int> singVerticesList, singIndicesList;
-  for (int i=0;i<VMesh.rows();i++)
+  for (int i=0;i<V.rows();i++)
     if (cycleIndices(vertex2cycle(i))){
       singVerticesList.push_back(i);
       singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
@@ -103,13 +92,8 @@ void update_singularities_mesh()
     singIndices(i)=singIndicesList[i];
   }
   
-  directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings, 2.5);
+  viewer.set_singularities(N, singVertices, singIndices);
   
-  viewer.data_list[2].clear();
-  viewer.data_list[2].set_mesh(VSings, FSings);
-  viewer.data_list[2].show_faces = true;
-  viewer.data_list[2].show_lines = false;
-  viewer.data_list[2].set_colors(CSings);
 }
 
 
@@ -128,19 +112,19 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '0': _select=true; break;
     case '1':
       globalRotation+=0.314;
-      update_raw_field_mesh();
+      update_raw_field();
       break;
     case '-':
     case '_':
       cycleIndices(currCycle)--;
-      update_raw_field_mesh();
-      update_singularities_mesh();
+      update_raw_field();
+      update_singularities();
       break;
     case '+':
     case '=':
       cycleIndices(currCycle)++;
-      update_raw_field_mesh();
-      update_singularities_mesh();
+      update_raw_field();
+      update_singularities();
       break;
 
     case 'B':
@@ -186,11 +170,11 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   double x = viewer.current_mouse_x;
   double y = viewer.core().viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, VMesh, FMesh, fid, bc))
+                               viewer.core().proj, viewer.core().viewport, V, F, fid, bc))
   {
     Eigen::Vector3d::Index maxCol;
     bc.maxCoeff(&maxCol);
-    int currVertex=FMesh(fid, maxCol);
+    int currVertex=F(fid, maxCol);
     currCycle=vertex2cycle(currVertex);
     update_triangle_mesh();
     return true;
@@ -212,10 +196,10 @@ int main()
   "  -          Decrease index  of current cycle" << std::endl <<
   "  1          rotate field globally" << std::endl;
   
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj", VMesh, FMesh);
-  igl::edge_topology(VMesh, FMesh, EV,FE,EF);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj", V, F);
+  igl::edge_topology(V, F, EV,FE,EF);
   
-  directional::dual_cycles(VMesh, FMesh,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
   cycleIndices=Eigen::VectorXi::Constant(basisCycles.rows(),0);
   
   //loading singularities
@@ -226,9 +210,9 @@ int main()
     cycleIndices(vertex2cycle(singVertices(i)))=singIndices(i);
   
   std::vector<std::vector<int>> boundaryLoops;
-  igl::boundary_loop(FMesh, boundaryLoops);
+  igl::boundary_loop(F, boundaryLoops);
   numBoundaries=boundaryLoops.size();
-  eulerChar = VMesh.rows() - EV.rows() + FMesh.rows();
+  eulerChar = V.rows() - EV.rows() + F.rows();
   numGenerators = 2 - eulerChar - boundaryLoops.size();
   
   std::cout<<"Euler characteristic: "<<eulerChar<<std::endl;
@@ -249,20 +233,10 @@ int main()
   }
   
   //triangle mesh setup
-  viewer.data().set_mesh(VMesh, FMesh);
-  viewer.data().set_colors(Eigen::RowVector3d::Constant(3,1.0));
-  viewer.data().show_lines = false;
-  
-  //apending and updating raw field mesh
-  viewer.append_mesh();
-  
-  //singularity mesh
-  viewer.append_mesh();
-  
+  viewer.set_mesh(V, F);  
   update_triangle_mesh();
-  update_raw_field_mesh();
-  update_singularities_mesh();
-  viewer.selected_data_index=0;
+  update_raw_field();
+  update_singularities();
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

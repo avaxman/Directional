@@ -1,7 +1,7 @@
 viewer encapsulation branch TODO:
 
 1. toggle mesh edges
-2. index_prescription without basis cycles
+2. index_prescription without basis cycles (and encapsulating all the rest of the technical data).
 3. picked faces coloring
 4. picked vectors coloring
 5. nasty callback thing?
@@ -10,3 +10,4 @@ viewer encapsulation branch TODO:
 8. scalar coloring of mesh
 9. Explicit choise of seams
 10. toggling with true/false control
+11. Configuring sizes and width in the viewer
