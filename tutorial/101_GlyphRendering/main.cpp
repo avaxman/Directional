@@ -24,7 +24,8 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 
 int main()
 {
-  std::cout <<"<space bar>  Show/hide Singularities" << std::endl;
+  std::cout <<"1    Show/hide Field" << std::endl;
+  std::cout <<"2    Show/hide Singularities" << std::endl;
   
   igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", V, F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);

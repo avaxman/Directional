@@ -11,9 +11,7 @@ option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
 option(LIBIGL_WITH_OPENGL      "Use OpenGL"         ON)
 option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
-
-
-option(LIBIGL_WITH_PNG       "Use PNG"          ON)
+option(LIBIGL_WITH_PNG         "Use PNG"            ON)
 set(LIBIGL_WITH_PNG CACHE BOOL ON)
 
 
@@ -50,6 +48,7 @@ if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_GlyphRendering")
   add_subdirectory("102_PickingEditing")
   add_subdirectory("103_StreamlineTracing")
+  add_subdirectory("104_FaceVertexEdgeData")
 endif()
 
 # Chapter 2

@@ -9,6 +9,7 @@
 
 #include <Eigen/Core>
 #include <igl/jet.h>
+#include <igl/parula.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
@@ -99,13 +100,9 @@ namespace directional
                                     const double maxRange,
                                     const int meshNum=0)
     {
-      data_list[NUMBER_OF_SUBMESHES*meshNum].set_data(vertexData,minRange,maxRange);
-      data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=true;
-      if (edgeVList[meshNum].size()!=0){
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=false;
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_lines=false;
-      }
-      selected_data_index=NUMBER_OF_SUBMESHES*meshNum;
+      Eigen::MatrixXd C;
+      igl::parula(vertexData, minRange,maxRange, C);
+      set_mesh_colors(C, meshNum);
     }
     
     void IGL_INLINE set_face_data(const Eigen::VectorXd& faceData,
@@ -114,7 +111,7 @@ namespace directional
                                    const int meshNum=0)
     {
       Eigen::MatrixXd C;
-      igl::jet(faceData, minRange,maxRange, C);
+      igl::parula(faceData, minRange,maxRange, C);
       set_mesh_colors(C, meshNum);
     }
     
@@ -131,7 +128,6 @@ namespace directional
         edge_diamond_mesh(VList[meshNum],FList[meshNum],EV,EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
         data_list[NUMBER_OF_SUBMESHES*meshNum+5].clear();
         data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
-  
       }
       
       Eigen::VectorXd edgeFData(edgeFList[meshNum].rows());
@@ -139,7 +135,7 @@ namespace directional
         edgeFData(i)=edgeData(edgeFEList[meshNum](i));
       
       Eigen::MatrixXd C;
-      igl::jet(edgeFData, minRange,maxRange, C);
+      igl::parula(edgeFData, minRange,maxRange, C);
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_colors(C);
 
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=false;
