@@ -7,6 +7,7 @@ Eigen::MatrixXi F, EV, FE, EF;
 Eigen::MatrixXd V, rawField;
 Eigen::VectorXi singVertices, singIndices;
 directional::DirectionalViewer viewer;
+bool showField=true, showSingularities=true;
 
 bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
@@ -14,11 +15,11 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   directional::DirectionalViewer* directional_viewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
-    case '1': directional_viewer->toggle_field(); return true;
-    case '2': directional_viewer->toggle_singularities(); return true;
+    case '1': showField=!showField; directional_viewer->toggle_field(showField); break;
+    case '2': showSingularities=!showSingularities; directional_viewer->toggle_singularities(showSingularities); break;;
     default: return false;
   }
-  
+  return true;
 }
 
 int main()
@@ -34,6 +35,7 @@ int main()
   viewer.set_mesh(V,F);
   viewer.set_field(rawField);
   viewer.set_singularities(N, singVertices, singIndices);
+  viewer.toggle_mesh_edges(false);
 
   viewer.callback_key_down = &key_down;
   viewer.launch();
