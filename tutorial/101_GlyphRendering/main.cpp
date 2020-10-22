@@ -36,7 +36,7 @@ int main()
   viewer.set_field(rawField);
   viewer.set_singularities(N, singVertices, singIndices);
   viewer.toggle_mesh_edges(false);
-
+  
   viewer.callback_key_down = &key_down;
   viewer.launch();
 }

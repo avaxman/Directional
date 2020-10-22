@@ -15,3 +15,4 @@ viewer encapsulation branch TODO:
 13. allow toggling colors
 14. Automatic creation of barycentric meshes
 15. Set default values to be default if not specified.. 
+16. assertions for everything
