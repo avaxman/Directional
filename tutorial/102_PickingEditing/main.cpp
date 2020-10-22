@@ -15,23 +15,6 @@ directional::DirectionalViewer viewer;
 //User input variables
 bool zeroPressed = false;
 
-void update_triangle_mesh()
-{
-  
-  Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
-  CMesh.row(currF)=directional::DirectionalViewer::selected_face_color();
-  viewer.set_mesh_colors(CMesh);
-}
-
-void update_raw_field_mesh()
-{
-  Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(F.rows(),N);
-  glyphColors.row(currF)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
-  glyphColors.block(currF,3*currVec,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
-  
-  viewer.set_field(rawField, glyphColors);
-}
-
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
@@ -44,23 +27,27 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 // Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+  directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
       // Select vector
     case '0': zeroPressed=true; break;
     case '1':
       currVec = (currVec+1)%N;
-      update_raw_field_mesh();
+      directionalViewer->set_selected_vector(rawField, currF, currVec);
       break;
   }
   return true;
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
 {
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+  directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   if (!zeroPressed)
     return false;
   int fid;
@@ -76,8 +63,9 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
     //choosing face
     if ((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Left){
       currF=fid;
-      update_triangle_mesh();
-      update_raw_field_mesh();
+      Eigen::VectorXi selectedFaces(1); selectedFaces(0)=currF;
+      viewer.set_selected_faces(selectedFaces);
+      directionalViewer->set_selected_vector(rawField, currF, currVec);
       return true;
     }
     //choosing face
@@ -88,7 +76,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifiers)
                                   V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
       
       rawField.block(currF, currVec*3, 1,3)=newVec;
-      update_raw_field_mesh();
+      directionalViewer->set_selected_vector(rawField, currF, currVec);
       return true;
       
     }
@@ -110,9 +98,6 @@ int main()
   
   viewer.set_mesh(V,F);
   viewer.set_field(rawField);
-  
-  update_triangle_mesh();
-  update_raw_field_mesh();
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

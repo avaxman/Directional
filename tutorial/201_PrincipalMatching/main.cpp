@@ -25,10 +25,8 @@ bool zeroPressed=false;
 
 void update_triangle_mesh()
 {
-  //TODO: allow automatic picked-face highlighting
-  CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
-  CMesh.row(currF)=directional::selected_face_color();
-  viewer.set_mesh_colors(CMesh);
+  Eigen::VectorXi selectedFaces(1); selectedFaces(0)=currF;
+  viewer.set_selected_faces(selectedFaces);
 }
 
 void update_raw_field_mesh()

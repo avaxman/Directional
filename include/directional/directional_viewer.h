@@ -29,7 +29,7 @@ namespace directional
   private:
     std::vector<Eigen::MatrixXd> VList;  //vertices of mesh list
     std::vector<Eigen::MatrixXi> FList;  //faces of mesh list
-
+    
     std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
     std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
@@ -108,7 +108,7 @@ namespace directional
     void IGL_INLINE set_face_data(const Eigen::VectorXd& faceData,
                                   const double minRange,
                                   const double maxRange,
-                                   const int meshNum=0)
+                                  const int meshNum=0)
     {
       Eigen::MatrixXd C;
       igl::parula(faceData, minRange,maxRange, C);
@@ -123,7 +123,7 @@ namespace directional
                                   const Eigen::MatrixXi& EF,
                                   const int meshNum=0)
     {
-   
+      
       if (edgeVList[meshNum].size()==0){  //allocate
         edge_diamond_mesh(VList[meshNum],FList[meshNum],EV,EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
         data_list[NUMBER_OF_SUBMESHES*meshNum+5].clear();
@@ -137,7 +137,7 @@ namespace directional
       Eigen::MatrixXd C;
       igl::parula(edgeFData, minRange,maxRange, C);
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_colors(C);
-
+      
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=false;
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=true;
@@ -145,6 +145,26 @@ namespace directional
       
       selected_data_index=NUMBER_OF_SUBMESHES*meshNum+5;
     }
+    
+    void IGL_INLINE set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
+      Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(FList[meshNum].rows(),1);
+      for (int i=0;i<selectedFaces.size();i++)
+        CMesh.row(selectedFaces(i))=directional::selected_face_color();
+      set_mesh_colors(CMesh,meshNum);
+    }
+    
+    void IGL_INLINE set_selected_vector(const Eigen::MatrixXd& rawField, const int selectedFace, const int selectedVector, const int meshNum=0)
+    {
+      int N = rawField.cols()/3;
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
+      glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
+      glyphColors.block(selectedFace,3*selectedVector,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
+      
+      set_field(rawField, glyphColors);
+    }
+    
+    
+    
     
     void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),

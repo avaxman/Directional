@@ -18,3 +18,4 @@ viewer encapsulation branch TODO:
 16. assertions for everything
 17. color schemes for fields
 18. more economic and gainly field arrows
+19. allow changing colors of field without passing field around
