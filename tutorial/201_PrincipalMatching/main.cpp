@@ -70,9 +70,6 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   {
       // Select vector
     case '0': zeroPressed=true; break;
-    case GLFW_KEY_SPACE:
-      directional_viewer->toggle_singularities();
-      break;
   }
   return true;
 }
@@ -110,7 +107,6 @@ int main()
 {
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
-  "  <space>  Show/hide singularities" << std::endl;
   igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", V, F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
   igl::edge_topology(V, F, EV, FE, EF);

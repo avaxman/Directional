@@ -13,8 +13,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/avg_edge_length.h>
 #include <directional/representative_to_raw.h>
-#include <directional/point_spheres.h>
-#include <directional/line_boxes.h>
+#include <directional/angled_arrows.h>
 #include <Eigen/Core>
 
 
@@ -26,7 +25,7 @@ namespace directional
   //  F:          #F by 3 face vertex indices.
   //  rawField:   A directional field in raw xyzxyz form
   //  glyphColor: An array of either 1 by 3 color values for each vector, #F by 3 colors for each individual directional or #F*N by 3 colours for each individual vector, ordered by #F times vector 1, followed by #F times vector 2 etc.
-  //  width, length, height: of the glyphs depicting the directionals
+  //  length, width,  height: of the glyphs depicting the directionals
   //  N:        The degree of the field.
   
   // Outputs:
@@ -38,8 +37,8 @@ namespace directional
                                   const Eigen::MatrixXi &F,
                                   const Eigen::MatrixXd &rawField,
                                   const Eigen::MatrixXd &glyphColor,
-                                  double width,
                                   double length,
+                                  double width,
                                   double height,
                                   Eigen::MatrixXd &fieldV,
                                   Eigen::MatrixXi &fieldF,
@@ -51,6 +50,8 @@ namespace directional
     
     Eigen::MatrixXd vectNormals = normals.replicate(N,1);
     
+    double angle = 2*igl::PI/(double)(N);
+    if (N==1) angle=igl::PI;
     Eigen::MatrixXd barycenters, vectorColors, P1, P2;
     igl::barycenter(V, F, barycenters);
     
@@ -81,7 +82,8 @@ namespace directional
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
     // Draw boxes
-    directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, fieldV, fieldF, fieldC);
+    //directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, fieldV, fieldF, fieldC);
+    directional::angled_arrows(P1,P2,vectNormals, width/length, height, angle, vectorColors, fieldV, fieldF, fieldC);
     
     
   }
@@ -97,7 +99,7 @@ namespace directional
                                   const double sizeRatio = 1.25)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColors, l/30, l/6, l/50, fieldV, fieldF, fieldC);
+    glyph_lines_raw(V, F, rawField, glyphColors, l/6, l/30,  l/200, fieldV, fieldF, fieldC);
   }
   
 }

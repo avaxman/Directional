@@ -2,8 +2,8 @@ viewer encapsulation branch TODO:
 
 1. toggle mesh edges - done
 2. index_prescription without basis cycles (and encapsulating all the rest of the technical data).
-3. picked faces coloring
-4. picked vectors coloring
+3. picked faces coloring - done
+4. picked vectors coloring - done
 5. nasty callback thing?
 6. power_field normalization option + remove _representative_ relation.
 7. Partial PV constraints
@@ -17,5 +17,6 @@ viewer encapsulation branch TODO:
 15. Set default values to be default if not specified.. 
 16. assertions for everything
 17. color schemes for fields
-18. more economic and gainly field arrows
+18. more economic and gainly field arrows - done
 19. allow changing colors of field without passing field around
+20. vertex-shaded singularities
