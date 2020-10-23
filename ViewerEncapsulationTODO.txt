@@ -20,3 +20,4 @@ viewer encapsulation branch TODO:
 18. more economic and gainly field arrows - done
 19. allow changing colors of field without passing field around
 20. vertex-shaded singularities
+21. face-skipping glyph drawing

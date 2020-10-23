@@ -27,12 +27,13 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
 bool showCombed=false;
+bool showSingularities=true;
 
 void update_raw_field_mesh()
 {
   Eigen::MatrixXd currField = (showCombed ? combedField : rawField);
   viewer.set_field(currField,directional::indexed_glyph_colors(currField));
-  viewer.toggle_seams();
+  viewer.toggle_seams(showCombed);
 }
 
 
@@ -45,7 +46,7 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   {
       // Select vector
     case '1': showCombed = !showCombed; update_raw_field_mesh(); break;
-    case '2': directional_viewer->toggle_singularities(); break;
+    case '2': showSingularities=~showSingularities; directional_viewer->toggle_singularities(showSingularities); break;
   }
   return true;
 }
