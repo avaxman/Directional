@@ -39,18 +39,19 @@ namespace directional
     using namespace Eigen;
     V.resize(res*res*points.rows(),3);
     T.resize(2*(res-1)*res*points.rows(),3);
-    C.resize(T.rows(),3);
+    C.resize(V.rows(),3);
     
     for (int i=0;i<points.rows();i++){
       RowVector3d center=points.row(i);
       
       //creating vertices
       for (int j=0;j<res;j++){
-        double z=center(2)+radius*cos(M_PI*(double)j/(double(res-1)));
+        double z=center(2)+radius*cos(igl::PI*(double)j/(double(res-1)));
         for (int k=0;k<res;k++){
-          double x=center(0)+radius*sin(M_PI*(double)j/(double(res-1)))*cos(2*M_PI*(double)k/(double(res-1)));
-          double y=center(1)+radius*sin(M_PI*(double)j/(double(res-1)))*sin(2*M_PI*(double)k/(double(res-1)));
+          double x=center(0)+radius*sin(igl::PI*(double)j/(double(res)))*cos(2*igl::PI*(double)k/(double(res)));
+          double y=center(1)+radius*sin(igl::PI*(double)j/(double(res)))*sin(2*igl::PI*(double)k/(double(res)));
           V.row((res*res)*i+j*res+k)<<x,y,z;
+          C.row((res*res)*i+j*res+k)<<colors.row(i);
         }
       }
       
@@ -64,8 +65,7 @@ namespace directional
           int v4=(res*res)*i+j*res+(k+1)%res;
           T.row(2*(((res-1)*res)*i+res*j+k))<<v1,v2,v3;
           T.row(2*(((res-1)*res)*i+res*j+k)+1)<<v4,v1,v3;
-          C.row(2*(((res-1)*res)*i+res*j+k))<<colors.row(i);
-          C.row(2*(((res-1)*res)*i+res*j+k)+1)<<colors.row(i);
+      
         }
       }
     }

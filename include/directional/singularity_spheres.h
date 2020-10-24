@@ -60,7 +60,7 @@ namespace directional
       
     }
     double radius = radiusRatio*igl::avg_edge_length(V, F)/5.0;
-    directional::point_spheres(points, radius, colors, 8, singV, singF, singC);
+    directional::point_spheres(points, radius, colors, 20, singV, singF, singC);
   
   }
   
