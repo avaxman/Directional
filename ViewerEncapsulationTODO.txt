@@ -21,3 +21,6 @@ viewer encapsulation branch TODO:
 19. allow changing colors of field without passing field around
 20. vertex-shaded singularities
 21. face-skipping glyph drawing
+22. possible sign symmetry in glyph drawing - done
+23. Weird power-field alignment
+24. selected face -> selected field coloring

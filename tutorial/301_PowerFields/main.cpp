@@ -28,15 +28,6 @@ int N = 4;
 bool normalized = false;
 bool zeroPressed = false;
 
-void update_triangle_mesh()
-{
-  
-  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(F.rows(),1);
-  for (int i = 0; i < b.rows(); i++)
-    CMesh.row(b(i)) = directional::selected_face_color();
-  
-  viewer.set_mesh_colors(CMesh);
-}
 
 void recompute_field(){
   directional::power_field(V, F, b, bc, N, powerField);
@@ -53,11 +44,7 @@ void update_raw_field_mesh()
 
   viewer.set_singularities(N,singVertices, singIndices);
   
-  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(F.rows(),N);
-  if (b.rows()!=0)
-    glyphColors.row(b(b.rows()-1))=directional::selected_face_glyph_color().replicate(1,N);
-  
-  viewer.set_field(rawField, glyphColors);
+  viewer.set_field(rawField);
 
 }
 
@@ -71,8 +58,10 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+  directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
       // Toggle field drawing for easier rotation
@@ -84,15 +73,15 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       b.resize(0);
       bc.resize(0, 3);
       recompute_field();
-      update_triangle_mesh();
       update_raw_field_mesh();
+      directionalViewer->set_selected_faces(b);
       break;
       
       // Toggle normalization
     case 'N':
       normalized = !normalized;
-      update_triangle_mesh();
       update_raw_field_mesh();
+      directionalViewer->set_selected_faces(b);
       break;
       
       
@@ -108,8 +97,10 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 //Select vertices using the mouse
-bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
+  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
+  directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   if (!zeroPressed)
     return false;
   
@@ -139,8 +130,8 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
                 V.row(F(fid, 1)) * baryInFace(1) +
                 V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
     recompute_field();
-    update_triangle_mesh();
     update_raw_field_mesh();
+    directionalViewer->set_selected_faces(b);
     return true;
   }
   return false;

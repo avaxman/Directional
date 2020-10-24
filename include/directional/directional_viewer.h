@@ -149,7 +149,7 @@ namespace directional
     void IGL_INLINE set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
       Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(FList[meshNum].rows(),1);
       for (int i=0;i<selectedFaces.size();i++)
-        CMesh.row(selectedFaces(i))=directional::selected_face_color();
+        CMesh.row(selectedFaces(i))=selected_face_color();
       set_mesh_colors(CMesh,meshNum);
     }
     
@@ -191,7 +191,7 @@ namespace directional
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(VList[meshNum], FList[meshNum], N, singVertices, singIndices, VSings, FSings, CSings);
+      directional::singularity_spheres(VList[meshNum], FList[meshNum], N, singVertices, singIndices, default_singularity_colors(N), VSings, FSings, CSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_colors(CSings);
@@ -205,7 +205,7 @@ namespace directional
     {
       Eigen::MatrixXd VSeams, CSeams;
       Eigen::MatrixXi FSeams;
-      directional::seam_lines(VList[meshNum], FList[meshNum],EV,combedMatching, VSeams,FSeams,CSeams);
+      directional::seam_lines(VList[meshNum], FList[meshNum],EV,combedMatching, default_seam_color(), VSeams,FSeams,CSeams);
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_mesh(VSeams, FSeams);
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_colors(CSeams);
@@ -300,13 +300,13 @@ namespace directional
     }
     
     //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
-    static Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field){
+    static Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
       
       Eigen::Matrix<double, 15,3> glyphPrincipalColors;
-      glyphPrincipalColors<<1.0,0.0,0.5,
+      glyphPrincipalColors<< 0.0,0.5,1.0,
       1.0,0.5,0.0,
       0.0,1.0,0.5,
-      0.0,0.5,1.0,
+      1.0,0.0,0.5,
       0.5,0.0,1.0,
       0.5,1.0,0.0,
       1.0,0.5,0.5,
@@ -323,7 +323,7 @@ namespace directional
       int N = field.cols()/3;
       for (int i=0;i<field.rows();i++)
         for (int j=0;j<N;j++)
-          fullGlyphColors.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);
+          fullGlyphColors.block(i,3*j,1,3)<< (signSymmetry && (N%2==0) ? glyphPrincipalColors.row(j%(N/2)) : glyphPrincipalColors.row(j));
       
       return fullGlyphColors;
     }

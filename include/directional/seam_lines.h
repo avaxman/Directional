@@ -13,7 +13,6 @@
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/avg_edge_length.h>
-#include <directional/visualization_schemes.h>
 #include <directional/line_cylinders.h>
 
 namespace directional
@@ -35,6 +34,7 @@ namespace directional
                              const Eigen::MatrixXi &F,
                              const Eigen::MatrixXi &EV,
                              const Eigen::VectorXi seams,
+                             const Eigen::RowVector3d& seamColor,
                              double width,
                              int res,
                              Eigen::MatrixXd &VSeams,
@@ -53,7 +53,7 @@ namespace directional
       P2.row(i)=V.row(EV(seamEdges[i],1));
     }
     
-    directional::line_cylinders(P1, P2, width, directional::default_seam_color().replicate(P1.rows(),1), res, VSeams, FSeams, CSeams);
+    directional::line_cylinders(P1, P2, width, seamColor.replicate(P1.rows(),1), res, VSeams, FSeams, CSeams);
   }
   
   
@@ -62,13 +62,14 @@ namespace directional
                              const Eigen::MatrixXi &F,
                              const Eigen::MatrixXi &EV,
                              const Eigen::VectorXi seams,
+                             const Eigen::RowVector3d& seamColor,
                              Eigen::MatrixXd &VSeams,
                              Eigen::MatrixXi &FSeams,
                              Eigen::MatrixXd &CSeams,
                              const double lengthRatio=1.25)
   {
     double l = lengthRatio*igl::avg_edge_length(V, F);
-    seam_lines(V,F,EV, seams, l/25.0,6, VSeams, FSeams, CSeams);
+    seam_lines(V,F,EV, seams, seamColor, l/25.0,6, VSeams, FSeams, CSeams);
   }
   
 }

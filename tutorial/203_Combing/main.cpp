@@ -5,7 +5,6 @@
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
-#include <directional/visualization_schemes.h>
 #include <directional/seam_lines.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
@@ -32,7 +31,7 @@ bool showSingularities=true;
 void update_raw_field_mesh()
 {
   Eigen::MatrixXd currField = (showCombed ? combedField : rawField);
-  viewer.set_field(currField,directional::indexed_glyph_colors(currField));
+  viewer.set_field(currField,directional::DirectionalViewer::indexed_glyph_colors(currField, false));
   viewer.toggle_seams(showCombed);
 }
 
@@ -40,13 +39,10 @@ void update_raw_field_mesh()
 // Handle keyboard input
 bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
-  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
-  directional::DirectionalViewer* directional_viewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
       // Select vector
     case '1': showCombed = !showCombed; update_raw_field_mesh(); break;
-    case '2': showSingularities=~showSingularities; directional_viewer->toggle_singularities(showSingularities); break;
   }
   return true;
 }
@@ -56,7 +52,6 @@ int main()
 {
   std::cout <<
   "  1        Toggle raw field/Combed field" << std::endl <<
-  "  2        Show/hide singularities" << std::endl;
   igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", V, F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
   igl::edge_topology(V, F, EV, FE, EF);
@@ -69,7 +64,7 @@ int main()
   
   //Mesh setup
   viewer.set_mesh(V, F);
-  viewer.data().show_lines = false;  //TODO: get rid of that
+  viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();
   viewer.set_singularities(N, singVertices, singIndices);
   viewer.set_seams(EV, combedMatching);  //TODO: allow to define seams in several ways

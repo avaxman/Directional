@@ -50,8 +50,6 @@ namespace directional
     1.0,0.0,0.0,
     (width/2.0)*(cos(angle/2.0)/sin(angle/2.0)), width/2.0, 0.0;
     
-    std::cout<<"VArrow :"<<VArrow<<std::endl;
-  
     TArrow<<0,1,2,
     2,3,0;
     

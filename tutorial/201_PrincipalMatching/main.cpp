@@ -64,8 +64,6 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 // Handle keyboard input
 bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 {
-  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
-  directional::DirectionalViewer* directional_viewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
       // Select vector
