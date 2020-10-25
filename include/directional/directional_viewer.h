@@ -34,6 +34,12 @@ namespace directional
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
     std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
     
+    int vec2faceRatio;  //how many faces in the field mesh correspond to a single vector (assuming they are continuous in the implementation)
+    int N;              //degree of field
+    std::vector<Eigen::MatrixXd> fieldVList;
+    std::vector<Eigen::MatrixXi> fieldFList;
+    
+    
   public:
     DirectionalViewer(){}
     ~DirectionalViewer(){}
@@ -151,6 +157,14 @@ namespace directional
       for (int i=0;i<selectedFaces.size();i++)
         CMesh.row(selectedFaces(i))=selected_face_color();
       set_mesh_colors(CMesh,meshNum);
+      
+      //coloring field
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(vec2faceRatio*N*FList[meshNum].rows(),1);
+      for (int i=0;i<selectedFaces.rows();i++)
+        glyphColors.block(vec2faceRatio*N*i, 0, vec2faceRatio*N, 3)=directional::DirectionalViewer::selected_face_glyph_color().replicate(vec2faceRatio*N,1);
+      
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(glyphColors);
+      
     }
     
     void IGL_INLINE set_selected_vector(const Eigen::MatrixXd& rawField, const int selectedFace, const int selectedVector, const int meshNum=0)
@@ -163,9 +177,6 @@ namespace directional
       set_field(rawField, glyphColors);
     }
     
-    
-    
-    
     void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                               const int meshNum=0)
@@ -177,6 +188,7 @@ namespace directional
       
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
+      N=rawField.cols()/3;
       directional::glyph_lines_raw(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
@@ -184,8 +196,7 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
     }
     
-    void IGL_INLINE set_singularities(const int N,
-                                      const Eigen::VectorXi& singVertices,
+    void IGL_INLINE set_singularities(const Eigen::VectorXi& singVertices,
                                       const Eigen::VectorXi& singIndices,
                                       const int meshNum=0)
     {

@@ -37,7 +37,7 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
     case '0': zeroPressed=true; break;
     case '1':
       currVec = (currVec+1)%N;
-      directionalViewer->set_selected_vector(rawField, currF, currVec);
+      //directionalViewer->set_selected_vector(rawField, currF, currVec);
       break;
   }
   return true;
@@ -65,7 +65,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
       currF=fid;
       Eigen::VectorXi selectedFaces(1); selectedFaces(0)=currF;
       viewer.set_selected_faces(selectedFaces);
-      directionalViewer->set_selected_vector(rawField, currF, currVec);
+      //directionalViewer->set_selected_vector(rawField, currF, currVec);
       return true;
     }
     //choosing face
@@ -76,7 +76,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
                                   V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
       
       rawField.block(currF, currVec*3, 1,3)=newVec;
-      directionalViewer->set_selected_vector(rawField, currF, currVec);
+      //directionalViewer->set_selected_vector(rawField, currF, currVec);
       return true;
       
     }
