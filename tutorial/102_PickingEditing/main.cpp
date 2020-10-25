@@ -37,7 +37,7 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
     case '0': zeroPressed=true; break;
     case '1':
       currVec = (currVec+1)%N;
-      //directionalViewer->set_selected_vector(rawField, currF, currVec);
+      directionalViewer->set_selected_vector(currF, currVec);
       break;
   }
   return true;
@@ -65,10 +65,10 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
       currF=fid;
       Eigen::VectorXi selectedFaces(1); selectedFaces(0)=currF;
       viewer.set_selected_faces(selectedFaces);
-      //directionalViewer->set_selected_vector(rawField, currF, currVec);
+      directionalViewer->set_selected_vector(currF, currVec);
       return true;
     }
-    //choosing face
+    //moving vector
     if (((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Right)&&(fid==currF)){
       // Calculate direction from the center of the face to the mouse
       Eigen::RowVector3d newVec =(V.row(F(fid, 0)) * baryInFace(0) +
@@ -76,7 +76,8 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
                                   V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
       
       rawField.block(currF, currVec*3, 1,3)=newVec;
-      //directionalViewer->set_selected_vector(rawField, currF, currVec);
+      directionalViewer->set_field(rawField);
+      directionalViewer->set_selected_vector(currF, currVec);
       return true;
       
     }

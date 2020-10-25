@@ -11,7 +11,7 @@
 #include <igl/jet.h>
 #include <igl/parula.h>
 #include <igl/opengl/glfw/Viewer.h>
-#include <directional/glyph_lines_raw.h>
+#include <directional/glyph_lines_mesh.h>
 #include <directional/singularity_spheres.h>
 #include <directional/seam_lines.h>
 #include <directional/edge_diamond_mesh.h>
@@ -34,7 +34,6 @@ namespace directional
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
     std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
     
-    int vec2faceRatio;  //how many faces in the field mesh correspond to a single vector (assuming they are continuous in the implementation)
     int N;              //degree of field
     std::vector<Eigen::MatrixXd> fieldVList;
     std::vector<Eigen::MatrixXi> fieldFList;
@@ -64,7 +63,10 @@ namespace directional
         
         data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(V,F);
+        if ((V.rows()==F.rows())||(meshColors.rows()!=V.rows()))  //assume face_based was meant
+          data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
+        
         
         if (VList.size()<meshNum+1){
           VList.resize(meshNum+1);
@@ -91,6 +93,8 @@ namespace directional
       else
         meshColors=C;
       
+      if ((VList[meshNum].rows()==FList[meshNum].rows())&&(meshColors.rows()!=VList[meshNum].rows()))  //assume face_based was meant
+        data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=true;
       if (edgeVList[meshNum].size()!=0){
@@ -159,22 +163,19 @@ namespace directional
       set_mesh_colors(CMesh,meshNum);
       
       //coloring field
-      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(vec2faceRatio*N*FList[meshNum].rows(),1);
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
       for (int i=0;i<selectedFaces.rows();i++)
-        glyphColors.block(vec2faceRatio*N*i, 0, vec2faceRatio*N, 3)=directional::DirectionalViewer::selected_face_glyph_color().replicate(vec2faceRatio*N,1);
+        glyphColors.row(selectedFaces(i))=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
       
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(glyphColors);
-      
+      set_field_colors(glyphColors,meshNum);
     }
     
-    void IGL_INLINE set_selected_vector(const Eigen::MatrixXd& rawField, const int selectedFace, const int selectedVector, const int meshNum=0)
+    void IGL_INLINE set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
     {
-      int N = rawField.cols()/3;
       Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
       glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
       glyphColors.block(selectedFace,3*selectedVector,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
-      directional::glyph_lines_colors(N, fieldColors, CField);
-      set_field(rawField, glyphColors);
+      set_field_colors(glyphColors, meshNum);
     }
     
     void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
@@ -203,11 +204,9 @@ namespace directional
       if (C.rows()==0)
         fieldColors=default_glyph_color();
       
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
+      Eigen::MatrixXd CField;
+      directional::glyph_lines_mesh(FList[meshNum], N, fieldColors, CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
     }
     
     

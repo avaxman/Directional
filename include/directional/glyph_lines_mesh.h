@@ -101,19 +101,21 @@ namespace directional
                                    const double sizeRatio = 1.25)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
-    glyph_lines_raw(V, F, rawField, glyphColors, l/6, l/30,  l/200, fieldV, fieldF, fieldC);
+    glyph_lines_mesh(V, F, rawField, glyphColors, l/6, l/30,  l/200, fieldV, fieldF, fieldC);
   }
   
   //A version that just delivers (updated) colors)
-  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &glyphColor,
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXi& F,
+                                   const int N,
+                                   const Eigen::MatrixXd &glyphColor,
                                    Eigen::MatrixXd &fieldC)
   {
    
-    vectorColors.resize(F.rows() * N, 3);
+    Eigen::MatrixXd vectorColors(F.rows() * N, 3);
     
     // Duplicate colors so each glyph gets the proper color
     if (glyphColor.rows() == 1)
-      vectorColors = glyphColor.replicate(P1.rows(), 1);
+      vectorColors = glyphColor.replicate(F.rows() * N, 1);
     else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
       vectorColors = glyphColor.replicate(N, 1);
     else{
@@ -121,7 +123,7 @@ namespace directional
         vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
     }
 
-    directional::angled_arrows(P1,P2,vectNormals, width/length, height, angle, vectorColors, fieldV, fieldF, fieldC);
+    directional::angled_arrows(vectorColors, fieldC);
 
     
   }

@@ -12,15 +12,16 @@ viewer encapsulation branch TODO:
 10. toggling with true/false control - done
 11. Configuring sizes and width in the viewer
 12. parameterization quiet mode
-13. allow toggling colors
+13. allow toggling colors - done
 14. Automatic creation of barycentric meshes - done
 15. Set default values to be default if not specified.. 
 16. assertions for everything
 17. color schemes for fields
 18. more economic and gainly field arrows - done
-19. allow changing colors of field without passing field around
+19. allow changing colors of field without passing field around - done
 20. vertex-shaded singularities
 21. face-skipping glyph drawing
 22. possible sign symmetry in glyph drawing - done
 23. Weird power-field alignment
-24. selected face -> selected field coloring
+24. selected face -> selected field coloring - done
+25. reverse-engineer picking and editing single vectors

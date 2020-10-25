@@ -28,7 +28,7 @@ namespace directional
   //  T:              #T by 3 mesh triangles
   //  C:              #T by 3 colors
   
-  IGL_INLINE bool angled_arrows(const Eigen::MatrixXd& P1,
+  bool IGL_INLINE angled_arrows(const Eigen::MatrixXd& P1,
                                const Eigen::MatrixXd& P2,
                                const Eigen::MatrixXd& normals,
                                const double& width,
@@ -59,11 +59,11 @@ namespace directional
     C.resize(NewColorSize,3);
     
     for (int i=0;i<P1.rows();i++){
-      RowVector3d YAxis=(P2.row(i)-P1.row(i));
+      RowVector3d XAxis=(P2.row(i)-P1.row(i));
       RowVector3d ZAxis=normals.row(i);
-      RowVector3d XAxis =YAxis.cross(ZAxis);
-      XAxis.rowwise().normalize();
-      XAxis*=YAxis.norm();
+      RowVector3d YAxis =ZAxis.cross(XAxis);
+      YAxis.normalize();
+      YAxis*=XAxis.norm();
 
       Matrix3d R; R<<XAxis, YAxis, ZAxis;
       RowVector3d translation = P1.row(i)+height*normals.row(i);
@@ -75,6 +75,23 @@ namespace directional
     
     return true;
   }
+  
+  //A version that only creates the colors
+  bool IGL_INLINE angled_arrows(const Eigen::MatrixXd& arrowColors,
+                               Eigen::MatrixXd& C)
+  {
+    using namespace Eigen;
+   
+    C.resize(2*arrowColors.rows(),3);
+    
+    for (int i=0;i<arrowColors.rows();i++){
+      C.block(2*i,0,2,3)=arrowColors.row(i).replicate(2,1);
+    }
+    
+    return true;
+  }
+  
+  
   
   }
 
