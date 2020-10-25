@@ -173,7 +173,7 @@ namespace directional
       Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
       glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
       glyphColors.block(selectedFace,3*selectedVector,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
-      
+      directional::glyph_lines_colors(N, fieldColors, CField);
       set_field(rawField, glyphColors);
     }
     
@@ -189,12 +189,27 @@ namespace directional
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
       N=rawField.cols()/3;
-      directional::glyph_lines_raw(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
     }
+    
+    void IGL_INLINE set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+                                     const int meshNum=0)
+    {
+      Eigen::MatrixXd fieldColors=C;
+      if (C.rows()==0)
+        fieldColors=default_glyph_color();
+      
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
+    }
+    
     
     void IGL_INLINE set_singularities(const Eigen::VectorXi& singVertices,
                                       const Eigen::VectorXi& singIndices,

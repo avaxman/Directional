@@ -1,12 +1,12 @@
 // This file is part of Directional, a library for directional field processing.
-// Copyright (C) 2018 Amir Vaxman <avaxman@gmail.com>
+// Copyright (C) 2020 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef DIRECTIONAL_GLYPH_LINES_RAW_H
-#define DIRECTIONAL_GLYPH_LINES_RAW_H
+#ifndef DIRECTIONAL_GLYPH_LINES_MESH_H
+#define DIRECTIONAL_GLYPH_LINES_MESH_H
 
 #include <igl/igl_inline.h>
 #include <igl/barycenter.h>
@@ -18,7 +18,9 @@
 
 
 namespace directional
-{
+  {
+  
+  
   // Creates mesh elements that comprise glyph drawing of a directional field.
   // Inputs:
   //  V:          #V X 3 vertex coordinates.
@@ -33,16 +35,16 @@ namespace directional
   //  fieldF: The faces of the field mesh
   //  fieldC: The colors of the field mesh
   
-  void IGL_INLINE glyph_lines_raw(const Eigen::MatrixXd &V,
-                                  const Eigen::MatrixXi &F,
-                                  const Eigen::MatrixXd &rawField,
-                                  const Eigen::MatrixXd &glyphColor,
-                                  double length,
-                                  double width,
-                                  double height,
-                                  Eigen::MatrixXd &fieldV,
-                                  Eigen::MatrixXi &fieldF,
-                                  Eigen::MatrixXd &fieldC)
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &V,
+                                   const Eigen::MatrixXi &F,
+                                   const Eigen::MatrixXd &rawField,
+                                   const Eigen::MatrixXd &glyphColor,
+                                   double length,
+                                   double width,
+                                   double height,
+                                   Eigen::MatrixXd &fieldV,
+                                   Eigen::MatrixXi &fieldF,
+                                   Eigen::MatrixXd &fieldC)
   {
     Eigen::MatrixXd normals;
     igl::per_face_normals(V, F, normals);
@@ -69,7 +71,7 @@ namespace directional
     P2.array() *= length;
     P2 += P1;
     
-    // Duplicate colors so each cylinder gets the proper color
+    // Duplicate colors so each glyph gets the proper color
     if (glyphColor.rows() == 1)
       vectorColors = glyphColor.replicate(P1.rows(), 1);
     else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
@@ -88,20 +90,43 @@ namespace directional
     
   }
   
-  //version without specification of glyph dimensions
-  void IGL_INLINE glyph_lines_raw(const Eigen::MatrixXd &V,
-                                  const Eigen::MatrixXi &F,
-                                  const Eigen::MatrixXd &rawField,
-                                  const Eigen::MatrixXd &glyphColors,
-                                  Eigen::MatrixXd &fieldV,
-                                  Eigen::MatrixXi &fieldF,
-                                  Eigen::MatrixXd &fieldC,
-                                  const double sizeRatio = 1.25)
+  //A version without specification of glyph dimensions
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &V,
+                                   const Eigen::MatrixXi &F,
+                                   const Eigen::MatrixXd &rawField,
+                                   const Eigen::MatrixXd &glyphColors,
+                                   Eigen::MatrixXd &fieldV,
+                                   Eigen::MatrixXi &fieldF,
+                                   Eigen::MatrixXd &fieldC,
+                                   const double sizeRatio = 1.25)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
     glyph_lines_raw(V, F, rawField, glyphColors, l/6, l/30,  l/200, fieldV, fieldF, fieldC);
   }
   
-}
+  //A version that just delivers (updated) colors)
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &glyphColor,
+                                   Eigen::MatrixXd &fieldC)
+  {
+   
+    vectorColors.resize(F.rows() * N, 3);
+    
+    // Duplicate colors so each glyph gets the proper color
+    if (glyphColor.rows() == 1)
+      vectorColors = glyphColor.replicate(P1.rows(), 1);
+    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
+      vectorColors = glyphColor.replicate(N, 1);
+    else{
+      for (int i=0;i<N;i++)
+        vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
+    }
+
+    directional::angled_arrows(P1,P2,vectNormals, width/length, height, angle, vectorColors, fieldV, fieldF, fieldC);
+
+    
+  }
+  
+
+  }
 
 #endif
