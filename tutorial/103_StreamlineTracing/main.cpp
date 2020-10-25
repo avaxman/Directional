@@ -1,22 +1,10 @@
-#include <igl/barycenter.h>
 #include <igl/edge_topology.h>
-#include <igl/local_basis.h>
-#include <igl/parula.h>
-#include <igl/per_face_normals.h>
-#include <igl/per_vertex_normals.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/readOFF.h>
-#include <igl/slice.h>
-#include <igl/sort_vectors_ccw.h>
 #include <directional/streamlines.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/directional_viewer.h>
-
-#include <cstdlib>
-#include <iostream>
-#include <vector>
-#include <fstream>
 
 
 // Mesh
@@ -59,8 +47,6 @@ bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
   P2.block(P2.rows()-sl_state.end_point.rows(),0,sl_state.end_point.rows(),3)=sl_state.end_point;
   
   directional_viewer->set_streamlines(P1, P2, color.replicate(P2.rows(),1));
-  
-  
   
   anim_t += anim_t_dir;
   

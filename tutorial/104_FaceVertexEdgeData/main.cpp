@@ -1,5 +1,4 @@
-#include <math.h>       /* sin */
-#include <igl/gaussian_curvature.h>
+#include <math.h>
 #include <igl/edge_topology.h>
 #include <igl/per_face_normals.h>
 #include <directional/directional_viewer.h>
@@ -51,8 +50,8 @@ int main()
   edgeData.array()*=edgeData.array();
   
   viewer.set_mesh(V,F);
-  viewer.set_field(rawField);
-  viewer.set_singularities(N, singVertices, singIndices);
+  viewer.set_field(rawField, Eigen::RowVector3d::Constant(1.0));
+  viewer.set_singularities(singVertices, singIndices);
   viewer.toggle_mesh_edges(false);
   
   viewer.callback_key_down = &key_down;

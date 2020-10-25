@@ -45,8 +45,7 @@ namespace directional
     }
     
     Eigen::VectorXi usedVertices=VectorXi::Zero(numV);
-    int numUsed=0;
-    
+
     //queue and initial possible edges
     std::queue<std::pair<int,int> > edgeVertices;
     
