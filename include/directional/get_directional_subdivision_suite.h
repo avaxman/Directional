@@ -77,8 +77,8 @@ namespace directional{
         }
 
         get_W(FCoarse, EVCoarse, SFECoarse.leftCols(3), EFCoarse, WCoarse);
-        get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3), PCoarse);
-        get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), PInvFine);
+        get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),1, PCoarse);
+        get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),1, PInvFine);
         get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), WInvFine);
     }
 
@@ -147,10 +147,10 @@ namespace directional{
             VFine.row(v) = VFineVec.middleRows(3 * v, 3).transpose();
         }
 
-        get_W(FCoarse, EVCoarse, SFECoarse.leftCols(3), EFCoarse, WCoarse);
-        get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3), PCoarse);
-        get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), PInvFine);
-        get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), WInvFine);
+        get_W(FCoarse, EVCoarse, SFECoarse.leftCols(3), EFCoarse, matchingCoarse, N, WCoarse);
+        get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),N, PCoarse);
+        get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),N, PInvFine);
+        get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), matchingFine, N,  WInvFine);
     }
 
 }

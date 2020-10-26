@@ -140,7 +140,7 @@ namespace directional
       Eigen::VectorXd effort, curlNorm;
       directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FE_et, rawFieldCoarse, matchingCoarse, effort, curlNorm);
     }
-      // Principal matching otherwise
+    // Principal matching otherwise
     else
     {
         Eigen::VectorXd effort;
