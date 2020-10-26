@@ -47,6 +47,93 @@ namespace directional{
             }
         }
     }
+    
+    inline void shm_edge_topology(
+        const Eigen::MatrixXi& F,
+        const Eigen::MatrixXi& E,
+        Eigen::MatrixXi& EF,
+        Eigen::MatrixXi& EI,
+        Eigen::MatrixXi& SFE
+    )
+    {
+        SFE = Eigen::MatrixXi::Constant(F.rows(), 6, -1);
+        EI = Eigen::MatrixXi::Constant(E.rows(), 2, -1);
+        EF = Eigen::MatrixXi::Constant(E.rows(), 2, -1);
+
+        // Reconstruct EF
+        {
+            std::map<int,std::set<int>> VToF;
+            for(auto f= 0; f < F.rows(); ++f)
+            {
+                for(int c = 0; c < 3; ++c)
+                {
+                    if (VToF.find(F(f, c)) == VToF.end()) VToF[F(f, c)] = {};
+                    VToF[F(f, c)].insert(f);
+                }
+            }
+            for(int e = 0; e < E.rows(); ++e)
+            {
+                const auto v0 = E(e, 0);
+                const auto v1 = E(e, 1);
+                std::vector<int> diff;
+                auto end = std::set_intersection(VToF[v0].begin(), VToF[v0].end(), VToF[v1].begin(), VToF[v1].end(), diff.begin());
+                assert(std::distance(diff.begin(), end) == 2);
+                auto f0 = diff[0];
+                auto f1 = diff[1];
+                // Determine left and right
+                for(int c = 0;c < 3; ++c)
+                {
+                    if(F(f0,c) == v0)
+                    {
+                        if(F(f0,(c+1)%3) == v1)
+                        {
+                            EF(e, 0) = f0;
+                            EF(e, 1) = f1;
+                        }
+                        else
+                        {
+                            EF(e, 0) = f1;
+                            EF(e, 1) = f0;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int e = 0; e < EF.rows(); ++e)
+        {
+            auto leftF = EF(e, 0);
+            if (leftF != -1)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    auto v = F(leftF, j);
+                    if (E(e, 0) != v && E(e, 1) != v)
+                    {
+                        SFE(leftF, j) = e;
+                        SFE(leftF, 3 + j) = 0;
+                        EI(e, 0) = j;
+                    }
+                }
+            }
+
+            auto rightF = EF(e, 1);
+            if (rightF != -1)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    auto v = F(rightF, j);
+                    if (E(e, 0) != v && E(e, 1) != v)
+                    {
+                        SFE(rightF, j) = e;
+                        SFE(rightF, 3 + j) = 1;
+                        EI(e, 1) = j;
+                    }
+                }
+            }
+        }
+    }
 
     inline void shm_edge_topology(
         const Eigen::MatrixXi& F,
@@ -62,7 +149,7 @@ namespace directional{
         for(int f = 0; f < FE.rows(); ++f)
         {
             // SHM follows edge_flaps based stuff, so compensate
-            // Difference: edge FE(f,0) of edgetopology is between F(f,0) and F(f,0)
+            // Difference: edge FE(f,0) of edgetopology is between F(f,0) and F(f,1)
             // instead of opposite corner F(f,0), i.e. between vertices F(f,1) and F(f,2) (possibly flipped)
             if(isEdgeTopologyBased)
             {

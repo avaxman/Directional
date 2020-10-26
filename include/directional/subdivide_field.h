@@ -124,6 +124,7 @@ namespace directional
                               const Eigen::MatrixXi& FCoarse,
                               const Eigen::MatrixXd& rawFieldCoarse,
                               int targetLevel,
+                              bool useCurlMatching,
                               Eigen::MatrixXd& VFine,
                               Eigen::MatrixXi& FFine,
                               Eigen::MatrixXd& rawFieldFine)
@@ -134,9 +135,16 @@ namespace directional
     shm_edge_topology_to_igledgetopology(FCoarse, EVCoarse, EFCoarse, SFE, EI_et, FE_et);
     // Compute curl matching
     Eigen::VectorXi matchingCoarse, matchingFine;
+    if(useCurlMatching)
     {
       Eigen::VectorXd effort, curlNorm;
       directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FE_et, rawFieldCoarse, matchingCoarse, effort, curlNorm);
+    }
+      // Principal matching otherwise
+    else
+    {
+        Eigen::VectorXd effort;
+        directional::principal_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FE_et, rawFieldCoarse, matchingCoarse, effort);
     }
     
     subdivide_field(VCoarse, FCoarse, EVCoarse, EFCoarse, rawFieldCoarse, matchingCoarse, targetLevel, VFine, FFine, EVFine, EFFine, rawFieldFine, matchingFine);
