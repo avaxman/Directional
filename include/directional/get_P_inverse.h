@@ -25,38 +25,49 @@ namespace directional
         const Eigen::MatrixXi& F,
         const Eigen::MatrixXi& EV,
         const Eigen::MatrixXi& FE,
+        int N,
         Eigen::SparseMatrix<double>& P_inverse)
     {
-        using namespace Eigen;
-        P_inverse = Eigen::SparseMatrix<double>(3 * F.rows(), 2 * F.rows());
-        std::vector<Triplet<double>> trips;
-        trips.reserve(9 * F.rows());
-        Eigen::VectorXd DA;
-        Eigen::MatrixXd N;
-        igl::doublearea(V, F, DA);
-        igl::per_face_normals(V, F, N);
-        for (int f = 0; f < F.rows(); f++)
+        if(N == 1)
         {
-            RowVector3d localN = N.row(f);
-            RowVector3d center = (V.row(F(f, 0)) + V.row(F(f, 1)) + V.row(F(f, 2))) / 3.0;
-            const int e0ind = FE(f, 0), e1ind = FE(f, 1);
-            // Compute gamma signs (could be easier when we can assume something about FE...)
-            const double s0 = (V.row(EV(e0ind, 0))).cross(V.row(EV(e0ind, 1)) - center).dot(localN) > 0 ? 1.0 : -1.0;
-            const double s1 = (V.row(EV(e1ind, 0))).cross(V.row(EV(e1ind, 1)) - center).dot(localN) > 0 ? 1.0 : -1.0;
-            // Get the edges
-            RowVector3d e0 = V.row(EV(e0ind, 1)) - V.row(EV(e0ind, 0));
-            RowVector3d e1 = V.row(EV(e1ind, 1)) - V.row(EV(e1ind, 0));
-            // Compute basis elements
-            RowVector3d vals0 = localN.cross(e0) / DA(f);
-            RowVector3d vals1 = -localN.cross(e1) / DA(f);
-            const double signProd = s0 * s1;
-            for (int i = 0; i < 3; i++)
+            using namespace Eigen;
+            P_inverse = Eigen::SparseMatrix<double>(3 * F.rows(), 2 * F.rows());
+            std::vector<Triplet<double>> trips;
+            trips.reserve(9 * F.rows());
+            Eigen::VectorXd DA;
+            Eigen::MatrixXd N;
+            igl::doublearea(V, F, DA);
+            igl::per_face_normals(V, F, N);
+            for (int f = 0; f < F.rows(); f++)
             {
-                trips.emplace_back(3 * f + i, 2 * f, signProd * vals1(i));
-                trips.emplace_back(3 * f + i, 2 * f + 1, signProd * vals0(i));
+                RowVector3d localN = N.row(f);
+                RowVector3d center = (V.row(F(f, 0)) + V.row(F(f, 1)) + V.row(F(f, 2))) / 3.0;
+                const int e0ind = FE(f, 0), e1ind = FE(f, 1);
+                // Compute gamma signs (could be easier when we can assume something about FE...)
+                const double s0 = (V.row(EV(e0ind, 0))).cross(V.row(EV(e0ind, 1)) - center).dot(localN) > 0 ? 1.0 : -1.0;
+                const double s1 = (V.row(EV(e1ind, 0))).cross(V.row(EV(e1ind, 1)) - center).dot(localN) > 0 ? 1.0 : -1.0;
+                // Get the edges
+                RowVector3d e0 = V.row(EV(e0ind, 1)) - V.row(EV(e0ind, 0));
+                RowVector3d e1 = V.row(EV(e1ind, 1)) - V.row(EV(e1ind, 0));
+                // Compute basis elements
+                RowVector3d vals0 = localN.cross(e0) / DA(f);
+                RowVector3d vals1 = -localN.cross(e1) / DA(f);
+                const double signProd = s0 * s1;
+                for (int i = 0; i < 3; i++)
+                {
+                    trips.emplace_back(3 * f + i, 2 * f, signProd * vals1(i));
+                    trips.emplace_back(3 * f + i, 2 * f + 1, signProd * vals0(i));
+                }
             }
+            P_inverse.setFromTriplets(trips.begin(), trips.end());
         }
-        P_inverse.setFromTriplets(trips.begin(), trips.end());
+        else
+        {
+            Eigen::SparseMatrix<double> PInv1;
+            get_P_inverse(V, F, EV, FE, 1, PInv1);
+            std::vector<Eigen::SparseMatrix<double>*> copies(N, &PInv1);
+            directional::block_diag(copies, P_inverse);
+        }
     }
 }
 #endif

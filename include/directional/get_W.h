@@ -4,6 +4,7 @@
 #include <Eigen/Sparse>
 #include "block_diag.h"
 #include <igl/cat.h>
+#include "get_U.h"
 
 namespace directional
 {
@@ -19,34 +20,11 @@ namespace directional
     {
         // Construct gamma2 to gamma3 converter, easier to construct the oneform and curl converters
         // when usign gamma3 representation.
-        Eigen::SparseMatrix<double> G2_To_G3(3 * FE.rows(), 2 * FE.rows());
-        using namespace Eigen;
+        Eigen::SparseMatrix<double> U;
+        get_U(F, EV, FE, EF,1, U);
         using namespace std;
+        using namespace Eigen;
         std::vector<Triplet<double>> trips;
-        trips.reserve(4 * FE.rows());
-        for (int f = 0; f < FE.rows(); f++)
-        {
-            RowVector3d signs;
-            for(int c = 0; c < 3; ++c)
-            {
-                for(int i = 0; i < 3; ++i)
-                {
-                    if(F(f,i) == EV(FE(f,c),0))
-                    {
-                        signs(c) = EV(FE(f, c), 1) == F(f, (i + 1) % 3) ? 1.0 : -1.0;
-                        break;
-                    }
-                }
-            }
-
-
-            trips.emplace_back(3 * f, 2 * f, 1.);
-            trips.emplace_back(3 * f + 1, 2 * f + 1, 1.);
-            // Reconstruct last halfedge form from zero sum constraint.
-            trips.emplace_back(3 * f + 2, 2 * f, -signs(0)*signs(2));
-            trips.emplace_back(3 * f + 2, 2 * f + 1, -signs(1)*signs(2));
-        }
-        G2_To_G3.setFromTriplets(trips.begin(), trips.end());
 
         Eigen::SparseMatrix<double> GammaToOneform(EF.rows(), F.rows()* 3);
         trips.clear();
@@ -69,7 +47,7 @@ namespace directional
             }
         }
         GammaToOneform.setFromTriplets(trips.begin(), trips.end());
-        GammaToOneform = GammaToOneform * G2_To_G3;
+        GammaToOneform = GammaToOneform * U;
         // Construct half curl operator
         Eigen::SparseMatrix<double> GammaToHalfCurl(EF.rows(), F.rows() * 3);
         trips.clear();
@@ -89,7 +67,7 @@ namespace directional
             trips.emplace_back(e, 3 * EF(e, 0) + ind0, -0.5);
         }
         GammaToHalfCurl.setFromTriplets(trips.begin(), trips.end());
-        GammaToHalfCurl = GammaToHalfCurl * G2_To_G3;
+        GammaToHalfCurl = GammaToHalfCurl * U;
 
         igl::cat(1, GammaToOneform, GammaToHalfCurl, W);
 

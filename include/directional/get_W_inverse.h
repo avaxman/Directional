@@ -4,6 +4,7 @@
 #include <Eigen/Sparse>
 #include "block_diag.h"
 #include <igl/cat.h>
+#include "get_U_inverse.h"
 
 namespace directional
 {
@@ -15,6 +16,7 @@ namespace directional
     {
 
         using SMat = Eigen::SparseMatrix<double>;
+        // Matrix to convert oneform to gamma3 elements
         SMat OneFormToG3(3 * FE.rows(), EF.rows()), CToG3(3 * FE.rows(), EF.rows());
 
         std::vector<Eigen::Triplet<double>> tripsCBack, tripsOneFormBack;
@@ -44,6 +46,10 @@ namespace directional
         }
         OneFormToG3.setFromTriplets(tripsOneFormBack.begin(), tripsOneFormBack.end());
         CToG3.setFromTriplets(tripsCBack.begin(), tripsCBack.end());
+        SMat U_inverse;
+        get_U_inverse(F, EV, FE, EF, U_inverse);
+        OneFormToG3 = U_inverse * OneFormToG3;
+        CToG3 = U_inverse * CToG3;
         igl::cat(2, OneFormToG3, CToG3, W_inverse);
     }
 

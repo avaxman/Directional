@@ -25,25 +25,39 @@ namespace directional
         const Eigen::MatrixXi& F,
         const Eigen::MatrixXi& EV,
         const Eigen::MatrixXi& FE,
+        int N,
         Eigen::SparseMatrix<double>& P)
     {
-        // Projects FEM vector field into Gamma3 space.
-        P = Eigen::SparseMatrix<double>(2 * F.rows(), 3 * F.rows());
+        if(N == 1)
+        {
+            // Projects FEM vector field into Gamma3 space.
+            P = Eigen::SparseMatrix<double>(2 * F.rows(), 3 * F.rows());
 
-        std::vector<Eigen::Triplet<double>> trips;
-        trips.reserve(9 * F.rows());
-        for (int f = 0; f < F.rows(); f++) {
-            // Iterate over corners
-            for (int c = 0; c < 2; c++) {
-                //Get edge opposite corner in global orientation
-                const int eI = FE(f, c);
-                Eigen::RowVector3d edge = V.row(EV(eI, 1)) - V.row(EV(eI, 0));
-                for (int i = 0; i < 3; i++) {
-                    trips.emplace_back(2 * f + c, 3 * f + i, edge[i]);
+            std::vector<Eigen::Triplet<double>> trips;
+            trips.reserve(9 * F.rows());
+            for (int f = 0; f < F.rows(); f++) {
+                // Iterate over corners
+                for (int c = 0; c < 2; c++) {
+                    //Get edge opposite corner in global orientation
+                    const int eI = FE(f, c);
+                    Eigen::RowVector3d edge = V.row(EV(eI, 1)) - V.row(EV(eI, 0));
+                    for (int i = 0; i < 3; i++) {
+                        trips.emplace_back(2 * f + c, 3 * f + i, edge[i]);
+                    }
                 }
             }
+            P.setFromTriplets(trips.begin(), trips.end());
         }
-        P.setFromTriplets(trips.begin(), trips.end());
+        else
+        {
+            // For a single PCVF
+            Eigen::SparseMatrix<double> P1;
+            get_P(V, F, EV, FE, 1, P1);
+            // Copy for the directionals
+            std::vector<Eigen::SparseMatrix<double>*> copies(N, &P1);
+            // Assign to P
+            directional::block_diag(copies, P);
+        }
     }
 }
 #endif
