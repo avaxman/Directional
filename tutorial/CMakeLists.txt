@@ -81,6 +81,9 @@ endif()
 # Chapter 6
 if(TUTORIALS_CHAPTER6)
 add_subdirectory("601_SubdivisionFields")
+add_subdirectory("602_RestrictedEigenDecomposition")
+add_subdirectory("603_PCVFSubvisionInterpolation")
+add_subdirectory("604_Advection")
 endif()
 
 

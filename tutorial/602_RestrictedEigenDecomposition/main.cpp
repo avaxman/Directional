@@ -1,42 +1,33 @@
 #include <iostream>
-#include <fstream>
 #include <igl/readOFF.h>
 #include <igl/readOBJ.h>
 #include <igl/opengl/glfw/Viewer.h>
-#include <igl/local_basis.h>
-#include <igl/avg_edge_length.h>
-#include <igl/is_border_vertex.h>
-#include <igl/adjacency_list.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/triangle_triangle_adjacency.h>
 #include <igl/edge_topology.h>
 #include <igl/jet.h>
 #include <igl/barycenter.h>
-#include <igl/false_barycentric_subdivision.h>
 #include <directional/visualization_schemes.h>
 #include <directional/glyph_lines_raw.h>
 #include <directional/seam_lines.h>
-#include <directional/read_raw_field.h>
-#include <directional/curl_matching.h>
-#include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
-#include <igl/edge_flaps.h>
 #include <directional/combing.h>
-#include <directional/polycurl_reduction.h>
-#include <directional/write_raw_field.h>
 #include <directional/setup_parameterization.h>
 #include <directional/parameterize.h>
-#include <directional/subdivide_field.h>
 #include <directional/power_field.h>
-#include <directional/power_to_raw.h>
-#include "tutorial_shared_path.h"
 #include <directional/cut_mesh_with_singularities.h>
-#include <unordered_set>
+#include <igl/grad.h>
+#include "directional/get_directional_subdivision_suite.h"
+// Import matlab interface for eigen computation
+#ifdef LIBIGL_WITH_MATLAB
+#include <igl/matlab/matlabinterface.h>
+#endif
 
 using namespace std;
 
+int subdivisionLevel = 3;
+
+int numberOfEigenValues = 15;
+
 Eigen::VectorXi matchingCoarse, matchingFine, combedMatchingCoarse, combedMatchingFine, singVerticesCoarse, singVerticesFine, singIndicesCoarse, singIndicesFine;
-Eigen::VectorXd effortCoarse, effortFine, combedEffortCoarse, combedEffortFine;
 Eigen::MatrixXi FCoarse, FFine, FCutCoarse, FCutFine, FFieldCoarse, FSingsCoarse, FSeamsCoarse, FFieldFine, FSingsFine, FSeamsFine;
 Eigen::MatrixXi EVCoarse, EFCoarse, FECoarse,EVFine, EFFine, FEFine;
 
@@ -47,32 +38,8 @@ Eigen::MatrixXd rawFieldCoarse, rawFieldFine;
 Eigen::MatrixXd combedFieldCoarse, combedFieldFine;
 Eigen::VectorXd curlCoarse, curlFine; // norm of curl per edge
 
-Eigen::MatrixXd cutReducedUVCoarse, cutFullUVCoarse, cornerWholeUVCoarse;
-Eigen::MatrixXd cutReducedUVFine, cutFullUVFine, cornerWholeUVFine;
-
-Eigen::MatrixXcd powerField;
-
-
 // The igl viewer
 igl::opengl::glfw::Viewer viewer;
-
-Eigen::VectorXi singVerticesOrig, singVerticesCF;
-Eigen::VectorXi singIndicesOrig, singIndicesCF;
-
-
-
-//for averaging curl to faces, for visualization
-Eigen::SparseMatrix<double> AE2FCoarse, AE2FFine;
-
-int N = 4;
-int targetLevel = 2;
-int iter = 0;
-
-// The set of parameters for calculating the curl-free fields
-directional::polycurl_reduction_parameters params;
-
-// Solver data (needed for precomputation)
-directional::PolyCurlReductionSolverData pcrdata;
 
 typedef enum {COARSE_FIELD, COARSE_CURL, COARSE_PARAMETERIZATION,FINE_FIELD, FINE_CURL, FINE_PARAMETERIZATION} ViewingModes;
 ViewingModes viewingMode=COARSE_FIELD;
@@ -248,67 +215,57 @@ int main(int argc, char *argv[])
   igl::edge_topology(VCoarse, FCoarse, EVCoarse, FECoarse, EFCoarse);
   igl::barycenter(VCoarse, FCoarse, barycenters);
   
-  //Reducing curl from coarse mesh
+  Eigen::SparseMatrix<double> PCoarse, S_Gamma, PInvFine, S_epsstar, S_0, S_1, S_2,WCoarse, WInvFine;
+  // Get subdivision matrix
+  directional::get_pcvf_subdivision_suite(VCoarse, FCoarse, EVCoarse, subdivisionLevel, S_epsstar, S_0, S_1, S_2, S_Gamma, WCoarse, PCoarse, EVFine, FFine, WInvFine, PInvFine);
 
-  Eigen::VectorXi b;
-  Eigen::MatrixXd bc;
-  b.resize(0);
-  bc.resize(0, 3);
-
-  cout<<"Computing initial field"<<endl;
-  directional::power_field(VCoarse, FCoarse, b, bc, N, powerField);
-  powerField.array()/=powerField.cwiseAbs().array();
-  directional::power_to_raw(VCoarse,FCoarse,powerField, N, rawFieldCoarse);
-   
-  // Precompute polycurl reduction data.
-  b.resize(1); b << 0;
-  bc.resize(1, 6); bc << rawFieldCoarse.row(0).head(6);
-  Eigen::VectorXi blevel; blevel.resize(1); b << 1;
-  directional::polycurl_reduction_precompute(VCoarse, FCoarse, b, bc, blevel, rawFieldCoarse, pcrdata);
-  
-  printf("--Improving Curl--\n");
-  //Performing 60 Batches of curl reduction
-  for (int bi = 0; bi < 30; ++bi)
+  // Compute the SHM Laplacian and Co-Laplacian
   {
-    
-    printf("\n\n **** Batch %d ****\n", iter);
-    // Solve
-    directional::polycurl_reduction_solve(pcrdata, params, rawFieldCoarse, iter == 0);
-    ++iter;
-    // Adjust the smoothness weight
-    params.wSmooth *= params.redFactor_wsmooth;
-  }
-  
-  directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, rawFieldCoarse, matchingCoarse, effortCoarse, curlCoarse);
-  directional::effort_to_indices(VCoarse, FCoarse, EVCoarse, EFCoarse, effortCoarse, matchingCoarse, N, singVerticesCoarse, singIndicesCoarse);
-  directional::combing(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, rawFieldCoarse, matchingCoarse, combedFieldCoarse);
-  directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, combedFieldCoarse, combedMatchingCoarse, combedEffortCoarse, curlCoarse);
-  double curlMax = curlCoarse.maxCoeff();
-  std::cout << "Coarse optimized absolute curl: " << curlMax << std::endl;
-  
-  cout<<"Doing coarse parameterization"<<endl;
-  parameterize_mesh(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, singVerticesCoarse, rawFieldCoarse, matchingCoarse, VCutCoarse, FCutCoarse, cutFullUVCoarse);
-  
-  cout<<"Doing field subdivision"<<endl;
-  //Subdividing field and mesh. Curl precision should result in very low curl on the fine mesh as well
-  const bool usingCurlMatching = true;
-  directional::subdivide_field(VCoarse, FCoarse, rawFieldCoarse, targetLevel, usingCurlMatching, VFine, FFine, rawFieldFine);
-  
-  //directional::subdivide_field(VCoarse, FCoarse, EVCoarse, EFCoarse, combedFieldCoarse, combedMatchingCoarse, targetLevel, VFine, FFine, EVFine, EFFine, rawFieldFine, matchingFine);
+      // Alternative construction of same Laplacian
+      Eigen::SparseMatrix<double> G;
+      // Gradient/Divergence
+      igl::grad(VCoarse, FCoarse, G);
+      // Diagonal per-triangle "mass matrix"
+      Eigen::VectorXd dblAFine;
+      igl::doublearea(VFine, FFine, dblAFine);
+      // Place areas along diagonal #dim times. (const auto& ?, does that work?)
+      const auto & T = 1.*(dblAFine.replicate(3, 1)*0.5).asDiagonal();
 
-  igl::edge_topology(VFine, FFine, EVFine, FEFine, EFFine);
-    
-  directional::curl_matching(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, effortFine, curlFine);
-  directional::effort_to_indices(VFine, FFine, EVFine, EFFine, effortFine, matchingFine, N, singVerticesFine, singIndicesFine);
-  directional::combing(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, combedFieldFine);
-  directional::curl_matching(VFine, FFine, EVFine, EFFine, FEFine, combedFieldFine, combedMatchingFine, combedEffortFine, curlFine);
-  curlMax = curlFine.maxCoeff();
-  std::cout << "Fine subdivided absolute curl: " << curlMax << std::endl;
-  
-  cout<<"Doing fine parameterization"<<endl;
-  parameterize_mesh(VFine, FFine, EVFine, EFFine, FEFine, singVerticesFine, rawFieldFine, matchingFine, VCutFine, FCutFine, cutFullUVFine);
-  
-  cout<<"Done!"<<endl;
+      // SHM the mass matrix
+      Eigen::SparseMatrix<double> mass = (PInvFine * S_Gamma).transpose() * T * (PInvFine * S_Gamma);
+
+      // Laplacian K built as discrete divergence of gradient or equivalently
+      // discrete Dirichelet energy Hessian
+      Eigen::SparseMatrix<double> L = -G.transpose() * mass * G;
+      // Compute mass matrix for generalized solutions
+      Eigen::SparseMatrix<double> M_v;
+
+      igl::massmatrix(VFine, FFine, igl::MASSMATRIX_TYPE_BARYCENTRIC, M_v);
+
+
+      // We solve the generalized eigen value problem  \lambda M \phi = L \phi for eigenvector \phi and eigenvalue \lambda, where M is a mass matrix.
+#ifdef LIBIGL_WITH_MATLAB
+      // Matlab instance
+      Engine* engine;
+      // Launch MATLAB
+      igl::matlab::mlinit(&engine);
+      // Send Laplacian matrix to matlab
+      igl::matlab::mlsetmatrix(&engine, "L", L);
+      // Send mass matrix
+      igl::matlab::mlsetmatrix(&engine, "L", L);
+
+      std::stringstream code;
+      code << "[eigenValues, eigenVectors] = eigs(-L,M," << numberOfEigenValues << ", 1e-5)";
+
+      // Extract the first 10 eigenvectors
+      igl::matlab::mleval(&engine, code.str().c_str());
+
+      // Retrieve the result
+      igl::matlab::mlgetmatrix(&engine, "EV", EV);
+#else 
+      // We actually need the largest eigenvalues, so IGL support is somewhat limited...
+#endif
+  }
   
   
   //field mesh

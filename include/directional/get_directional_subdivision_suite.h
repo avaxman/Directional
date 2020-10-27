@@ -36,6 +36,7 @@ namespace directional{
         Eigen::SparseMatrix<double>& S_0,
         Eigen::SparseMatrix<double>& S_1,
         Eigen::SparseMatrix<double>& S_2,
+        Eigen::SparseMatrix<double>& S_Gamma,
         Eigen::SparseMatrix<double>& WCoarse,
         Eigen::SparseMatrix<double>& PCoarse,
         Eigen::MatrixXi& EVFine,
@@ -80,6 +81,11 @@ namespace directional{
         get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),1, PCoarse);
         get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),1, PInvFine);
         get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), WInvFine);
+
+        // Construct S_Gamma
+        Eigen::SparseMatrix<double> subdivider;
+        directional::block_diag({ &S_0, &S_epsstar }, subdivider);
+        S_Gamma = WInvFine * subdivider * WCoarse;
     }
 
 
@@ -102,6 +108,7 @@ namespace directional{
         Eigen::SparseMatrix<double>& S_0,
         Eigen::SparseMatrix<double>& S_1,
         Eigen::SparseMatrix<double>& S_2,
+        Eigen::SparseMatrix<double>& S_Gamma,
         Eigen::SparseMatrix<double>& WCoarse,
         Eigen::SparseMatrix<double>& PCoarse,
         Eigen::VectorXi& matchingFine,
@@ -112,7 +119,7 @@ namespace directional{
     ){
         if(N==1)
         {
-            get_pcvf_subdivision_suite(VCoarse, FCoarse, EVCoarse, subdivisionLevel, S_epsstar, S_0, S_1, S_2, WCoarse, PCoarse, EVFine, FFine, WInvFine, PInvFine);
+            get_pcvf_subdivision_suite(VCoarse, FCoarse, EVCoarse, subdivisionLevel, S_epsstar, S_0, S_1, S_2, S_Gamma, WCoarse, PCoarse, EVFine, FFine, WInvFine, PInvFine);
             return;
         }
 
@@ -151,6 +158,11 @@ namespace directional{
         get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),N, PCoarse);
         get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),N, PInvFine);
         get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), matchingFine, N,  WInvFine);
+
+        // Construct S_Gamma
+        Eigen::SparseMatrix<double> subdivider;
+        directional::block_diag({ &S_0, &S_epsstar }, subdivider);
+        S_Gamma = WInvFine * subdivider * WCoarse;
     }
 
 }
