@@ -1,18 +1,12 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
-#include <directional/seam_lines.h>
-#include <directional/glyph_lines_raw.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
-#include <directional/effort_to_indices.h>
-#include <directional/singularity_spheres.h>
 #include <directional/combing.h>
-#include <directional/line_cylinders.h>
 #include <directional/directional_viewer.h>
 
 
@@ -66,7 +60,7 @@ int main()
   viewer.set_mesh(V, F);
   viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();
-  viewer.set_singularities(N, singVertices, singIndices);
+  viewer.set_singularities(singVertices, singIndices);
   viewer.set_seams(EV, combedMatching);  //TODO: allow to define seams in several ways
   
   viewer.callback_key_down = &key_down;
