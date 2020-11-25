@@ -31,6 +31,7 @@ namespace directional
                                 Eigen::VectorXi& matching,
                                 Eigen::MatrixXi& EF,
                                 Eigen::MatrixXi& EV,
+                                Eigen::MatrixXi& FE,
                                 int & N)
 	{
 		try
@@ -43,7 +44,7 @@ namespace directional
             EV.conservativeResize(numEdges,2);
             
             for (int i=0;i<numEdges;i++)
-                f >> EF(i,0)>> EF(i,1) >> EV(i, 0) >> EV(i, 1) >> matching(i);
+                f >> EF(i,0)>> EF(i,1) >> EV(i, 0) >> EV(i, 1) >> FE(i,0) >> FE(i,1)>>FE(1,2)>>matching(i);
       
 			f.close();
 			return f.fail();
