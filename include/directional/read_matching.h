@@ -49,7 +49,7 @@ namespace directional
         f >> EF(i,0)>> EF(i,1) >> EV(i, 0) >> EV(i, 1) >> matching(i);
       
       for (int i=0;i<numFaces;i++)
-        f >> FE(i,0) >> FE(i,1) >> FE(1,2);
+        f >> FE(i,0) >> FE(i,1) >> FE(i,2);
       
       f.close();
       return f.fail();
