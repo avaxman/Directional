@@ -27,8 +27,8 @@ namespace directional
             int ind0 = -1, ind1 = -1;
             for(int c = 0; c < 3; ++c)
             {
-                if (EF(e, 0) != -1 && F(EF(e, 0), c) == e) ind0 = c;
-                if (EF(e, 1) != -1 && F(EF(e, 1), c) == e) ind0 = c;
+                if (EF(e, 0) != -1 && FE(EF(e, 0), c) == e) ind0 = c;
+                if (EF(e, 1) != -1 && FE(EF(e, 1), c) == e) ind1 = c;
             }
             const bool isBoundary = EF(e, 0) == -1 || EF(e, 1) == -1;
             if (isBoundary)
@@ -38,6 +38,7 @@ namespace directional
             }
             else
             {
+                assert(ind0 >= 0 && ind1 >= 0);
                 tripsOneFormBack.emplace_back(3 * EF(e, 0) + ind0, e, 1.);
                 tripsOneFormBack.emplace_back(3 * EF(e, 1) + ind1, e, 1.);
                 tripsCBack.emplace_back(3 * EF(e, 0) + ind0, e, -1.);
@@ -71,11 +72,12 @@ namespace directional
         SparseHelper meanToGamma3Construct(3 * faceCount * N, edgeCount * N, 2 * edgeCount * N);
         for (int e = 0; e < edgeCount; e++)
         {
+            // Find index in FE of edge for left and right face.
             int ind0 = -1, ind1 = -1;
             for (int c = 0; c < 3; ++c)
             {
-                if (EF(e, 0) != -1 && F(EF(e, 0), c) == e) ind0 = c;
-                if (EF(e, 1) != -1 && F(EF(e, 1), c) == e) ind0 = c;
+                if (EF(e, 0) != -1 && FE(EF(e, 0), c) == e) ind0 = c;
+                if (EF(e, 1) != -1 && FE(EF(e, 1), c) == e) ind1 = c;
             }
             const int lGamma = 3 * EF(e, 0) + ind0;
             const int rGamma = 3 * EF(e, 1) + ind1;
