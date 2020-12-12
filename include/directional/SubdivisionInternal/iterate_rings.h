@@ -17,8 +17,6 @@ namespace directional
 	inline void boundary_edges(const Eigen::MatrixXi& EF, Eigen::MatrixXi& boundaryEdges)
 	{
 		// Count number of boundary edges
-		int leftCount = 0;
-		int rightCount = 0;
 		std::vector<int> leftBoundary, rightBoundary;
 		for (int i = 0; i < EF.rows(); i++)
 		{
@@ -52,9 +50,9 @@ namespace directional
 		Handler& h)
 	{
 		// Retrieve the boundary edges along with their side
-		Eigen::MatrixXi boundary;
+		Eigen::MatrixXi boundary; // Matrix with first column edge index and second column whether the 'open' part is to the left or right (0 or 1).
 		boundary_edges(EF, boundary);
-		assert((boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0)) && "Boundary edges are not in canonical position (with boundary at the left)");
+		//assert((boundary.col(1) == Eigen::VectorXi::Constant(boundary.rows(), 0)) && "Boundary edges are not in canonical position (with boundary at the left)");
 
 		// Ideally, find max valence.
 		Eigen::VectorXi VE;
@@ -85,10 +83,6 @@ namespace directional
 			edge = SFE(face, corner);
 		};
 
-
-
-		//DIR_ASSERT_M(boundaryEdgeCount == data.boundaryEdgeCount, "Found different number of boundary edges");
-
 		//Construct ring per boundary vertex
 		for (int eI = 0; eI < boundaryEdgeCount; eI++)
 		{
@@ -96,12 +90,10 @@ namespace directional
 			const int e = boundary(eI, 0);
 			std::vector<int> edges;
 			std::vector<int> edgeSides;
-			// Set edge oriented along outside of boundary
-			edge = e; side = 0; //side = boundary(eI,1);
-			// Mark handled
-			VE(E(edge,1)) = -1;
-			//DIR_ASSERT(face() == -1);
-			//DIR_ASSERT(twinFace() != -1);
+			// Start at halfedge outside of the mesh
+			edge = e; side = boundary(eI,1);
+			// Mark the vertex at the end of the current half edge as handled
+			VE(E(edge,1-side)) = -1;
 			do
 			{
 				toTwin();
