@@ -13,15 +13,15 @@ namespace directional
 	{
 		std::vector<Eigen::Triplet<double>> trips;
 		int rows, cols;
-		SparseHelper(int rows, int cols, int expectedCoeffs):rows(rows),cols(cols)
+		inline SparseHelper(int rows, int cols, int expectedCoeffs):rows(rows),cols(cols)
 		{
 			trips.reserve(expectedCoeffs);
 		}
-		void addCoeff(int r, int c, double coeff)
+		inline void addCoeff(int r, int c, double coeff)
 		{
 			trips.emplace_back(r, c, coeff);
 		}
-		Eigen::SparseMatrix<double> toMat()
+		inline Eigen::SparseMatrix<double> toMat()
 		{
 			Eigen::SparseMatrix<double> m{ rows,cols };
 			m.setFromTriplets(trips.begin(), trips.end());
@@ -48,7 +48,7 @@ namespace directional
 	/**
 	 * TODO
 	 */
-	void DirectionalGamma_Suite(
+	inline void DirectionalGamma_Suite(
 		int N,
 		const Eigen::MatrixXi& matching,
 		Eigen::SparseMatrix<double>& C
@@ -310,7 +310,7 @@ namespace directional
 		Gamma2_To_A = sh.toMat() * G2ToG3_N;
 	}
 
-	void Matched_A_C_To_F(
+	inline void Matched_A_C_To_F(
 		const Eigen::MatrixXi& sFE,
 		int edgeCount,
 		int N,
@@ -350,7 +350,7 @@ namespace directional
 		A_C_To_F = sh.toMat();
 	}
 
-	void Matched_D1(
+	inline void Matched_D1(
 		const Eigen::MatrixXi& sFE,
 		int edgeCount,
 		int N,

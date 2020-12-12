@@ -27,7 +27,7 @@ namespace directional{
      * - Fcoarse |F| x 3, connectivity between faces and vertices, where each row gives the 3 vertices of the face, in CCW order relative to the face normal.
      * - EVcoarse |E| x 2, connectivity between edge and vertex, where edge e is directed from EVcoarse(e,0) to EVcoarse(e,1)
      */
-    void get_pcvf_subdivision_suite(
+    inline void get_pcvf_subdivision_suite(
         const Eigen::MatrixXd& VCoarse,
         const Eigen::MatrixXi& FCoarse,
         const Eigen::MatrixXi& EVCoarse,
@@ -97,7 +97,7 @@ namespace directional{
      * - matching |E| x 1, the matching between the left and right face of edge e, where directional at k in the left face maps to (k+ matching(e)) % N in the right face
      * - N, the number of directionals per face.
      */
-    void get_directional_subdivision_suite(
+    inline void get_directional_subdivision_suite(
         const Eigen::MatrixXd& VCoarse,
         const Eigen::MatrixXi& FCoarse,
         const Eigen::MatrixXi& EVCoarse,

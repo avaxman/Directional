@@ -5,7 +5,7 @@
 #include "loop_coefficients.h"
 namespace directional{
     namespace subdivision{
-        void shm_oneform_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
+        inline void shm_oneform_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
             // Filled DOF for stencils
             const double z = 3. / 32.;
             // Total edges

@@ -15,7 +15,7 @@
 #include <Eigen/Sparse>
 namespace directional{
     namespace subdivision{
-        void build_shm_subdivision(
+        inline void build_shm_subdivision(
             const Eigen::MatrixXi& F0,
             const Eigen::MatrixXd& V0,
             const Eigen::MatrixXi& E0,

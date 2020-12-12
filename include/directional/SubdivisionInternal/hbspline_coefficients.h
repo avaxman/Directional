@@ -12,7 +12,7 @@ namespace directional{
          * Out:
          * - Factor
          */
-        double hbspline_factor(int valence)
+        inline double hbspline_factor(int valence)
         {
             if (valence == 3) return 1.0 / 12.0;
             if (valence == 4) return 1.0 / 8.0;
@@ -20,7 +20,7 @@ namespace directional{
             return 0.25;
         }
 
-        void hbspline_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
+        inline void hbspline_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
             // Boundary parameter
             const double z = 3. / 32.;
             const int fCount = isBoundary ? valence-1: valence;

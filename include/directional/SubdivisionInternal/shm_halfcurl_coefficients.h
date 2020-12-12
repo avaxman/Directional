@@ -3,7 +3,7 @@
 #include <vector>
 namespace directional{
     namespace subdivision{
-        void shm_halfcurl_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
+        inline void shm_halfcurl_coefficients(bool isBoundary, bool isEven, int valence, int location, std::vector<int>& inds, std::vector<double>& coeffs){
             const int maxEdgeIndex = 2 * valence - 1 - isBoundary;
             const double z = 3. / 32.;
             const int eCount = 2 * valence - isBoundary;

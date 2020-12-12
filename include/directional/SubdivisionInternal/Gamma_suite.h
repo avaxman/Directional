@@ -51,7 +51,7 @@ namespace directional
 	/**
 	 * Averaging integrated edge field to faces by simply summing contributions
 	 */
-	void Edge_To_Face_Average(const Eigen::MatrixXi& sFE, int edgeCount, Eigen::SparseMatrix<double>& A_EToF)
+	inline void Edge_To_Face_Average(const Eigen::MatrixXi& sFE, int edgeCount, Eigen::SparseMatrix<double>& A_EToF)
 	{
 		A_EToF = Eigen::SparseMatrix<double>(sFE.rows(), edgeCount);
 		std::vector<Eigen::Triplet<double>> trips;
@@ -467,7 +467,7 @@ namespace directional
 		DCToG3 = G2ToG3 * DCToG3;
 	}
 
-	void DEC_d0(const Eigen::MatrixXd& V,
+	inline void DEC_d0(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXi& EV,
 		const Eigen::MatrixXi& sFE,
@@ -483,7 +483,7 @@ namespace directional
 		}
 		D0.setFromTriplets(trips.begin(), trips.end());
 	}
-	void DEC_d1(const Eigen::MatrixXd& V,
+	inline void DEC_d1(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXi& EV,
 		const Eigen::MatrixXi& sFE,

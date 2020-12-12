@@ -11,7 +11,7 @@ namespace directional
 	 * \param E0ToEk Mapping from the original edge to 4 new edges, which are the newly created edges
 	 * that are ''parallel'' in the subdivided edge flap.
 	 */
-	void quadrisect(
+	inline void quadrisect(
 		const Eigen::MatrixXi& F0,
 		const int& vCount,
 		const Eigen::MatrixXi& E0,
