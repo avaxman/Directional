@@ -2,6 +2,9 @@
 #define DIRECTIONAL_SHM_EDGE_TOPOLOGY_H
 #include <Eigen/Eigen>
 #include <igl/sortrows.h>
+#include <set>
+#include <map>
+#include <igl/edge_topology.h>
 namespace directional{
 	
     inline void shm_edge_topology(
@@ -76,10 +79,10 @@ namespace directional{
                 const auto v0 = E(e, 0);
                 const auto v1 = E(e, 1);
                 std::vector<int> diff;
-                auto end = std::set_intersection(VToF[v0].begin(), VToF[v0].end(), VToF[v1].begin(), VToF[v1].end(), diff.begin());
-                assert(std::distance(diff.begin(), end) == 2);
+                auto end = std::set_intersection(VToF[v0].begin(), VToF[v0].end(), VToF[v1].begin(), VToF[v1].end(), std::back_inserter(diff));
+                assert(diff.size() == 1 || diff.size() == 2);
                 auto f0 = diff[0];
-                auto f1 = diff[1];
+                auto f1 = diff.size() == 2 ? diff[1] : -1;
                 // Determine left and right
                 for(int c = 0;c < 3; ++c)
                 {
@@ -198,8 +201,8 @@ namespace directional{
         Eigen::MatrixXi& FE
     )
     {
-        FE = Eigen::MatrixXi(EF.rows(), 3);
-        EI = Eigen::MatrixXi(EF.rows(), 2);
+        FE.setConstant(SFE.rows(), 3, -1);
+        EI.setConstant(EF.rows(), 2, -1);
         for (int f = 0; f < FE.rows(); ++f)
         {
             for(int j = 0; j <3; ++j)
