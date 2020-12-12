@@ -36,7 +36,7 @@ namespace directional
   //  Ge:    #3f x V Non-conforming gradient of the same style, but for mid-edge functions
   //  J:    #3F x 3F rotation operator [Nx] per face
   //  C:  Curl operator which is basically (JGe)^T * Mchi
-  //  C:  Divergence operator which is basically Gv^T * Mchi
+  //  D:  Divergence operator which is basically Gv^T * Mchi
   
   IGL_INLINE void FEM_suite(const Eigen::MatrixXd& V,
                             const Eigen::MatrixXi& F,
