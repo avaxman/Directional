@@ -53,39 +53,57 @@ namespace directional{
         using coeffProv = coefficient_provider_t;
 
         // Providers for all subdivision operators
-        auto Sv_provider = triplet_provider_wrapper<coeffProv>(subdivision::loop_coefficients, subdivision::Sv_triplet_provider<coeffProv>);
-        auto Sc_provider = triplet_provider_wrapper<coeffProv>(subdivision::shm_halfcurl_coefficients, subdivision::Sc_triplet_provider<coeffProv>);
-        auto Se_provider = triplet_provider_wrapper<coeffProv>(subdivision::shm_oneform_coefficients, subdivision::Se_triplet_provider<coeffProv>);
-        auto Sf_provider = triplet_provider_wrapper<coeffProv>(subdivision::hbspline_coefficients, subdivision::Sf_triplet_provider<coeffProv>);
+        auto S0_provider = triplet_provider_wrapper<coeffProv>(subdivision::loop_coefficients, subdivision::Sv_triplet_provider<coeffProv>);
+        auto Sepsstar_provider = triplet_provider_wrapper<coeffProv>(subdivision::shm_halfcurl_coefficients, subdivision::Sc_triplet_provider<coeffProv>);
+        auto S1_provider = triplet_provider_wrapper<coeffProv>(subdivision::shm_oneform_coefficients, subdivision::Se_triplet_provider<coeffProv>);
+        auto S2_provider = triplet_provider_wrapper<coeffProv>(subdivision::hbspline_coefficients, subdivision::Sf_triplet_provider<coeffProv>);
 
         // Construct regular vertex subdivision
-        build_subdivision_operators(VCoarse, FCoarse, EVCoarse, EFCoarse, EICoarse, SFECoarse, std::vector<int>({ (int)VCoarse.rows() }), subdivisionLevel,
-            FFine, EVFine, EFFine, EIFine, SFEFine, subdivisionOperators, Sv_provider, Se_provider, Sc_provider, Sf_provider);
+        build_subdivision_operators(VCoarse, FCoarse, EVCoarse, EFCoarse, EICoarse, SFECoarse, std::vector<int>({ (int)VCoarse.rows(),(int)EFCoarse.rows(), 
+        (int)EFCoarse.rows(), (int)FCoarse.rows()}), subdivisionLevel,
+            FFine, EVFine, EFFine, EIFine, SFEFine, subdivisionOperators, S0_provider, S1_provider, Sepsstar_provider, S2_provider);
         S_0 = subdivisionOperators[0];
         S_1 = subdivisionOperators[1];
         S_epsstar = subdivisionOperators[2];
         S_2 = subdivisionOperators[3];
 
-        Eigen::VectorXd VCoarseVec;
-        VCoarseVec.resize(3 * VCoarse.rows());
-        for (int v = 0; v < VCoarse.rows(); ++v) VCoarseVec.middleRows(3 * v, 3) = VCoarse.row(v).transpose();
-        Eigen::VectorXd VFineVec = S_0 * VCoarseVec;
-        Eigen::MatrixXd VFine;
-        VFine.setConstant(VCoarseVec.rows() / 3, 3, -1);
-        for (int v = 0; v < VFine.rows(); ++v)
-        {
-            VFine.row(v) = VFineVec.middleRows(3 * v, 3).transpose();
-        }
+        Eigen::MatrixXd VFine = S_0 * VCoarse;
 
-        get_W(FCoarse, EVCoarse, SFECoarse.leftCols(3), EFCoarse, WCoarse);
-        get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),1, PCoarse);
-        get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),1, PInvFine);
-        get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), WInvFine);
+        // Fix up stuff to be igl edge_topology compliant...
+        Eigen::MatrixXi FEFine_igl_et, EIFine_igl_et, EICoarse_igl_et, FECoarse_igl_et;
+
+        shm_edge_topology_to_igledgetopology(FFine, EVFine, EFFine, SFEFine, EIFine_igl_et, FEFine_igl_et);
+        shm_edge_topology_to_igledgetopology(FCoarse, EVCoarse, EFCoarse, SFECoarse, EICoarse_igl_et, FECoarse_igl_et);
+
+        // Gamma elements to mean-curl decomposition operator
+        get_W(FCoarse, EVCoarse, FECoarse_igl_et, EFCoarse, WCoarse);
+        assert(WCoarse.rows() == EVCoarse.rows() * 2);
+        assert(WCoarse.cols() == FCoarse.rows() * 2);
+        // PCVF to gamma operator
+        get_P(VCoarse, FCoarse, EVCoarse, FECoarse_igl_et,1, PCoarse);
+        assert(PCoarse.rows() == FCoarse.rows() * 2);
+        assert(PCoarse.cols() == FCoarse.rows() * 3);
+        // Gamma to PCVF operator for fine level
+        get_P_inverse(VFine, FFine, EVFine, FEFine_igl_et,1, PInvFine);
+        assert(PInvFine.rows() == FFine.rows() * 3);
+        assert(PInvFine.cols() == FFine.rows() * 2);
+        // Mean-curl decomposition to gamma operator for fine level
+        get_W_inverse(FFine, EVFine, FEFine_igl_et, EFFine, WInvFine);
+        assert(WInvFine.rows() == FFine.rows() * 2);
+        assert(WInvFine.cols() == EVFine.rows() * 2);
 
         // Construct S_Gamma
         Eigen::SparseMatrix<double> subdivider;
-        directional::block_diag({ &S_0, &S_epsstar }, subdivider);
+        directional::block_diag({ &S_1, &S_epsstar }, subdivider);
+        assert(subdivider.rows() == S_1.rows() + S_epsstar.rows());
+        assert(subdivider.cols() == S_1.cols() + S_epsstar.cols());
+        assert(EVCoarse.rows() == S_epsstar.cols());
+        assert(EVCoarse.rows() == S_1.cols());
+        assert(subdivider.cols() == WCoarse.rows());
+
         S_Gamma = WInvFine * subdivider * WCoarse;
+        assert(S_Gamma.cols() == FCoarse.rows() * 2);
+        assert(S_Gamma.rows() == FFine.rows() * 2);
     }
 
 
@@ -143,21 +161,12 @@ namespace directional{
             FFine, EVFine, EFFine, EIFine, SFEFine, svOut, Sv_provider);
         S_0 = svOut[0];
 
-        Eigen::VectorXd VCoarseVec;
-        VCoarseVec.resize(3 * VCoarse.rows());
-        for (int v = 0; v < VCoarse.rows(); ++v) VCoarseVec.middleRows(3 * v, 3) = VCoarse.row(v).transpose();
-        Eigen::VectorXd VFineVec = S_0 * VCoarseVec;
-        Eigen::MatrixXd VFine;
-        VFine.setConstant(VCoarseVec.rows() / 3, 3, -1);
-        for (int v = 0; v < VFine.rows(); ++v)
-        {
-            VFine.row(v) = VFineVec.middleRows(3 * v, 3).transpose();
-        }
+        Eigen::MatrixXd VFine = S_0 * VCoarse;
 
         get_W(FCoarse, EVCoarse, SFECoarse.leftCols(3), EFCoarse, matchingCoarse, N, WCoarse);
         get_P(VCoarse, FCoarse, EVCoarse, SFECoarse.leftCols(3),N, PCoarse);
         get_P_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3),N, PInvFine);
-        get_W_inverse(VFine, FFine, EVFine, SFEFine.leftCols(3), matchingFine, N,  WInvFine);
+        get_W_inverse(FFine, EVFine, SFEFine.leftCols(3), EFFine, matchingFine, N,  WInvFine);
 
         // Construct S_Gamma
         Eigen::SparseMatrix<double> subdivider;
