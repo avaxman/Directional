@@ -182,7 +182,7 @@ namespace directional
       constValuesMat.setZero();
       for (int i=0;i<b.rows();i++){
         complex<double> bComplex=complex<double>(b.row(i).dot(B1.row(bc(i))), b.row(i).dot(B2.row(bc(i))));
-        constValuesMat(i,0)=pow(bComplex, N);
+        constValuesMat(i,0)=-pow(bComplex, N);
       }
     } else {
       for (int i=0;i<b.rows();i++){
