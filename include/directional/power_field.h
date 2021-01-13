@@ -89,6 +89,7 @@ namespace directional
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
     power_field_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
     power_field(B1, B2, bc, b, solver, Afull, AVar, N, powerField);
+    powerField=-powerField;  //powerfield is represented positively
   }
 }
 

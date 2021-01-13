@@ -166,12 +166,15 @@ namespace directional
       L.setFromTriplets(LTriplets.begin(), LTriplets.end());
       Eigen::MatrixXd U;
       Eigen::VectorXd S;
-      igl::eigs(L,M,5,igl::EIGS_TYPE_SM,U,S);
+      igl::eigs(L,M,10,igl::EIGS_TYPE_SM,U,S);
+      int smallestIndex; S.minCoeff(&smallestIndex);
       
       polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
       
-      polyVectorField.col(0) = U.block(0,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
-     U.block(U.rows()/2,0,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1); 
+      polyVectorField.col(0) = U.block(0,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+      U.block(U.rows()/2,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1);
+      //cout<<"polyVectorField.col(0): "<<polyVectorField.col(0)<<endl;
+      //cout<<"B1: "<<B1<<endl;
       return;
     }
     
