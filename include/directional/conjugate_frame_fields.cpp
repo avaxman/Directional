@@ -11,6 +11,7 @@
 #include <igl/slice.h>
 #include <directional/polyroots.h>
 #include <directional/polyvector_to_raw.h>
+#include <directional/ccw_reorient_field.h>
 #include <Eigen/Sparse>
 
 #include <iostream>
@@ -21,7 +22,7 @@ namespace directional {
   public:
     IGL_INLINE ConjugateFFSolver(const ConjugateFFSolverData &_data,
                                  int _maxIter = 20,
-                                 const double _lambdaOrtho = .1,
+                                 const double _lambdaOrtho = .05,
                                  const double _lambdaInit = 100,
                                  const double _lambdaMultFactor = 1.01,
                                  bool _doHardConstraints = true);
@@ -403,6 +404,12 @@ IGL_INLINE void directional::conjugate_frame_fields(const Eigen::MatrixXd &V,
   cs.solve(isConstrained, twoFieldMat, output);
   output.conservativeResize(output.rows(), 2*output.cols());
   output.block(0,6,output.rows(),6) = -output.block(0,0,output.rows(),6);
+  
+  //reorienting field hack
+  Eigen::MatrixXd newOutput,B1,B2,normals;
+  igl::local_basis(V,F,B1,B2,normals);
+  directional::ccw_reorient_field(csdata.B1,csdata.B2,output, newOutput);
+  output=newOutput;
 }
 
 
@@ -437,6 +444,15 @@ IGL_INLINE double directional::conjugate_frame_fields(const directional::Conjuga
   
   output.conservativeResize(output.rows(), 2*output.cols());
   output.block(0,6,output.rows(),6) = -output.block(0,0,output.rows(),6);
+  
+  //reorienting field hack
+  Eigen::MatrixXd newOutput,B1,B2,normals;
+  directional::ccw_reorient_field(csdata.B1,csdata.B2,output, newOutput);
+  output=newOutput;
+  
+  
+  
+  
   return lambdaOut;
 }
 
