@@ -60,6 +60,7 @@ namespace directional
                                    const Eigen::MatrixXd V,
                                    const Eigen::MatrixXi F,
                                    const Eigen::MatrixXd &temp_field,
+                                   const Eigen::VectorXi& seedLocations,
                                    StreamlineData &data,
                                    StreamlineState &state,
                                    double percentage = 0.3

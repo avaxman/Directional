@@ -18,14 +18,13 @@
 #include <directional/streamlines.h>
 
 
-IGL_INLINE void directional::streamlines_init(
-                                      const Eigen::MatrixXd V,
-                                      const Eigen::MatrixXi F,
-                                      const Eigen::MatrixXd &temp_field,
-                                      StreamlineData &data,
-                                      StreamlineState &state,
-                                      double percentage
-                                      ){
+IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
+                                              const Eigen::MatrixXi F,
+                                              const Eigen::MatrixXd &temp_field,
+                                              const Eigen::VectorXi& seedLocations,
+                                              StreamlineData &data,
+                                              StreamlineState &state,
+                                              double percentage){
   using namespace Eigen;
   using namespace std;
   
@@ -65,12 +64,17 @@ IGL_INLINE void directional::streamlines_init(
   Eigen::VectorXi samples;
   int nsamples;
   
-  nsamples = percentage * F.rows();
-  Eigen::VectorXd r;
-  r.setRandom(nsamples, 1);
-  r = (1 + r.array()) / 2.;
-  samples = (r.array() * F.rows()).cast<int>();
-  data.nsample = nsamples;
+  if (seedLocations.rows()==0){
+    nsamples = percentage * F.rows();
+    Eigen::VectorXd r;
+    r.setRandom(nsamples, 1);
+    r = (1 + r.array()) / 2.;
+    samples = (r.array() * F.rows()).cast<int>();
+    data.nsample = nsamples;
+  } else {
+    samples=seedLocations;
+    nsamples = data.nsample = seedLocations.size();
+  }
   
   Eigen::MatrixXd BC, BC_sample;
   igl::barycenter(V, F, BC);
