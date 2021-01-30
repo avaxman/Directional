@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
   // Convert it to raw field
   directional::power_to_raw(VMesh,FMesh,powerField,3,rawField, true);
   
-  directional::streamlines_init(VMesh, FMesh, rawField, sl_data, sl_state);
+  directional::streamlines_init(VMesh, FMesh, rawField, Eigen::VectorXi(), 5, sl_data, sl_state);
   
   //triangle mesh
   viewer.data().set_mesh(VMesh, FMesh);
