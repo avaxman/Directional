@@ -11,6 +11,7 @@ option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
 option(LIBIGL_WITH_OPENGL      "Use OpenGL"         ON)
 option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
+option(LIBIGL_WITH_MATLAB      "Use Matlab"         ON)
 
 
 option(LIBIGL_WITH_PNG       "Use PNG"          ON)
@@ -74,8 +75,8 @@ endif()
 
 # Chapter 5
 if(TUTORIALS_CHAPTER5)
-  add_subdirectory("501_SeamlessParameterization")
-  add_subdirectory("502_MixedIntegerParameterization")
+  add_subdirectory("501_SeamlessIntegration")
+  add_subdirectory("502_IntegralSeamlessIntegration")
 endif()
 
 # Chapter 6

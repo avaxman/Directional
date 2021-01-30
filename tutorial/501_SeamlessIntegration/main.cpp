@@ -16,8 +16,8 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/combing.h>
-#include <directional/setup_parameterization.h>
-#include <directional/parameterize.h>
+#include <directional/setup_integration.h>
+#include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
 
 int N;
@@ -33,7 +33,7 @@ Eigen::VectorXi singIndices, singVertices;
 Eigen::MatrixXd cutReducedUV, cutFullUV, cornerWholeUV;
 
 
-typedef enum {FIELD, PARAMETERIZATION} ViewingModes;
+typedef enum {FIELD, INTEGRATION} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 
@@ -68,7 +68,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   {
       // Select vector
     case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = PARAMETERIZATION; break;
+    case '2': viewingMode = INTEGRATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/botijo-param.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutReducedUV, FMeshCut);
@@ -96,25 +96,26 @@ int main()
   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
-  directional::ParameterizationData pd;
-  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
+  directional::IntegrationData intData;
+  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, intData.face2cut);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
    //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
  
-  std::cout<<"Setting up parameterization"<<std::endl;
+  std::cout<<"Setting up integration..."<<std::endl;
   
+  //an N=4 sign-symmetric function
   Eigen::MatrixXi symmFunc(4,2);
   symmFunc<<1,0,
   0,1,
   -1,0,
   0,-1;
   
-  directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+  directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, intData, VMeshCut, FMeshCut);
   
-  double lengthRatio=0.01;
+  double lengthRatio=0.02;
   bool isInteger = false;  //do not do translational seamless.
-  std::cout<<"Solving parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutReducedUV,  cutFullUV,cornerWholeUV);
+  std::cout<<"Integrating..."<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, isInteger, true, cutReducedUV,  cutFullUV,cornerWholeUV);
   cutFullUV=cutFullUV.block(0,0,cutFullUV.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

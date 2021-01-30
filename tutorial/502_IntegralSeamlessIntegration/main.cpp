@@ -16,8 +16,8 @@
 #include <directional/effort_to_indices.h>
 #include <directional/singularity_spheres.h>
 #include <directional/combing.h>
-#include <directional/setup_parameterization.h>
-#include <directional/parameterize.h>
+#include <directional/setup_integration.h>
+#include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
 
 
@@ -33,7 +33,7 @@ Eigen::VectorXi singIndices, singVertices;
 Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV, cutReducedUV;
 igl::opengl::glfw::Viewer viewer;
 
-typedef enum {FIELD, ROT_PARAMETERIZATION, FULL_PARAMETERIZATION, UV_COORDS} ViewingModes;
+typedef enum {FIELD, ROT_INTEGRATION, FULL_INTEGRATION, UV_COORDS} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 //texture image
@@ -65,11 +65,11 @@ void update_triangle_mesh()
     viewer.data_list[0].set_face_based(false);
     viewer.data_list[0].show_texture=false;
     viewer.data_list[0].show_lines=false;
-  } else if ((viewingMode==ROT_PARAMETERIZATION) || (viewingMode==FULL_PARAMETERIZATION)){
+  } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
-    viewer.data_list[0].set_uv(viewingMode==ROT_PARAMETERIZATION ? cutUVRot : cutUVFull);
+    viewer.data_list[0].set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull);
     viewer.data_list[0].set_texture(texture_R, texture_G, texture_B);
     viewer.data_list[0].set_face_based(true);
     viewer.data_list[0].show_texture=true;
@@ -98,8 +98,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   {
       // Select vector
     case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = ROT_PARAMETERIZATION; break;
-    case '3': viewingMode = FULL_PARAMETERIZATION; break;
+    case '2': viewingMode = ROT_INTEGRATION; break;
+    case '3': viewingMode = FULL_INTEGRATION; break;
     case '4': viewingMode = UV_COORDS; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
@@ -133,33 +133,34 @@ int main()
   
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
-  directional::ParameterizationData pd;
+  directional::IntegrationData pd;
   directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
   directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
   //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField, combedMatching, combedEffort);
   std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
   
-  std::cout<<"Setting up parameterization"<<std::endl;
+  std::cout<<"Setting up Integration"<<std::endl;
   
+  //N=4 with sign-symmetry
   Eigen::MatrixXi symmFunc(4,2);
   symmFunc<<1,0,
   0,1,
   -1,0,
   0,-1;
   
-  directional::setup_parameterization(symmFunc, VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+  directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
   
-  double lengthRatio=0.01;
+  double lengthRatio=0.02;
   bool isInteger = false;  //do not do translational seamless.
-  std::cout<<"Solving rotationally-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutReducedUV, cutUVRot, cornerWholeUV);
+  std::cout<<"Solving rotationally-seamless integration"<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, true, cutReducedUV, cutUVRot, cornerWholeUV);
   
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   isInteger = true;  //do not do translational seamless.
-  std::cout<<"Solving fully-seamless parameterization"<<std::endl;
-  directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,   cutReducedUV, cutUVFull, cornerWholeUV);
+  std::cout<<"Solving fully-seamless integration"<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,   true, cutReducedUV, cutUVFull, cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
