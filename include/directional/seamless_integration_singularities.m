@@ -8,7 +8,7 @@
 
 %integration by rounding singularity values and then remainder seames if any
 clear x0
-
+load /Users/amirvaxman/PatternsParam/build/Release/poisson.mat 
 centers = (V(F(:,1),:)+V(F(:,2),:)+V(F(:,3),:))/3;
 nf=length(F);
 
@@ -32,6 +32,7 @@ normals = cross(V(F(:,2),:)-V(F(:,1),:), V(F(:,3),:)-V(F(:,1),:),2);
 triAreas = normv(normals)/2;
 normals=normals./normv(normals);
 
+
 %face mass matrices
 I3=reshape((1:3*N*nf)', 3*N, nf)';
 J3=I3;
@@ -45,6 +46,8 @@ B1 = V(F(:,2),:)-V(F(:,1),:);
 B1=B1./normv(B1);
 B2 = cross(normals, B1);
 B2=B2./normv(B2);
+
+
 
 %creating 3D->2D gradient
 IReduc = repmat((1:2*N*nf)',1,3);
@@ -137,8 +140,13 @@ for i=0:N-1
     currField = rawField(:,i*3+1:i*3+3);
     rawField2(:, i*2+1:i*2+2) = [dot(currField, B1,2), dot(currField, B2,2)];
 end
+%HACKING THE FIELD
+%rawComplex = complex(rawField2(:,1), rawField2(:,2))*exp(1i*pi/10);
+%rawField2(:,3:4) = [real(rawComplex), imag(rawComplex)];
+%rawField2(:,7:8) = -rawField2(:,3:4);
+
 rawField2 = reshape(rawField2', 2*N*length(F),1);
-rawField = reshape(rawField', 3*N*length(F),1);
+%rawField = reshape(rawField', 3*N*length(F),1);
 
 IImagField=repmat((1:N*nf)',1,4);
 JImagField=IImagField;
@@ -159,7 +167,7 @@ for i=0:nf-1
     
     %tripleProducts = dot(repmat(FN(i+1,:),N,1), cross(faceField, faceField([2:end,1],:)),2);
     crossProducts = (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
-    origFieldVolumes(i+1,:) = crossProducts';
+    origFieldVolumes(i+1,:) = normv(faceField).*normv(faceFieldNext);%crossProducts';
 end
 
 minOrigFieldVolumes=min(origFieldVolumes)
@@ -169,18 +177,18 @@ wintegration=10e3;
 wconst=10e3;
 wbarrier=0.0001;
 wclose=1;
-s=0.1;
+s=1.0;
 success=1;
 
 %Use if Mx doesn't exist
-Mx = speye(3*N*size(F,1));
+Mx = speye(2*N*size(F,1));
 
 
 %%%%%%%%%%%%%%%%%%%%%%solving initial poisson problem without integers
 
-L = G'*Mx*G;
-E = UFull'*G'*Mx*G*UFull;
-f = UFull'*G'*Mx*(rawField/paramLength);
+L = G2'*Mx*G2;
+E = UFull'*G2'*Mx*G2*UFull;
+f = UFull'*G2'*Mx*(rawField2/paramLength);
 constMat = UFull(fixedIndices,:);
 bigMat = [E constMat'; constMat, sparse([],[],[],size(constMat,1), size(constMat,1))];
 bigRhs = [f;fixedValues];
@@ -247,7 +255,7 @@ for i=0:nf-1
     faceFieldNext = faceField([2:N,1],:);
     
     %tripleProducts = dot(repmat(FN(i+1,:),N,1), cross(faceField, faceField([2:end,1],:)),2);
-    origFieldVolumes(i+1,:) = (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
+    origFieldVolumes(i+1,:) =normv(faceField).*normv(faceFieldNext);% (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
 end
 
 
@@ -442,7 +450,8 @@ gConst = sparse((1:length(fixedIndices))', fixedIndices, ones(length(fixedIndice
 nf = length(FN);
 
 fBarrier = zeros(N*nf,1);
-fBarrierDerivative= zeros(N*nf,1);
+splineDerivative= zeros(N*nf,1);
+barSpline=zeros(N*nf,1);
 
 SImagField=IImagField;
 
@@ -456,30 +465,34 @@ for i=0:nf-1
     imagProduct = (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1))./origFieldVolumes(i+1,:)';
     barResult = (imagProduct/s).^3 - 3*(imagProduct/s).^2 + 3*(imagProduct/s);
     barResult2 = 1./barResult -1;
+    
     barResult2(imagProduct<=0)=Inf;
     barResult2(imagProduct>=s)=0;
     fBarrier(barOffset:barOffset+N-1)=barResult2;
+    barSpline(barOffset:barOffset+N-1)=barResult;
     
-    barDerivative=(3*(imagProduct.^2/s^3) -6*(imagProduct/s^2) + 3/s)./origFieldVolumes(i+1,:)';
-    barDerivative(imagProduct<=0)=Inf;
-    barDerivative(imagProduct>=s)=0;
-    fBarrierDerivative(barOffset:barOffset+N-1) =  barDerivative;
+    splineDerivativeLocal=(3*(imagProduct.^2/s^3) -6*(imagProduct/s^2) + 3/s);
+    splineDerivativeLocal(imagProduct<=0)=Inf;
+    splineDerivativeLocal(imagProduct>=s)=0;
+    splineDerivative(barOffset:barOffset+N-1) =  splineDerivativeLocal;
     
     %ImagField(barOffset:barOffset+N-1,1:2)=reshape(varOffset:varOffset+2*N-1, 2, N)';
     %JImagField(barOffset:barOffset+N-1,3:4)=JImagField([barOffset+1:barOffset+N-1,barOffset],1:2);
     
-    SImagField(barOffset:barOffset+N-1,:)=[faceFieldNext(:, 2), -faceFieldNext(:, 1), -faceField(:,2),faceField(:,1)];
+    SImagField(barOffset:barOffset+N-1,:)=[faceFieldNext(:, 2), -faceFieldNext(:, 1), -faceField(:,2),faceField(:,1)]./origFieldVolumes(i+1,:)';
 end
 
 if (nargout<2) %don't compute jacobian
     f=[wintegration*fIntegration;wclose*fClose;wconst*fConst;wbarrier*fBarrier];
+    %f=fBarrier;
     return
 end
 
 
 gImagField=sparse(IImagField, JImagField, SImagField, N*nf, length(currField));
 gFieldReduction = gClose;
-barDerVec=-fBarrierDerivative./(fBarrier.^2);
+barDerVec=-splineDerivative./(barSpline.^2);
+barDerVec(fBarrier==Inf)=Inf;
 barDerVec(isinf(barDerVec))=0;
 barDerVec(isnan(barDerVec))=0;
 gBarrierFunc = spdiags(barDerVec, 0, length(fBarrier), length(fBarrier));   %./fBarrier.^2
@@ -488,6 +501,8 @@ gBarrier=gBarrierFunc*gImagField*gFieldReduction;
 %g=2*wobj*gAb'*fAb+2*wconst*gConst'*fConst+2*wbarrier*gBarrier'*fBarrier;
 f=[wintegration*fIntegration;wclose*fClose;wconst*fConst;wbarrier*fBarrier];
 g=[wintegration*gIntegration;wclose*gClose;wconst*gConst;wbarrier*gBarrier];
+%f=fBarrier;
+%g=gBarrier;
 end
 
 
@@ -507,35 +522,38 @@ gClose=speye(length(xcurrSmall));
 fConst = (xcurr(fixedIndices)-fixedValues);
 
 nf = length(FN);
-field = G2*xcurr*paramLength;
+currField = G2*xcurr*paramLength;
 fBarrier = zeros(N*nf,1);
-fBarrierDerivative= zeros(N*nf,1);
+splineDerivative= zeros(N*nf,1);
+barSpline=zeros(N*nf,1);
 
 SImagField=IImagField;
 
 for i=0:nf-1
     varOffset=i*2*N+1;
     barOffset=i*N+1;
-    faceField = reshape(field(varOffset:varOffset+2*N-1),2,N)';
+    faceField = reshape(currField(varOffset:varOffset+2*N-1),2,N)';
     faceFieldNext = faceField([2:N,1],:);
     
     %tripleProducts = dot(repmat(FN(i+1,:),N,1), cross(faceField, faceField([2:end,1],:)),2);
     imagProduct = (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1))./origFieldVolumes(i+1,:)';
     barResult = (imagProduct/s).^3 - 3*(imagProduct/s).^2 + 3*(imagProduct/s);
     barResult2 = 1./barResult -1;
+    
     barResult2(imagProduct<=0)=Inf;
     barResult2(imagProduct>=s)=0;
     fBarrier(barOffset:barOffset+N-1)=barResult2;
+    barSpline(barOffset:barOffset+N-1)=barResult;
     
-    barDerivative=(3*(imagProduct.^2/s^3) -6*(imagProduct/s^2) + 3/s)./origFieldVolumes(i+1,:)';
-    barDerivative(imagProduct<=0)=Inf;
-    barDerivative(imagProduct>=s)=0;
-    fBarrierDerivative(barOffset:barOffset+N-1) =  barDerivative;
+    splineDerivativeLocal=(3*(imagProduct.^2/s^3) -6*(imagProduct/s^2) + 3/s);
+    splineDerivativeLocal(imagProduct<=0)=Inf;
+    splineDerivativeLocal(imagProduct>=s)=0;
+    splineDerivative(barOffset:barOffset+N-1) =  splineDerivativeLocal;
     
     %ImagField(barOffset:barOffset+N-1,1:2)=reshape(varOffset:varOffset+2*N-1, 2, N)';
     %JImagField(barOffset:barOffset+N-1,3:4)=JImagField([barOffset+1:barOffset+N-1,barOffset],1:2);
     
-    SImagField(barOffset:barOffset+N-1,:)=[faceFieldNext(:, 2), -faceFieldNext(:, 1), -faceField(:,2),faceField(:,1)];
+    SImagField(barOffset:barOffset+N-1,:)=[faceFieldNext(:, 2), -faceFieldNext(:, 1), -faceField(:,2),faceField(:,1)]./origFieldVolumes(i+1,:)';
 end
 
 if (nargout<2) %don't compute jacobian
@@ -544,12 +562,13 @@ if (nargout<2) %don't compute jacobian
 end
 %gLinConst=C;
 gConst=sparse((1:length(fixedIndices))', fixedIndices, ones(length(fixedIndices),1), length(fixedIndices),length(xcurr))*U;
-gImagField=sparse(IImagField, JImagField, SImagField, N*nf, 2*N*nf);
-barDerVec=-fBarrierDerivative./(fBarrier.^2);
+gImagField=sparse(IImagField, JImagField, SImagField, N*nf, length(currField));
+barDerVec=-splineDerivative./(barSpline.^2);
+barDerVec(fBarrier==Inf)=Inf;
 barDerVec(isinf(barDerVec))=0;
 barDerVec(isnan(barDerVec))=0;
 gBarrierFunc = spdiags(barDerVec, 0, length(fBarrier), length(fBarrier));   %./fBarrier.^2
-gBarrier=gBarrierFunc*gImagField*G2*U;
+gBarrier=gBarrierFunc*gImagField*G2*U*paramLength;
 %f=sum(wobj*fAb.^2)+sum(wconst*fConst.^2)+sum(wbarrier*fBarrier.^2);
 %g=2*wobj*gAb'*fAb+2*wconst*gConst'*fConst+2*wbarrier*gBarrier'*fBarrier;
 f=[wobj*fObj;wclose*fClose;wconst*fConst;wbarrier*fBarrier];
