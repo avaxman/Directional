@@ -177,7 +177,7 @@ wintegration=10e3;
 wconst=10e3;
 wbarrier=0.0001;
 wclose=1;
-s=1.0;
+s=0.1;
 success=1;
 
 %Use if Mx doesn't exist
