@@ -76,7 +76,7 @@ URaw = blkdiag(speye(length(nonPartIndices)), USmall);
 %parmutation matrix to build full uncompressed variables
 permMat = sparse([nonPartIndices;small2Big], (1:size(URaw,1))', ones(size(URaw,1),1), size(C,2), size(URaw,1));
 
-UFull = permMat*URaw;
+%UFull = permMat*URaw;
 
 %figure
 %hold on
