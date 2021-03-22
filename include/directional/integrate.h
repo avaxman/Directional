@@ -27,14 +27,13 @@
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
 #include <directional/branched_gradient.h>
-#include <igl/matlab/MatlabWorkspace.h>
-#include <igl/matlab/matlabinterface.h>
+#include <directional/iterative_rounding.h>
 #include <igl/per_face_normals.h>
 
 namespace directional
 {
-
-  // Creates an integration of N-functions from a directional field by solving the Poisson equation, with custom edge weights
+  
+  // Creates an integration of N-functions from a directional field by solving the seamless Poisson equation
   // Input:
   //  wholeV:       #V x 3 vertex coordinates of the original mesh.
   //  wholeF:       #F x 3 face vertex indices of the original mesh.
@@ -50,18 +49,19 @@ namespace directional
   //  paramFuncsN             #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
   // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
   IGL_INLINE void integrate(const Eigen::MatrixXd& wholeV,
-                               const Eigen::MatrixXi& wholeF,
-                               const Eigen::MatrixXi& FE,
-                               const Eigen::MatrixXd rawField,
-                               const double lengthRatio,
-                               const IntegrationData& intData,
-                               const Eigen::MatrixXd& cutV,
-                               const Eigen::MatrixXi& cutF,
-                               const bool roundIntegers,
-                               const bool roundSeams,
-                               Eigen::MatrixXd& paramFuncsd,
-                               Eigen::MatrixXd& paramFuncsN,
-                               Eigen::MatrixXd& wholeCornerParamFuncsN)
+                            const Eigen::MatrixXi& wholeF,
+                            const Eigen::MatrixXi& FE,
+                            const Eigen::MatrixXd rawField,
+                            const double lengthRatio,
+                            const IntegrationData& intData,
+                            const Eigen::MatrixXd& cutV,
+                            const Eigen::MatrixXi& cutF,
+                            const bool integralSeamless,
+                            const bool roundSeams,
+                            const bool verbose,
+                            Eigen::MatrixXd& paramFuncsd,
+                            Eigen::MatrixXd& paramFuncsN,
+                            Eigen::MatrixXd& wholeCornerParamFuncsN)
   
   
   {
@@ -108,13 +108,13 @@ namespace directional
     
     SparseMatrix<double> Mx(3*N*cutF.rows(), 3*N*cutF.rows());
     Mx.setFromTriplets(MxTri.begin(), MxTri.end());
-      
+    
     //The variables that should be fixed in the end
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
-
-
-   for (int i=0;i<intData.fixedIndices.size();i++)
+    
+    
+    for (int i=0;i<intData.fixedIndices.size();i++)
       fixedMask(intData.fixedIndices(i)) = 1;
     
     if(false)
@@ -126,31 +126,31 @@ namespace directional
     VectorXi alreadyFixed(numVars);
     alreadyFixed.setZero();
     
-
+    
     for (int i=0;i<intData.fixedIndices.size();i++)
       alreadyFixed(intData.fixedIndices(i)) = 1;
-
+    
     //the values for the fixed variables (size is as all variables)
     VectorXd fixedValues(numVars);
     fixedValues.setZero();  //for everything but the originally fixed values
     for (int i=0;i<intData.fixedValues.size();i++)
       fixedValues(intData.fixedIndices(i))=intData.fixedValues(i);
-  
+    
     SparseMatrix<double> Efull = d0 * intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
     VectorXd x, xprev;
-
+    
     // until then all the N depedencies should be resolved?
-
+    
     //reducing constraintMat
     SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
     SparseMatrix<double> Cfull = intData.constraintMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
     if (Cfull.rows()!=0){
       qrsolver.compute(Cfull.transpose());
       int CRank = qrsolver.rank();
-
+      
       //creating sliced permutation matrix
       VectorXi PIndices = qrsolver.colsPermutation().indices();
-
+      
       vector<Triplet<double> > CTriplets;
       for(int k = 0; k < Cfull.outerSize(); ++k)
       {
@@ -161,7 +161,7 @@ namespace directional
               CTriplets.emplace_back(j, it.col(), it.value());
         }
       }
-
+      
       Cfull.resize(CRank, Cfull.cols());
       Cfull.setFromTriplets(CTriplets.begin(), CTriplets.end());
     }
@@ -176,10 +176,10 @@ namespace directional
       for(int i = 0; i < numVars; i++)
       {
         if (!alreadyFixed(i)){
-           //for (int j=0;j<intData.d;j++)
-            var2AllTriplets.emplace_back(i, varCounter++, 1.0);
+          //for (int j=0;j<intData.d;j++)
+          var2AllTriplets.emplace_back(i, varCounter++, 1.0);
         }
-          
+        
       }
       var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
       
@@ -194,10 +194,10 @@ namespace directional
       if (Cpart.rows()!=0){
         qrsolver.compute(Cpart.transpose());
         CpartRank = qrsolver.rank();
-    
+        
         //creating sliced permutation matrix
         PIndices = qrsolver.colsPermutation().indices();
-
+        
         vector<Triplet<double> > CPartTriplets;
         
         for(int k = 0; k < Cpart.outerSize(); ++k)
@@ -209,7 +209,7 @@ namespace directional
                 CPartTriplets.emplace_back(j, it.col(), it.value());
           }
         }
-
+        
         Cpart.resize(CpartRank, Cpart.cols());
         Cpart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
       }
@@ -221,7 +221,7 @@ namespace directional
         for (SparseMatrix<double>::InnerIterator it(EtE, k); it; ++it)
           ATriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
       }
-
+      
       for(int k = 0; k < Cpart.outerSize(); ++k)
       {
         for(SparseMatrix<double>::InnerIterator it(Cpart, k); it; ++it)
@@ -241,20 +241,20 @@ namespace directional
       for(int k = 0; k < CpartRank; k++)
         bpart(k)=bfull(PIndices(k));
       b.segment(EtE.rows(), Cpart.rows()) = bpart;
-
+      
       SparseLU<SparseMatrix<double> > lusolver;
       lusolver.compute(A);
       if(lusolver.info() != Success)
         throw std::runtime_error("LU decomposition failed!");
       x = lusolver.solve(b);
-
+      
       fullx = var2AllMat * x.head(numVars - alreadyFixed.sum()) + fixedValues;
-
-//#ifndef NDEBUG
+      
+      //#ifndef NDEBUG
       //cout << "(Cfull * fullx).lpNorm<Infinity>(): "<< (Cfull * fullx).lpNorm<Infinity>() << endl;
       cout << "Initial Poisson error: " << (Efull * fullx - gamma).lpNorm<Infinity>() << endl;
-//#endif
-
+      //#endif
+      
       if((alreadyFixed - fixedMask).sum() == 0)
         break;
       
@@ -267,7 +267,7 @@ namespace directional
           double currIntDiff =0;
           double func = fullx(i); //fullx.segment(intData.d*i,intData.d);
           //for (int j=0;j<intData.d;j++)
-            currIntDiff += std::fabs(func - std::round(func));
+          currIntDiff += std::fabs(func - std::round(func));
           if (currIntDiff < minIntDiff)
           {
             minIntDiff = currIntDiff;
@@ -275,11 +275,11 @@ namespace directional
           }
         }
       }
-
-//#ifndef NDEBUG
+      
+      //#ifndef NDEBUG
       //cout << "variable index: " << minIntDiffIndex << endl;
       //cout << "variable Integer error: " << minIntDiff << endl;
-//#endif
+      //#endif
       
       if (minIntDiffIndex != -1)
       {
@@ -289,10 +289,10 @@ namespace directional
         double funcInteger=std::round(func);
         //cout<<"fullx.segment(intData.d*minIntDiffIndex,intData.d): "<<fullx.segment(intData.d*minIntDiffIndex,intData.d)<<endl;
         //cout<<"func: "<<func<<endl;
-       
+        
         //for (int d=0;d<intData.d;d++)
         //  funcInteger(d)=std::round(func(d));
-         //cout<<"funcInteger: "<<funcInteger<<endl;
+        //cout<<"funcInteger: "<<funcInteger<<endl;
         //fixedValues.segment(intData.d*minIntDiffIndex,intData.d) = /*pinvSymm*projMat**/funcInteger;
         fixedValues(minIntDiffIndex) = /*pinvSymm*projMat**/funcInteger;
         //cout<<" fixedValues.segment(intData.d*minIntDiffIndex,intData.d): "<< fixedValues.segment(intData.d*minIntDiffIndex,intData.d)<<endl;
@@ -306,7 +306,7 @@ namespace directional
       
       xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());
     }
-
+    
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     VectorXd paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
     paramFuncsN.conservativeResize(cutV.rows(), intData.N);
@@ -334,37 +334,37 @@ namespace directional
     //cout<<"cutF.rows(): "<<cutF.rows()<<endl;
     SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
     SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
-    igl::matlab::MatlabWorkspace mw;
+    //igl::matlab::MatlabWorkspace mw;
     VectorXi integerIndices(intData.integerVars.size()*intData.d);
     for(int i = 0; i < intData.integerVars.size(); i++)
       for (int j=0;j<intData.d;j++)
-       integerIndices(intData.d*i+j) = intData.d*intData.integerVars(i)+j;
+        integerIndices(intData.d*i+j) = intData.d*intData.integerVars(i)+j;
     
     //cout<<"integerIndices: "<<integerIndices<<endl;
     /*mw.save(Efull,"A");
-    mw.save(fullx,"x0");
-    mw.save(rawField,"rawField");
-    mw.save_index(intData.fixedIndices,"fixedIndices");
-    mw.save(intData.fixedValues,"fixedValues");
-    mw.save_index(intData.singularIndices,"singularIndices");
-    mw.save(gamma,"b");
-    mw.save(Cfull,"C");
-    mw.save(Gd,"G");
-    //mw.save(Mx,"Mx");
-    mw.save(FN,"FN");
-    mw.save(intData.N,"N");
-    mw.save(lengthRatio, "lengthRatio");
-    //mw.save(length,"gradLength");
-    mw.save(intData.d,"n");
-    //mw.save(intData.intSpanMat,"intSpanMat");
-    mw.save(cutV,"V");
-    mw.save_index(cutF,"F");
-    mw.save(x2CornerMat,"x2CornerMat");
-    mw.save_index(integerIndices,"integerIndices");
-    mw.write("poisson.mat");*/
+     mw.save(fullx,"x0");
+     mw.save(rawField,"rawField");
+     mw.save_index(intData.fixedIndices,"fixedIndices");
+     mw.save(intData.fixedValues,"fixedValues");
+     mw.save_index(intData.singularIndices,"singularIndices");
+     mw.save(gamma,"b");
+     mw.save(Cfull,"C");
+     mw.save(Gd,"G");
+     //mw.save(Mx,"Mx");
+     mw.save(FN,"FN");
+     mw.save(intData.N,"N");
+     mw.save(lengthRatio, "lengthRatio");
+     //mw.save(length,"gradLength");
+     mw.save(intData.d,"n");
+     //mw.save(intData.intSpanMat,"intSpanMat");
+     mw.save(cutV,"V");
+     mw.save_index(cutF,"F");
+     mw.save(x2CornerMat,"x2CornerMat");
+     mw.save_index(integerIndices,"integerIndices");
+     mw.write("poisson.mat");*/
     
     //working out MATLAB
-    MatrixXi fixedIndicesMat(intData.fixedIndices.size(),1);
+    /*MatrixXi fixedIndicesMat(intData.fixedIndices.size(),1);
     fixedIndicesMat.col(0)=intData.fixedIndices;
     MatrixXd fixedValuesMat(intData.fixedValues.size(),1);
     fixedValuesMat.col(0)=intData.fixedValues;
@@ -408,27 +408,29 @@ namespace directional
     if (roundSeams)
       igl::matlab::mleval(&engine,runLine + std::string("/../../include/directional/seamless_integration_seams' );"));
     else
-      igl::matlab::mleval(&engine,runLine + std::string("/../../include/directional/seamless_integration_singularities' );"));
-      
-   
-    MatrixXd fullxMat,successMat;
+      igl::matlab::mleval(&engine,runLine + std::string("/../../include/directional/seamless_integration_singularities' );"));*/
+    
+    success=directional::iterative_rounding(Efull, rawField, fixedIndices, fixedValues, lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.d, cutV, cutF, x2CornerMat,  fullySeamless, roundSeams, verbose, paramFuncsd);
+    
+    
+    /*MatrixXd fullxMat,successMat;
     igl::matlab::mlgetmatrix(&engine,"xcurr",fullxMat);
     igl::matlab::mlgetmatrix(&engine,"success",successMat);
     fullx=fullxMat.col(0);
-    int success=(int)successMat(0,0);
-    if (success<0)
+    int success=(int)successMat(0,0);*/
+    if (!success)
       cout<<"Rounding has failed!"<<endl;
-    igl::matlab::mlclose(&engine);
+    //igl::matlab::mlclose(&engine);
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-   paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
+    paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
     paramFuncsN.conservativeResize(cutV.rows(), intData.N);
     for(int i = 0; i < paramFuncsN.rows(); i++)
       paramFuncsN.row(i) << paramFuncsVec.segment(intData.N * i, N).transpose();
     
     paramFuncsd = fullx;
     
-     //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
+    //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
     
     //allocating per corner
     wholeCornerParamFuncsN.conservativeResize(wholeF.rows(), N*3);
@@ -438,9 +440,9 @@ namespace directional
     
     
   }
-
-}
   
+}
+
 #endif
 
-  
+
