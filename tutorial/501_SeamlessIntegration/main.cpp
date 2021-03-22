@@ -113,9 +113,12 @@ int main()
   directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, intData, VMeshCut, FMeshCut);
   
   double lengthRatio=0.02;
-  bool isInteger = false;  //do not do translational seamless.
+  bool integralSeamless = false;  //do not do translational seamless.
+  bool roundSeams = true;//do not do translational seamless.
+  bool verbose=true;
+  bool localInjectivity=false;
   std::cout<<"Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, isInteger, true, cutReducedUV,  cutFullUV,cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, integralSeamless, roundSeams, localInjectivity, verbose, cutReducedUV,  cutFullUV,cornerWholeUV);
   cutFullUV=cutFullUV.block(0,0,cutFullUV.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

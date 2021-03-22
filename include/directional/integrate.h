@@ -20,7 +20,6 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/edge_topology.h>
 #include <igl/min_quad_with_fixed.h>
-#include <igl/matlab_format.h>
 #include <igl/bounding_box_diagonal.h>
 #include <directional/tree.h>
 #include <directional/representative_to_raw.h>
@@ -58,6 +57,7 @@ namespace directional
                             const Eigen::MatrixXi& cutF,
                             const bool integralSeamless,
                             const bool roundSeams,
+                            const bool localInjectivity,
                             const bool verbose,
                             Eigen::MatrixXd& paramFuncsd,
                             Eigen::MatrixXd& paramFuncsN,
@@ -410,7 +410,7 @@ namespace directional
     else
       igl::matlab::mleval(&engine,runLine + std::string("/../../include/directional/seamless_integration_singularities' );"));*/
     
-    success=directional::iterative_rounding(Efull, rawField, fixedIndices, fixedValues, lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.d, cutV, cutF, x2CornerMat,  fullySeamless, roundSeams, verbose, paramFuncsd);
+    bool success=directional::iterative_rounding(Efull, rawField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.d, cutV, cutF, x2CornerMat,  integralSeamless, roundSeams, localInjectivity, verbose, fullx);
     
     
     /*MatrixXd fullxMat,successMat;
