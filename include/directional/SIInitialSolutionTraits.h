@@ -241,17 +241,24 @@ public:
     
     SparseMatrix<double> gBarrier = gBarrierFunc*gImagField*gFieldReduction;
     
+   
     MatrixXi blockIndices(4,1);
     blockIndices<<0,1,2,3;
     vector<SparseMatrix<double>> JMats;
     JMats.push_back(gIntegration*wIntegration);
     JMats.push_back(gClose*wClose);
     JMats.push_back(gConst*wConst);
-    if (localInjectivity)
+    if (localInjectivity){
       JMats.push_back(gBarrier*wBarrier);
-    SaddlePoint::sparse_block(blockIndices, JMats,J);
-    
-    
+      MatrixXi blockIndices(4,1);
+      blockIndices<<0,1,2,3;
+      SaddlePoint::sparse_block(blockIndices, JMats,J);
+    } else {
+      MatrixXi blockIndices(3,1);
+      blockIndices<<0,1,2;
+      SaddlePoint::sparse_block(blockIndices, JMats,J);
+    }
+
   }
   
   void init()

@@ -84,14 +84,14 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   //SaddlePoint::check_traits(slTraits, slTraits.initXandFieldSmall);
   initialSolutionLMSolver.solve(true);
   
-  if (!fullySeamless){
-    fullx=initialSolutionLMSolver.x;
-    return true;
-  }
-  
   //Iterative rounding
   irTraits.init(slTraits, initialSolutionLMSolver.x, roundSeams);
   
+  if (!fullySeamless){
+    fullx=irTraits.x0;
+    return true;
+  }
+
   bool success=true;
   int i=0;
   while (irTraits.leftIndices.size()!=0){
@@ -112,7 +112,7 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   else
     cout<<"iterative rounding failed! "<<endl;
   
-  fullx=iterativeRoundingLMSolver.x;
+  fullx=irTraits.UFull*iterativeRoundingLMSolver.x;
   
   return success;
   

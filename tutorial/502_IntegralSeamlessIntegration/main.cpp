@@ -133,9 +133,9 @@ int main()
   
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
-  directional::IntegrationData pd;
-  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
+  directional::IntegrationData intData;
+  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, intData.face2cut);
+  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
   //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField, combedMatching, combedEffort);
   std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
   
@@ -148,19 +148,24 @@ int main()
   -1,0,
   0,-1;
   
-  directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole, EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
+  directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, intData, VMeshCut, FMeshCut);
   
   double lengthRatio=0.02;
-  bool isInteger = false;  //do not do translational seamless.
-  std::cout<<"Solving rotationally-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, true, cutReducedUV, cutUVRot, cornerWholeUV);
+  bool integralSeamless = false;  //do not do translational seamless.
+  bool roundSeams = true;//do not do translational seamless.
+  bool verbose=true;
+  bool localInjectivity=true;
+  std::cout<<"Integrating..."<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, integralSeamless, roundSeams, localInjectivity, verbose, cutReducedUV,  cutUVRot,cornerWholeUV);
+  
+  
   
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
-  isInteger = true;  //do not do translational seamless.
+  integralSeamless = true;  //do not do translational seamless.
   std::cout<<"Solving fully-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger,   true, cutReducedUV, cutUVFull, cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, integralSeamless, roundSeams, localInjectivity, verbose, cutReducedUV,  cutUVFull,cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
@@ -190,7 +195,7 @@ int main()
   Eigen::VectorXi isSeam=Eigen::VectorXi::Zero(EV.rows());
   for (int i=0;i<FE.rows();i++)
     for (int j=0;j<3;j++)
-      if (pd.face2cut(i,j))
+      if (intData.face2cut(i,j))
         isSeam(FE(i,j))=1;
   directional::seam_lines(VMeshWhole, FMeshWhole, EV, combedMatching, VSeams, FSeams, CSeams,2.5);
   
