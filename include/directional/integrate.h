@@ -51,14 +51,9 @@ namespace directional
                             const Eigen::MatrixXi& wholeF,
                             const Eigen::MatrixXi& FE,
                             const Eigen::MatrixXd rawField,
-                            const double lengthRatio,
                             const IntegrationData& intData,
                             const Eigen::MatrixXd& cutV,
                             const Eigen::MatrixXi& cutF,
-                            const bool integralSeamless,
-                            const bool roundSeams,
-                            const bool localInjectivity,
-                            const bool verbose,
                             Eigen::MatrixXd& paramFuncsd,
                             Eigen::MatrixXd& paramFuncsN,
                             Eigen::MatrixXd& wholeCornerParamFuncsN)
@@ -69,7 +64,7 @@ namespace directional
     using namespace std;
     
     VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff() + 1, 1.0);
-    double length = igl::bounding_box_diagonal(wholeV) * lengthRatio;
+    double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
     
     int N = intData.N; //rawField.cols() / 3;
     int numVars = intData.symmMat.cols();
@@ -119,8 +114,8 @@ namespace directional
     
     if(false)
       for(int i = 0; i < intData.integerVars.size(); i++)
-        for (int j=0;j<intData.d;j++)
-          fixedMask(intData.d*intData.integerVars(i)+j) = 1;
+        for (int j=0;j<intData.n;j++)
+          fixedMask(intData.n * intData.integerVars(i)+j) = 1;
     
     //the variables that were already fixed to begin with
     VectorXi alreadyFixed(numVars);
@@ -335,10 +330,10 @@ namespace directional
     SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
     SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
     //igl::matlab::MatlabWorkspace mw;
-    VectorXi integerIndices(intData.integerVars.size()*intData.d);
+    VectorXi integerIndices(intData.integerVars.size()*intData.n);
     for(int i = 0; i < intData.integerVars.size(); i++)
-      for (int j=0;j<intData.d;j++)
-        integerIndices(intData.d*i+j) = intData.d*intData.integerVars(i)+j;
+      for (int j=0;j<intData.n;j++)
+        integerIndices(intData.n * i+j) = intData.n * intData.integerVars(i)+j;
     
     //cout<<"integerIndices: "<<integerIndices<<endl;
     /*mw.save(Efull,"A");
@@ -410,7 +405,7 @@ namespace directional
     else
       igl::matlab::mleval(&engine,runLine + std::string("/../../include/directional/seamless_integration_singularities' );"));*/
     
-    bool success=directional::iterative_rounding(Efull, rawField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.d, cutV, cutF, x2CornerMat,  integralSeamless, roundSeams, localInjectivity, verbose, fullx);
+    bool success=directional::iterative_rounding(Efull, rawField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.n, cutV, cutF, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
     
     
     /*MatrixXd fullxMat,successMat;

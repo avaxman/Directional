@@ -21,15 +21,17 @@
 #include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/dcel.h>
+#include <directional/cut_mesh_with_singularities.h>
+#include <directional/combing.h>
 
 namespace directional
-  {
+{
   struct IntegrationData
   {
     int N;  //num of parametric functions
-    int d;  //actual dimension of problem (for surfaces always 2)
-    Eigen::MatrixXi symmFunc;
-    Eigen::MatrixXi intFunc;
+    int n;  //actual dimension of problem
+    Eigen::MatrixXi symmFunc; //Symmetry function tying the n dofs to the full N
+    Eigen::MatrixXi intFunc;  //function spanning integers
     Eigen::SparseMatrix<double> vertexTrans2CutMat;
     Eigen::SparseMatrix<double> constraintMat;
     Eigen::SparseMatrix<double> symmMat;  //in fact, using it for the general reduction of degrees of freedom
@@ -50,9 +52,30 @@ namespace directional
     Eigen::SparseMatrix<int> intSpanMatInteger;  //in case some integers are constrained to lie on a lattice
     Eigen::SparseMatrix<int> singIntSpanMatInteger;  //the layer for the singularities
     
-    IntegrationData(){}
+    double lengthRatio;     //global scaling of
+    bool integralSeamless;  //do not do translational seamless.
+    bool roundSeams;//do not do translational seamless.
+    bool verbose;
+    bool localInjectivity;
+    
+    IntegrationData():lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){}
     ~IntegrationData(){}
   };
+  
+  IGL_INLINE Eigen::MatrixXi sign_symmetry(int N){
+    assert(N%2==0);
+    Eigen::MatrixXi symmFunc(N,N/2);
+    symmFunc<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
+    std::cout<<"symmFunc: "<<symmFunc<<std::endl;
+    return symmFunc;
+  }
+
+  IGL_INLINE Eigen::MatrixXi default_period_jumps(int n){
+    return Eigen::MatrixXi::Identity(n,n);
+  }
+  
+  
+
   
   
   // Setting up the seamless integration algorithm
@@ -78,20 +101,27 @@ namespace directional
                                     const Eigen::MatrixXi& EV,
                                     const Eigen::MatrixXi& EF,
                                     const Eigen::MatrixXi& FE,
+                                    const Eigen::MatrixXd& rawField,
                                     const Eigen::VectorXi& matching,
                                     const Eigen::VectorXi& singVertices,
                                     IntegrationData& intData,
                                     Eigen::MatrixXd& cutV,
-                                    Eigen::MatrixXi& cutF)
+                                    Eigen::MatrixXi& cutF,
+                                    Eigen::MatrixXd& combedField,
+                                    Eigen::VectorXi& combedMatching)
   {
     
     using namespace Eigen;
     using namespace std;
     
+    //cutting mesh and combing field.
+    cut_mesh_with_singularities(wholeV, wholeF, singVertices, intData.face2cut);
+    combing(wholeV,wholeF, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
+   
     int N = symmFunc.rows();
-    int d = symmFunc.cols();
+    int n = symmFunc.cols();
     intData.N=N;
-    intData.d=d;
+    intData.n=n;
     intData.symmFunc = symmFunc;
     intData.intFunc = intFunc;
     
@@ -222,7 +252,7 @@ namespace directional
     {
       // HE is a map between half-edges to edges, but it does not carry the direction
       // EH edge to half-edge mapping
-      Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -matching(HE(i)) : matching(HE(i)));
+      Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -combedMatching(HE(i)) : combedMatching(HE(i)));
       if(Halfedge2Matching(i) < 0)
         Halfedge2Matching(i) = (N + (Halfedge2Matching(i) % N)) % N;
     }
@@ -531,20 +561,20 @@ namespace directional
     intData.constraintMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     //doing the integer spanning matrix
-    intData.intSpanMat.conservativeResize(d * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
-    intData.intSpanMatInteger.conservativeResize(d * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
+    intData.intSpanMat.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.intSpanMatInteger.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > intSpanMatTriplets;
     vector<Triplet<int> > intSpanMatTripletsInteger;
-    for (int i=0;i<d*numTransitions;i+=d){
-      for(int k = 0; k < d; k++)
-        for(int l = 0; l < d; l++){
+    for (int i=0;i<n*numTransitions;i+=n){
+      for(int k = 0; k < n; k++)
+        for(int l = 0; l < n; l++){
           if (intFunc(k,l)!=0){
-            intSpanMatTriplets.emplace_back(d * wholeV.rows()+i+k, d*wholeV.rows()+i+l, (double)intFunc(k,l));
-            intSpanMatTripletsInteger.emplace_back(d * wholeV.rows()+i+k, d*wholeV.rows()+i+l, intFunc(k,l));
+            intSpanMatTriplets.emplace_back(n * wholeV.rows()+i+k, n * wholeV.rows()+i+l, (double)intFunc(k,l));
+            intSpanMatTripletsInteger.emplace_back(n * wholeV.rows()+i+k, n * wholeV.rows()+i+l, intFunc(k,l));
           }
         }
     }
-    for (int i=0;i<d*wholeV.rows();i++){
+    for (int i=0;i<n * wholeV.rows();i++){
       intSpanMatTriplets.emplace_back(i,i,1.0);
       intSpanMatTripletsInteger.emplace_back(i,i,1);
     }
@@ -554,16 +584,16 @@ namespace directional
     
     //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include d dof for the surface
     //TODO: this assumes d divides N!
-    intData.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
-    intData.symmMatInteger.conservativeResize(N * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
+    intData.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.symmMatInteger.conservativeResize(N * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > symmMatTriplets;
     vector<Triplet<int> > symmMatTripletsInteger;
     for(int i = 0; i < N*(wholeV.rows() + numTransitions); i +=N)
       for(int k = 0; k < N; k++)
-        for(int l = 0; l < d; l++){
+        for(int l = 0; l < n; l++){
           if (symmFunc(k,l)!=0){
-            symmMatTriplets.emplace_back(i + k, i*d/N + l, (double)symmFunc(k,l));
-            symmMatTripletsInteger.emplace_back(i + k, i*d/N + l, symmFunc(k,l));
+            symmMatTriplets.emplace_back(i + k, i*n/N + l, (double)symmFunc(k,l));
+            symmMatTripletsInteger.emplace_back(i + k, i*n/N + l, symmFunc(k,l));
           }
         }
     
@@ -577,9 +607,9 @@ namespace directional
       intData.integerVars(i) = wholeV.rows() + i;
     
     //fixed values
-    intData.fixedIndices.resize(intData.d);
+    intData.fixedIndices.resize(intData.n);
     if (isSingular.sum()==0){  //no inner singular vertices; vertex 0 is set to (0....0)
-      for (int j=0;j<intData.d;j++)
+      for (int j=0;j<intData.n;j++)
         intData.fixedIndices(j)=j;
     }else {  //fixing first singularity to (0.5,....0.5)
       int firstSing;
@@ -587,42 +617,42 @@ namespace directional
         if (isSingular(firstSing))
           break;
       //firstSing=0; //like before
-      for (int j=0;j<intData.d;j++)
-        intData.fixedIndices(j)=intData.d*firstSing+j;
+      for (int j=0;j<intData.n;j++)
+        intData.fixedIndices(j)=intData.n*firstSing+j;
     }
     
     //creating list of singular corners and singular integer matrix
-    VectorXi singularIndices(intData.d*isSingular.sum());
+    VectorXi singularIndices(intData.n * isSingular.sum());
     int counter=0;
     for (int i=0;i<isSingular.size();i++){
       if (isSingular(i))
-        for (int j=0;j<intData.d;j++)
-          singularIndices(counter++)=intData.d*i+j;
+        for (int j=0;j<intData.n;j++)
+          singularIndices(counter++)=intData.n*i+j;
     }
     
     //doing the integer spanning matrix
-    intData.singIntSpanMat.conservativeResize(d * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
-    intData.singIntSpanMatInteger.conservativeResize(d * (wholeV.rows() + numTransitions), d * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMat.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMatInteger.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > singIntSpanMatTriplets;
     vector<Triplet<int> > singIntSpanMatTripletsInteger;
     for (int i=0;i<isSingular.size();i++){
       if (!isSingular(i)){
-        for (int j=0;j<d;j++){
-          singIntSpanMatTriplets.emplace_back(d*i+j,d*i+j,1.0);
-          singIntSpanMatTripletsInteger.emplace_back(d*i+j,d*i+j,1);
+        for (int j=0;j<n;j++){
+          singIntSpanMatTriplets.emplace_back(n*i+j,n*i+j,1.0);
+          singIntSpanMatTripletsInteger.emplace_back(n*i+j,n*i+j,1);
         }
       } else {
-        for(int k = 0; k < d; k++)
-          for(int l = 0; l < d; l++){
+        for(int k = 0; k < n; k++)
+          for(int l = 0; l < n; l++){
             if (intFunc(k,l)!=0){
-              singIntSpanMatTriplets.emplace_back(d*i+k, d*i+l, (double)intFunc(k,l));
-              singIntSpanMatTripletsInteger.emplace_back(d*i+k, d*i+l, intFunc(k,l));
+              singIntSpanMatTriplets.emplace_back(n*i+k, n*i+l, (double)intFunc(k,l));
+              singIntSpanMatTripletsInteger.emplace_back(n*i+k, n*i+l, intFunc(k,l));
             }
           }
       }
     }
     
-    for (int i=d*wholeV.rows() ; i<d*(wholeV.rows()+numTransitions);i++){
+    for (int i=n * wholeV.rows() ; i<n*(wholeV.rows()+numTransitions);i++){
       singIntSpanMatTriplets.emplace_back(i,i,1.0);
       singIntSpanMatTripletsInteger.emplace_back(i,i,1);
     }
@@ -631,7 +661,7 @@ namespace directional
     intData.singIntSpanMatInteger.setFromTriplets(singIntSpanMatTripletsInteger.begin(), singIntSpanMatTripletsInteger.end());
     
     intData.singularIndices=singularIndices;
-    intData.fixedValues.resize(intData.d);
+    intData.fixedValues.resize(intData.n);
     intData.fixedValues.setConstant(0);
     
   }
