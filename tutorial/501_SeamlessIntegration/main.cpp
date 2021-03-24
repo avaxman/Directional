@@ -96,29 +96,17 @@ int main()
   directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
-  directional::IntegrationData intData;
-  directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, intData.face2cut);
-  directional::combing(VMeshWhole,FMeshWhole, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
-   //directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, combedField,  combedMatching, combedEffort);
- 
-  std::cout<<"Setting up integration..."<<std::endl;
+  directional::IntegrationData intData(N);
+  std::cout<<"Setting up Integration"<<std::endl;
+  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
-  //an N=4 sign-symmetric function
-  Eigen::MatrixXi symmFunc(4,2);
-  symmFunc<<1,0,
-  0,1,
-  -1,0,
-  0,-1;
+  intData.verbose=true;
+  intData.localInjectivity=false;
+  intData.integralSeamless=false;
   
-  directional::setup_integration(symmFunc, Eigen::MatrixXi::Identity(2,2), VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, intData, VMeshCut, FMeshCut);
-  
-  double lengthRatio=0.02;
-  bool integralSeamless = false;  //do not do translational seamless.
-  bool roundSeams = true;//do not do translational seamless.
-  bool verbose=true;
-  bool localInjectivity=false;
   std::cout<<"Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, intData, VMeshCut, FMeshCut, integralSeamless, roundSeams, localInjectivity, verbose, cutReducedUV,  cutFullUV,cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutFullUV,cornerWholeUV);
+  
   cutFullUV=cutFullUV.block(0,0,cutFullUV.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

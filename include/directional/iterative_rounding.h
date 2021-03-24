@@ -16,12 +16,19 @@
 #include <directional/IterativeRoundingTraits.h>
 #include <iostream>
 #include <Eigen/core>
+#include <iomanip>
 
 
 
 
 
 namespace directional{
+
+
+template<typename T> void printElement(T t, const int& width)
+{
+  std::cout << std::left << std::setw(width) << std::setfill(' ') << t;
+}
 
 
 bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
@@ -79,38 +86,67 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   slTraits.localInjectivity=localInjectivity;
   
   //initial solution
-  slTraits.init();
+  if (verbose)
+    cout<<"Computing initial solution..."<<endl;
+  slTraits.init(verbose);
   initialSolutionLMSolver.init(&lSolver1, &slTraits, &dISTraits, 1000);
   //SaddlePoint::check_traits(slTraits, slTraits.initXandFieldSmall);
-  initialSolutionLMSolver.solve(true);
+  initialSolutionLMSolver.solve(false);
+  if (verbose){
+    cout<<"Done!"<<endl;
+    cout<<"Integrability error: "<<slTraits.integrability<<endl;
+    cout<<"LM Solver energy: "<<initialSolutionLMSolver.energy<<endl;
+    cout<<"LM 1st-order optimality: "<<initialSolutionLMSolver.fooOptimality<<endl;
+  }
   
-  //Iterative rounding
+ 
   irTraits.init(slTraits, initialSolutionLMSolver.x, roundSeams);
   
   if (!fullySeamless){
     fullx=irTraits.x0;
     return true;
   }
+  
+  //Iterative rounding
+  int colWidth=15;
+   if (verbose){
+     cout<<"Starting Iterative rounding..."<<endl;
+     printElement("index", colWidth);
+     printElement("orig. value", colWidth);
+     printElement(" int. value", colWidth);
+     printElement("energy value", colWidth);
+     printElement("f.o. Optimality", colWidth);
+     cout<<endl;
+     
+     //cout<<"index    orig. value   int. value    energy value    f.o. Optimality"<<endl;
+   }
 
   bool success=true;
-  int i=0;
   while (irTraits.leftIndices.size()!=0){
-    cout<<"i: "<<i++<<endl;
+    //cout<<"i: "<<i++<<endl;
     if (!irTraits.initFixedIndices())
       continue;
     dIRTraits.currLambda=0.01;
     iterativeRoundingLMSolver.init(&lSolver2, &irTraits, &dIRTraits, 1000);
-    iterativeRoundingLMSolver.solve(true);
+    iterativeRoundingLMSolver.solve(false);
+    if (verbose){
+      printElement(irTraits.currRoundIndex, colWidth);
+      printElement(irTraits.origValue, colWidth);
+      printElement(irTraits.roundValue, colWidth);
+      printElement(iterativeRoundingLMSolver.energy, colWidth);
+      printElement(iterativeRoundingLMSolver.fooOptimality, colWidth);
+      cout<<endl;
+    }
     if (!irTraits.post_checking(iterativeRoundingLMSolver.x)){
       success=false;
+      if (verbose)
+        cout<<"Failed to round!"<<endl;
       break;
     }
   }
   
-  if (success)
-    cout<<"iterative rounding succeeded! "<<endl;
-  else
-    cout<<"iterative rounding failed! "<<endl;
+  if (verbose)
+    cout<<"Iterative rounding "<<(success ? "succeeded!" : "failed!")<<endl;
   
   fullx=irTraits.UFull*iterativeRoundingLMSolver.x;
   

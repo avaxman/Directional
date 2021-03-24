@@ -36,6 +36,8 @@ public:
   double wIntegration,wConst, wBarrier, wClose, s;
   bool localInjectivity;
   
+  double integrability;  //true to last iteration
+  
   void initial_solution(Eigen::VectorXd& _x0){_x0 = initXandFieldSmall;}
   void pre_iteration(const Eigen::VectorXd& prevx){}
   bool post_iteration(const Eigen::VectorXd& x){return false;}
@@ -170,6 +172,8 @@ public:
       }
     }
     
+    integrability = fIntegration.lpNorm<Infinity>();
+    
     
     if (localInjectivity){
       EVec.conservativeResize(fIntegration.size()+fClose.size()+fConst.size()+fBarrier.size());
@@ -261,7 +265,7 @@ public:
 
   }
   
-  void init()
+  bool init(const bool verbose)
   {
     using namespace std;
     using namespace Eigen;
@@ -335,14 +339,8 @@ public:
     for (int i=0;i<I.rows();i++)
       CSmall(I(i),JMask(J(i)))=S(i);
     
-    //cout<<"CSmall: "<<CSmall<<endl;
-    
-    
     FullPivLU<MatrixXd> lu_decomp(CSmall);
     MatrixXd USmall=lu_decomp.kernel();
-    
-    //cout<<"USmall: "<<USmall<<endl;
-    
     
     //converting into the big matrix
     VectorXi nonPartIndices, stub;
@@ -373,10 +371,8 @@ public:
     
     UFull=permMat*URaw;
     
-    cout<<"(C*UFull).lpNorm<Infinity>(): "<<(C*UFull).norm()<<endl;
-    
+
     //computing original volumes and (row,col) of that functional
-    
     rawField2.resize(F.rows(),2*N);
     for (int i=0;i<N;i++)
       rawField2.middleCols(2*i,2)<<rawField.middleCols(3*i,3).cwiseProduct(B1).rowwise().sum(),rawField.middleCols(3*i,3).cwiseProduct(B2).rowwise().sum();
@@ -387,9 +383,6 @@ public:
       rawFieldVec.segment(3*N*i,3*N)=rawField.row(i).transpose();
       rawField2Vec.segment(2*N*i,2*N)=rawField2.row(i).transpose();
     }
-    
-    //cout<<"rawField2Vec: "<<rawField2Vec<<endl;
-    
     
     IImagField.resize(N*F.rows(),4);
     JImagField.resize(N*F.rows(),4);
@@ -403,9 +396,6 @@ public:
         origFieldVolumes(i,j)=currVec.norm()*nextVec.norm();//currVec(0)*nextVec(1)-currVec(1)*nextVec(0);
       }
     }
-    
-    //cout<<"min origFieldVolumes: "<<origFieldVolumes.colwise().minCoeff()<<endl;
-    //cout<<"origFieldVolumes.row(0): "<<origFieldVolumes.row(0)<<endl;
     
     //Generating naive poisson solution
     SparseMatrix<double> Mx;
@@ -435,19 +425,17 @@ public:
     
     VectorXd bigRhs(f.size()+fixedValues.size());
     bigRhs<<f,fixedValues;
-    //cout<<"bigRhs: "<<bigRhs<<endl;
-    
+
     SparseLU<SparseMatrix<double>, COLAMDOrdering<int> >   solver;
     solver.compute(bigMat);
     if (solver.info()!=Eigen::Success){
-      cout<<"Factorization of bigMat failed!!"<<endl;
-      return;
+      if (verbose)
+        cout<<"Matrix factorization failed!"<<endl;
+      return false;
     }
     VectorXd initXSmallFull = solver.solve(bigRhs);
     VectorXd initXSmall=initXSmallFull.head(UFull.cols());
-    
-    double initialIntegrationError = (rawField2Vec - paramLength*G2*UFull*initXSmall).template lpNorm<Infinity>();
-    std::cout<<"initialIntegrationError: "<<initialIntegrationError<<std::endl;
+
     
     x0=UFull*initXSmall;
     
@@ -467,6 +455,8 @@ public:
     
     
     xSize = UExt.cols();
+    
+    
     
   }
 };

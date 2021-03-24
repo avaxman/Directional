@@ -25,7 +25,21 @@
 #include <directional/combing.h>
 
 namespace directional
-{
+  {
+  
+  IGL_INLINE Eigen::MatrixXi sign_symmetry(int N){
+    assert(N%2==0);
+    Eigen::MatrixXi symmFunc(N,N/2);
+    symmFunc<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
+    return symmFunc;
+  }
+  
+  IGL_INLINE Eigen::MatrixXi default_period_jumps(int n){
+    return Eigen::MatrixXi::Identity(n,n);
+  }
+  
+  
+  
   struct IntegrationData
   {
     int N;  //num of parametric functions
@@ -58,30 +72,24 @@ namespace directional
     bool verbose;
     bool localInjectivity;
     
-    IntegrationData():lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){}
+    IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){
+      N=_N;
+      n=(N%2==0 ? N/2 : N);
+      symmFunc=directional::sign_symmetry(N);
+      intFunc=directional::default_period_jumps(n);
+    }
     ~IntegrationData(){}
   };
   
-  IGL_INLINE Eigen::MatrixXi sign_symmetry(int N){
-    assert(N%2==0);
-    Eigen::MatrixXi symmFunc(N,N/2);
-    symmFunc<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
-    std::cout<<"symmFunc: "<<symmFunc<<std::endl;
-    return symmFunc;
-  }
-
-  IGL_INLINE Eigen::MatrixXi default_period_jumps(int n){
-    return Eigen::MatrixXi::Identity(n,n);
-  }
   
   
-
+  
   
   
   // Setting up the seamless integration algorithm
   // Input:
   // symmFunc:    #N x n matrix that describes the transformation between the physical "n"" dofs and the N functions integration into. This should not depend on the mesh.
-   // intFunc:    n x n matrix that describes any special relation between the translational jumps. If you don't know what that means, just give Eigen::Identity(d)
+  // intFunc:    n x n matrix that describes any special relation between the translational jumps. If you don't know what that means, just give Eigen::Identity(d)
   //  wholeV:     #V x 3 vertex coordinates
   //  wholeF:     #F x 3 face vertex indices
   //  EV:         #E x 2 edges to vertices indices
@@ -94,9 +102,7 @@ namespace directional
   //  cutV:       the Vertices of the cut mesh.
   //  cutF:       The Faces of the cut mesh.
   
-  IGL_INLINE void setup_integration(const Eigen::MatrixXi& symmFunc,
-                                    const Eigen::MatrixXi& intFunc,
-                                    const Eigen::MatrixXd& wholeV,
+  IGL_INLINE void setup_integration(const Eigen::MatrixXd& wholeV,
                                     const Eigen::MatrixXi& wholeF,
                                     const Eigen::MatrixXi& EV,
                                     const Eigen::MatrixXi& EF,
@@ -117,13 +123,6 @@ namespace directional
     //cutting mesh and combing field.
     cut_mesh_with_singularities(wholeV, wholeF, singVertices, intData.face2cut);
     combing(wholeV,wholeF, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
-   
-    int N = symmFunc.rows();
-    int n = symmFunc.cols();
-    intData.N=N;
-    intData.n=n;
-    intData.symmFunc = symmFunc;
-    intData.intFunc = intFunc;
     
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
@@ -202,14 +201,14 @@ namespace directional
      }*/
     
     // here we compute a permutation matrix
-    vector<MatrixXi> constParmMatrices(N);
-    MatrixXi unitPermMatrix = MatrixXi::Zero(N, N);
-    for (int i = 0; i < N; i++)
-      unitPermMatrix((i + 1) % N, i) = 1;
+    vector<MatrixXi> constParmMatrices(intData.N);
+    MatrixXi unitPermMatrix = MatrixXi::Zero(intData.N, intData.N);
+    for (int i = 0; i < intData.N; i++)
+      unitPermMatrix((i + 1) % intData.N, i) = 1;
     
     // generate all the members of the permutation group
-    constParmMatrices[0] = MatrixXi::Identity(N, N);
-    for (int i = 1; i < N; i++)
+    constParmMatrices[0] = MatrixXi::Identity(intData.N, intData.N);
+    for (int i = 1; i < intData.N; i++)
       constParmMatrices[i] = unitPermMatrix * constParmMatrices[i - 1];
     
     // each edge which is on the cut seam is marked by 1 and 0 otherwise
@@ -254,7 +253,7 @@ namespace directional
       // EH edge to half-edge mapping
       Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -combedMatching(HE(i)) : combedMatching(HE(i)));
       if(Halfedge2Matching(i) < 0)
-        Halfedge2Matching(i) = (N + (Halfedge2Matching(i) % N)) % N;
+        Halfedge2Matching(i) = (intData.N + (Halfedge2Matching(i) % intData.N)) % intData.N;
     }
     
     int currTransition = 1;
@@ -391,7 +390,7 @@ namespace directional
       std::vector<MatrixXi> permMatrices;
       std::vector<int> permIndices;  //in the space #V + #transitions
       //The initial corner gets the identity without any transition
-      permMatrices.push_back(MatrixXi::Identity(N, N));
+      permMatrices.push_back(MatrixXi::Identity(intData.N, intData.N));
       permIndices.push_back(i);
       
       int beginH = VH(i);
@@ -441,10 +440,10 @@ namespace directional
           for(int i = 0; i < permIndices.size(); i++)
           {
             // place the perumtation matrix in a bigger matrix, we need to know how things are connected along the cut, no?
-            for(int j = 0; j < N; j++)
-              for(int k = 0; k < N; k++){
-                vertexTrans2CutTriplets.emplace_back(N * currCutVertex + j, N * permIndices[i] + k, (double) permMatrices[i](j, k));
-                vertexTrans2CutTripletsInteger.emplace_back(N * currCutVertex + j, N * permIndices[i] + k, permMatrices[i](j, k));
+            for(int j = 0; j < intData.N; j++)
+              for(int k = 0; k < intData.N; k++){
+                vertexTrans2CutTriplets.emplace_back(intData.N * currCutVertex + j, intData.N * permIndices[i] + k, (double) permMatrices[i](j, k));
+                vertexTrans2CutTripletsInteger.emplace_back(intData.N * currCutVertex + j, intData.N * permIndices[i] + k, permMatrices[i](j, k));
               }
           }
         }
@@ -459,7 +458,7 @@ namespace directional
         }
         
         // constParmMatrices contains all the members of the permutation group
-        MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge) % N];
+        MatrixXi nextPermMatrix = constParmMatrices[Halfedge2Matching(nextHalfedge) % intData.N];
         //no update needed
         if(isHEcut(nextHalfedge) == 0)
         {
@@ -476,14 +475,14 @@ namespace directional
             permMatrices[j] = nextPermMatrix * permMatrices[j];
           
           //and identity on the fresh transition
-          permMatrices.push_back(MatrixXi::Identity(N, N));
+          permMatrices.push_back(MatrixXi::Identity(intData.N, intData.N));
           permIndices.push_back(wholeV.rows() + nextTransition - 1);
         }
         // (Pe*(f-Je))  matrix is already inverse since halfedge matching is minused
         else
         {
           //reverse order
-          permMatrices.push_back(-MatrixXi::Identity(N, N));
+          permMatrices.push_back(-MatrixXi::Identity(intData.N, intData.N));
           permIndices.push_back(wholeV.rows() - nextTransition - 1);
           
           for(int j = 0; j < permMatrices.size(); j++)
@@ -499,12 +498,12 @@ namespace directional
       
       for (int j = 0; j < cleanPermIndices.size(); j++)
       {
-        cleanPermMatrices[j] = MatrixXi::Zero(N, N);
+        cleanPermMatrices[j] = MatrixXi::Zero(intData.N, intData.N);
         for(int k = 0;k < permIndices.size(); k++)
           if(cleanPermIndices[j] == permIndices[k])
             cleanPermMatrices[j] += permMatrices[k];
         if(cleanPermIndices[j] == i)
-          cleanPermMatrices[j] -= MatrixXi::Identity(N, N);
+          cleanPermMatrices[j] -= MatrixXi::Identity(intData.N, intData.N);
       }
       
       //if not all matrices are zero, there is a constraint
@@ -517,10 +516,10 @@ namespace directional
       {
         for(int j = 0; j < cleanPermMatrices.size(); j++)
         {
-          for(int k = 0; k < N; k++)
-            for(int l = 0; l < N; l++){
-              constTriplets.emplace_back(N * currConst + k, N * cleanPermIndices[j] + l, (double) cleanPermMatrices[j](k, l));
-              constTripletsInteger.emplace_back(N * currConst + k, N * cleanPermIndices[j] + l, cleanPermMatrices[j](k, l));
+          for(int k = 0; k < intData.N; k++)
+            for(int l = 0; l < intData.N; l++){
+              constTriplets.emplace_back(intData.N * currConst + k, intData.N * cleanPermIndices[j] + l, (double) cleanPermMatrices[j](k, l));
+              constTripletsInteger.emplace_back(intData.N * currConst + k, intData.N * cleanPermIndices[j] + l, cleanPermMatrices[j](k, l));
             }
         }
         currConst++;
@@ -531,8 +530,8 @@ namespace directional
     vector< Triplet< double > > cleanTriplets;
     vector< Triplet< int > > cleanTripletsInteger;
     
-    intData.vertexTrans2CutMat.conservativeResize(N * cutV.rows(), N * (wholeV.rows() + numTransitions));
-    intData.vertexTrans2CutMatInteger.conservativeResize(N * cutV.rows(), N * (wholeV.rows() + numTransitions));
+    intData.vertexTrans2CutMat.conservativeResize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
+    intData.vertexTrans2CutMatInteger.conservativeResize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < vertexTrans2CutTriplets.size(); i++){
@@ -547,8 +546,8 @@ namespace directional
     
     //
     
-    intData.constraintMat.conservativeResize(N * currConst, N * (wholeV.rows() + numTransitions));
-    intData.constraintMatInteger.conservativeResize(N * currConst, N * (wholeV.rows() + numTransitions));
+    intData.constraintMat.conservativeResize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
+    intData.constraintMatInteger.conservativeResize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < constTriplets.size(); i++){
@@ -561,20 +560,20 @@ namespace directional
     intData.constraintMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     //doing the integer spanning matrix
-    intData.intSpanMat.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
-    intData.intSpanMatInteger.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.intSpanMat.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.intSpanMatInteger.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > intSpanMatTriplets;
     vector<Triplet<int> > intSpanMatTripletsInteger;
-    for (int i=0;i<n*numTransitions;i+=n){
-      for(int k = 0; k < n; k++)
-        for(int l = 0; l < n; l++){
-          if (intFunc(k,l)!=0){
-            intSpanMatTriplets.emplace_back(n * wholeV.rows()+i+k, n * wholeV.rows()+i+l, (double)intFunc(k,l));
-            intSpanMatTripletsInteger.emplace_back(n * wholeV.rows()+i+k, n * wholeV.rows()+i+l, intFunc(k,l));
+    for (int i=0;i<intData.n*numTransitions;i+=intData.n){
+      for(int k = 0; k < intData.n; k++)
+        for(int l = 0; l < intData.n; l++){
+          if (intData.intFunc(k,l)!=0){
+            intSpanMatTriplets.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, (double)intData.intFunc(k,l));
+            intSpanMatTripletsInteger.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, intData.intFunc(k,l));
           }
         }
     }
-    for (int i=0;i<n * wholeV.rows();i++){
+    for (int i=0;i<intData.n * wholeV.rows();i++){
       intSpanMatTriplets.emplace_back(i,i,1.0);
       intSpanMatTripletsInteger.emplace_back(i,i,1);
     }
@@ -584,16 +583,16 @@ namespace directional
     
     //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include d dof for the surface
     //TODO: this assumes d divides N!
-    intData.symmMat.conservativeResize(N * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
-    intData.symmMatInteger.conservativeResize(N * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.symmMat.conservativeResize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.symmMatInteger.conservativeResize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > symmMatTriplets;
     vector<Triplet<int> > symmMatTripletsInteger;
-    for(int i = 0; i < N*(wholeV.rows() + numTransitions); i +=N)
-      for(int k = 0; k < N; k++)
-        for(int l = 0; l < n; l++){
-          if (symmFunc(k,l)!=0){
-            symmMatTriplets.emplace_back(i + k, i*n/N + l, (double)symmFunc(k,l));
-            symmMatTripletsInteger.emplace_back(i + k, i*n/N + l, symmFunc(k,l));
+    for(int i = 0; i < intData.N*(wholeV.rows() + numTransitions); i +=intData.N)
+      for(int k = 0; k < intData.N; k++)
+        for(int l = 0; l < intData.n; l++){
+          if (intData.symmFunc(k,l)!=0){
+            symmMatTriplets.emplace_back(i + k, i*intData.n/intData.N + l, (double)intData.symmFunc(k,l));
+            symmMatTripletsInteger.emplace_back(i + k, i*intData.n/intData.N + l, intData.symmFunc(k,l));
           }
         }
     
@@ -631,28 +630,28 @@ namespace directional
     }
     
     //doing the integer spanning matrix
-    intData.singIntSpanMat.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
-    intData.singIntSpanMatInteger.conservativeResize(n * (wholeV.rows() + numTransitions), n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMat.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMatInteger.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > singIntSpanMatTriplets;
     vector<Triplet<int> > singIntSpanMatTripletsInteger;
     for (int i=0;i<isSingular.size();i++){
       if (!isSingular(i)){
-        for (int j=0;j<n;j++){
-          singIntSpanMatTriplets.emplace_back(n*i+j,n*i+j,1.0);
-          singIntSpanMatTripletsInteger.emplace_back(n*i+j,n*i+j,1);
+        for (int j=0;j<intData.n;j++){
+          singIntSpanMatTriplets.emplace_back(intData.n * i+j,intData.n * i+j,1.0);
+          singIntSpanMatTripletsInteger.emplace_back(intData.n * i+j,intData.n * i+j,1);
         }
       } else {
-        for(int k = 0; k < n; k++)
-          for(int l = 0; l < n; l++){
-            if (intFunc(k,l)!=0){
-              singIntSpanMatTriplets.emplace_back(n*i+k, n*i+l, (double)intFunc(k,l));
-              singIntSpanMatTripletsInteger.emplace_back(n*i+k, n*i+l, intFunc(k,l));
+        for(int k = 0; k < intData.n; k++)
+          for(int l = 0; l < intData.n; l++){
+            if (intData.intFunc(k,l)!=0){
+              singIntSpanMatTriplets.emplace_back(intData.n*i+k, intData.n*i+l, (double)intData.intFunc(k,l));
+              singIntSpanMatTripletsInteger.emplace_back(intData.n*i+k, intData.n*i+l, intData.intFunc(k,l));
             }
           }
       }
     }
     
-    for (int i=n * wholeV.rows() ; i<n*(wholeV.rows()+numTransitions);i++){
+    for (int i=intData.n * wholeV.rows() ; i<intData.n*(wholeV.rows()+numTransitions);i++){
       singIntSpanMatTriplets.emplace_back(i,i,1.0);
       singIntSpanMatTripletsInteger.emplace_back(i,i,1);
     }

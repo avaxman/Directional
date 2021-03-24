@@ -37,6 +37,9 @@ public:
   Eigen::VectorXi leftIndices;
   bool roundedSingularities, roundSeams;
   
+  double origValue,roundValue;
+  int currRoundIndex;
+  
   bool success;
   
   void initial_solution(Eigen::VectorXd& _x0){
@@ -70,8 +73,9 @@ public:
       }
     }
     
-    double origValue = xCurr(leftIndices(minRoundIndex));
-    double roundValue = std::round(fraction*xCurr(leftIndices(minRoundIndex)))/fraction;
+    currRoundIndex = leftIndices(minRoundIndex);
+    origValue = xCurr(leftIndices(minRoundIndex));
+    roundValue = std::round(fraction*xCurr(leftIndices(minRoundIndex)))/fraction;
     //cout<<"origValue,roundValue: "<<origValue<<","<<roundValue<<endl;
     fixedIndices.conservativeResize(fixedIndices.size()+1);
     fixedIndices(fixedIndices.size()-1)=leftIndices[minRoundIndex];  //is this under-performing?
@@ -281,7 +285,7 @@ public:
         avgGradNorm+=rawField2.block(i,2*j,1,2).norm();
     
     avgGradNorm/=(double)(N*FN.rows());
-    cout<<"avgGradNorm: "<<avgGradNorm<<endl;
+    //cout<<"avgGradNorm: "<<avgGradNorm<<endl;
     
     rawField.array()/=avgGradNorm;
     rawField2.array()/=avgGradNorm;
@@ -298,7 +302,7 @@ public:
     }
     
     
-    cout<<"min origFieldVolumes: "<<origFieldVolumes.colwise().minCoeff()<<endl;
+    //cout<<"min origFieldVolumes: "<<origFieldVolumes.colwise().minCoeff()<<endl;
     
     fixedIndices=VectorXi::Zero(0);
     fixedValues=VectorXd::Zero(0.0);

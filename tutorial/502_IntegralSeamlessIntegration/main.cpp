@@ -134,12 +134,12 @@ int main()
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
 
-  directional::IntegrationData intData;
+  directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(directional::sign_symmetry(4), directional::default_period_jumps(2), VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
   intData.verbose=true;
-  intData.localInjectivity=true;
+  intData.localInjectivity=false;
   intData.integralSeamless=false;
   
   std::cout<<"Integrating..."<<std::endl;
