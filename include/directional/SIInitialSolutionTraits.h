@@ -105,11 +105,11 @@ public:
     
     MatrixXi blockIndices(4,1);
     blockIndices<<0,1,2,3;
-    vector<SparseMatrix<int>> JMats;
-    JMats.push_back(gIntegrationPattern);
-    JMats.push_back(gClosePattern);
-    JMats.push_back(gConstPattern);
-    JMats.push_back(gBarrierPattern);
+    vector<SparseMatrix<int>*> JMats;
+    JMats.push_back(&gIntegrationPattern);
+    JMats.push_back(&gClosePattern);
+    JMats.push_back(&gConstPattern);
+    JMats.push_back(&gBarrierPattern);
     SaddlePoint::sparse_block(blockIndices, JMats,JPattern);
     
   }
@@ -197,7 +197,7 @@ public:
     
     gIntegration.resize(G2.rows(), G2.cols()+currField.size());
     gIntegration.setFromTriplets(gIntegrationTriplets.begin(), gIntegrationTriplets.end());
-    gIntegration=gIntegration*UExt;
+    gIntegration=gIntegration*UExt*wIntegration;
     
     SparseMatrix<double> gClose(currField.size(), xAndCurrField.size());
     vector<Triplet<double>> gCloseTriplets;
@@ -205,7 +205,7 @@ public:
       gCloseTriplets.push_back(Triplet<double>(i,x0.size()+i,1.0));
     
     gClose.setFromTriplets(gCloseTriplets.begin(), gCloseTriplets.end());
-    gClose=gClose*UExt;
+    gClose=gClose*UExt*wClose;
     
     SparseMatrix<double> gConst(fixedIndices.size(), xAndCurrField.size());
     vector<Triplet<double>> gConstTriplets;
@@ -213,7 +213,7 @@ public:
       gConstTriplets.push_back(Triplet<double>(i,fixedIndices(i),1.0));
     
     gConst.setFromTriplets(gConstTriplets.begin(), gConstTriplets.end());
-    gConst=gConst*UExt;
+    gConst=gConst*UExt*wConst;
     
     
     SparseMatrix<double> gImagField(N*FN.rows(), currField.size());
@@ -243,17 +243,17 @@ public:
       gBarrierFuncTris.push_back(Triplet<double>(i,i,barDerVec(i)));
     gBarrierFunc.setFromTriplets(gBarrierFuncTris.begin(), gBarrierFuncTris.end());
     
-    SparseMatrix<double> gBarrier = gBarrierFunc*gImagField*gFieldReduction;
+    SparseMatrix<double> gBarrier = gBarrierFunc*gImagField*gFieldReduction*wIntegration;
     
    
     MatrixXi blockIndices(4,1);
     blockIndices<<0,1,2,3;
-    vector<SparseMatrix<double>> JMats;
-    JMats.push_back(gIntegration*wIntegration);
-    JMats.push_back(gClose*wClose);
-    JMats.push_back(gConst*wConst);
+    vector<SparseMatrix<double>*> JMats;
+    JMats.push_back(&gIntegration);
+    JMats.push_back(&gClose);
+    JMats.push_back(&gConst);
     if (localInjectivity){
-      JMats.push_back(gBarrier*wBarrier);
+      JMats.push_back(&gBarrier);
       MatrixXi blockIndices(4,1);
       blockIndices<<0,1,2,3;
       SaddlePoint::sparse_block(blockIndices, JMats,J);

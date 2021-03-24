@@ -35,12 +35,15 @@ public:
   double lengthRatio, paramLength, fraction;
   double wConst, wBarrier, wClose, s, wPoisson;
   Eigen::VectorXi leftIndices;
-  bool roundedSingularities, roundSeams;
+  bool roundedSingularities, roundSeams, localInjectivity;
   
   double origValue,roundValue;
   int currRoundIndex;
   
   bool success;
+  
+  //elements of the jacobian which are fixed
+  Eigen::SparseMatrix<double> gObj,gClose,gConst,G2UFullParamLength, gObjCloseConst;
   
   void initial_solution(Eigen::VectorXd& _x0){
     _x0 = x0Small;
@@ -97,6 +100,35 @@ public:
       roundedSingularities=true;
     }
     
+    //Updating fixed elements of the jacobian
+    G2UFullParamLength = G2*UFull*paramLength;
+    
+    //Poisson error
+    gObj =G2UFullParamLength*wPoisson;
+    
+    //Closeness
+    igl::speye(xCurrSmall.size(), gClose);
+    gClose=gClose*wClose;  //TODO: bad performance
+    
+    //fixedIndices constness
+    gConst.resize(fixedIndices.size(), xCurr.size());
+    vector<Triplet<double>> gConstTriplets;
+    for (int i=0;i<fixedIndices.size();i++)
+      gConstTriplets.push_back(Triplet<double>(i,fixedIndices(i),1.0));
+    
+    gConst.setFromTriplets(gConstTriplets.begin(), gConstTriplets.end());
+  
+    gConst=gConst*UFull*wConst;
+    
+    MatrixXi blockIndices(3,1);
+    blockIndices<<0,1,2;
+    vector<SparseMatrix<double>*> JMats;
+    JMats.push_back(&gObj);
+    JMats.push_back(&gClose);
+    JMats.push_back(&gConst);
+
+    SaddlePoint::sparse_block(blockIndices, JMats,gObjCloseConst);
+    
     return (minRoundDiff>10e-7); //only proceeding if there is a need to round
   }
   
@@ -108,7 +140,7 @@ public:
     
     
     VectorXd xCurr = UFull*xCurrSmall;
-    VectorXd fObj = G2*UFull*xCurrSmall*paramLength - rawField2Vec;
+    VectorXd fObj = G2UFullParamLength*xCurrSmall - rawField2Vec;
     VectorXd fClose = (xCurrSmall-xPrevSmall);
     
     VectorXd fConst(fixedIndices.size());
@@ -116,7 +148,7 @@ public:
       fConst(i) = xCurr(fixedIndices(i))-fixedValues(i);
     
     
-    VectorXd currField = G2*xCurr*paramLength;
+    VectorXd currField = G2UFullParamLength*xCurrSmall;
     VectorXd fBarrier = VectorXd::Zero(N*FN.rows());
     VectorXd barSpline = VectorXd::Zero(N*FN.rows());
     VectorXd splineDerivative;
@@ -147,52 +179,26 @@ public:
       }
     }
     
-    EVec.conservativeResize(fObj.size()+fClose.size()+fConst.size()+fBarrier.size());
-    EVec<<fObj*wPoisson,fClose*wClose,fConst*wConst,fBarrier*wBarrier;
+    if (localInjectivity){
+      EVec.conservativeResize(fObj.size()+fClose.size()+fConst.size()+fBarrier.size());
+      EVec<<fObj*wPoisson,fClose*wClose,fConst*wConst,fBarrier*wBarrier;
+    }else{
+      EVec.conservativeResize(fObj.size()+fClose.size()+fConst.size());
+      EVec<<fObj*wPoisson,fClose*wClose,fConst*wConst;
+    }
     
     if (!computeJacobian)
       return;
     
-    //Poisson error
-    SparseMatrix<double> gObj = G2*UFull*paramLength;
-    
-    //Closeness
-    SparseMatrix<double> gClose;
-    igl::speye(xCurrSmall.size(), gClose);
-    
-    
-    //fixedIndices constness
-    SparseMatrix<double> gConst(fixedIndices.size(), xCurr.size());
-    vector<Triplet<double>> gConstTriplets;
-    for (int i=0;i<fixedIndices.size();i++)
-      gConstTriplets.push_back(Triplet<double>(i,fixedIndices(i),1.0));
-    
-    gConst.setFromTriplets(gConstTriplets.begin(), gConstTriplets.end());
-    
-    /*for (int k=0; k<gConst.outerSize(); ++k)
-     for (SparseMatrix<double>::InnerIterator it(gConst,k); it; ++it)
-     cout<<it.row()+1<<","<<it.col()+1<<","<<it.value()<<";"<<endl;*/
-    
-    gConst=gConst*UFull;
-    
     SparseMatrix<double> gImagField(N*FN.rows(), currField.size());
     vector<Triplet<double>> gImagTriplets;
-    //cout<<"IImagField.maxCoeff(): "<<IImagField.maxCoeff()<<endl;
-    //cout<<"JImagField.maxCoeff(): "<<JImagField.maxCoeff()<<endl;
     for (int i=0;i<IImagField.rows();i++)
       for (int j=0;j<IImagField.cols();j++)
         gImagTriplets.push_back(Triplet<double>(IImagField(i,j), JImagField(i,j), SImagField(i,j)));
     
     gImagField.setFromTriplets(gImagTriplets.begin(), gImagTriplets.end());
     
-    //cout<<"fBarrier(11): "<<fBarrier(11)<<endl;
-    //cout<<"fBarrierDerivative(11): "<<fBarrierDerivative(11)<<endl;
-    SparseMatrix<double> gFieldReduction = gClose;
     VectorXd barDerVec=-splineDerivative.array()/((barSpline.array()*barSpline.array()).array());
-    //cout<<"barDerVec(11): "<<barDerVec(11)<<endl;
-    /*barDerVec(fBarrier==Inf)=Inf;
-     barDerVec(isinf(barDerVec))=0;
-     barDerVec(isnan(barDerVec))=0;*/
     for (int i=0;i<fBarrier.size();i++)
       if (std::abs(fBarrier(i))<10e-9)
         barDerVec(i)=0.0;
@@ -205,16 +211,16 @@ public:
       gBarrierFuncTris.push_back(Triplet<double>(i,i,barDerVec(i)));
     gBarrierFunc.setFromTriplets(gBarrierFuncTris.begin(), gBarrierFuncTris.end());
     
-    SparseMatrix<double> gBarrier = gBarrierFunc*gImagField*G2*UFull*paramLength;
+    SparseMatrix<double> gBarrier = gBarrierFunc*gImagField*G2UFullParamLength*wBarrier;
     
-    MatrixXi blockIndices(4,1);
-    blockIndices<<0,1,2,3;
-    vector<SparseMatrix<double>> JMats;
-    JMats.push_back(gObj*wPoisson);
-    JMats.push_back(gClose*wClose);
-    JMats.push_back(gConst*wConst);
-    JMats.push_back(gBarrier*wBarrier);
-    SaddlePoint::sparse_block(blockIndices, JMats,J);
+    if (localInjectivity){
+      MatrixXi blockIndices(2,1);
+      blockIndices<<0,1;
+      vector<SparseMatrix<double>*> JMats;
+      JMats.push_back(&gObjCloseConst);
+      JMats.push_back(&gBarrier);
+      SaddlePoint::sparse_block(blockIndices, JMats,J);
+    } else J=gObjCloseConst;
   }
   
   
@@ -236,6 +242,8 @@ public:
     }
     
     xCurrSmall=x;
+    x0Small=xCurrSmall;
+    xPrevSmall=x0Small;
     
     return (roundDiffs.maxCoeff()<=10e-7);
     //} else {
@@ -260,6 +268,7 @@ public:
     wConst=sist.wConst, wBarrier=sist.wBarrier, wClose=sist.wClose, s=sist.s;
     roundSeams=_roundSeams;
     roundedSingularities=false;
+    localInjectivity=sist.localInjectivity;
     
     wPoisson=1;
     wClose = 0.01;
