@@ -74,7 +74,10 @@ endif()
 # Chapter 5
 if(TUTORIALS_CHAPTER5)
   add_subdirectory("501_SeamlessIntegration")
-  add_subdirectory("502_IntegralSeamlessIntegration")
+  add_subdirectory("502_LocalInjectivity")
+  add_subdirectory("503_VariousOrder")
+  add_subdirectory("504_SeamsSingsRounding")
+  add_subdirectory("505_Symmetry")
 endif()
 
 # Chapter 6

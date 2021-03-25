@@ -272,7 +272,7 @@ public:
     
     wPoisson=1;
     wClose = 0.01;
-    wConst=10e5;
+    wConst=10e3;
     
     //Updating initial quantities
     

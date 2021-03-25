@@ -142,14 +142,14 @@ int main()
   intData.localInjectivity=false;
   intData.integralSeamless=false;
   
-  std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
+  std::cout<<"Integrating..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVRot,cornerWholeUV);
   
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   intData.integralSeamless = true;  //do not do translational seamless.
-  std::cout<<"Solving for integrally-seamless integration"<<std::endl;
+  std::cout<<"Solving fully-seamless integration"<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVFull,cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;

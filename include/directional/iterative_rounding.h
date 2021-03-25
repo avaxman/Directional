@@ -27,7 +27,7 @@ namespace directional{
 
 template<typename T> void printElement(T t, const int& width)
 {
-  std::cout << std::left << std::setw(width) << std::setfill(' ') << t;
+  std::cout << std::right << std::setw(width) << std::setfill(' ') << t;
 }
 
 
@@ -60,11 +60,11 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   
   SIInitialSolutionTraits<LinearSolver> slTraits;
   LinearSolver lSolver1,lSolver2;
-  SaddlePoint::DiagonalDamping<SIInitialSolutionTraits<LinearSolver>> dISTraits(0.01);
+  SaddlePoint::DiagonalDamping<SIInitialSolutionTraits<LinearSolver>> dISTraits(localInjectivity ? 0.01 : 0.0);
   SaddlePoint::LMSolver<LinearSolver,SIInitialSolutionTraits<LinearSolver>, SaddlePoint::DiagonalDamping<SIInitialSolutionTraits<LinearSolver> > > initialSolutionLMSolver;
   
   IterativeRoundingTraits<LinearSolver> irTraits;
-  SaddlePoint::DiagonalDamping<IterativeRoundingTraits<LinearSolver>> dIRTraits(0.01);
+  SaddlePoint::DiagonalDamping<IterativeRoundingTraits<LinearSolver>> dIRTraits(localInjectivity ? 0.01 : 0.0);
   SaddlePoint::LMSolver<LinearSolver,IterativeRoundingTraits<LinearSolver>, SaddlePoint::DiagonalDamping<IterativeRoundingTraits<LinearSolver> > > iterativeRoundingLMSolver;
   
   slTraits.A=A;
@@ -89,7 +89,7 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   if (verbose)
     cout<<"Computing initial solution..."<<endl;
   slTraits.init(verbose);
-  initialSolutionLMSolver.init(&lSolver1, &slTraits, &dISTraits, 1000);
+  initialSolutionLMSolver.init(&lSolver1, &slTraits, &dISTraits, 100, 1e-7, 1e-7);
   //SaddlePoint::check_traits(slTraits, slTraits.initXandFieldSmall);
   initialSolutionLMSolver.solve(false);
   if (verbose){
@@ -99,7 +99,6 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
     cout<<"LM 1st-order optimality: "<<initialSolutionLMSolver.fooOptimality<<endl;
   }
   
- 
   irTraits.init(slTraits, initialSolutionLMSolver.x, roundSeams);
   
   if (!fullySeamless){
@@ -108,17 +107,16 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   }
   
   //Iterative rounding
-  int colWidth=15;
+  int colWidth=20;
    if (verbose){
      cout<<"Starting Iterative rounding..."<<endl;
-     printElement("index", colWidth);
-     printElement("orig. value", colWidth);
-     printElement(" int. value", colWidth);
-     printElement("energy value", colWidth);
-     printElement("f.o. Optimality", colWidth);
+     cout << std::right << setw(colWidth) << setfill(' ') << "Index";
+     cout << std::right << setw(colWidth) << setfill(' ') << "Orig. value";
+     cout << std::right << setw(colWidth) << setfill(' ') << "Integer value";
+     cout << std::right << setw(colWidth) << setfill(' ') << "Energy";
+     cout << std::right << setw(colWidth) << setfill(' ') << "1st-ord. Optimality";
+     cout << std::right << setw(colWidth) << setfill(' ') << "# Iterations";
      cout<<endl;
-     
-     //cout<<"index    orig. value   int. value    energy value    f.o. Optimality"<<endl;
    }
 
   bool success=true;
@@ -126,8 +124,8 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
     //cout<<"i: "<<i++<<endl;
     if (!irTraits.initFixedIndices())
       continue;
-    dIRTraits.currLambda=0.01;
-    iterativeRoundingLMSolver.init(&lSolver2, &irTraits, &dIRTraits, 1000);
+    dIRTraits.currLambda=(localInjectivity ? 0.01 : 0.0);
+    iterativeRoundingLMSolver.init(&lSolver2, &irTraits, &dIRTraits, 100, 1e-7, 1e-7);
     iterativeRoundingLMSolver.solve(false);
     if (verbose){
       printElement(irTraits.currRoundIndex, colWidth);
@@ -135,6 +133,7 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
       printElement(irTraits.roundValue, colWidth);
       printElement(iterativeRoundingLMSolver.energy, colWidth);
       printElement(iterativeRoundingLMSolver.fooOptimality, colWidth);
+      printElement(iterativeRoundingLMSolver.currIter, colWidth);
       cout<<endl;
     }
     if (!irTraits.post_checking(iterativeRoundingLMSolver.x)){
