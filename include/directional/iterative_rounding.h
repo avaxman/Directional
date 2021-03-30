@@ -89,7 +89,7 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   if (verbose)
     cout<<"Computing initial solution..."<<endl;
   slTraits.init(verbose);
-  initialSolutionLMSolver.init(&lSolver1, &slTraits, &dISTraits, 100, 1e-7, 1e-7);
+  initialSolutionLMSolver.init(&lSolver1, &slTraits, &dISTraits, 100);
   //SaddlePoint::check_traits(slTraits, slTraits.initXandFieldSmall);
   initialSolutionLMSolver.solve(false);
   if (verbose){

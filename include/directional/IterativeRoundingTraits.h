@@ -245,6 +245,7 @@ public:
     x0Small=xCurrSmall;
     xPrevSmall=x0Small;
     
+    std::cout<<"roundDiffs.maxCoeff(): "<<roundDiffs.maxCoeff()<<std::endl;
     return (roundDiffs.maxCoeff()<=10e-7);
     //} else {
     //  return (leftIndices.size()==0);
@@ -272,7 +273,7 @@ public:
     
     wPoisson=1;
     wClose = 0.01;
-    wConst=10e3;
+    wConst=10e4;
     
     //Updating initial quantities
     
