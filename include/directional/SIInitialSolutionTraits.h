@@ -69,8 +69,6 @@ public:
     for (int i=0;i<rawField2Vec.size();i++)
       gIntegrationTriplets.push_back(Triplet<int>(i,G2.cols()+i,1));
     
-    
-    
     gIntegrationPattern.resize(G2.rows(), G2.cols()+rawField2Vec.size());
     gIntegrationPattern.setFromTriplets(gIntegrationTriplets.begin(), gIntegrationTriplets.end());
     gIntegrationPattern=gIntegrationPattern*UExtPattern;
@@ -274,7 +272,7 @@ public:
     wConst=10e3;
     wBarrier=0.0001;
     wClose=1;
-    s=0.1;
+    s=0.5;
     
     
     paramLength = (V.colwise().maxCoeff()-V.colwise().minCoeff()).norm()*lengthRatio;
@@ -393,7 +391,7 @@ public:
         RowVector2d nextVec=rawField2.block(i,2*((j+1)%N),1,2);
         IImagField.row(i*N+j)=VectorXi::Constant(4,i*N+j);
         JImagField.row(i*N+j)<<2*N*i+2*j, 2*N*i+2*j+1, 2*N*i+2*((j+1)%N), 2*N*i+2*((j+1)%N)+1;
-        origFieldVolumes(i,j)=currVec.norm()*nextVec.norm();//currVec(0)*nextVec(1)-currVec(1)*nextVec(0);
+        origFieldVolumes(i,j)=1.0; //currVec.norm()*nextVec.norm();//currVec(0)*nextVec(1)-currVec(1)*nextVec(0);
       }
     }
     

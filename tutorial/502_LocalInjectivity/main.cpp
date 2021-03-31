@@ -165,7 +165,10 @@ int main()
   directional::gradient(VMeshWhole, FMeshWhole, N, cornerWholeUV, gradientField);
   
   Eigen::VectorXi isOrderPreserving;
-  directional::is_order_preserving(VMeshWhole, FMeshWhole, gradientField, isOrderPreserving);
+  Eigen::MatrixXd products;
+  directional::is_order_preserving(VMeshWhole, FMeshWhole, gradientField, isOrderPreserving, products);
+  
+  std::cout<<"products.minCoeff(): "<<products.minCoeff()<<std::endl;
   
   intData.verbose=true;
   intData.localInjectivity=true;
@@ -191,7 +194,7 @@ int main()
   
   //raw field mesh
   viewer.append_mesh();
-  directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,1.0);
+  directional::glyph_lines_raw(VMeshWhole, FMeshWhole, gradientField, directional::indexed_glyph_colors(gradientField), VField, FField, CField,1.0);
   
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);

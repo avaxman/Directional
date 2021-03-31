@@ -64,7 +64,7 @@ namespace directional
     using namespace std;
     
     VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff() + 1, 1.0);
-    double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
+    //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
     
     int numVars = intData.symmMat.cols();
     //constructing face differentials
@@ -80,7 +80,7 @@ namespace directional
           d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * cutF(i, j) + k, -1.0);
           d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * cutF(i, (j + 1) % 3) + k, 1.0);
           Vector3d edgeVector = (cutV.row(cutF(i, (j + 1) % 3)) - cutV.row(cutF(i, j))).transpose();
-          gamma(3 * intData.N * i + intData.N * j + k) = (rawField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0) / length;
+          gamma(3 * intData.N * i + intData.N * j + k) = (rawField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0);
           M1Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, 3 * intData.N * i + intData.N * j + k, edgeWeights(FE(i, j)));
         }
       }

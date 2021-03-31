@@ -167,7 +167,7 @@ for i=0:nf-1
     
     %tripleProducts = dot(repmat(FN(i+1,:),N,1), cross(faceField, faceField([2:end,1],:)),2);
     crossProducts = (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
-    origFieldVolumes(i+1,:) = normv(faceField).*normv(faceFieldNext);%crossProducts';
+    origFieldVolumes(i+1,:) = 1; %normv(faceField).*normv(faceFieldNext);%crossProducts';
 end
 
 minOrigFieldVolumes=min(origFieldVolumes)
@@ -255,7 +255,7 @@ for i=0:nf-1
     faceFieldNext = faceField([2:N,1],:);
     
     %tripleProducts = dot(repmat(FN(i+1,:),N,1), cross(faceField, faceField([2:end,1],:)),2);
-    origFieldVolumes(i+1,:) =normv(faceField).*normv(faceFieldNext);% (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
+    origFieldVolumes(i+1,:) =1; % normv(faceField).*normv(faceFieldNext);% (faceField(:,1).*faceFieldNext(:, 2) - faceField(:,2).*faceFieldNext(:, 1));
 end
 
 
