@@ -131,11 +131,6 @@ int main()
   igl::readOFF(TUTORIAL_SHARED_PATH "/botanic-garden-bubble.off", VMeshWhole, FMeshWhole);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/botanic-garden-bubble.rawfield", N, rawField);
   
-  //normalize the field
-  for (int i=0;i<rawField.rows();i++)
-    for (int j=0;j<rawField.cols();j+=3)
-      rawField.block(i,j,1,3).normalize();
-  
   std::cout<<"N: "<<N<<std::endl;
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
@@ -155,7 +150,7 @@ int main()
   intData.localInjectivity=false;
   intData.integralSeamless = true;
   intData.roundSeams=false;
-  intData.lengthRatio=0.04;
+  intData.lengthRatio=0.08;
   std::cout<<"Solving regular integration"<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVReg,cornerWholeUV);
   std::cout<<"Done!"<<std::endl;
