@@ -128,8 +128,8 @@ int main()
   "  2  Show regular integration" << std::endl <<
   "  3  Show locally-injective integration" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/botanic-garden-bubble.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/botanic-garden-bubble.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/soumaya.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/soumaya.rawfield", N, rawField);
   
   std::cout<<"N: "<<N<<std::endl;
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
@@ -150,7 +150,7 @@ int main()
   intData.localInjectivity=false;
   intData.integralSeamless = true;
   intData.roundSeams=false;
-  intData.lengthRatio=0.08;
+  intData.lengthRatio=0.02;
   std::cout<<"Solving regular integration"<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVReg,cornerWholeUV);
   std::cout<<"Done!"<<std::endl;

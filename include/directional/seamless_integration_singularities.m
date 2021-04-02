@@ -302,7 +302,7 @@ while (i<=length(singularIndices))
         i=i+1;
         continue
     end
-    options=optimoptions('lsqnonlin','Algorithm','levenberg-marquardt','display', 'iter-detailed','MaxIterations', 250, 'SpecifyObjectiveGradient',true,'FiniteDifferenceType', 'central');%,'CheckGradients', true); %
+    options=optimoptions('lsqnonlin','Algorithm','levenberg-marquardt','display', 'iter-detailed','MaxIterations', 250, 'SpecifyObjectiveGradient',true,'FiniteDifferenceType', 'central','CheckGradients', true); %
     objfun = @(xcurrSmall)integerPoissonObjective(xcurrSmall,xprevSmall,rawField2, UFull, G2, Mx, N, FN, fixedIndices, fixedValues, paramLength, s, wpoisson,wclose, wconst, wbarrier, IImagField, JImagField,origFieldVolumes);
     
     %for checking gradients only!!!
@@ -360,7 +360,7 @@ if (integerError>10e-7)
             i=i+1;
             continue
         end
-        options=optimoptions('lsqnonlin','Algorithm','levenberg-marquardt','display', 'iter-detailed','MaxIterations', 250, 'SpecifyObjectiveGradient',true,'FiniteDifferenceType', 'central');%,'CheckGradients', true); %
+        options=optimoptions('lsqnonlin','Algorithm','levenberg-marquardt','display', 'iter-detailed','MaxIterations', 250, 'SpecifyObjectiveGradient',true,'FiniteDifferenceType', 'central','CheckGradients', true); %
         objfun = @(xcurrSmall)integerPoissonObjective(xcurrSmall,xprevSmall,rawField2, UFull, G2, Mx, N, FN, fixedIndices, fixedValues, paramLength, s, wpoisson,wclose, wconst, wbarrier, IImagField, JImagField,origFieldVolumes);
         
         %for checking gradients only!!!
@@ -542,7 +542,7 @@ for i=0:nf-1
     
     barResult2(imagProduct<=0)=Inf;
     barResult2(imagProduct>=s)=0;
-    fBarrier(barOffset:barOffset+N-1)=barResult2;
+    fBarrier(barOffset:barOffset+N-1)=sqrt(barResult2);
     barSpline(barOffset:barOffset+N-1)=barResult;
     
     splineDerivativeLocal=(3*(imagProduct.^2/s^3) -6*(imagProduct/s^2) + 3/s);
@@ -556,6 +556,9 @@ for i=0:nf-1
     SImagField(barOffset:barOffset+N-1,:)=[faceFieldNext(:, 2), -faceFieldNext(:, 1), -faceField(:,2),faceField(:,1)]./origFieldVolumes(i+1,:)';
 end
 
+max(fBarrier)
+find(isinf(fBarrier))
+
 if (nargout<2) %don't compute jacobian
     f=[wobj*fObj;wclose*fClose;wconst*fConst;wbarrier*fBarrier];
     return
@@ -564,6 +567,7 @@ end
 gConst=sparse((1:length(fixedIndices))', fixedIndices, ones(length(fixedIndices),1), length(fixedIndices),length(xcurr))*U;
 gImagField=sparse(IImagField, JImagField, SImagField, N*nf, length(currField));
 barDerVec=-splineDerivative./(barSpline.^2);
+barDerVec=-0.5./sqrt(barDerVec);
 barDerVec(fBarrier==Inf)=Inf;
 barDerVec(isinf(barDerVec))=0;
 barDerVec(isnan(barDerVec))=0;
@@ -571,8 +575,8 @@ gBarrierFunc = spdiags(barDerVec, 0, length(fBarrier), length(fBarrier));   %./f
 gBarrier=gBarrierFunc*gImagField*G2*U*paramLength;
 %f=sum(wobj*fAb.^2)+sum(wconst*fConst.^2)+sum(wbarrier*fBarrier.^2);
 %g=2*wobj*gAb'*fAb+2*wconst*gConst'*fConst+2*wbarrier*gBarrier'*fBarrier;
-f=[wobj*fObj;wclose*fClose;wconst*fConst;wbarrier*fBarrier];
-g=[wobj*gObj;wclose*gClose;wconst*gConst;wbarrier*gBarrier];
+f=[wobj*fObj;wclose*fClose;wconst*fConst];%;wbarrier*fBarrier];
+g=[wobj*gObj;wclose*gClose;wconst*gConst];%;wbarrier*gBarrier];
 end
 
 
