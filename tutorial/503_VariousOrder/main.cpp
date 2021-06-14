@@ -122,8 +122,8 @@ int main()
   "  W  Save parameterized OBJ file "<< std::endl;
   
   setup_line_texture();
-  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/teddy.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/teddy.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
@@ -139,8 +139,7 @@ int main()
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
   intData.verbose=true;
-  intData.localInjectivity=false;
-  intData.integralSeamless=false;
+  intData.integralSeamless=true;
   
   std::cout<<"Integrating..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVRot,cornerWholeUV);

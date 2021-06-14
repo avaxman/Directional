@@ -29,7 +29,7 @@ Eigen::MatrixXd rawField,representative, bc, barycenters;
 Eigen::MatrixXcd powerField;
 igl::opengl::glfw::Viewer viewer;
 
-int N = 4;
+int N = 6;
 bool normalized = false;
 bool zeroPressed = false;
 
@@ -128,7 +128,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       
     case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/rocker-arm2500.rawfield", rawField))
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/teddy.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
@@ -187,7 +187,7 @@ int main()
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   
   // Load mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/teddy.off", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   igl::barycenter(VMesh, FMesh, barycenters);
   
