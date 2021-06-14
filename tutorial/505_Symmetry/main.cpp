@@ -38,13 +38,28 @@ typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 
+void append_meshes(const Eigen::MatrixXd& VAdd, const Eigen::MatrixXi& FAdd, const Eigen::MatrixXd& CAdd, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& C){
+  int oldVSize = V.rows();
+  int oldFSize = F.rows();
+  int oldCSize = C.rows();
+  
+  V.conservativeResize(V.rows()+VAdd.rows(),3);
+  F.conservativeResize(F.rows()+FAdd.rows(),3);
+  C.conservativeResize(C.rows()+CAdd.rows(),3);
+  
+  V.block(oldVSize, 0, VAdd.rows(),3)=VAdd;
+  F.block(oldFSize, 0, FAdd.rows(),3)=FAdd.array()+oldVSize;
+  C.block(oldCSize, 0, CAdd.rows(),3)=CAdd;
+}
+
 void trace_isolines(const Eigen::MatrixXd& paramFuncs,
-                    Eigen::MatrixXd& P1,
-                    Eigen::MatrixXd& P2,
-                    Eigen::MatrixXd& C)
+                    Eigen::MatrixXd& VIsoLines,
+                    Eigen::MatrixXi& FIsoLines,
+                    Eigen::MatrixXd& CIsoLines)
 {
   
   Eigen::MatrixXd funcColors(8,3);
+  double isolineRadius=0.02;
   funcColors<<1.0,0.0,0.0,
   0.0,1.0,0.0,
   0.0,0.0,1.0,
@@ -55,26 +70,29 @@ void trace_isolines(const Eigen::MatrixXd& paramFuncs,
   0.0,1.0,0.5;
   funcColors.array()/=2.0;
   int jumps = (N%2 == 0 ? 2 : 1);
-  P1.resize(0,3), P2.resize(0,3), C.resize(0,3);
+  Eigen::MatrixXd isoV;
+  Eigen::MatrixXi isoE;
+  VIsoLines.resize(0,3); FIsoLines.resize(0,3); CIsoLines.resize(0,3);
+  double l = 1.25*igl::avg_edge_length(VMeshWhole, FMeshWhole);
+  
   for (int i=0;i<paramFuncs.cols()/jumps;i++){
     Eigen::VectorXd d = paramFuncs.col(i);
     
     /*std::cout<<"d.min(): "<<d.minCoeff()<<std::endl;
      std::cout<<"d.max(): "<<d.maxCoeff()<<std::endl;*/
-    Eigen::MatrixXd isoV;
-    Eigen::MatrixXi isoE;
     igl::isolines(VMeshCut,FMeshCut, d, 100, isoV, isoE);
     
-    int prevIndex = P1.rows();
-    P1.conservativeResize(P1.rows()+isoE.rows(),3);
-    P2.conservativeResize(P2.rows()+isoE.rows(),3);
-    C.conservativeResize(C.rows()+isoE.rows(),3);
+    Eigen::MatrixXd P1(isoE.rows(),3), P2(isoE.rows(),3);
     for (int i=0;i<isoE.rows();i++){
-      P1.row(prevIndex+i)=isoV.row(isoE(i,0));
-      P2.row(prevIndex+i)=isoV.row(isoE(i,1));
+      P1.row(i)=isoV.row(isoE(i,0));
+      P2.row(i)=isoV.row(isoE(i,1));
     }
     
-    C.block(prevIndex, 0, isoE.rows(),3)=funcColors.row(i).replicate(isoE.rows(),1);
+    Eigen::MatrixXd VIsoLinesTemp, CIsoLinesTemp;
+    Eigen::MatrixXi FIsoLinesTemp;
+    directional::line_cylinders(P1, P2, l*isolineRadius,funcColors.row(i).replicate(P1.rows(),1),4, VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp);
+    
+    append_meshes(VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp, VIsoLines, FIsoLines, CIsoLines);
     
   }
 }
@@ -103,7 +121,7 @@ void update_triangle_mesh()
 
 void update_raw_field_mesh()
 {
-  for (int i=1;i<=4;i++)  //hide all other meshes
+  for (int i=1;i<=3;i++)  //hide all other meshes
     viewer.data_list[i].show_faces=(viewingMode==FIELD);
 }
 
@@ -131,8 +149,8 @@ int main()
   "  2  Show only sign-symmetric integrated functions" << std::endl <<
   "  3  Show triangular-symmetric integrated functions" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/teddy.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/teddy.rawfield", N, rawField);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/sphere.obj", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere-6.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
@@ -145,11 +163,12 @@ int main()
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
   intData.verbose=true;
-  intData.integralSeamless=false;
+  intData.integralSeamless=true;
   intData.localInjectivity=false;
     
   std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVSign,cornerWholeUV);
+  std::cout<<"intData.symmFunc: "<<intData.symmFunc<<std::endl;
   
 
   std::cout<<"Done!"<<std::endl;
@@ -160,14 +179,14 @@ int main()
   intData.symmFunc.row(1)<<0,1;
   intData.symmFunc.row(2)<<-1,1;
   intData.symmFunc.block(3,0,3,2)=-intData.symmFunc.block(0,0,3,2);
+   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   std::cout<<"Solving triangular-constrained integration..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVTri,cornerWholeUV);
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
-  viewer.append_mesh();
   directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,1.0);
-  
+  viewer.append_mesh();
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
@@ -175,9 +194,8 @@ int main()
   viewer.data_list[1].show_lines = false;
   
   //singularity mesh
-  viewer.append_mesh();
   directional::singularity_spheres(VMeshWhole, FMeshWhole, N, singVertices, singIndices, VSings, FSings, CSings,2.5);
-  
+  viewer.append_mesh();
   viewer.data_list[2].clear();
   viewer.data_list[2].set_mesh(VSings, FSings);
   viewer.data_list[2].set_colors(CSings);
@@ -185,8 +203,6 @@ int main()
   viewer.data_list[2].show_lines = false;
   
   //seams mesh
-  viewer.append_mesh();
-  
   Eigen::VectorXi isSeam=Eigen::VectorXi::Zero(EV.rows());
   for (int i=0;i<FE.rows();i++)
     for (int j=0;j<3;j++)
@@ -194,6 +210,7 @@ int main()
         isSeam(FE(i,j))=1;
   directional::seam_lines(VMeshWhole, FMeshWhole, EV, combedMatching, VSeams, FSeams, CSeams,2.5);
   
+  viewer.append_mesh();
   viewer.data_list[3].clear();
   viewer.data_list[3].set_mesh(VSeams, FSeams);
   viewer.data_list[3].set_colors(CSeams);
@@ -203,27 +220,22 @@ int main()
   //sign-symmetric isolines mesh
 
   viewer.append_mesh();
-  Eigen::MatrixXd P1,P2,C;
-  trace_isolines(cutUVTri, P1, P2, C);
+  Eigen::MatrixXd VIsoLines, CIsoLines;
+  Eigen::MatrixXi FIsoLines;
+  trace_isolines(cutUVSign, VIsoLines, FIsoLines, CIsoLines);
   viewer.data_list[4].clear();
-  Eigen::MatrixXd VSign, CSign;
-  Eigen::MatrixXi TSign;
-  directional::line_cylinders(P1, P2, 2.5, C, 6, VSign, TSign, CSign);
-  viewer.data_list[4].set_mesh(VSign, TSign);
-  viewer.data_list[4].set_colors(CSign);
-  viewer.data_list[4].show_faces = true;
+  viewer.data_list[4].set_mesh(VIsoLines, FIsoLines);
+  viewer.data_list[4].set_colors(CIsoLines);
+  viewer.data_list[4].show_faces = false;
   viewer.data_list[4].show_lines = false;
   
   //tri-symmetric isolines mesh
   viewer.append_mesh();
-  trace_isolines(cutUVSign, P1, P2, C);
+  trace_isolines(cutUVTri, VIsoLines, FIsoLines, CIsoLines);
   viewer.data_list[5].clear();
-  Eigen::MatrixXd VTri, CTri;
-  Eigen::MatrixXi TTri;
-  directional::line_cylinders(P1, P2, 2.5, C, 6, VTri, TTri, CTri);
-  viewer.data_list[5].set_mesh(VTri, TTri);
-  viewer.data_list[5].set_colors(CTri);
-  viewer.data_list[5].show_faces = true;
+  viewer.data_list[5].set_mesh(VIsoLines, FIsoLines);
+  viewer.data_list[5].set_colors(CIsoLines);
+  viewer.data_list[5].show_faces = false;
   viewer.data_list[5].show_lines = false;
   
   update_triangle_mesh();
