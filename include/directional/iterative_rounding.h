@@ -108,22 +108,24 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   
   //Iterative rounding
   int colWidth=20;
-   if (verbose){
-     cout<<"Starting Iterative rounding..."<<endl;
-     cout << std::right << setw(colWidth) << setfill(' ') << "Index";
-     cout << std::right << setw(colWidth) << setfill(' ') << "Orig. value";
-     cout << std::right << setw(colWidth) << setfill(' ') << "Integer value";
-     cout << std::right << setw(colWidth) << setfill(' ') << "Energy";
-     cout << std::right << setw(colWidth) << setfill(' ') << "1st-ord. Optimality";
-     cout << std::right << setw(colWidth) << setfill(' ') << "# Iterations";
-     cout<<endl;
-   }
-
+  if (verbose){
+    cout<<"Starting Iterative rounding..."<<endl;
+    cout << std::right << setw(colWidth) << setfill(' ') << "Index";
+    cout << std::right << setw(colWidth) << setfill(' ') << "Orig. value";
+    cout << std::right << setw(colWidth) << setfill(' ') << "Integer value";
+    cout << std::right << setw(colWidth) << setfill(' ') << "Energy";
+    cout << std::right << setw(colWidth) << setfill(' ') << "1st-ord. Optimality";
+    cout << std::right << setw(colWidth) << setfill(' ') << "# Iterations";
+    cout<<endl;
+  }
+  
   bool success=true;
+  bool hasRounded=false;
   while (irTraits.leftIndices.size()!=0){
     //cout<<"i: "<<i++<<endl;
     if (!irTraits.initFixedIndices())
       continue;
+    hasRounded=true;
     dIRTraits.currLambda=(localInjectivity ? 0.01 : 0.0);
     iterativeRoundingLMSolver.init(&lSolver2, &irTraits, &dIRTraits, 100, 1e-7, 1e-7);
     iterativeRoundingLMSolver.solve(false);
@@ -147,11 +149,11 @@ bool iterative_rounding(const Eigen::SparseMatrix<double>& A,
   if (verbose)
     cout<<"Iterative rounding "<<(success ? "succeeded!" : "failed!")<<endl;
   
-  fullx=irTraits.UFull*iterativeRoundingLMSolver.x;
-  
+  if (hasRounded)
+    fullx=irTraits.UFull*iterativeRoundingLMSolver.x;
+  else
+    fullx=irTraits.x0;  //in case nothing happens
   return success;
-  
-  
   
   
 }

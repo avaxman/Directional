@@ -128,7 +128,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       
     case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/teddy.rawfield", rawField))
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
@@ -187,7 +187,7 @@ int main()
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/teddy.off", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/dome.off", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   igl::barycenter(VMesh, FMesh, barycenters);
   

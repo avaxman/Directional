@@ -149,8 +149,8 @@ int main()
   "  2  Show only sign-symmetric integrated functions" << std::endl <<
   "  3  Show triangular-symmetric integrated functions" << std::endl;
   
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/sphere.obj", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/sphere-6.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/dome.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
@@ -168,17 +168,28 @@ int main()
     
   std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVSign,cornerWholeUV);
-  std::cout<<"intData.symmFunc: "<<intData.symmFunc<<std::endl;
-  
-
   std::cout<<"Done!"<<std::endl;
   
   //Triangular symmetric  + sign symmetric for N=6
-  intData.symmFunc.resize(6,2);
-  intData.symmFunc.row(0)<<1,0;
-  intData.symmFunc.row(1)<<0,1;
-  intData.symmFunc.row(2)<<-1,1;
-  intData.symmFunc.block(3,0,3,2)=-intData.symmFunc.block(0,0,3,2);
+  
+  /*directional::IntegrationData intData2(N);
+  intData2.verbose=true;
+  intData2.integralSeamless=true;
+  intData2.localInjectivity=false;
+  Eigen::MatrixXi symmFunc(6,2);
+  symmFunc.row(0)<<1,0;
+  symmFunc.row(1)<<0,1;
+  symmFunc.row(2)<<-1,1;
+  symmFunc.block(3,0,3,2)=-symmFunc.block(0,0,3,2);
+  intData2.setSymmFunc(symmFunc);
+  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);*/
+  
+  Eigen::MatrixXi symmFunc(6,2);
+  symmFunc.row(0)<<1,0;
+  symmFunc.row(1)<<0,1;
+  symmFunc.row(2)<<-1,1;
+  symmFunc.block(3,0,3,2)=-symmFunc.block(0,0,3,2);
+  intData.setSymmFunc(symmFunc);
    directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   std::cout<<"Solving triangular-constrained integration..."<<std::endl;
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVTri,cornerWholeUV);

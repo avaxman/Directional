@@ -79,6 +79,8 @@ namespace directional
       intFunc=directional::default_period_jumps(n);
     }
     ~IntegrationData(){}
+    
+    void setSymmFunc(const Eigen::MatrixXi& _symmFunc){symmFunc =_symmFunc; N=symmFunc.rows(); n=symmFunc.cols(); intFunc=directional::default_period_jumps(n);}
   };
   
   
@@ -265,7 +267,7 @@ namespace directional
     //cutting the mesh
     vector<int> cut2whole;
     vector<RowVector3d> cutVlist;
-    cutF.conservativeResize(wholeF.rows(),3);
+    cutF.resize(wholeF.rows(),3);
     for (int i = 0; i < VH.rows(); i++)
     {
       //creating corners whereever we have non-trivial matching
@@ -309,7 +311,7 @@ namespace directional
       } while((beginH != currH) && (currH != -1));
     }
     
-    cutV.conservativeResize(cutVlist.size(), 3);
+    cutV.resize(cutVlist.size(), 3);
     for(int i = 0; i < cutVlist.size(); i++)
       cutV.row(i) = cutVlist[i];
     
@@ -530,8 +532,8 @@ namespace directional
     vector< Triplet< double > > cleanTriplets;
     vector< Triplet< int > > cleanTripletsInteger;
     
-    intData.vertexTrans2CutMat.conservativeResize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
-    intData.vertexTrans2CutMatInteger.conservativeResize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
+    intData.vertexTrans2CutMat.resize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
+    intData.vertexTrans2CutMatInteger.resize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < vertexTrans2CutTriplets.size(); i++){
@@ -546,8 +548,8 @@ namespace directional
     
     //
     
-    intData.constraintMat.conservativeResize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
-    intData.constraintMatInteger.conservativeResize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
+    intData.constraintMat.resize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
+    intData.constraintMatInteger.resize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < constTriplets.size(); i++){
@@ -560,8 +562,8 @@ namespace directional
     intData.constraintMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     //doing the integer spanning matrix
-    intData.intSpanMat.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.intSpanMatInteger.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.intSpanMat.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.intSpanMatInteger.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > intSpanMatTriplets;
     vector<Triplet<int> > intSpanMatTripletsInteger;
     for (int i=0;i<intData.n*numTransitions;i+=intData.n){
@@ -581,10 +583,10 @@ namespace directional
     intData.intSpanMat.setFromTriplets(intSpanMatTriplets.begin(), intSpanMatTriplets.end());
     intData.intSpanMatInteger.setFromTriplets(intSpanMatTripletsInteger.begin(), intSpanMatTripletsInteger.end());
     
-    //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include d dof for the surface
-    //TODO: this assumes d divides N!
-    intData.symmMat.conservativeResize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.symmMatInteger.conservativeResize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include n dof for the surface
+    //TODO: this assumes n divides N!
+    intData.symmMat.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.symmMatInteger.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > symmMatTriplets;
     vector<Triplet<int> > symmMatTripletsInteger;
     for(int i = 0; i < intData.N*(wholeV.rows() + numTransitions); i +=intData.N)
@@ -600,7 +602,7 @@ namespace directional
     intData.symmMatInteger.setFromTriplets(symmMatTripletsInteger.begin(), symmMatTripletsInteger.end());
     
     //integer variables are per single "d" packet, and the rounding is done for the N functions with projection over symmFunc
-    intData.integerVars.conservativeResize(numTransitions);
+    intData.integerVars.resize(numTransitions);
     intData.integerVars.setZero();
     for(int i = 0; i < numTransitions; i++)
       intData.integerVars(i) = wholeV.rows() + i;
@@ -630,8 +632,8 @@ namespace directional
     }
     
     //doing the integer spanning matrix
-    intData.singIntSpanMat.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.singIntSpanMatInteger.conservativeResize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMat.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMatInteger.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
     vector<Triplet<double> > singIntSpanMatTriplets;
     vector<Triplet<int> > singIntSpanMatTripletsInteger;
     for (int i=0;i<isSingular.size();i++){

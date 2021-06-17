@@ -288,14 +288,14 @@ namespace directional
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     VectorXd paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    paramFuncsN.conservativeResize(cutV.rows(), intData.N);
+    paramFuncsN.resize(cutV.rows(), intData.N);
     for(int i = 0; i < paramFuncsN.rows(); i++)
       paramFuncsN.row(i) << paramFuncsVec.segment(intData.N * i, intData.N).transpose();
     
     paramFuncsd = fullx;
     
     //allocating per corner
-    wholeCornerParamFuncsN.conservativeResize(wholeF.rows(), intData.N*3);
+    wholeCornerParamFuncsN.resize(wholeF.rows(), intData.N*3);
     for (int i=0;i<wholeF.rows();i++)
       for (int j=0;j<3;j++)
         wholeCornerParamFuncsN.block(i, intData.N*j, 1, intData.N) = paramFuncsN.row(cutF(i,j));
@@ -322,7 +322,7 @@ namespace directional
   
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    paramFuncsN.conservativeResize(cutV.rows(), intData.N);
+    paramFuncsN.resize(cutV.rows(), intData.N);
     for(int i = 0; i < paramFuncsN.rows(); i++)
       paramFuncsN.row(i) << paramFuncsVec.segment(intData.N * i, intData.N).transpose();
     
@@ -331,7 +331,7 @@ namespace directional
     //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
     
     //allocating per corner
-    wholeCornerParamFuncsN.conservativeResize(wholeF.rows(), intData.N*3);
+    wholeCornerParamFuncsN.resize(wholeF.rows(), intData.N*3);
     for (int i=0;i<wholeF.rows();i++)
       for (int j=0;j<3;j++)
         wholeCornerParamFuncsN.block(i, intData.N*j, 1, intData.N) = paramFuncsN.row(cutF(i,j)).array();
