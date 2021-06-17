@@ -19,6 +19,7 @@
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
+#include <directional/isolines.h>
 
 
 int N;
@@ -30,31 +31,73 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV, cutReducedUV;
+Eigen::MatrixXd cutUVTri, cutUVSign, cornerWholeUV, cutReducedUV;
 igl::opengl::glfw::Viewer viewer;
 
-typedef enum {FIELD, ROT_INTEGRATION, FULL_INTEGRATION, UV_COORDS} ViewingModes;
+typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
-//texture image
-Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
 
-// Create a texture that hides the integer translation in the parametrization
-void setup_line_texture()
-{
-  unsigned size = 128;
-  unsigned size2 = size/2;
-  unsigned lineWidth = 5;
-  texture_B.setConstant(size, size, 0);
-  texture_G.setConstant(size, size, 0);
-  texture_R.setConstant(size, size, 0);
-  for (unsigned i=0; i<size; ++i)
-    for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
-  for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
-    for (unsigned j=0; j<size; ++j)
-      texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
+void append_meshes(const Eigen::MatrixXd& VAdd, const Eigen::MatrixXi& FAdd, const Eigen::MatrixXd& CAdd, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& C){
+  int oldVSize = V.rows();
+  int oldFSize = F.rows();
+  int oldCSize = C.rows();
+  
+  V.conservativeResize(V.rows()+VAdd.rows(),3);
+  F.conservativeResize(F.rows()+FAdd.rows(),3);
+  C.conservativeResize(C.rows()+CAdd.rows(),3);
+  
+  V.block(oldVSize, 0, VAdd.rows(),3)=VAdd;
+  F.block(oldFSize, 0, FAdd.rows(),3)=FAdd.array()+oldVSize;
+  C.block(oldCSize, 0, CAdd.rows(),3)=CAdd;
 }
+
+void trace_isolines(const Eigen::MatrixXd& paramFuncs,
+                    Eigen::MatrixXd& VIsoLines,
+                    Eigen::MatrixXi& FIsoLines,
+                    Eigen::MatrixXd& CIsoLines)
+{
+  
+  Eigen::MatrixXd funcColors(8,3);
+  double isolineRadius=0.02;
+  funcColors<<1.0,0.0,0.0,
+  0.0,1.0,0.0,
+  0.0,0.0,1.0,
+  1.0,0.0,0.5,
+  0.5,1.0,0.0,
+  0.0,0.5,1.0,
+  1.0,0.5,0.0,
+  0.0,1.0,0.5;
+  funcColors.array()/=2.0;
+  int jumps = (N%2 == 0 ? 2 : 1);
+  Eigen::MatrixXd isoV;
+  Eigen::MatrixXi isoE;
+  VIsoLines.resize(0,3); FIsoLines.resize(0,3); CIsoLines.resize(0,3);
+  double l = 1.25*igl::avg_edge_length(VMeshWhole, FMeshWhole);
+  
+  for (int i=0;i<paramFuncs.cols()/jumps;i++){
+    Eigen::VectorXd d = paramFuncs.col(i);
+    
+    /*std::cout<<"d.min(): "<<d.minCoeff()<<std::endl;
+     std::cout<<"d.max(): "<<d.maxCoeff()<<std::endl;*/
+    igl::isolines(VMeshCut,FMeshCut, d, 100, isoV, isoE);
+    
+    Eigen::MatrixXd P1(isoE.rows(),3), P2(isoE.rows(),3);
+    for (int i=0;i<isoE.rows();i++){
+      P1.row(i)=isoV.row(isoE(i,0));
+      P2.row(i)=isoV.row(isoE(i,1));
+    }
+    
+    Eigen::MatrixXd VIsoLinesTemp, CIsoLinesTemp;
+    Eigen::MatrixXi FIsoLinesTemp;
+    directional::line_cylinders(P1, P2, l*isolineRadius,funcColors.row(i).replicate(P1.rows(),1),4, VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp);
+    
+    append_meshes(VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp, VIsoLines, FIsoLines, CIsoLines);
+    
+  }
+}
+
+
 
 void update_triangle_mesh()
 {
@@ -63,30 +106,22 @@ void update_triangle_mesh()
     viewer.data_list[0].set_mesh(VMeshWhole, FMeshWhole);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].set_face_based(false);
-    viewer.data_list[0].show_texture=false;
     viewer.data_list[0].show_lines=false;
-  } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
+  } else if ((viewingMode==SIGN_SYMMETRY) || (viewingMode==TRI_SYMMETRY)){
     viewer.data_list[0].clear();
     viewer.data_list[0].set_mesh(VMeshCut, FMeshCut);
     viewer.data_list[0].set_colors(directional::default_mesh_color());
-    viewer.data_list[0].set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull);
-    viewer.data_list[0].set_texture(texture_R, texture_G, texture_B);
-    viewer.data_list[0].set_face_based(true);
-    viewer.data_list[0].show_texture=true;
-    viewer.data_list[0].show_lines=false;
-  } else {
-    viewer.data_list[0].clear();
-    viewer.data_list[0].set_mesh(cutUVFull, FMeshCut);
-    viewer.data_list[0].set_colors(directional::default_mesh_color());
     viewer.data_list[0].set_face_based(false);
-    viewer.data_list[0].show_texture=false;
-    viewer.data_list[0].show_lines=true;
+    viewer.data_list[0].show_lines=false;
   }
+  
+  viewer.data_list[4].show_faces=(viewingMode==SIGN_SYMMETRY);
+  viewer.data_list[5].show_faces=(viewingMode==TRI_SYMMETRY);
 }
 
 void update_raw_field_mesh()
 {
-  for (int i=1;i<=4;i++)  //hide all other meshes
+  for (int i=1;i<=3;i++)  //hide all other meshes
     viewer.data_list[i].show_faces=(viewingMode==FIELD);
 }
 
@@ -98,14 +133,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   {
       // Select vector
     case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = ROT_INTEGRATION; break;
-    case '3': viewingMode = FULL_INTEGRATION; break;
-    case '4': viewingMode = UV_COORDS; break;
-    case 'W':
-      Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
-      break;
+    case '2': viewingMode = SIGN_SYMMETRY; break;
+    case '3': viewingMode = TRI_SYMMETRY; break;
   }
   update_triangle_mesh();
   update_raw_field_mesh();
@@ -117,47 +146,40 @@ int main()
 {
   std::cout <<
   "  1  Loaded field" << std::endl <<
-  "  2  Show textured rotationally-seamless parameterization mesh" << std::endl <<
-  "  3  Show textured fully-seamless parameterization mesh" << std::endl <<
-  "  W  Save parameterized OBJ file "<< std::endl;
+  "  2  Show only sign-symmetric integrated functions" << std::endl <<
+  "  3  Show triangular-symmetric integrated functions" << std::endl;
   
-  setup_line_texture();
-  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", N, rawField);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/train-station.off", VMeshWhole, FMeshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/train-station-5.rawfield", N, rawField);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
   //combing and cutting
-  Eigen::VectorXd curlNorm;
-  directional::curl_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort, curlNorm);
-  std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
+  directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort);
   directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort,matching, N,singVertices, singIndices);
   
-
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
   intData.verbose=true;
+  intData.integralSeamless=true;
   intData.localInjectivity=false;
-  intData.integralSeamless=false;
-  
-  std::cout<<"Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVRot,cornerWholeUV);
-  
-  cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
+  intData.roundSeams=true;
+    
+  std::cout<<"Seams-rounding Integrating..."<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVSign,cornerWholeUV);
   std::cout<<"Done!"<<std::endl;
   
-  intData.integralSeamless = true;  //do not do translational seamless.
-  std::cout<<"Solving fully-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVFull,cornerWholeUV);
-  cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
+  intData.roundSeams=false;
+  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  std::cout<<"Singularity-rounding integration..."<<std::endl;
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVTri,cornerWholeUV);
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
-  viewer.append_mesh();
   directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField, directional::indexed_glyph_colors(combedField), VField, FField, CField,1.0);
-  
+  viewer.append_mesh();
   viewer.data_list[1].clear();
   viewer.data_list[1].set_mesh(VField, FField);
   viewer.data_list[1].set_colors(CField);
@@ -165,9 +187,8 @@ int main()
   viewer.data_list[1].show_lines = false;
   
   //singularity mesh
-  viewer.append_mesh();
   directional::singularity_spheres(VMeshWhole, FMeshWhole, N, singVertices, singIndices, VSings, FSings, CSings,2.5);
-  
+  viewer.append_mesh();
   viewer.data_list[2].clear();
   viewer.data_list[2].set_mesh(VSings, FSings);
   viewer.data_list[2].set_colors(CSings);
@@ -175,8 +196,6 @@ int main()
   viewer.data_list[2].show_lines = false;
   
   //seams mesh
-  viewer.append_mesh();
-  
   Eigen::VectorXi isSeam=Eigen::VectorXi::Zero(EV.rows());
   for (int i=0;i<FE.rows();i++)
     for (int j=0;j<3;j++)
@@ -184,11 +203,33 @@ int main()
         isSeam(FE(i,j))=1;
   directional::seam_lines(VMeshWhole, FMeshWhole, EV, combedMatching, VSeams, FSeams, CSeams,2.5);
   
+  viewer.append_mesh();
   viewer.data_list[3].clear();
   viewer.data_list[3].set_mesh(VSeams, FSeams);
   viewer.data_list[3].set_colors(CSeams);
   viewer.data_list[3].show_faces = true;
   viewer.data_list[3].show_lines = false;
+  
+  //sign-symmetric isolines mesh
+
+  viewer.append_mesh();
+  Eigen::MatrixXd VIsoLines, CIsoLines;
+  Eigen::MatrixXi FIsoLines;
+  trace_isolines(cutUVSign, VIsoLines, FIsoLines, CIsoLines);
+  viewer.data_list[4].clear();
+  viewer.data_list[4].set_mesh(VIsoLines, FIsoLines);
+  viewer.data_list[4].set_colors(CIsoLines);
+  viewer.data_list[4].show_faces = false;
+  viewer.data_list[4].show_lines = false;
+  
+  //tri-symmetric isolines mesh
+  viewer.append_mesh();
+  trace_isolines(cutUVTri, VIsoLines, FIsoLines, CIsoLines);
+  viewer.data_list[5].clear();
+  viewer.data_list[5].set_mesh(VIsoLines, FIsoLines);
+  viewer.data_list[5].set_colors(CIsoLines);
+  viewer.data_list[5].show_faces = false;
+  viewer.data_list[5].show_lines = false;
   
   update_triangle_mesh();
   update_raw_field_mesh();

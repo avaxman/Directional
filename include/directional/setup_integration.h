@@ -75,7 +75,9 @@ namespace directional
     IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){
       N=_N;
       n=(N%2==0 ? N/2 : N);
-      symmFunc=directional::sign_symmetry(N);
+      if (N%2==0)
+        symmFunc=directional::sign_symmetry(N);
+      else symmFunc=Eigen::MatrixXi::Identity(N,n);
       intFunc=directional::default_period_jumps(n);
     }
     ~IntegrationData(){}

@@ -29,7 +29,7 @@ Eigen::MatrixXd rawField,representative, bc, barycenters;
 Eigen::MatrixXcd powerField;
 igl::opengl::glfw::Viewer viewer;
 
-int N = 6;
+int N = 5;
 bool normalized = false;
 bool zeroPressed = false;
 
@@ -110,6 +110,42 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
     case '0': zeroPressed=true; break;
       
+    case 'B':{
+      std::vector<Eigen::RowVector3d> boundVectors;
+      std::vector<int> boundIndices;
+      for (int i=0;i<EF.rows();i++){
+        if ((EF(i,0)!=-1)&&(EF(i,1)!=-1))
+          continue;
+        
+        Eigen::RowVector3d edgeVector=(VMesh.row(EV(i,1))-VMesh.row(EV(i,0))).normalized();
+        int candidateFace=(EF(i,0)==-1 ? EF(i,1) : EF(i,0));
+        for (int j=0;j<3;j++)
+          if ((FMesh(candidateFace,(j+1)%3)==EV(i,0))&&(FMesh(candidateFace,j)==EV(i,1)))  //edge oriented oppositely
+            edgeVector=-edgeVector;
+        
+        bool found=false;
+        for (int j=0;j<b.size();j++){
+          if (b(j)==candidateFace){
+            bc.row(j)=edgeVector;
+            found=true;
+          }
+        }
+        if (!found){
+          boundVectors.push_back(edgeVector);
+          boundIndices.push_back(EF(i,0)==-1 ? EF(i,1) : EF(i,0));
+        }
+      }
+      b.resize(boundVectors.size());
+      bc.resize(boundVectors.size(),3);
+      for (int i=0;i<boundVectors.size();i++){
+        b(i)=boundIndices[i];
+        bc.row(i)=boundVectors[i];
+      }
+      recompute_field();
+      update_triangle_mesh();
+      update_raw_field_mesh();
+      break;
+    }
       // Reset the constraints
     case 'R':
       b.resize(0);
@@ -128,7 +164,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
       
       
     case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", rawField))
+      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/train-station-5.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
@@ -187,7 +223,7 @@ int main()
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/dome.off", VMesh, FMesh);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/train-station.off", VMesh, FMesh);
   igl::edge_topology(VMesh, FMesh, EV,FE,EF);
   igl::barycenter(VMesh, FMesh, barycenters);
   
