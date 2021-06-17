@@ -337,14 +337,17 @@ public:
     for (int i=0;i<I.rows();i++)
       CSmall(I(i),JMask(J(i)))=S(i);
     
-    FullPivLU<MatrixXd> lu_decomp(CSmall);
-    MatrixXd USmall=lu_decomp.kernel();
-    
     //converting into the big matrix
     VectorXi nonPartIndices, stub;
     VectorXi allIndices(C.cols());
     for (int i=0;i<allIndices.size();i++) allIndices(i)=i;
+    MatrixXd USmall(0,0);
     igl::setdiff(allIndices, uniqueJVec, nonPartIndices, stub);
+    if (CSmall.rows()!=0){ //if there are any constraints at all
+      FullPivLU<MatrixXd> lu_decomp(CSmall);
+      USmall=lu_decomp.kernel();
+    } else
+      nonPartIndices=allIndices;
     
     SparseMatrix<double> URaw(nonPartIndices.size()+USmall.rows(),nonPartIndices.size()+USmall.cols());
     vector<Triplet<double>> URawTriplets;
