@@ -139,7 +139,6 @@ int main()
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
   intData.verbose=true;
-  intData.localInjectivity=false;
   intData.integralSeamless=false;
   
   std::cout<<"Solving for permutationally-seamless integration"<<std::endl;

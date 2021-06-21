@@ -25,35 +25,22 @@
 #include <directional/combing.h>
 
 namespace directional
-  {
-  
-  IGL_INLINE Eigen::MatrixXi sign_symmetry(int N){
-    assert(N%2==0);
-    Eigen::MatrixXi symmFunc(N,N/2);
-    symmFunc<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
-    return symmFunc;
-  }
-  
-  IGL_INLINE Eigen::MatrixXi default_period_jumps(int n){
-    return Eigen::MatrixXi::Identity(n,n);
-  }
-  
-  
-  
+{
+    
   struct IntegrationData
   {
-    int N;  //num of parametric functions
-    int n;  //actual dimension of problem
-    Eigen::MatrixXi symmFunc; //Symmetry function tying the n dofs to the full N
-    Eigen::MatrixXi intFunc;  //function spanning integers
-    Eigen::SparseMatrix<double> vertexTrans2CutMat;
-    Eigen::SparseMatrix<double> constraintMat;
-    Eigen::SparseMatrix<double> symmMat;  //in fact, using it for the general reduction of degrees of freedom
-    Eigen::SparseMatrix<double> intSpanMat;  //in case some integers are constrained to lie on a lattice
+    int N;  //# uncompressed parametric functions
+    int n;  //# independent parameteric functions
+    Eigen::MatrixXi linRed; //Linear Reduction tying the n dofs to the full N
+    Eigen::MatrixXi periodMat;  //function spanning integers
+    Eigen::SparseMatrix<double> vertexTrans2CutMat;   //a map between the whole mesh (vertex + translational jump) representation to the vertex-based representation on the cut mesh
+    Eigen::SparseMatrix<double> constraintMat;  //linear constraints (resulting from non-singular nodes)
+    Eigen::SparseMatrix<double> linRedMat;  //the global uncompression of n->N
+    Eigen::SparseMatrix<double> intSpanMat;  //Spanning the translational jump lattice
     Eigen::SparseMatrix<double> singIntSpanMat;  //the layer for the singularities
-    Eigen::VectorXi constrainedVertices;
-    Eigen::VectorXi integerVars;
-    Eigen::MatrixXi face2cut;
+    Eigen::VectorXi constrainedVertices;         //constrained vertices (fixed points in the parameterization)
+    Eigen::VectorXi integerVars;                 //variables that are to be rounded.
+    Eigen::MatrixXi face2cut;                    //|F|x3 map of which edges of faces are seams
     
     Eigen::VectorXi fixedIndices;  //the translation fixing indices
     Eigen::VectorXd fixedValues;   //translation fixed values
@@ -62,27 +49,55 @@ namespace directional
     //integer versions, for pure seamless parameterizations
     Eigen::SparseMatrix<int> vertexTrans2CutMatInteger;
     Eigen::SparseMatrix<int> constraintMatInteger;
-    Eigen::SparseMatrix<int> symmMatInteger;  //in fact, using it for the general reduction of degrees of freedom
-    Eigen::SparseMatrix<int> intSpanMatInteger;  //in case some integers are constrained to lie on a lattice
-    Eigen::SparseMatrix<int> singIntSpanMatInteger;  //the layer for the singularities
+    Eigen::SparseMatrix<int> linRedMatInteger;
+    Eigen::SparseMatrix<int> intSpanMatInteger;
+    Eigen::SparseMatrix<int> singIntSpanMatInteger;
     
-    double lengthRatio;     //global scaling of
-    bool integralSeamless;  //do not do translational seamless.
-    bool roundSeams;//do not do translational seamless.
-    bool verbose;
-    bool localInjectivity;
+    double lengthRatio;     //global scaling of functions
+    
+    //Flags
+    bool integralSeamless;  //If to the full translational seamless.
+    bool roundSeams;        //If to round seams or round singularities
+    bool verbose;           //output the integration optimization log.
+    bool localInjectivity;  //Enforce local injectivity; might result in failure!
     
     IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){
       N=_N;
       n=(N%2==0 ? N/2 : N);
       if (N%2==0)
-        symmFunc=directional::sign_symmetry(N);
-      else symmFunc=Eigen::MatrixXi::Identity(N,n);
-      intFunc=directional::default_period_jumps(n);
+        set_sign_symmetry(N);
+      else linRed=Eigen::MatrixXi::Identity(N,n);
+      set_default_period_matrix(n);
     }
     ~IntegrationData(){}
     
-    void setSymmFunc(const Eigen::MatrixXi& _symmFunc){symmFunc =_symmFunc; N=symmFunc.rows(); n=symmFunc.cols(); intFunc=directional::default_period_jumps(n);}
+    IGL_INLINE void set_linear_reduction(const Eigen::MatrixXi& _linRed, const Eigen::MatrixXi& _periodMat){linRed =_linRed; N=linRed.rows(); n=linRed.cols(); periodMat=_periodMat;}
+    
+    //the default symmetry, where for even N there are N/2 lines
+    IGL_INLINE void set_sign_symmetry(int N){
+      assert(N%2==0);
+      linRed.resize(N,N/2);
+      linRed=Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
+    }
+    
+    //the entire first N/3 lines are symmetric w.r.t. to the next two (N/3) packets, and where if N is even we also add sign symmetry.
+    IGL_INLINE void set_triangular_symmetry(int N){
+      assert(N%3==0);
+      if (N%2==0){
+        linRed.resize(N,N/3);
+        linRed.block(0,0,N/2,N/3)<<Eigen::MatrixXi::Identity(N/3,N/3),-Eigen::MatrixXi::Identity(N/6,N/6),-Eigen::MatrixXi::Identity(N/6,N/6);
+        linRed.block(N/2,0,N/2,N/3)=-linRed.block(N/2,0,N/2,N/3);
+        std::cout<<"linRed: "<<linRed<<std::endl;
+      } else {
+        linRed.resize(N,2*N/3);
+        linRed<<Eigen::MatrixXi::Identity(2*N/3,2*N/3),-Eigen::MatrixXi::Identity(N/3,N/3),-Eigen::MatrixXi::Identity(N/3,N/3);
+        std::cout<<"linRed: "<<linRed<<std::endl;
+      }
+    }
+    
+    IGL_INLINE void set_default_period_matrix(int n){
+      periodMat=Eigen::MatrixXi::Identity(n,n);
+    }
   };
   
   
@@ -92,19 +107,20 @@ namespace directional
   
   // Setting up the seamless integration algorithm
   // Input:
-  // symmFunc:    #N x n matrix that describes the transformation between the physical "n"" dofs and the N functions integration into. This should not depend on the mesh.
-  // intFunc:    n x n matrix that describes any special relation between the translational jumps. If you don't know what that means, just give Eigen::Identity(d)
-  //  wholeV:     #V x 3 vertex coordinates
-  //  wholeF:     #F x 3 face vertex indices
-  //  EV:         #E x 2 edges to vertices indices
-  //  EF:         #E x 2 edges to faces indices
-  //  FE:         #F x 3 faces to edges tindices
-  // matching:    #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Most matching should be zero due to prior combing.
-  // singVertices: list of singular vertices in wholeV.
+  //  wholeV:       #V x 3 vertex coordinates
+  //  wholeF:       #F x 3 face vertex indices
+  //  EV:           #E x 2 edges to vertices indices
+  //  EF:           #E x 2 edges to faces indices
+  //  FE:           #F x 3 faces to edges tindices
+  // matching:      #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Most matching should be zero due to prior combing.
+  // singVertices:  list of singular vertices in wholeV.
+  // intData:       Integration data structure
   // Output:
-  //  intData:         integration data subsequently used in directional::integrate();
-  //  cutV:       the Vertices of the cut mesh.
-  //  cutF:       The Faces of the cut mesh.
+  //  intData:      updated integration data.
+  //  cutV:         the Vertices of the cut mesh.
+  //  cutF:         the Faces of the cut mesh (1-1 correspondence with wholeF, but vertices indexed into cutV).
+  //  combedField:  The raw field combed into N different fields on the cut mesh (every column is a single-vf).
+  //  combedMatching: the new matching of the combed field when given on the whole mesh (mostly zero except on cuts).
   
   IGL_INLINE void setup_integration(const Eigen::MatrixXd& wholeV,
                                     const Eigen::MatrixXi& wholeF,
@@ -571,9 +587,9 @@ namespace directional
     for (int i=0;i<intData.n*numTransitions;i+=intData.n){
       for(int k = 0; k < intData.n; k++)
         for(int l = 0; l < intData.n; l++){
-          if (intData.intFunc(k,l)!=0){
-            intSpanMatTriplets.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, (double)intData.intFunc(k,l));
-            intSpanMatTripletsInteger.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, intData.intFunc(k,l));
+          if (intData.periodMat(k,l)!=0){
+            intSpanMatTriplets.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, (double)intData.periodMat(k,l));
+            intSpanMatTripletsInteger.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, intData.periodMat(k,l));
           }
         }
     }
@@ -587,23 +603,23 @@ namespace directional
     
     //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include n dof for the surface
     //TODO: this assumes n divides N!
-    intData.symmMat.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.symmMatInteger.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    vector<Triplet<double> > symmMatTriplets;
-    vector<Triplet<int> > symmMatTripletsInteger;
+    intData.linRedMat.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.linRedMatInteger.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    vector<Triplet<double> > linRedMatTriplets;
+    vector<Triplet<int> > linRedMatTripletsInteger;
     for(int i = 0; i < intData.N*(wholeV.rows() + numTransitions); i +=intData.N)
       for(int k = 0; k < intData.N; k++)
         for(int l = 0; l < intData.n; l++){
-          if (intData.symmFunc(k,l)!=0){
-            symmMatTriplets.emplace_back(i + k, i*intData.n/intData.N + l, (double)intData.symmFunc(k,l));
-            symmMatTripletsInteger.emplace_back(i + k, i*intData.n/intData.N + l, intData.symmFunc(k,l));
+          if (intData.linRed(k,l)!=0){
+            linRedMatTriplets.emplace_back(i + k, i*intData.n/intData.N + l, (double)intData.linRed(k,l));
+            linRedMatTripletsInteger.emplace_back(i + k, i*intData.n/intData.N + l, intData.linRed(k,l));
           }
         }
     
-    intData.symmMat.setFromTriplets(symmMatTriplets.begin(), symmMatTriplets.end());
-    intData.symmMatInteger.setFromTriplets(symmMatTripletsInteger.begin(), symmMatTripletsInteger.end());
+    intData.linRedMat.setFromTriplets(linRedMatTriplets.begin(), linRedMatTriplets.end());
+    intData.linRedMatInteger.setFromTriplets(linRedMatTripletsInteger.begin(), linRedMatTripletsInteger.end());
     
-    //integer variables are per single "d" packet, and the rounding is done for the N functions with projection over symmFunc
+    //integer variables are per single "d" packet, and the rounding is done for the N functions with projection over linRed
     intData.integerVars.resize(numTransitions);
     intData.integerVars.setZero();
     for(int i = 0; i < numTransitions; i++)
@@ -647,9 +663,9 @@ namespace directional
       } else {
         for(int k = 0; k < intData.n; k++)
           for(int l = 0; l < intData.n; l++){
-            if (intData.intFunc(k,l)!=0){
-              singIntSpanMatTriplets.emplace_back(intData.n*i+k, intData.n*i+l, (double)intData.intFunc(k,l));
-              singIntSpanMatTripletsInteger.emplace_back(intData.n*i+k, intData.n*i+l, intData.intFunc(k,l));
+            if (intData.periodMat(k,l)!=0){
+              singIntSpanMatTriplets.emplace_back(intData.n*i+k, intData.n*i+l, (double)intData.periodMat(k,l));
+              singIntSpanMatTripletsInteger.emplace_back(intData.n*i+k, intData.n*i+l, intData.periodMat(k,l));
             }
           }
       }
@@ -668,7 +684,7 @@ namespace directional
     intData.fixedValues.setConstant(0);
     
   }
-  }
+}
 
 #endif
 

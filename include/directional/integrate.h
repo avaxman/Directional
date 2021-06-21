@@ -32,20 +32,18 @@
 namespace directional
 {
   
-  // Creates an integration of N-functions from a directional field by solving the seamless Poisson equation
+  // Integrates an N-directional fields into an N-function by solving the seamless Poisson equation. Respects *valid* linear reductions where the field is reducible to an n-field for n<=M, and consequently the function is reducible to an n-function.
   // Input:
   //  wholeV:       #V x 3 vertex coordinates of the original mesh.
   //  wholeF:       #F x 3 face vertex indices of the original mesh.
   //  FE:           #F x 3 faces to edges indices.
   //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size.
-  //  lengthRatio   #edgeLength/bounding_box_diagonal of quad mesh (scaling the gradient).
-  //  intData:           Integration data obtained from directional::setup_integration.
+  //  intData:      Integration data, which must be obtained from directional::setup_integration.
   //  cutV:         #cV x 3 vertices of the cut mesh.
   //  cutF:         #F x 3 faces of the cut mesh.
-  //  roundIntegers;   which variables (from #V+#T) are rounded iteratively to double integers. for each "x" entry that means that the [4*x,4*x+4] entries of vt will be double integer.
   // Output:
-  //  paramFuncsd             #cV x d parameterization functions per cut vertex (the compact version)
-  //  paramFuncsN             #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
+  //  nFunction:    #cV x n parameterization functions per cut vertex (the reduced version)
+  //  NFunction:    #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
   // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
   IGL_INLINE bool integrate(const Eigen::MatrixXd& wholeV,
                             const Eigen::MatrixXi& wholeF,
@@ -54,9 +52,9 @@ namespace directional
                             const IntegrationData& intData,
                             const Eigen::MatrixXd& cutV,
                             const Eigen::MatrixXi& cutF,
-                            Eigen::MatrixXd& paramFuncsd,
-                            Eigen::MatrixXd& paramFuncsN,
-                            Eigen::MatrixXd& wholeCornerParamFuncsN)
+                            Eigen::MatrixXd& nFunction,
+                            Eigen::MatrixXd& NFunction,
+                            Eigen::MatrixXd& NCornerFunctions)
   
   
   {
