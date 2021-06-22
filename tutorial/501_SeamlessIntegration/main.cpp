@@ -30,10 +30,10 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV, cutReducedUV;
+Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV;
 igl::opengl::glfw::Viewer viewer;
 
-typedef enum {FIELD, ROT_INTEGRATION, FULL_INTEGRATION, UV_COORDS} ViewingModes;
+typedef enum {FIELD, ROT_INTEGRATION, FULL_INTEGRATION} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 //texture image
@@ -74,13 +74,6 @@ void update_triangle_mesh()
     viewer.data_list[0].set_face_based(true);
     viewer.data_list[0].show_texture=true;
     viewer.data_list[0].show_lines=false;
-  } else {
-    viewer.data_list[0].clear();
-    viewer.data_list[0].set_mesh(cutUVFull, FMeshCut);
-    viewer.data_list[0].set_colors(directional::default_mesh_color());
-    viewer.data_list[0].set_face_based(false);
-    viewer.data_list[0].show_texture=false;
-    viewer.data_list[0].show_lines=true;
   }
 }
 
@@ -100,7 +93,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '1': viewingMode = FIELD; break;
     case '2': viewingMode = ROT_INTEGRATION; break;
     case '3': viewingMode = FULL_INTEGRATION; break;
-    case '4': viewingMode = UV_COORDS; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
       igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
@@ -142,14 +134,14 @@ int main()
   intData.integralSeamless=false;
   
   std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVRot,cornerWholeUV);
-  
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutUVRot ,cornerWholeUV);
+  //Extracting the UV from [U,V,-U, -V];
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   intData.integralSeamless = true;  //do not do translational seamless.
   std::cout<<"Solving for integrally-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVFull,cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutUVFull,cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

@@ -42,7 +42,6 @@ namespace directional
   //  cutV:         #cV x 3 vertices of the cut mesh.
   //  cutF:         #F x 3 faces of the cut mesh.
   // Output:
-  //  nFunction:    #cV x n parameterization functions per cut vertex (the reduced version)
   //  NFunction:    #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
   // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
   IGL_INLINE bool integrate(const Eigen::MatrixXd& wholeV,
@@ -52,7 +51,6 @@ namespace directional
                             const IntegrationData& intData,
                             const Eigen::MatrixXd& cutV,
                             const Eigen::MatrixXi& cutF,
-                            Eigen::MatrixXd& nFunction,
                             Eigen::MatrixXd& NFunction,
                             Eigen::MatrixXd& NCornerFunctions)
   
@@ -64,7 +62,7 @@ namespace directional
     VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff() + 1, 1.0);
     //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
     
-    int numVars = intData.symmMat.cols();
+    int numVars = intData.linRedMat.cols();
     //constructing face differentials
     vector<Triplet<double> >  d0Triplets;
     vector<Triplet<double> > M1Triplets;
@@ -128,14 +126,14 @@ namespace directional
     for (int i=0;i<intData.fixedValues.size();i++)
       fixedValues(intData.fixedIndices(i))=intData.fixedValues(i);
     
-    SparseMatrix<double> Efull = d0 * intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
+    SparseMatrix<double> Efull = d0 * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     VectorXd x, xprev;
     
     // until then all the N depedencies should be resolved?
     
     //reducing constraintMat
     SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
-    SparseMatrix<double> Cfull = intData.constraintMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
+    SparseMatrix<double> Cfull = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     if (Cfull.rows()!=0){
       qrsolver.compute(Cfull.transpose());
       int CRank = qrsolver.rank();
@@ -285,26 +283,26 @@ namespace directional
     }
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    paramFuncsN.resize(cutV.rows(), intData.N);
-    for(int i = 0; i < paramFuncsN.rows(); i++)
-      paramFuncsN.row(i) << paramFuncsVec.segment(intData.N * i, intData.N).transpose();
+    VectorXd NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
+    NFunction.resize(cutV.rows(), intData.N);
+    for(int i = 0; i < NFunction.rows(); i++)
+      NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
-    paramFuncsd = fullx;
+    //nFunction = fullx;
     
     //allocating per corner
-    wholeCornerParamFuncsN.resize(wholeF.rows(), intData.N*3);
+    NCornerFunctions.resize(wholeF.rows(), intData.N*3);
     for (int i=0;i<wholeF.rows();i++)
       for (int j=0;j<3;j++)
-        wholeCornerParamFuncsN.block(i, intData.N*j, 1, intData.N) = paramFuncsN.row(cutF(i,j));
+        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(cutF(i,j));
     
     SparseMatrix<double> G;
     MatrixXd FN;
     igl::per_face_normals(cutV, cutF, FN);
     branched_gradient(cutV,cutF, intData.N, G);
     //cout<<"cutF.rows(): "<<cutF.rows()<<endl;
-    SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
-    SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat;
+    SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     //igl::matlab::MatlabWorkspace mw;
     VectorXi integerIndices(intData.integerVars.size()*intData.n);
     for(int i = 0; i < intData.integerVars.size(); i++)
@@ -319,20 +317,20 @@ namespace directional
       cout<<"Rounding has failed!"<<endl;
   
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    paramFuncsVec = intData.vertexTrans2CutMat * intData.symmMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    paramFuncsN.resize(cutV.rows(), intData.N);
-    for(int i = 0; i < paramFuncsN.rows(); i++)
-      paramFuncsN.row(i) << paramFuncsVec.segment(intData.N * i, intData.N).transpose();
+    NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
+    NFunction.resize(cutV.rows(), intData.N);
+    for(int i = 0; i < NFunction.rows(); i++)
+      NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
-    paramFuncsd = fullx;
+    //nFunction = fullx;
     
     //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
     
     //allocating per corner
-    wholeCornerParamFuncsN.resize(wholeF.rows(), intData.N*3);
+    NCornerFunctions.resize(wholeF.rows(), intData.N*3);
     for (int i=0;i<wholeF.rows();i++)
       for (int j=0;j<3;j++)
-        wholeCornerParamFuncsN.block(i, intData.N*j, 1, intData.N) = paramFuncsN.row(cutF(i,j)).array();
+        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(cutF(i,j)).array();
     
     return success;
     

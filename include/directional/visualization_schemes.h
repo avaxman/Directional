@@ -39,30 +39,36 @@ namespace directional
   Eigen::RowVector3d IGL_INLINE selected_vector_glyph_color(){
     return Eigen::RowVector3d(0.0,1.0,0.5);
   }
+
+//The selected glyph currently edited from a selected face
+ Eigen::MatrixXd IGL_INLINE default_glyph_colors(const int numColors){
+   assert(numColors<=15);
+    Eigen::Matrix<double, 15,3> glyphPrincipalColors;
+      glyphPrincipalColors<<1.0,0.0,0.5,
+      1.0,0.5,0.0,
+      0.0,1.0,0.5,
+      0.0,0.5,1.0,
+      0.5,0.0,1.0,
+      0.5,1.0,0.0,
+      1.0,0.5,0.5,
+      0.5,1.0,0.5,
+      0.5,0.5,1.0,
+      0.5,1.0,1.0,
+      1.0,0.5,1.0,
+      1.0,1.0,0.5,
+      0.0,1.0,1.0,
+      1.0,0.0,1.0,
+      1.0,1.0,0.0;
+   
+   return glyphPrincipalColors.block(0,0,numColors,3);
+ }
   
   //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
   Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field){
     
-    Eigen::Matrix<double, 15,3> glyphPrincipalColors;
-    glyphPrincipalColors<<1.0,0.0,0.5,
-    1.0,0.5,0.0,
-    0.0,1.0,0.5,
-    0.0,0.5,1.0,
-    0.5,0.0,1.0,
-    0.5,1.0,0.0,
-    1.0,0.5,0.5,
-    0.5,1.0,0.5,
-    0.5,0.5,1.0,
-    0.5,1.0,1.0,
-    1.0,0.5,1.0,
-    1.0,1.0,0.5,
-    0.0,1.0,1.0,
-    1.0,0.0,1.0,
-    1.0,1.0,0.0;
-    
-    
-    Eigen::MatrixXd fullGlyphColors(field.rows(),field.cols());
     int N = field.cols()/3;
+    Eigen::MatrixXd glyphPrincipalColors = default_glyph_colors(N);
+    Eigen::MatrixXd fullGlyphColors(field.rows(),field.cols());
     for (int i=0;i<field.rows();i++)
       for (int j=0;j<N;j++)
         fullGlyphColors.block(i,3*j,1,3)<<glyphPrincipalColors.row(j);

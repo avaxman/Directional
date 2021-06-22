@@ -77,7 +77,7 @@ namespace directional
     IGL_INLINE void set_sign_symmetry(int N){
       assert(N%2==0);
       linRed.resize(N,N/2);
-      linRed=Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
+      linRed<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
     }
     
     //the entire first N/3 lines are symmetric w.r.t. to the next two (N/3) packets, and where if N is even we also add sign symmetry.

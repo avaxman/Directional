@@ -19,7 +19,7 @@
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
-#include <directional/isolines.h>
+#include <directional/branched_isolines.h>
 
 #define NUM_N 4
 
@@ -33,74 +33,13 @@ Eigen::VectorXd effort[NUM_N], combedEffort[NUM_N];
 Eigen::VectorXi matching[NUM_N], combedMatching[NUM_N];
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices[NUM_N], singVertices[NUM_N];
-Eigen::MatrixXd paramFuncsn[NUM_N], paramFuncsN[NUM_N], cornerFuncs[NUM_N];
+Eigen::MatrixXd NFunction[NUM_N], NCornerFunction[NUM_N];
 igl::opengl::glfw::Viewer viewer;
 
 
 
 typedef enum {FIELD, INTEGRATION} ViewingModes;
 ViewingModes viewingMode=FIELD;
-
-void append_meshes(const Eigen::MatrixXd& VAdd, const Eigen::MatrixXi& FAdd, const Eigen::MatrixXd& CAdd, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& C){
-  int oldVSize = V.rows();
-  int oldFSize = F.rows();
-  int oldCSize = C.rows();
-  
-  V.conservativeResize(V.rows()+VAdd.rows(),3);
-  F.conservativeResize(F.rows()+FAdd.rows(),3);
-  C.conservativeResize(C.rows()+CAdd.rows(),3);
-  
-  V.block(oldVSize, 0, VAdd.rows(),3)=VAdd;
-  F.block(oldFSize, 0, FAdd.rows(),3)=FAdd.array()+oldVSize;
-  C.block(oldCSize, 0, CAdd.rows(),3)=CAdd;
-}
-
-void trace_isolines(const int currN,
-                    const Eigen::MatrixXd& paramFuncs,
-                    Eigen::MatrixXd& VIsoLines,
-                    Eigen::MatrixXi& FIsoLines,
-                    Eigen::MatrixXd& CIsoLines)
-{
-  
-  Eigen::MatrixXd funcColors(8,3);
-  double isolineRadius=0.02;
-  funcColors<<1.0,0.0,0.0,
-  0.0,1.0,0.0,
-  0.0,0.0,1.0,
-  1.0,0.0,0.5,
-  0.5,1.0,0.0,
-  0.0,0.5,1.0,
-  1.0,0.5,0.0,
-  0.0,1.0,0.5;
-  funcColors.array()/=2.0;
-  int jumps = (N[currN]%2 == 0 ? 2 : 1);
-  Eigen::MatrixXd isoV;
-  Eigen::MatrixXi isoE;
-  VIsoLines.resize(0,3); FIsoLines.resize(0,3); CIsoLines.resize(0,3);
-  double l = 1.25*igl::avg_edge_length(VMeshWhole, FMeshWhole);
-  
-  for (int i=0;i<paramFuncs.cols()/jumps;i++){
-    Eigen::VectorXd d = paramFuncs.col(i);
-    
-    /*std::cout<<"d.min(): "<<d.minCoeff()<<std::endl;
-     std::cout<<"d.max(): "<<d.maxCoeff()<<std::endl;*/
-    igl::isolines(VMeshCut[currN],FMeshCut[currN], d, 100, isoV, isoE);
-    
-    Eigen::MatrixXd P1(isoE.rows(),3), P2(isoE.rows(),3);
-    for (int i=0;i<isoE.rows();i++){
-      P1.row(i)=isoV.row(isoE(i,0));
-      P2.row(i)=isoV.row(isoE(i,1));
-    }
-    
-    Eigen::MatrixXd VIsoLinesTemp, CIsoLinesTemp;
-    Eigen::MatrixXi FIsoLinesTemp;
-    directional::line_cylinders(P1, P2, l*isolineRadius,funcColors.row(i).replicate(P1.rows(),1),4, VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp);
-    
-    append_meshes(VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp, VIsoLines, FIsoLines, CIsoLines);
-    
-  }
-}
-
 
 void update_raw_field_mesh()
 {
@@ -176,12 +115,12 @@ int main()
     std::cout<<"Setting up Integration #"<<i<<std::endl;
     directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField[i], matching[i], singVertices[i], intData, VMeshCut[i], FMeshCut[i], combedField[i], combedMatching[i]);
     
-    intData.verbose=true;
+    intData.verbose=false;
     intData.integralSeamless=true;
     intData.roundSeams=false;
     intData.localInjectivity=false;
     std::cout<<"Solving integration #"<<i<<std::endl;
-    directional::integrate(VMeshWhole, FMeshWhole, FE, combedField[i],  intData, VMeshCut[i], FMeshCut[i], paramFuncsn[i], paramFuncsN[i],cornerFuncs[i]);
+    directional::integrate(VMeshWhole, FMeshWhole, FE, combedField[i],  intData, VMeshCut[i], FMeshCut[i], NFunction[i],NCornerFunction[i]);
     
     std::cout<<"Done!"<<std::endl;
     
@@ -227,7 +166,7 @@ int main()
       viewer.data_list[3].show_lines = false;
     }
     
-    trace_isolines(i,paramFuncsN[i], VIso[i], FIso[i], CIso[i]);
+    directional::branched_isolines(VMeshCut[i], FMeshCut[i],NFunction[i], VIso[i], FIso[i], CIso[i]);
     if (i==0){
       viewer.append_mesh();
       viewer.data_list[4].clear();
