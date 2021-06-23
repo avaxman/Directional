@@ -1,6 +1,6 @@
 Integrator  TODO:
 
-1. Properly rename and document in setup_integration() and integrate()
+1. Properly rename and document in setup_integration() and integrate() DONE
 2. embellish() function.
 3. Fix metric in integration equation.
-4. N-isolines function
+4. N-isolines function DONE

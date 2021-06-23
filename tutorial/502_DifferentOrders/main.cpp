@@ -118,7 +118,7 @@ int main()
     intData.verbose=false;
     intData.integralSeamless=true;
     intData.roundSeams=false;
-    intData.localInjectivity=false;
+  
     std::cout<<"Solving integration #"<<i<<std::endl;
     directional::integrate(VMeshWhole, FMeshWhole, FE, combedField[i],  intData, VMeshCut[i], FMeshCut[i], NFunction[i],NCornerFunction[i]);
     

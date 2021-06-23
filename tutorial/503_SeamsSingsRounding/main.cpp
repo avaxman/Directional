@@ -19,7 +19,7 @@
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
-#include <directional/isolines.h>
+#include <directional/branched_isolines.h>
 
 
 int N;
@@ -31,71 +31,11 @@ Eigen::VectorXd effort, combedEffort;
 Eigen::VectorXi matching, combedMatching;
 Eigen::MatrixXi EV, FE, EF;
 Eigen::VectorXi singIndices, singVertices;
-Eigen::MatrixXd cutUVTri, cutUVSign, cornerWholeUV, cutReducedUV;
+Eigen::MatrixXd NFunctionSeams, NFunctionSings, NCornerFunc;
 igl::opengl::glfw::Viewer viewer;
 
 typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
 ViewingModes viewingMode=FIELD;
-
-
-void append_meshes(const Eigen::MatrixXd& VAdd, const Eigen::MatrixXi& FAdd, const Eigen::MatrixXd& CAdd, Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& C){
-  int oldVSize = V.rows();
-  int oldFSize = F.rows();
-  int oldCSize = C.rows();
-  
-  V.conservativeResize(V.rows()+VAdd.rows(),3);
-  F.conservativeResize(F.rows()+FAdd.rows(),3);
-  C.conservativeResize(C.rows()+CAdd.rows(),3);
-  
-  V.block(oldVSize, 0, VAdd.rows(),3)=VAdd;
-  F.block(oldFSize, 0, FAdd.rows(),3)=FAdd.array()+oldVSize;
-  C.block(oldCSize, 0, CAdd.rows(),3)=CAdd;
-}
-
-void trace_isolines(const Eigen::MatrixXd& paramFuncs,
-                    Eigen::MatrixXd& VIsoLines,
-                    Eigen::MatrixXi& FIsoLines,
-                    Eigen::MatrixXd& CIsoLines)
-{
-  
-  Eigen::MatrixXd funcColors(8,3);
-  double isolineRadius=0.02;
-  funcColors<<1.0,0.0,0.0,
-  0.0,1.0,0.0,
-  0.0,0.0,1.0,
-  1.0,0.0,0.5,
-  0.5,1.0,0.0,
-  0.0,0.5,1.0,
-  1.0,0.5,0.0,
-  0.0,1.0,0.5;
-  funcColors.array()/=2.0;
-  int jumps = (N%2 == 0 ? 2 : 1);
-  Eigen::MatrixXd isoV;
-  Eigen::MatrixXi isoE;
-  VIsoLines.resize(0,3); FIsoLines.resize(0,3); CIsoLines.resize(0,3);
-  double l = 1.25*igl::avg_edge_length(VMeshWhole, FMeshWhole);
-  
-  for (int i=0;i<paramFuncs.cols()/jumps;i++){
-    Eigen::VectorXd d = paramFuncs.col(i);
-    
-    /*std::cout<<"d.min(): "<<d.minCoeff()<<std::endl;
-     std::cout<<"d.max(): "<<d.maxCoeff()<<std::endl;*/
-    igl::isolines(VMeshCut,FMeshCut, d, 100, isoV, isoE);
-    
-    Eigen::MatrixXd P1(isoE.rows(),3), P2(isoE.rows(),3);
-    for (int i=0;i<isoE.rows();i++){
-      P1.row(i)=isoV.row(isoE(i,0));
-      P2.row(i)=isoV.row(isoE(i,1));
-    }
-    
-    Eigen::MatrixXd VIsoLinesTemp, CIsoLinesTemp;
-    Eigen::MatrixXi FIsoLinesTemp;
-    directional::line_cylinders(P1, P2, l*isolineRadius,funcColors.row(i).replicate(P1.rows(),1),4, VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp);
-    
-    append_meshes(VIsoLinesTemp, FIsoLinesTemp, CIsoLinesTemp, VIsoLines, FIsoLines, CIsoLines);
-    
-  }
-}
 
 
 
@@ -146,8 +86,8 @@ int main()
 {
   std::cout <<
   "  1  Loaded field" << std::endl <<
-  "  2  Show only sign-symmetric integrated functions" << std::endl <<
-  "  3  Show triangular-symmetric integrated functions" << std::endl;
+  "  2  Show integral-seams function" << std::endl <<
+  "  3  Show integral-singularity function" << std::endl;
   
   igl::readOFF(TUTORIAL_SHARED_PATH "/train-station.off", VMeshWhole, FMeshWhole);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/train-station-5.rawfield", N, rawField);
@@ -162,19 +102,18 @@ int main()
   std::cout<<"Setting up Integration"<<std::endl;
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   
-  intData.verbose=true;
+  intData.verbose=false;
   intData.integralSeamless=true;
-  intData.localInjectivity=false;
   intData.roundSeams=true;
     
   std::cout<<"Seams-rounding Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVSign,cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut,  NFunctionSeams,NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   intData.roundSeams=false;
   directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
   std::cout<<"Singularity-rounding integration..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutReducedUV,  cutUVTri,cornerWholeUV);
+  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, NFunctionSings,NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   //raw field mesh
@@ -210,12 +149,11 @@ int main()
   viewer.data_list[3].show_faces = true;
   viewer.data_list[3].show_lines = false;
   
-  //sign-symmetric isolines mesh
-
+  //Just sign-symmetric isolines mesh
   viewer.append_mesh();
   Eigen::MatrixXd VIsoLines, CIsoLines;
   Eigen::MatrixXi FIsoLines;
-  trace_isolines(cutUVSign, VIsoLines, FIsoLines, CIsoLines);
+  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionSeams, VIsoLines, FIsoLines, CIsoLines);
   viewer.data_list[4].clear();
   viewer.data_list[4].set_mesh(VIsoLines, FIsoLines);
   viewer.data_list[4].set_colors(CIsoLines);
@@ -224,7 +162,7 @@ int main()
   
   //tri-symmetric isolines mesh
   viewer.append_mesh();
-  trace_isolines(cutUVTri, VIsoLines, FIsoLines, CIsoLines);
+  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionSings, VIsoLines, FIsoLines, CIsoLines);
   viewer.data_list[5].clear();
   viewer.data_list[5].set_mesh(VIsoLines, FIsoLines);
   viewer.data_list[5].set_colors(CIsoLines);

@@ -78,6 +78,8 @@ namespace directional
       assert(N%2==0);
       linRed.resize(N,N/2);
       linRed<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
+      n=N/2;
+      set_default_period_matrix(n);
     }
     
     //the entire first N/3 lines are symmetric w.r.t. to the next two (N/3) packets, and where if N is even we also add sign symmetry.
@@ -85,14 +87,15 @@ namespace directional
       assert(N%3==0);
       if (N%2==0){
         linRed.resize(N,N/3);
-        linRed.block(0,0,N/2,N/3)<<Eigen::MatrixXi::Identity(N/3,N/3),-Eigen::MatrixXi::Identity(N/6,N/6),-Eigen::MatrixXi::Identity(N/6,N/6);
-        linRed.block(N/2,0,N/2,N/3)=-linRed.block(N/2,0,N/2,N/3);
-        std::cout<<"linRed: "<<linRed<<std::endl;
+        linRed.block(0,0,N/2,N/3)<<Eigen::MatrixXi::Identity(N/3,N/3),-Eigen::MatrixXi::Identity(N/6,N/6),Eigen::MatrixXi::Identity(N/6,N/6);
+        linRed.block(N/2,0,N/2,N/3)=-linRed.block(0,0,N/2,N/3);
+        n=N/3;
       } else {
         linRed.resize(N,2*N/3);
         linRed<<Eigen::MatrixXi::Identity(2*N/3,2*N/3),-Eigen::MatrixXi::Identity(N/3,N/3),-Eigen::MatrixXi::Identity(N/3,N/3);
-        std::cout<<"linRed: "<<linRed<<std::endl;
+        n=2*N/3;
       }
+      set_default_period_matrix(n);
     }
     
     IGL_INLINE void set_default_period_matrix(int n){

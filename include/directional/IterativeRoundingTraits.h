@@ -245,7 +245,7 @@ public:
     x0Small=xCurrSmall;
     xPrevSmall=x0Small;
     
-    std::cout<<"roundDiffs.maxCoeff(): "<<roundDiffs.maxCoeff()<<std::endl;
+    //std::cout<<"roundDiffs.maxCoeff(): "<<roundDiffs.maxCoeff()<<std::endl;
     return (roundDiffs.maxCoeff()<=10e-7);
     //} else {
     //  return (leftIndices.size()==0);
