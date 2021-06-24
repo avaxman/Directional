@@ -6,13 +6,25 @@ message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 ### conditionally compile certain modules depending on libraries found on the system
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
+### Choose which chapters to compile
+option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
+option(TUTORIALS_CHAPTER2 "Compile chapter 2" ON)
+option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
+option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
+option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
+option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
+
+
+
 ### libIGL options:
 option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
 option(LIBIGL_WITH_OPENGL      "Use OpenGL"         ON)
 option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
-
 option(LIBIGL_WITH_PNG       "Use PNG"          ON)
+if(TUTORIALS_CHAPTER5)
+	option(LIBIGL_WITH_CGAL              "Use CGAL"  	  ON)
+endif()
 set(LIBIGL_WITH_PNG CACHE BOOL ON)
 
 
@@ -28,13 +40,6 @@ else()
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../")
 endif()
 
-### Choose which chapters to compile
-option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
-option(TUTORIALS_CHAPTER2 "Compile chapter 2" ON)
-option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
-option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
-option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
-option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
 
 
 # Store location of tutorial/shared directory
@@ -77,6 +82,7 @@ if(TUTORIALS_CHAPTER5)
   add_subdirectory("502_DifferentOrders")
   add_subdirectory("503_SeamsSingsRounding")
   add_subdirectory("504_LinearReductions")
+  add_subdirectory("505_Meshing")
 endif()
 
 # Chapter 6
