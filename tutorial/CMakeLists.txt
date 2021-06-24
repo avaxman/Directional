@@ -23,7 +23,7 @@ option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
 option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
 option(LIBIGL_WITH_PNG       "Use PNG"          ON)
 if(TUTORIALS_CHAPTER5)
-	option(LIBIGL_WITH_CGAL              "Use CGAL"  	  ON)
+  option(LIBIGL_WITH_CGAL              "Use CGAL"  	  ON)
 endif()
 set(LIBIGL_WITH_PNG CACHE BOOL ON)
 
@@ -87,7 +87,7 @@ endif()
 
 # Chapter 6
 if(TUTORIALS_CHAPTER6)
-add_subdirectory("601_SubdivisionFields")
+  add_subdirectory("601_SubdivisionFields")
 endif()
 
 

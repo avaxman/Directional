@@ -27,16 +27,16 @@ namespace Directional{
                      const Eigen::MatrixXi& EV,
                      const Eigen::MatrixXi& EF,
                      const Eigen::MatrixXi& FE,
-                     const IntegrationData& intData,
-                     const Eigen::MatrixXd NCornerFunc,
+                     const Eigen::MatrixXd& nFunction,
+                     const Eigen::SparseMatrix<int>& n2NMat,
                      const bool verbose,
-                     Eigen::MatrixXd& V,
-                     Eigen::VectorXi& D,
-                     Eigen::MatrixXi& F){
+                     Eigen::MatrixXd& VOutput,
+                     Eigen::VectorXi& DOutput,
+                     Eigen::MatrixXi& FOutput,
+                     const double exactResolution=10e-9){
     
     
-    int N = NFunction.cols();
-    FunctionMesh TMesh, FMesh;
+    NFunctionMesher TMesh, FMesh;
     
     Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
     Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
