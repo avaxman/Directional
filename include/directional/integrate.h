@@ -48,7 +48,7 @@ namespace directional
                             const Eigen::MatrixXi& wholeF,
                             const Eigen::MatrixXi& FE,
                             const Eigen::MatrixXd rawField,
-                            const IntegrationData& intData,
+                            IntegrationData& intData,
                             const Eigen::MatrixXd& cutV,
                             const Eigen::MatrixXi& cutF,
                             Eigen::MatrixXd& NFunction,
@@ -321,6 +321,8 @@ namespace directional
     NFunction.resize(cutV.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
       NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
+    
+    intData.nVertexFunction = fullx;
     
     //nFunction = fullx;
     

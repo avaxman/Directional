@@ -45,7 +45,7 @@
 #include <igl/PI.h>
 #include <directional/FunctionMesh.h>
 
-namespace Directional{
+namespace directional{
 
 class NFunctionMesher{
 public:
@@ -245,19 +245,19 @@ public:
     int Prev;
     int Twin;
     int AdjFace;
-    Eigen::VectorXd paramFuncs;
-    std::vector<ENumber> exactParamFuncs;
+    Eigen::VectorXd NFunction;
+    std::vector<ENumber> exactNFunction;
     bool isFunction;
     bool Valid;
     
     //Parametric function values
     int OrigHalfedge;
-    int OrigParamFunc;  //the original parameteric function assooicated with this edge
+    int OrigNFunctionIndex;  //the original parameteric function assoicated with this edge
     //int prescribedAngleDiff;
     double prescribedAngle;  //the actual prescribed angle
     
     
-    Halfedge():ID(-1), Origin(-1), Next(-1), Prev(-1), Twin(-1), AdjFace(-1), isFunction(false), Valid(true), OrigHalfedge(-1), OrigParamFunc(-1),  prescribedAngle(-1.0){}
+    Halfedge():ID(-1), Origin(-1), Next(-1), Prev(-1), Twin(-1), AdjFace(-1), isFunction(false), Valid(true), OrigHalfedge(-1), OrigNFunctionIndex(-1),  prescribedAngle(-1.0){}
     ~Halfedge(){}
   };
 
@@ -898,7 +898,7 @@ public:
   void TestUnmatchedTwins();
   
   
-  void GenerateMesh(const Eigen::VectorXd& funcOrientations, NFunctionMesher& funcMesh){
+  void GenerateMesh(NFunctionMesher& funcMesh){
     
     using namespace std;
     using namespace Eigen;
@@ -909,7 +909,7 @@ public:
     funcMesh.Halfedges.clear();
     funcMesh.Faces.clear();
     
-    int numParamFuncs=Halfedges[0].exactParamFuncs.size();
+    int numNFunction=Halfedges[0].exactNFunction.size();
     
     //DebugLog.open("Debugging.txt");
     
@@ -946,9 +946,9 @@ public:
       vector<vector<ENumber> > funcValues(3);
       
       //DebugLog<<"Working on triangle "<<findex<<"\n";
-      vector<ENumber> minFuncs(numParamFuncs);
-      vector<ENumber> maxFuncs(numParamFuncs);
-      for (int k=0;k<numParamFuncs;k++){
+      vector<ENumber> minFuncs(numNFunction);
+      vector<ENumber> maxFuncs(numNFunction);
+      for (int k=0;k<numNFunction;k++){
         minFuncs[k]=ENumber(327600);
         maxFuncs[k]=ENumber(-327600.0);
       }
@@ -958,11 +958,11 @@ public:
       eiterate=ebegin;
       int currVertex=0;
       do{
-        for(int i=0;i<numParamFuncs;i++){
-          if (Halfedges[eiterate].exactParamFuncs[i]>maxFuncs[i]) maxFuncs[i]=Halfedges[eiterate].exactParamFuncs[i];
-          if (Halfedges[eiterate].exactParamFuncs[i]<minFuncs[i]) minFuncs[i]=Halfedges[eiterate].exactParamFuncs[i];
+        for(int i=0;i<numNFunction;i++){
+          if (Halfedges[eiterate].exactNFunction[i]>maxFuncs[i]) maxFuncs[i]=Halfedges[eiterate].exactNFunction[i];
+          if (Halfedges[eiterate].exactNFunction[i]<minFuncs[i]) minFuncs[i]=Halfedges[eiterate].exactNFunction[i];
         }
-        funcValues[currVertex++]=Halfedges[eiterate].exactParamFuncs;
+        funcValues[currVertex++]=Halfedges[eiterate].exactNFunction;
         eiterate=Halfedges[eiterate].Next;
       }while (eiterate!=ebegin);
       
@@ -1023,9 +1023,9 @@ public:
       
       //creating the primal arrangement of lines
       vector<ELine2D> paramLines;
-      vector<EDirection2D> isoDirections(numParamFuncs);
-      //int jumps = (numParamFuncs%2==0 ? 2 : 1);
-      for (int funcIter=0;funcIter<numParamFuncs/*/jumps*/;funcIter++){
+      vector<EDirection2D> isoDirections(numNFunction);
+      //int jumps = (numNFunction%2==0 ? 2 : 1);
+      for (int funcIter=0;funcIter<numNFunction/*/jumps*/;funcIter++){
         
         vector<EInt> isoValues;
         //cout<<"isoValues: "<<endl;
@@ -1150,7 +1150,7 @@ public:
              ocit != ParamArr.originating_curves_end(eit); ++ocit){
           EDirection2D thisDirection =  EDirection2D(ocit->supporting_line().a(), ocit->supporting_line().b());
           //cout<<"thisDirection: "<<thisDirection<<endl;
-          for (int paramIter = 0;paramIter<numParamFuncs/*/jumps*/;paramIter++){
+          for (int paramIter = 0;paramIter<numNFunction/*/jumps*/;paramIter++){
             //cout<<"isoDirections[paramIter]: "<<isoDirections[paramIter]<<endl;
             if ((thisDirection==isoDirections[paramIter])||(thisDirection==-isoDirections[paramIter])){
               eit->data().funcNum=paramIter;
@@ -1199,7 +1199,7 @@ public:
             NewHalfedge.isFunction=(heiterate->data().ID==-2);
             NewHalfedge.Origin=heiterate->source()->data();
             NewHalfedge.OrigHalfedge=heiterate->data().OrigHalfedge;
-            NewHalfedge.OrigParamFunc=heiterate->data().funcNum;
+            NewHalfedge.OrigNFunctionIndex=heiterate->data().funcNum;
             //cout<<"NewHalfedge.OrigParamFunc :"<<NewHalfedge.OrigParamFunc<<endl;
             funcMesh.Vertices[heiterate->source()->data()].AdjHalfedge=NewHalfedge.ID;
             funcMesh.Halfedges.push_back(NewHalfedge);
@@ -1273,18 +1273,18 @@ public:
     }
     
     //devising angles from differences in functions
-    //int ratio = (numParamFuncs%2==0 ? 1 : 2);
-    for (int hi=0;hi<funcMesh.Halfedges.size();hi++){
+    //int ratio = (numNFunction%2==0 ? 1 : 2);
+    /*for (int hi=0;hi<funcMesh.Halfedges.size();hi++){
       //cout<<"funcMesh.Halfedges[hi].OrigParamFunc: "<<funcMesh.Halfedges[hi].OrigParamFunc<<endl;
       //cout<<"funcMesh.Halfedges[Halfedges[hi].Prev].OrigParamFunc: "<<funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc<<endl;
-      if ((funcMesh.Halfedges[hi].OrigParamFunc==-1)||(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc==-1))
+      if ((funcMesh.Halfedges[hi].OrigNFunctionIndex==-1)||(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex==-1))
         funcMesh.Halfedges[hi].prescribedAngle=-1.0;  //one of the edges is a triangle edge, and it will be devised later.
       else{
-        //int func1 =(ratio*(funcMesh.Halfedges[hi].OrigParamFunc)) % (numParamFuncs/(3-ratio));
-        //int func2 =(ratio*(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc)) % (numParamFuncs/(3-ratio));
+        //int func1 =(ratio*(funcMesh.Halfedges[hi].OrigParamFunc)) % (numNFunction/(3-ratio));
+        //int func2 =(ratio*(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc)) % (numNFunction/(3-ratio));
         
-        double funcOrient1 = funcOrientations(funcMesh.Halfedges[hi].OrigParamFunc);
-        double funcOrient2 = funcOrientations(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc);
+        double funcOrient1 = funcOrientations(funcMesh.Halfedges[hi].OrigNFunctionIndex);
+        double funcOrient2 = funcOrientations(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex);
         //cout<<"funcOrient1: "<<funcOrient1<<endl;
         //cout<<"funcOrient2: "<<funcOrient2<<endl;
         funcMesh.Halfedges[hi].prescribedAngle=funcOrient2-funcOrient1;
@@ -1298,7 +1298,7 @@ public:
           funcMesh.Halfedges[hi].prescribedAngle+=igl::PI;//+funcMesh.Halfedges[hi].prescribedAngle;
       
       }
-    }
+    }*/
   }
   
   struct PointPair{
@@ -1431,7 +1431,7 @@ public:
   };
 
   
-  bool SimplifyFuncMesh(const bool verbose, int N){
+  bool SimplifyMesh(const bool verbose, int N){
      //unifying vertices which are similar
      
     using namespace std;
@@ -1867,23 +1867,21 @@ public:
                      const Eigen::VectorXi& twinH,
                      const Eigen::MatrixXd& cutV,
                      const Eigen::MatrixXi& cutF,
-                     const Eigen::MatrixXd& nFunction,
-                     const int n,
+                     const Eigen::VectorXd& vertexNFunction,
                      const int N,
-                     const Eigen::SparseMatrix<int>& n2NMat,
-                     const Eigen::VectorXi& integerVars){
+                     const Eigen::SparseMatrix<double>& vertexToCornerMat,
+                     const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
+                     const Eigen::VectorXi& integerVars,
+                     const long resolution=1e8){
     
     using namespace std;
     using namespace CGAL;
+    using namespace Eigen;
     Vertices.resize(V.rows());
     Halfedges.resize(HE.rows());
     Faces.resize(F.rows());
     
-    int NEmb = embNumMat.rows();
-    
-    int capN = (N%2==0 ? N/2: N);
-    int capEmbN=(NEmb%2==0 ? NEmb/2 : NEmb);
-    int NFull=capN+capEmbN;
+    //int NFull=(N%2==0 ? N/2: N);
     
     for (int i=0;i<V.rows();i++){
       Vertices[i].Coordinates=Point3D(V(i,0), V(i,1), V(i,2));
@@ -1900,9 +1898,11 @@ public:
       Halfedges[i].AdjFace=HF(i);
     }
     
+    VectorXd cornerNFunctionVec = vertexToCornerMat*vertexNFunction;
+    
     for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++)
-        Halfedges[FH(i,j)].paramFuncs = cornerParamFuncs.block(i, NFull*j, 1, NFull).transpose();
+        Halfedges[FH(i,j)].NFunction = cornerNFunctionVec.segment(i+N*j, N).transpose();
     
     for (int i=0;i<F.rows();i++){
       Faces[i].ID=i;
@@ -1913,39 +1913,21 @@ public:
     }
     
     //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
-    
-    //resolution is set to 10e-10 of bounding box of mesh
-    vector<Point3D> coordList;
-    for (int i=0;i<Vertices.size();i++)
-      coordList.push_back(Vertices[i].Coordinates);
-    
-    Bbox_3 boundBox = CGAL::bbox_3  ( coordList.begin(), coordList.end());
-    
-    double minRange = 3276700.0;
-    for (int i=0;i<2;i++)
-      minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));
-    
-    long Resolution=1e8; //pow(10,ceil(10/log10(minRange)));
-    //cout<<"Resolution: "<<Resolution<<endl;
-    
-    vector<ENumber> exactParamFuncsd(paramFuncsd.size());
-    for (int i=0;i<paramFuncsd.size();i++){
-      exactParamFuncsd[i]=ENumber((long)round(paramFuncsd(i)*Resolution),Resolution);
-      //cout<<"rounding diff of var "<<i<<" is "<<exactParamFuncsd[i].to_double()-paramFuncsd(i)<<endl;;
+    vector<ENumber> exactVertexNFunction(vertexNFunction.size());
+    for (int i=0;i<vertexNFunction.size();i++){
+      exactVertexNFunction[i]=ENumber((long)round(vertexNFunction(i)*resolution),resolution);
+      //cout<<"rounding diff of var "<<i<<" is "<<exactNFunctiond[i].to_double()-NFunctiond(i)<<endl;;
     }
     
-    for (int i=0;i<integerVars.size();i++){
-      for (int j=0;j<d;j++){
-        exactParamFuncsd[d*integerVars(i)+j]=ENumber((long)round(paramFuncsd(d*integerVars(i)+j)));
-        //cout<<"rounding diff of integer var "<<d*integerVars(i)+j<<" is "<<exactParamFuncsd[d*integerVars(i)+j].to_double()-paramFuncsd(d*integerVars(i)+j)<<endl;
-      }
-    }
+    for (int i=0;i<integerVars.size();i++)
+        exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
+        //cout<<"rounding diff of integer var "<<d*integerVars(i)+j<<" is "<<exactNFunctiond[d*integerVars(i)+j].to_double()-NFunctiond(d*integerVars(i)+j)<<endl;
     
-    vector<ENumber> exactParamFuncsVec;
-    exactSparseMult(d2NMat, exactParamFuncsd,exactParamFuncsVec);
+    vector<ENumber> exactCornerNFunctionVec;
+    exactSparseMult(exactVertexToCornerMat, exactVertexNFunction,exactCornerNFunctionVec);
     
     /*vector<ENumber> constraintError;
-    exactSparseMult(constraintMatInteger, exactParamFuncsd,constraintError);
+    exactSparseMult(constraintMatInteger, exactNFunctiond,constraintError);
     
     ENumber MaxError(0);
     
@@ -1954,85 +1936,45 @@ public:
         MaxError=abs(constraintError[i]);
     
     if (verbose)
-      cout<<"constraintMatInteger*exactParamFuncsd MaxError: "<<MaxError<<endl;*/
+      cout<<"constraintMatInteger*exactNFunctiond MaxError: "<<MaxError<<endl;*/
     
     //introducing offset
-    Eigen::VectorXi offset= symmFunc.rowwise().sum();
-    int offDen=(N%3==0 ? 3 : 2);
-    if (N%6==0) {offDen=1; offset.setZero();}
-    
+    //Eigen::VectorXi offset= symmFunc.rowwise().sum();
+    //int offDen=(N%3==0 ? 3 : 2);
+    //if (N%6==0) {offDen=1; offset.setZero();}
     
     //ONLY FOR EXAMPLE!!!
     //offDen=1; offset.setZero();
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    vector<vector<ENumber> > exactParamFuncsN(cutV.rows());
+    /*vector<vector<ENumber> > exactCornerNFunction(cutV.rows());
     for(int i = 0; i < cutV.rows(); i++){
-      exactParamFuncsN[i].resize(N);
+      exactNFunctionN[i].resize(N);
       for (int j=0;j<N;j++)
-        exactParamFuncsN[i][j] =exactParamFuncsVec[N * i+j]+ENumber(offset(j),offDen);
-    }
+        exactNFunctionN[i][j] =exactNFunctionVec[N * i+j];//+ENumber(offset(j),offDen);
+    }*/
     
     //allocating per corner
-    vector<vector<ENumber> > exactWholeCornerParamFuncsN(F.rows());
+    vector<vector<ENumber> > exactCornerNFunction(F.rows());
     
     
-    //assuming the functions are ordered where the sign symmetry follows in the later half of the functions
-    
-    for (int i=0;i<F.rows();i++){
-      exactWholeCornerParamFuncsN[i].resize((capN+capEmbN)*3);
-      for (int j=0;j<3;j++)
-        for (int k=0;k<capN;k++)
-          exactWholeCornerParamFuncsN[i][(capN+capEmbN)*j+k] = exactParamFuncsN[cutF(i,j)][k];
-    }
-    
-    //putting in embedded functions
-    
-    for (int i=0;i<F.rows();i++){
-      for (int j=0;j<3;j++){
-        vector<ENumber> origCornerFunc(N);
-        for (int k=0;k<N;k++)
-          origCornerFunc[k]=exactParamFuncsN[cutF(i,j)][k];
-        
-        /*cout<<"origCornerFunc: ";
-         for (int k=0;k<N;k++)
-         cout<<origCornerFunc[k].to_double()<<" ";
-         cout<<endl;*/
-        
-        vector<ENumber> embCornerFunc;
-        exactDenseMult(embNumMat, embDenMat, origCornerFunc, embCornerFunc);
-        /*cout<<"embCornerFunc: ";
-         for (int k=0;k<NEmb;k++)
-         cout<<embCornerFunc[k].to_double()<<" ";
-         cout<<endl;*/
-        for (int k=capN;k<capN+capEmbN;k++)
-          exactWholeCornerParamFuncsN[i][NFull*j+k] = embCornerFunc[k-capN];
-        
-        /*cout<<"exactWholeCornerParamFuncsN[i]: ";
-         for (int k=0;k<NFull;k++)
-         cout<<exactWholeCornerParamFuncsN[i][NFull*j+k].to_double()<<" ";
-         cout<<endl;*/
-        
-        //cout<<"paramCornerFunc: "<<Halfedges[FH(i,j)].paramFuncs<<endl;
-      }
-    }
-    
-    for (int i=0;i<FH.rows();i++)
+    for (int i=0;i<FH.rows();i++){
       for (int j=0;j<FH.cols();j++){
-        Halfedges[FH(i,j)].exactParamFuncs.resize(NFull);
-        for (int k=0;k<NFull;k++)
-          Halfedges[FH(i,j)].exactParamFuncs[k] = exactWholeCornerParamFuncsN[i][NFull*j+k];
+        Halfedges[FH(i,j)].exactNFunction.resize(N);
+        for (int k=0;k<N;k++)
+          Halfedges[FH(i,j)].exactNFunction[k] = exactCornerNFunctionVec[N*cutF(i,j)+k];
       }
+    }
     
     //sanity check
     double maxError = -32767000.0;
     for (int i=0;i<Halfedges.size();i++){
-      for (int j=0;j<NFull;j++){
-        double fromExact = Halfedges[i].exactParamFuncs[j].to_double();
+      for (int j=0;j<N;j++){
+        double fromExact = Halfedges[i].exactNFunction[j].to_double();
         //cout<<"fromExact: "<<fromExact<<endl;
-        //cout<<"Halfedges[i].paramFuncs[j]: "<<Halfedges[i].paramFuncs[j]<<endl;
-        if (abs(fromExact-Halfedges[i].paramFuncs[j])>maxError)
-          maxError =abs(fromExact-Halfedges[i].paramFuncs[j]);
+        //cout<<"Halfedges[i].NFunction[j]: "<<Halfedges[i].NFunction[j]<<endl;
+        if (abs(fromExact-Halfedges[i].NFunction[j])>maxError)
+          maxError =abs(fromExact-Halfedges[i].NFunction[j]);
       }
       
     }
@@ -2041,7 +1983,7 @@ public:
   
   
   //corner angles is per vertex in each F
-  void toHedra(Eigen::MatrixXd& generatedV, Eigen::VectorXi& generatedD, Eigen::MatrixXi& generatedF, Eigen::MatrixXi& generatedFfuncNum, Eigen::MatrixXd& cornerAngles){
+  void toHedra(Eigen::MatrixXd& generatedV, Eigen::VectorXi& generatedD, Eigen::MatrixXi& generatedF){
     generatedV.resize(Vertices.size(),3);
     
     generatedD.resize(Faces.size());
@@ -2073,7 +2015,7 @@ public:
       
     }
     
-    generatedFfuncNum.resize(Faces.size(),generatedD.maxCoeff());
+    /*generatedFfuncNum.resize(Faces.size(),generatedD.maxCoeff());
     cornerAngles=Eigen::MatrixXd::Constant(Faces.size(),generatedD.maxCoeff(),-1.0);
     //prescribedAnglesInt.resize(Faces.size(),generatedD.maxCoeff());
     for (int i=0;i<Faces.size();i++){
@@ -2081,13 +2023,13 @@ public:
       int vCount=0;
       int heiterate=hebegin;
       do{
-        generatedFfuncNum(i,vCount)=Halfedges[heiterate].OrigParamFunc;
+        generatedFfuncNum(i,vCount)=Halfedges[heiterate].OrigNFunctionIndex;
         cornerAngles(i,vCount++)=Halfedges[heiterate].prescribedAngle;
         //prescribedAnglesInt(i,vCount++)=Halfedges[heiterate].prescribedAngleDiff;
         //cout<<"Halfedges[heiterate].prescribedAngleDiff: "<<Halfedges[heiterate].prescribedAngleDiff<<endl;
         heiterate=Halfedges[heiterate].Next;
       }while (heiterate!=hebegin);
-    }
+    }*/
     
     
   }

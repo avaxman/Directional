@@ -54,6 +54,7 @@ namespace directional
     Eigen::SparseMatrix<int> singIntSpanMatInteger;
     
     double lengthRatio;     //global scaling of functions
+    Eigen::VectorXd nVertexFunction;  //the final compressed result (used for meshing)
     
     //Flags
     bool integralSeamless;  //If to the full translational seamless.

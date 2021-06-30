@@ -20,9 +20,10 @@
 #include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
 #include <directional/branched_isolines.h>
-#include <directional/mesh_function.h>
+#include <directional/mesh_function_isolines.h>
+#include "polygonal_write_OFF.h"
 
-#define NUM_N 4
+#define NUM_N 1
 
 int N[NUM_N];
 int currN = 0;
@@ -33,6 +34,9 @@ Eigen::MatrixXd rawField[NUM_N], combedField[NUM_N], barycenters;
 Eigen::VectorXd effort[NUM_N], combedEffort[NUM_N];
 Eigen::VectorXi matching[NUM_N], combedMatching[NUM_N];
 Eigen::MatrixXi EV, FE, EF;
+Eigen::VectorXi DPolyMesh[NUM_N];
+Eigen::MatrixXi FPolyMesh[NUM_N];
+Eigen::MatrixXd VPolyMesh[NUM_N];
 Eigen::VectorXi singIndices[NUM_N], singVertices[NUM_N];
 Eigen::MatrixXd NFunction[NUM_N], NCornerFunction[NUM_N];
 igl::opengl::glfw::Viewer viewer;
@@ -100,10 +104,10 @@ int main()
   "  3  change between different N" << std::endl;
   
   igl::readOFF(TUTORIAL_SHARED_PATH "/vase.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-2.rawfield", N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[1], rawField[1]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[2], rawField[2]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", N[3], rawField[3]);
+  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-2.rawfield", N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[0], rawField[0]);
+  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[2], rawField[2]);
+  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", N[3], rawField[3]);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
   
@@ -125,10 +129,26 @@ int main()
     
     std::cout<<"Done!"<<std::endl;
     
-    directional::mesh_function(VMeshCut[i], FMeshCut[i]);
+    //getting things ready from integrator to mesher - should be encapsulated!
+    bool skip=(N[i]%2==0);  //TODO: actual skipping!! by altering the sparse matrices 
+    Eigen::SparseMatrix<double> vertex2CornerMat=intData.vertexTrans2CutMat*intData.linRedMat*intData.singIntSpanMat*intData.intSpanMat;
+    Eigen::SparseMatrix<int> exactVertex2CornerMat=intData.vertexTrans2CutMatInteger*intData.linRedMatInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger;
+    Eigen::VectorXi fullIntegerVars(intData.n*intData.integerVars.size());
+    for (int i=0;i<intData.integerVars.size();i++)
+      for (int j=0;j<intData.n;j++)
+        fullIntegerVars[intData.n*i+j]=intData.n*intData.integerVars(i)+j;
+        
+    /*TMesh.fromHedraDCEL(VectorXi::Constant(F.rows(),3),V, F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, VMeshCut, FMeshCut, paramFuncsd, intData.n, intData.N, intData.vertexTrans2CutMatInteger*pd.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger,  intData.constraintMatInteger*intData.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger, intData.linRed*intData.periodMat, NFunction, pd.integerVars, embNumMat, embDenMat, singVertices);*/
+    
+    
+    /*TMesh.fromHedraDCEL(VectorXi::Constant(F.rows(),3),V, F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, VMeshCut, FMeshCut, paramFuncsd, intData.n, intData.N, intData.vertexTrans2CutMatInteger*pd.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger,  intData.constraintMatInteger*intData.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger, intData.linRed*intData.periodMat, NFunction, pd.integerVars, embNumMat, embDenMat, singVertices);*/
+    
+    
+    //meshing and saving
+    directional::mesh_function_isolines(VMeshWhole, FMeshWhole,EV, EF, FE, intData.nVertexFunction, N[i], VMeshCut[i], FMeshCut[i], vertex2CornerMat, exactVertex2CornerMat, fullIntegerVars,  true, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-4-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
     
     //raw field mesh
-    
     directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField[i], directional::indexed_glyph_colors(combedField[i]), VField[i], FField[i], CField[i],1.0);
     
     if (i==0){
