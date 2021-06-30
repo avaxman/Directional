@@ -1898,11 +1898,13 @@ public:
       Halfedges[i].AdjFace=HF(i);
     }
     
-    VectorXd cornerNFunctionVec = vertexToCornerMat*vertexNFunction;
+    cout<<"N: "<<N<<endl;
+    
+
     
     for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++)
-        Halfedges[FH(i,j)].NFunction = cornerNFunctionVec.segment(i+N*j, N).transpose();
+        
     
     for (int i=0;i<F.rows();i++){
       Faces[i].ID=i;
@@ -1920,51 +1922,30 @@ public:
     }
     
     for (int i=0;i<integerVars.size();i++)
-        exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
+      exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
         //cout<<"rounding diff of integer var "<<d*integerVars(i)+j<<" is "<<exactNFunctiond[d*integerVars(i)+j].to_double()-NFunctiond(d*integerVars(i)+j)<<endl;
     
-    vector<ENumber> exactCornerNFunctionVec;
-    exactSparseMult(exactVertexToCornerMat, exactVertexNFunction,exactCornerNFunctionVec);
+    VectorXd cutNFunctionVec = vertexToCornerMat*vertexNFunction;
+    vector<ENumber> exactCutNFunctionVec;
+    exactSparseMult(exactVertexToCornerMat, exactVertexNFunction,exactCutNFunctionVec);
     
-    /*vector<ENumber> constraintError;
-    exactSparseMult(constraintMatInteger, exactNFunctiond,constraintError);
+    //sanity check - comparing exact to double
+    double maxError2 = -32767000.0;
+    for (int i=0;i<exactCutNFunctionVec.size();i++){
+      double fromExact = exactCutNFunctionVec[i].to_double();
+      if (abs(fromExact-cutNFunctionVec[i])>maxError2)
+        maxError2 =abs(fromExact-cutNFunctionVec[i]);
+    }
     
-    ENumber MaxError(0);
+    cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
     
-    for (int i=0;i<constraintError.size();i++)
-      if (abs(constraintError[i])>MaxError)
-        MaxError=abs(constraintError[i]);
-    
-    if (verbose)
-      cout<<"constraintMatInteger*exactNFunctiond MaxError: "<<MaxError<<endl;*/
-    
-    //introducing offset
-    //Eigen::VectorXi offset= symmFunc.rowwise().sum();
-    //int offDen=(N%3==0 ? 3 : 2);
-    //if (N%6==0) {offDen=1; offset.setZero();}
-    
-    //ONLY FOR EXAMPLE!!!
-    //offDen=1; offset.setZero();
-    
-    //the results are packets of N functions for each vertex, and need to be allocated for corners
-    /*vector<vector<ENumber> > exactCornerNFunction(cutV.rows());
-    for(int i = 0; i < cutV.rows(); i++){
-      exactNFunctionN[i].resize(N);
-      for (int j=0;j<N;j++)
-        exactNFunctionN[i][j] =exactNFunctionVec[N * i+j];//+ENumber(offset(j),offDen);
-    }*/
-    
-    //allocating per corner
-    vector<vector<ENumber> > exactCornerNFunction(F.rows());
-    
-    
-    for (int i=0;i<FH.rows();i++){
+    for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++){
         Halfedges[FH(i,j)].exactNFunction.resize(N);
+        Halfedges[FH(i,j)].NFunction = cutNFunctionVec.segment(cutF(i,j), N).transpose();
         for (int k=0;k<N;k++)
-          Halfedges[FH(i,j)].exactNFunction[k] = exactCornerNFunctionVec[N*cutF(i,j)+k];
+          Halfedges[FH(i,j)].exactNFunction[k] = exactCutNFunctionVec[N*cutF(i,j)+k];
       }
-    }
     
     //sanity check
     double maxError = -32767000.0;
