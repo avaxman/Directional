@@ -105,8 +105,8 @@ int main()
   
   igl::readOFF(TUTORIAL_SHARED_PATH "/vase.off", VMeshWhole, FMeshWhole);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-2.rawfield", N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[0], rawField[0]);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[0], rawField[0]);
+  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[0], rawField[0]);
   //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", N[3], rawField[3]);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
@@ -188,7 +188,7 @@ int main()
     
     //meshing and saving
     directional::mesh_function_isolines(VMeshWhole, FMeshWhole,EV, EF, FE, intData.nVertexFunction, (skip ? N[i]/2 : N[i]), VMeshCut[i], FMeshCut[i], vertex2CornerMat, exactVertex2CornerMat, fullIntegerVars,  true, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-4-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-7-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
     
     //raw field mesh
     directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField[i], directional::indexed_glyph_colors(combedField[i]), VField[i], FField[i], CField[i],1.0);

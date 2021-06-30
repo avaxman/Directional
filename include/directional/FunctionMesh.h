@@ -1942,7 +1942,7 @@ public:
     for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++){
         Halfedges[FH(i,j)].exactNFunction.resize(N);
-        Halfedges[FH(i,j)].NFunction = cutNFunctionVec.segment(cutF(i,j), N).transpose();
+        Halfedges[FH(i,j)].NFunction = cutNFunctionVec.segment(N*cutF(i,j), N).transpose();
         for (int k=0;k<N;k++)
           Halfedges[FH(i,j)].exactNFunction[k] = exactCutNFunctionVec[N*cutF(i,j)+k];
       }

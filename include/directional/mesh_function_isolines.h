@@ -65,7 +65,7 @@ bool mesh_function_isolines(const Eigen::MatrixXd& wholeV,
   if (verbose)
     std::cout<<"Simplifying Mesh"<<std::endl;
   
-  bool success = true ;//FMesh.SimplifyMesh(verbose, N);
+  bool success = FMesh.SimplifyMesh(verbose, N);
   
   if (success){
     if (verbose)
