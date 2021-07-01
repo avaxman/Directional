@@ -57,9 +57,9 @@ namespace directional
     Eigen::VectorXd nVertexFunction;  //the final compressed result (used for meshing)
     
     //Flags
-    bool integralSeamless;  //If to the full translational seamless.
-    bool roundSeams;        //If to round seams or round singularities
-    bool verbose;           //output the integration optimization log.
+    bool integralSeamless;  //Whether to do full translational seamless.
+    bool roundSeams;        //Whether to round seams or round singularities
+    bool verbose;           //output the integration log.
     bool localInjectivity;  //Enforce local injectivity; might result in failure!
     
     IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), localInjectivity(false){

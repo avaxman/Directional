@@ -1,6 +1,6 @@
 Integrator  TODO:
 
-1. Properly rename and document in setup_integration() and integrate() DONE
-2. embellish() function.
-3. Fix metric in integration equation.
-4. N-isolines function DONE
+1. embellish() function.
+2. Fix metric in integration equation.
+3. Kill boundary singularity showing (I did it already in the master)
+

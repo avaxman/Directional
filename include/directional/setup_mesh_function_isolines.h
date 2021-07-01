@@ -41,6 +41,12 @@ struct MeshFunctionIsolinesData{
 };
 
 
+//setups the meshing data from the (in-house) integration data.
+// Inputs:
+//  cutV, cutF:     cut mesh
+//  intData: IntegrationData object from the integrator
+// Output:
+//  mfiData: MeshFunctionIsolinesData object suitable to pass to the mesher
 void setup_mesh_function_isolines(const Eigen::MatrixXd& cutV,
                                   const Eigen::MatrixXi& cutF,
                                   const IntegrationData& intData,
