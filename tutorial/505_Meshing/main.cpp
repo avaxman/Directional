@@ -21,9 +21,10 @@
 #include <directional/cut_mesh_with_singularities.h>
 #include <directional/branched_isolines.h>
 #include <directional/mesh_function_isolines.h>
+#include <directional/setup_mesh_function_isolines.h>
 #include "polygonal_write_OFF.h"
 
-#define NUM_N 1
+#define NUM_N 3
 
 int N[NUM_N];
 int currN = 0;
@@ -104,12 +105,13 @@ int main()
   "  3  change between different N" << std::endl;
   
   igl::readOFF(TUTORIAL_SHARED_PATH "/vase.off", VMeshWhole, FMeshWhole);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-2.rawfield", N[0], rawField[0]);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[0], rawField[0]);
-  //directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", N[3], rawField[3]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", N[1], rawField[1]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", N[2], rawField[2]);
   igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
   igl::barycenter(VMeshWhole, FMeshWhole, barycenters);
+  
+  bool verbose=true;
   
   //combing and cutting
   for (int i=0;i<NUM_N;i++){
@@ -124,71 +126,18 @@ int main()
     intData.integralSeamless=true;
     intData.roundSeams=false;
   
-    std::cout<<"Solving integration #"<<i<<std::endl;
+    std::cout<<"Solving integration for N="<<N[i]<<std::endl;
     directional::integrate(VMeshWhole, FMeshWhole, FE, combedField[i],  intData, VMeshCut[i], FMeshCut[i], NFunction[i],NCornerFunction[i]);
     
     std::cout<<"Done!"<<std::endl;
     
-    //getting things ready from integrator to mesher - should be encapsulated!
-    bool skip=(N[i]%2==0);  //TODO: actual skipping!! by altering the sparse matrices 
-    Eigen::SparseMatrix<double> vertex2CornerMatFull=intData.vertexTrans2CutMat*intData.linRedMat*intData.singIntSpanMat*intData.intSpanMat;
-    Eigen::SparseMatrix<int> exactVertex2CornerMatFull=intData.vertexTrans2CutMatInteger*intData.linRedMatInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger;
-    
-    //cuttting the matrices from sign symmetrry
-    Eigen::SparseMatrix<double> vertex2CornerMat;
-    Eigen::SparseMatrix<int> exactVertex2CornerMat;
-    if (skip){
-      //cutting the latter N/2 from each N packet.
-      std::vector<Eigen::Triplet<double>> vertex2CornerTriplets;
-      std::vector<Eigen::Triplet<int>> exactVertex2CornerTriplets;
-      for (int k=0; k<vertex2CornerMatFull.outerSize(); ++k){
-        for (Eigen::SparseMatrix<double>::InnerIterator it(vertex2CornerMatFull,k); it; ++it)
-        {
-          int relativeRow = it.row()%N[i];
-          if (relativeRow<N[i]/2)
-            vertex2CornerTriplets.push_back(Eigen::Triplet<double>((it.row()-relativeRow)/2+relativeRow,it.col(),it.value()));
-          
-        }
-      }
-      
-      for (int k=0; k<exactVertex2CornerMatFull.outerSize(); ++k){
-        for (Eigen::SparseMatrix<int>::InnerIterator it(exactVertex2CornerMatFull,k); it; ++it)
-        {
-          int relativeRow = it.row()%N[i];
-          if (relativeRow<N[i]/2)
-            exactVertex2CornerTriplets.push_back(Eigen::Triplet<int>((it.row()-relativeRow)/2+relativeRow,it.col(),it.value()));
-          
-        }
-      }
-      
-      vertex2CornerMat.resize(vertex2CornerMatFull.rows()/2, vertex2CornerMatFull.cols());
-      vertex2CornerMat.setFromTriplets(vertex2CornerTriplets.begin(), vertex2CornerTriplets.end());
-      
-      exactVertex2CornerMat.resize(exactVertex2CornerMatFull.rows()/2, exactVertex2CornerMatFull.cols());
-      exactVertex2CornerMat.setFromTriplets(exactVertex2CornerTriplets.begin(), exactVertex2CornerTriplets.end());
-      
-    }else{
-      vertex2CornerMat=vertex2CornerMatFull;
-      exactVertex2CornerMat=exactVertex2CornerMatFull;
-      
-    }
-    
-    //for now no integer variables to test
-    Eigen::VectorXi fullIntegerVars(0);
-    /*Eigen::VectorXi fullIntegerVars(intData.n*intData.integerVars.size());
-    for (int i=0;i<intData.integerVars.size();i++)
-      for (int j=0;j<intData.n;j++)
-        fullIntegerVars[intData.n*i+j]=intData.n*intData.integerVars(i)+j;
-      */
-    /*TMesh.fromHedraDCEL(VectorXi::Constant(F.rows(),3),V, F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, VMeshCut, FMeshCut, paramFuncsd, intData.n, intData.N, intData.vertexTrans2CutMatInteger*pd.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger,  intData.constraintMatInteger*intData.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger, intData.linRed*intData.periodMat, NFunction, pd.integerVars, embNumMat, embDenMat, singVertices);*/
-    
-    
-    /*TMesh.fromHedraDCEL(VectorXi::Constant(F.rows(),3),V, F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, VMeshCut, FMeshCut, paramFuncsd, intData.n, intData.N, intData.vertexTrans2CutMatInteger*pd.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger,  intData.constraintMatInteger*intData.linRedInteger*intData.singIntSpanMatInteger*intData.intSpanMatInteger, intData.linRed*intData.periodMat, NFunction, pd.integerVars, embNumMat, embDenMat, singVertices);*/
-    
+    //setting up mesh data from itnegration data
+    directional::MeshFunctionIsolinesData mfiData;
+    directional::setup_mesh_function_isolines(VMeshCut[i], FMeshCut[i], intData, mfiData);
     
     //meshing and saving
-    directional::mesh_function_isolines(VMeshWhole, FMeshWhole,EV, EF, FE, intData.nVertexFunction, (skip ? N[i]/2 : N[i]), VMeshCut[i], FMeshCut[i], vertex2CornerMat, exactVertex2CornerMat, fullIntegerVars,  true, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-7-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+    directional::mesh_function_isolines(VMeshWhole, FMeshWhole,EV, EF, FE, mfiData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
     
     //raw field mesh
     directional::glyph_lines_raw(VMeshWhole, FMeshWhole, combedField[i], directional::indexed_glyph_colors(combedField[i]), VField[i], FField[i], CField[i],1.0);

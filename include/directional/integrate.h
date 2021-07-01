@@ -107,10 +107,10 @@ namespace directional
     for (int i=0;i<intData.fixedIndices.size();i++)
       fixedMask(intData.fixedIndices(i)) = 1;
     
-    if(false)
+    /*if(false)
       for(int i = 0; i < intData.integerVars.size(); i++)
         for (int j=0;j<intData.n;j++)
-          fixedMask(intData.n * intData.integerVars(i)+j) = 1;
+          fixedMask(intData.n * intData.integerVars(i)+j) = 1;*/
     
     //the variables that were already fixed to begin with
     VectorXi alreadyFixed(numVars);

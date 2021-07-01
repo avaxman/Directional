@@ -1622,12 +1622,12 @@ public:
      }
      
      //check if there are any non-twinned edge which shouldn't be in a closed mesh
-    if (verbose){
+    /*if (verbose){
      for (int i=0;i<Halfedges.size();i++){
        if (Halfedges[i].Twin==-1)
          std::cout<<"Halfedge "<<i<<" does not have a twin!"<<std::endl;
      }
-    }
+    }*/
      
 
      if (!CheckMesh(verbose, true, true, true))
@@ -1897,10 +1897,7 @@ public:
       Halfedges[i].Twin=twinH(i);
       Halfedges[i].AdjFace=HF(i);
     }
-    
-    cout<<"N: "<<N<<endl;
-    
-
+  
     
     for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++)
@@ -1909,21 +1906,18 @@ public:
     for (int i=0;i<F.rows();i++){
       Faces[i].ID=i;
       Faces[i].AdjHalfedge=FH(i);
-      /*Faces[i].NumVertices=D(i);
-       for (int j=0;j<D(i);j++)
-       Faces[i].Vertices[j]=F(i,j);*/
     }
     
     //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
     vector<ENumber> exactVertexNFunction(vertexNFunction.size());
     for (int i=0;i<vertexNFunction.size();i++){
       exactVertexNFunction[i]=ENumber((long)round(vertexNFunction(i)*resolution),resolution);
-      //cout<<"rounding diff of var "<<i<<" is "<<exactNFunctiond[i].to_double()-NFunctiond(i)<<endl;;
     }
     
-    for (int i=0;i<integerVars.size();i++)
+    for (int i=0;i<integerVars.size();i++){
       exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
-        //cout<<"rounding diff of integer var "<<d*integerVars(i)+j<<" is "<<exactNFunctiond[d*integerVars(i)+j].to_double()-NFunctiond(d*integerVars(i)+j)<<endl;
+        //cout<<"rounding diff of integer var "<<integerVars(i)<<" is "<<exactVertexNFunction[integerVars(i)].to_double()-vertexNFunction(integerVars(i))<<endl;
+    }
     
     VectorXd cutNFunctionVec = vertexToCornerMat*vertexNFunction;
     vector<ENumber> exactCutNFunctionVec;
@@ -1937,7 +1931,7 @@ public:
         maxError2 =abs(fromExact-cutNFunctionVec[i]);
     }
     
-    cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
+    //cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
     
     for (int i=0;i<FH.rows();i++)
       for (int j=0;j<FH.cols();j++){
@@ -1959,7 +1953,7 @@ public:
       }
       
     }
-    cout<<"double from exact in halfedges maxError: "<<maxError<<endl;
+    //cout<<"double from exact in halfedges maxError: "<<maxError<<endl;
   }
   
   
