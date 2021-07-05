@@ -137,9 +137,34 @@ int main()
       viewer.data_list[1].show_lines = false;
     }
     
+    //removing boundary vertices from indices for clarity
+    std::vector<std::vector<int> > L;
+    std::vector<int> singVerticesList, singIndicesList;
+    igl::boundary_loop(FMeshWhole, L);
+    for (int l=0;l<singVertices[i].size();l++){
+      bool found=false;
+      for (int j=0;j<L.size();j++)
+           for (int k=0;k<L[j].size();k++)
+               if (L[j][k]==singVertices[i][l]){
+                 found = true; break;
+               }
+      
+      if (!found){
+        singVerticesList.push_back(singVertices[i][l]);
+        singIndicesList.push_back(singIndices[i][l]);
+      }
+    }
+    
+    singVertices[i].resize(singVerticesList.size());
+    singIndices[i].resize(singIndicesList.size());
+    for (int j=0;j<singVerticesList.size();j++){
+      singVertices[i][j]=singVerticesList[j];
+      singIndices[i][j]=singIndicesList[j];
+    }
+    
     //singularity mesh
     directional::singularity_spheres(VMeshWhole, FMeshWhole, N[i], singVertices[i], singIndices[i], VSings[i], FSings[i], CSings[i],2.5);
-    
+   
     if (i==0){
       viewer.append_mesh();
       viewer.data_list[2].clear();

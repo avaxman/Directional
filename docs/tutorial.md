@@ -261,7 +261,7 @@ The singularity indices that are prescribed contain the singularity index corres
 
 ## Chapter 5: Seamless Integration and Meshing
 
-The full details of the method implemented in this chapter can be found in a technical report [^Vaxman_2021]
+The full details of the method implemented in this chapter can be found in a technical report [^Vaxman_2021]. Many of the therotical ideas for general $N$-functions are explored in[^Meekes_2021].
 
 $N$-Directional fields are commonly used as candidate gradients to seamless $N$-Functions, which in turn are used to generate meshes that are aligned to the original fields [^Bommes_2009],[^Kaelberer_2007],[^Myles_2014],[^Meekes_2021]. Recall that [combing](#203-combing) trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed $N$-directional $\left\{u_0,\cdots,u_{N-1}\right\}$ as a set of $N$ candidate gradients for $N$ vertex-based scalar functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. We then solve the Poisson problem:
 
@@ -315,14 +315,46 @@ bool localInjectivity;  //Enforce local injectivity; might result in failure!
 
 ![([Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp)) Left: directional field. Center: permutationally-seamless integration. Right: fully-seamless integration.](images/501_SeamlessIntegration.png)
 
-### 502 Integration in various orders.
+### 502 Integration in various orders
 
 Directional can handle integration for every $N$, including less common ones like the non-periodic $N \neq 2,3,4,6$. The properties of fields and integration in such unconventional $N$ are explored in [Meekes_2021].
 
-In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting. This is demonstrate in [Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp). 
+In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting. This is demonstrated in [Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp). 
 
 
 ![([Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp)) Left to right: $N=2,4,7,11$. Top: field. Bottom: integer isolines.](images/502_DifferentOrders.png)
+
+### 503 Rounding either seams or singularities
+
+It is possible to choose whether to round $T_e \in \mathbb{Z}^N$ directly, or the values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will be integer, but the latter case is more restrictive and will result in multiple isolines meeting in every singularity.
+
+![([Example 503]({{ repo_url }}/tutorial/503_SeamsSingsRounding/main.cpp)) Left to right (bottom is zoom-in of top): Field, rounding only seams, and rounding singularity function values.](images/503_SeamsSingsRounding.png)
+
+### 504 Linear Reductions
+
+It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix $U: N \times n$ so that $n \leq N$, and where $F = U\cdot f$. This relationship should be mirrored in the integrated directional field. *Warning*: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where $U = [1 0; 0 1; -1 -1]$ (in the case where $n=2$ and $N=3$). Another is sign symmetry where $U = [Id; -Id]$, and $n = \frac{N}{2}$. The latter is always assumed when $N$ is even, and both are always valid in any singularity configuration. Symmetries can also be combined. $U$ is fed into ```intData``` through the field ```linRed```, and there are pre-made funtcions to set it, such as ```set_triangular_symmetry(int N)```.
+
+
+![([Example 504]({{ repo_url }}/tutorial/504_LinearReductions/main.cpp)) Left to right (botom is zoom-in of top): $N=6$ with only sign symmetry, and the same with added triangular symmetry.](images/504_LinearReductions.png)
+
+### 505 Meshing
+
+This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together. The new mesh is given in libhedra format^[libhedra] of $(V,D,F)$, where $D$ is a vector $|F| \times 1$ of face degrees, and $F$ is a $|F| \times max(D)$ matrix of indices into $V$. 
+
+The meshing unit is independent from the integration unit, and can be potentially used with external functions; one should fill the ```MeshFunctionIsolinesData``` structure with the input, and call ```mesh_function_isolines()```.
+
+
+The input is given as functions on the vertices of the whole (original) mesh in ```vertexNFunction```, where the user must supply two sparse matrices: ```orig2CutMat``` to produce values per corner of the cut mesh, and the equivalent ```exactOrig2CutMatInteger``` to do the same in exact numbers. This ensures that the values across seams are perfectly matching in rationals, and the robustness of the meshing.
+
+There is a natural transition between the integrator and the mesher, which is done by calling ```setup_mesh_function_isolines()```, which translates the ```IntegratorData``` to the meshing data.
+
+The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.
+
+![([Example 505]({{ repo_url }}/tutorial/504_Meshing/main.cpp)) ](images/504_Meshing.png)
+
+
+
+
 
 ## Chapter 6: Subdivision Fields
 
