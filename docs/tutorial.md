@@ -328,14 +328,14 @@ In this example we demonstrate the results for $N=2,4,7,11$, for the same ```len
 
 It is possible to choose whether to round $T_e \in \mathbb{Z}^N$ directly, or the values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will be integer, but the latter case is more restrictive and will result in multiple isolines meeting in every singularity.
 
-![([Example 503]({{ repo_url }}/tutorial/503_SeamsSingsRounding/main.cpp)) Left to right (bottom is zoom-in of top): Field, rounding only seams, and rounding singularity function values.](images/503_SeamsSingsRounding.png)
+![([Example 503]({{ repo_url }}/tutorial/503_SeamsSingsRounding/main.cpp)) Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.](images/503_SeamsSingsRounding.png)
 
 ### 504 Linear Reductions
 
 It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix $U: N \times n$ so that $n \leq N$, and where $F = U\cdot f$. This relationship should be mirrored in the integrated directional field. *Warning*: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where $U = [1 0; 0 1; -1 -1]$ (in the case where $n=2$ and $N=3$). Another is sign symmetry where $U = [Id; -Id]$, and $n = \frac{N}{2}$. The latter is always assumed when $N$ is even, and both are always valid in any singularity configuration. Symmetries can also be combined. $U$ is fed into ```intData``` through the field ```linRed```, and there are pre-made funtcions to set it, such as ```set_triangular_symmetry(int N)```.
 
 
-![([Example 504]({{ repo_url }}/tutorial/504_LinearReductions/main.cpp)) Left to right (botom is zoom-in of top): $N=6$ with only sign symmetry, and the same with added triangular symmetry.](images/504_LinearReductions.png)
+![([Example 504]({{ repo_url }}/tutorial/504_LinearReductions/main.cpp)) Left to right: $6$-directional fields with a singularity, $N=6$ with only sign symmetry (the three lines don't always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.](images/504_LinearReductions.png)
 
 ### 505 Meshing
 
@@ -350,7 +350,7 @@ There is a natural transition between the integrator and the mesher, which is do
 
 The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.
 
-![([Example 505]({{ repo_url }}/tutorial/504_Meshing/main.cpp)) ](images/504_Meshing.png)
+![([Example 505]({{ repo_url }}/tutorial/505_Meshing/main.cpp)) Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in Example 502. The screenshots are from Meshlab[^Meshlab]](images/505_Meshing.png)
 
 
 
@@ -377,11 +377,9 @@ Directional is a budding project, and there are many algorithms in the state-of-
 
 4. Support for tensor fields.
 
-5. Face-based polar representation, and mixed-integer directional algorithms.
+5. Vertex-based representations.
 
-6. Vertex-based representations.
-
-7. Advanced and better visualization techniques.
+6. Advanced and better visualization techniques.
 
 ## References
 [^azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
@@ -401,3 +399,6 @@ Directional is a budding project, and there are many algorithms in the state-of-
 [^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
 [^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf), 2020.
+[^Vaxman_2021]: Amir Vaxman  [Directional Technical Reports: Seamless Integration](https://osf.io/s5ack/), 2021.
+[^Meekes_2021]: Merel Meekes, Amir Vaxman [Unconventional Patterns on Surfaces] (https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
+[^Meshlab]: P. Cignoni, M. Callieri, M. Corsini, M. Dellepiane, F. Ganovelli, G. Ranzuglia, [MeshLab: an Open-Source Mesh Processing Tool](https://www.meshlab.net/).
