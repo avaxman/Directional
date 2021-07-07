@@ -460,23 +460,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#chapter-5-seamless-parameterization" class="md-nav__link">
-    Chapter 5: Seamless Parameterization
+  <a href="#chapter-5-seamless-integration-and-meshing" class="md-nav__link">
+    Chapter 5: Seamless Integration and Meshing
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#501-seamless-parameterization" class="md-nav__link">
-    501 Seamless Parameterization
+  <a href="#501-seamless-integration" class="md-nav__link">
+    501 Seamless Integration
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#502-mixed-integer-parametrization" class="md-nav__link">
-    502 Mixed-Integer Parametrization
+  <a href="#502-integration-in-various-orders" class="md-nav__link">
+    502 Integration in various orders
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#503-rounding-either-seams-or-singularities" class="md-nav__link">
+    503 Rounding either seams or singularities
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#504-linear-reductions" class="md-nav__link">
+    504 Linear Reductions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#505-meshing" class="md-nav__link">
+    505 Meshing
   </a>
   
 </li>
@@ -795,23 +816,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#chapter-5-seamless-parameterization" class="md-nav__link">
-    Chapter 5: Seamless Parameterization
+  <a href="#chapter-5-seamless-integration-and-meshing" class="md-nav__link">
+    Chapter 5: Seamless Integration and Meshing
   </a>
   
     <nav class="md-nav">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#501-seamless-parameterization" class="md-nav__link">
-    501 Seamless Parameterization
+  <a href="#501-seamless-integration" class="md-nav__link">
+    501 Seamless Integration
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#502-mixed-integer-parametrization" class="md-nav__link">
-    502 Mixed-Integer Parametrization
+  <a href="#502-integration-in-various-orders" class="md-nav__link">
+    502 Integration in various orders
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#503-rounding-either-seams-or-singularities" class="md-nav__link">
+    503 Rounding either seams or singularities
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#504-linear-reductions" class="md-nav__link">
+    504 Linear Reductions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#505-meshing" class="md-nav__link">
+    505 Meshing
   </a>
   
 </li>
@@ -1073,40 +1115,81 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 <figure><img src="../images/401_IndexPrescription.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/401_IndexPrescription/main.cpp">Example 401</a>) Indices are prescribed on several vertex singularities, and on a generator loop, to match the index theorem.</figcaption>
 </figure>
 </p>
-<h2 id="chapter-5-seamless-parameterization">Chapter 5: Seamless Parameterization<a class="headerlink" href="#chapter-5-seamless-parameterization" title="Permanent link">&para;</a></h2>
-<p>Directional fields are commonly used to create seamless parameterizations <sup id="fnref2:Bommes_2009"><a class="footnote-ref" href="#fn:Bommes_2009">2</a></sup>,<sup id="fnref:Kaelberer_2007"><a class="footnote-ref" href="#fn:Kaelberer_2007">9</a></sup>,<sup id="fnref:Myles_2014"><a class="footnote-ref" href="#fn:Myles_2014">13</a></sup>. Recall that <a href="#203-combing">combing</a> trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-directional <span><span class="MathJax_Preview">\left\{u_0,\cdots,u_{N-1}\right\}</span><script type="math/tex">\left\{u_0,\cdots,u_{N-1}\right\}</script></span> as a set of <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> candidate gradients for <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> vertex-based scalar functions <span><span class="MathJax_Preview">\left\{F_0,\cdots,F_{N-1}\right\}</span><script type="math/tex">\left\{F_0,\cdots,F_{N-1}\right\}</script></span> on the cut mesh. We then solve the Poisson problem:</p>
-<p>$$ F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}} $$.</p>
+<h2 id="chapter-5-seamless-integration-and-meshing">Chapter 5: Seamless Integration and Meshing<a class="headerlink" href="#chapter-5-seamless-integration-and-meshing" title="Permanent link">&para;</a></h2>
+<p>The full details of the method implemented in this chapter can be found in a technical report <sup id="fnref:Vaxman_2021"><a class="footnote-ref" href="#fn:Vaxman_2021">18</a></sup>. Many of the therotical ideas for general <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-functions are explored in<sup id="fnref:Meekes_2021"><a class="footnote-ref" href="#fn:Meekes_2021">19</a></sup>.</p>
+<p><span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-Directional fields are commonly used as candidate gradients to seamless <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-Functions, which are in turn used to generate meshes that are aligned to the original fields <sup id="fnref2:Bommes_2009"><a class="footnote-ref" href="#fn:Bommes_2009">2</a></sup>,<sup id="fnref:Kaelberer_2007"><a class="footnote-ref" href="#fn:Kaelberer_2007">9</a></sup>,<sup id="fnref:Myles_2014"><a class="footnote-ref" href="#fn:Myles_2014">13</a></sup>,<sup id="fnref2:Meekes_2021"><a class="footnote-ref" href="#fn:Meekes_2021">19</a></sup>. Recall that <a href="#203-combing">combing</a> trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-directional <span><span class="MathJax_Preview">\left\{u_0,\cdots,u_{N-1}\right\}</span><script type="math/tex">\left\{u_0,\cdots,u_{N-1}\right\}</script></span> as a set of <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> candidate gradients for <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> vertex-based scalar functions <span><span class="MathJax_Preview">\left\{F_0,\cdots,F_{N-1}\right\}</span><script type="math/tex">\left\{F_0,\cdots,F_{N-1}\right\}</script></span> on the cut mesh. We then solve the Poisson problem:</p>
+<div>
+<div class="MathJax_Preview">F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}}</div>
+<script type="math/tex; mode=display">F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}}</script>
+</div>
 <p>Consider a seam edge <span><span class="MathJax_Preview">e_{ij}</span><script type="math/tex">e_{ij}</script></span> between original vertices <span><span class="MathJax_Preview">v_i</span><script type="math/tex">v_i</script></span> and <span><span class="MathJax_Preview">v_j</span><script type="math/tex">v_j</script></span>, and between adjacent faces <span><span class="MathJax_Preview">f_k</span><script type="math/tex">f_k</script></span> and <span><span class="MathJax_Preview">f_l</span><script type="math/tex">f_l</script></span>. The two vertices are then cut into four corners <span><span class="MathJax_Preview">v_{i,k},v_{j,k},v_{i,l},v_{j,l}</span><script type="math/tex">v_{i,k},v_{j,k},v_{i,l},v_{j,l}</script></span>. Note that some corners might be identical, if the seam edge is at a singularity. Across the seam edge, we enforce the (linear) seamless conditions:</p>
 <div>
 <div class="MathJax_Preview">F_{i,k}= \pi_e \cdot F_{i,l}  + T_e,</div>
 <script type="math/tex; mode=display">F_{i,k}= \pi_e \cdot F_{i,l}  + T_e,</script>
 </div>
-<p>where <span><span class="MathJax_Preview">\pi_e:N \times N</span><script type="math/tex">\pi_e:N \times N</script></span> is a permutation matrix attached to the (dual) edge <span><span class="MathJax_Preview">e</span><script type="math/tex">e</script></span>, matching values in the integrated function <span><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> as it did for the directional field <span><span class="MathJax_Preview">v</span><script type="math/tex">v</script></span>. and <span><span class="MathJax_Preview">T_e:N \times 1</span><script type="math/tex">T_e:N \times 1</script></span> is a <em>translational jump</em> (also: period jump), that encodes the discontinuity in <span><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a quad-mesh parameterization, it is the number of quads in such a loop.</p>
-<p>Seamless parameterizations are denoted as such for that obeying the seamless constraints; it can be easily shown <sup id="fnref2:Kaelberer_2007"><a class="footnote-ref" href="#fn:Kaelberer_2007">9</a></sup> that the translational jumps <span><span class="MathJax_Preview">T_e</span><script type="math/tex">T_e</script></span> is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh (<span><span class="MathJax_Preview">\times N</span><script type="math/tex">\times N</script></span>)</p>
-<h3 id="501-seamless-parameterization">501 Seamless Parameterization<a class="headerlink" href="#501-seamless-parameterization" title="Permanent link">&para;</a></h3>
-<p>In <a href="https://github.com/avaxman/Directional/tree/master/tutorial/501_SeamlessParameterization/main.cpp">Example 501</a> we demonstrate the computation of such a parameterization. The core functionality is in these lines:</p>
-<div class="codehilite"><pre><span></span><span class="n">directional</span><span class="o">::</span><span class="n">ParameterizationData</span> <span class="n">pd</span><span class="p">;</span>
-<span class="n">directional</span><span class="o">::</span><span class="n">cut_mesh_with_singularities</span><span class="p">(</span><span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span> <span class="n">singVertices</span><span class="p">,</span> <span class="n">pd</span><span class="p">.</span><span class="n">face2cut</span><span class="p">);</span>
-  <span class="p">...</span>
-<span class="n">directional</span><span class="o">::</span><span class="n">setup_parameterization</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span>  <span class="n">EV</span><span class="p">,</span> <span class="n">EF</span><span class="p">,</span> <span class="n">FE</span><span class="p">,</span> <span class="n">combedMatching</span><span class="p">,</span> <span class="n">singVertices</span><span class="p">,</span> <span class="n">pd</span><span class="p">,</span> <span class="n">VMeshCut</span><span class="p">,</span> <span class="n">FMeshCut</span><span class="p">);</span>
- <span class="kt">double</span> <span class="n">lengthRatio</span><span class="o">=</span><span class="mf">0.01</span><span class="p">;</span>
- <span class="kt">bool</span> <span class="n">isInteger</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>  <span class="c1">//do not do translational seamless.</span>
- <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">&quot;Solving parameterization&quot;</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
- <span class="n">directional</span><span class="o">::</span><span class="n">parameterize</span><span class="p">(</span><span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span> <span class="n">FE</span><span class="p">,</span> <span class="n">combedField</span><span class="p">,</span> <span class="n">lengthRatio</span><span class="p">,</span> <span class="n">pd</span><span class="p">,</span> <span class="n">VMeshCut</span><span class="p">,</span> <span class="n">FMeshCut</span><span class="p">,</span> <span class="n">isInteger</span><span class="p">,</span> <span class="n">cutUV</span><span class="p">);</span>
+<p>where <span><span class="MathJax_Preview">\pi_e:N \times N</span><script type="math/tex">\pi_e:N \times N</script></span> is a permutation matrix attached to the (dual) edge <span><span class="MathJax_Preview">e</span><script type="math/tex">e</script></span>, matching values in the integrated function <span><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> as it did for the directional field <span><span class="MathJax_Preview">v</span><script type="math/tex">v</script></span>. and <span><span class="MathJax_Preview">T_e:N \times 1</span><script type="math/tex">T_e:N \times 1</script></span> is a <em>translational jump</em> (also: period jump), that encodes the discontinuity in <span><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a <span><span class="MathJax_Preview">4</span><script type="math/tex">4</script></span>-function, leading to a quad mesh, it is the number of quads in such a loop. If <span><span class="MathJax_Preview">T_e \in \mathbb{Z}^N</span><script type="math/tex">T_e \in \mathbb{Z}^N</script></span>, then the <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-function is <em>fully</em> seamless: the integer isolines of a function connect perfectly along a seam. Otherwise, it is only <em>permutationally</em> seamless: the gradients match, which means they are only co-oriented.</p>
+<p>Seamless <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-functions are denoted as such for that obeying the seamless constraints; it can be easily shown <sup id="fnref2:Kaelberer_2007"><a class="footnote-ref" href="#fn:Kaelberer_2007">9</a></sup> that the translational jumps <span><span class="MathJax_Preview">T_e</span><script type="math/tex">T_e</script></span> is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh (<span><span class="MathJax_Preview">\times N</span><script type="math/tex">\times N</script></span>).</p>
+<h3 id="501-seamless-integration">501 Seamless Integration<a class="headerlink" href="#501-seamless-integration" title="Permanent link">&para;</a></h3>
+<p>In <a href="https://github.com/avaxman/Directional/tree/master/tutorial/501_SeamlessIntegration/main.cpp">Example 501</a> we demonstrate the computation of such a integration, both permutationally, and fully seamless. The computed function is a <span><span class="MathJax_Preview">4</span><script type="math/tex">4</script></span>-function with sign-symmetry, computing seamless <span><span class="MathJax_Preview">(U,V,-U,-V)</span><script type="math/tex">(U,V,-U,-V)</script></span> functions that we demonstrate as a quad texture. The core functionality is in these lines:</p>
+<div class="codehilite"><pre><span></span><span class="n">directional</span><span class="o">::</span><span class="n">IntegrationData</span> <span class="n">intData</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+<span class="n">directional</span><span class="o">::</span><span class="n">setup_integration</span><span class="p">(</span><span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span>  <span class="n">EV</span><span class="p">,</span> <span class="n">EF</span><span class="p">,</span> <span class="n">FE</span><span class="p">,</span> <span class="n">rawField</span><span class="p">,</span> <span class="n">matching</span><span class="p">,</span> <span class="n">singVertices</span><span class="p">,</span> <span class="n">intData</span><span class="p">,</span> <span class="n">VMeshCut</span><span class="p">,</span> <span class="n">FMeshCut</span><span class="p">,</span> <span class="n">combedField</span><span class="p">,</span> <span class="n">combedMatching</span><span class="p">);</span>
+
+<span class="n">intData</span><span class="p">.</span><span class="n">verbose</span><span class="o">=</span><span class="nb">true</span><span class="p">;</span>
+<span class="n">intData</span><span class="p">.</span><span class="n">integralSeamless</span><span class="o">=</span><span class="nb">false</span><span class="p">;</span>
+
+<span class="n">directional</span><span class="o">::</span><span class="n">integrate</span><span class="p">(</span><span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span> <span class="n">FE</span><span class="p">,</span> <span class="n">combedField</span><span class="p">,</span> <span class="n">intData</span><span class="p">,</span> <span class="n">VMeshCut</span><span class="p">,</span> <span class="n">FMeshCut</span><span class="p">,</span> <span class="n">cutUVRot</span> <span class="p">,</span><span class="n">cornerWholeUV</span><span class="p">);</span>
+
+<span class="c1">//Extracting the UV from [U,V,-U, -V];</span>
+<span class="n">cutUVRot</span><span class="o">=</span><span class="n">cutUVRot</span><span class="p">.</span><span class="n">block</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">cutUVRot</span><span class="p">.</span><span class="n">rows</span><span class="p">(),</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="n">intData</span><span class="p">.</span><span class="n">integralSeamless</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>  
+ <span class="n">directional</span><span class="o">::</span><span class="n">integrate</span><span class="p">(</span><span class="n">VMeshWhole</span><span class="p">,</span> <span class="n">FMeshWhole</span><span class="p">,</span> <span class="n">FE</span><span class="p">,</span> <span class="n">combedField</span><span class="p">,</span>  <span class="n">intData</span><span class="p">,</span> <span class="n">VMeshCut</span><span class="p">,</span> <span class="n">FMeshCut</span><span class="p">,</span> <span class="n">cutUVFull</span><span class="p">,</span><span class="n">cornerWholeUV</span><span class="p">);</span>
+
+<span class="n">cutUVFull</span><span class="o">=</span><span class="n">cutUVFull</span><span class="p">.</span><span class="n">block</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">cutUVFull</span><span class="p">.</span><span class="n">rows</span><span class="p">(),</span><span class="mi">2</span><span class="p">);</span>
 </pre></div>
 
-<p><code>directional::cut_mesh_with_singularities()</code> encodes the the seams in <code>pd.face2cut</code>. <code>directional::setup_parameterization()</code> creates the Poisson system and the constraints, and creates the actual cut mesh in <code>VMeshCut</code> and <code>FMeshCut</code>.  <code>directional::parameterize()</code> solves the parameterization, and puts the result in <code>cutUV</code>. The functionality is currently limited only to <span><span class="MathJax_Preview">2^2</span><script type="math/tex">2^2</script></span> fields (<span><span class="MathJax_Preview">N=4</span><script type="math/tex">N=4</script></span>) with symmetry assumed. <code>lengthRatio</code> encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal.</p>
-<p>The variable <code>isInteger</code> refers set to <code>false</code> which means that the parameterization would only be <em>rotationally-seamless</em>; the appearance across the seams would align only in direction. The next example considers the stronger option.</p>
+<p>The data structure containing all relevant information about the integration is <code>IntegrationData</code>. It contains some parameters that can be tuned to control the integration. Several relevant ones are:</p>
+<div class="codehilite"><pre><span></span><span class="kt">double</span> <span class="n">lengthRatio</span><span class="p">;</span>     <span class="c1">//global scaling of functions</span>
+
+<span class="c1">//Flags</span>
+<span class="kt">bool</span> <span class="n">integralSeamless</span><span class="p">;</span>  <span class="c1">//Whether to do full translational seamless.</span>
+<span class="kt">bool</span> <span class="n">roundSeams</span><span class="p">;</span>        <span class="c1">//Whether to round seams or round singularities</span>
+<span class="kt">bool</span> <span class="n">verbose</span><span class="p">;</span>           <span class="c1">//output the integration log.</span>
+<span class="kt">bool</span> <span class="n">localInjectivity</span><span class="p">;</span>  <span class="c1">//Enforce local injectivity; might result in failure!</span>
+</pre></div>
+
+<p><code>lengthRatio</code> encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal. Some of the other parameters are demonstrated in the other examples in this chapter. The integrator takes the original (whole) mesh, and generates a cut-mesh (in <code>VMeshCut,FMeshCut</code>) of disc-topology. The singularities are on the boundary of this mesh, and the function can consequently be defined without branching ambiguity on its vertices, with the appropriate permutation and translation across the cut seams.</p>
 <p>
-<figure><img src="../images/501_SeamlessParameterization.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/501_SeamlessParameterization/main.cpp">Example 501</a>) Left: directional field. Right: rotationally-seamless parameterization. Note that the direction of the texture aligns across seams.</figcaption>
+<figure><img src="../images/501_SeamlessIntegration.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/501_SeamlessParameterization/main.cpp">Example 501</a>) Left: directional field. Center: permutationally-seamless integration. Right: fully-seamless integration.</figcaption>
 </figure>
 </p>
-<h3 id="502-mixed-integer-parametrization">502 Mixed-Integer Parametrization<a class="headerlink" href="#502-mixed-integer-parametrization" title="Permanent link">&para;</a></h3>
-<p>To use seamless parameterizations for the purpose of quad meshing, we require the texture to be <em>fully-seamless</em> across seams. With this, the seams are virtually invisible on the cut mesh. This can be done by setting all <span><span class="MathJax_Preview">T_e</span><script type="math/tex">T_e</script></span> to values in <span><span class="MathJax_Preview">2\mathbb{Z}</span><script type="math/tex">2\mathbb{Z}</script></span> (for why <em>double</em> integers are necessary, see <sup id="fnref3:Kaelberer_2007"><a class="footnote-ref" href="#fn:Kaelberer_2007">9</a></sup>). The solving is done by simple iterative rounding <sup id="fnref3:Bommes_2009"><a class="footnote-ref" href="#fn:Bommes_2009">2</a></sup>: we choose the value in <span><span class="MathJax_Preview">T_e</span><script type="math/tex">T_e</script></span> which is the closest to a double integer, round and fix it, and repeat until all <span><span class="MathJax_Preview">T_e</span><script type="math/tex">T_e</script></span> are rounded. Note that CoMISo <sup id="fnref:Bommes_2012"><a class="footnote-ref" href="#fn:Bommes_2012">3</a></sup> has a more sophisticated Gauss-Seidel rounding algorithm that is more efficient; however, we include an implementation of our simpler version in Directional to avoid the dependency, and since our version will be used for general <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-function parameterization in future versions of Directional.</p>
-<p>Mixed-integer parameterization is demonstrated in <a href="https://github.com/avaxman/Directional/tree/master/tutorial/502_MixedIntegerParameterization/main.cpp">Example 502</a>. The essential difference from <a href="https://github.com/avaxman/Directional/tree/master/tutorial/501_SeamlessParameterization/main.cpp">Example 501</a> is by simply setting <code>isInteger=true</code>, when passed to <code>directional::parameterize()</code>.</p>
-<p><em>Note:</em> The input field <code>horsers-cf.rawfield</code> is computed according to <a href="#303-polycurl-reduction">Example 303</a> to have negligible PolyCurl. As such, the rotationally-seamless parameterization has a very low error (<span><span class="MathJax_Preview">L_\infty</span><script type="math/tex">L_\infty</script></span> of <span><span class="MathJax_Preview">1.25778\cdot 10^{-5}</span><script type="math/tex">1.25778\cdot 10^{-5}</script></span>). The rounding iterations incur some error, but it is rather low as well (after rounding <span><span class="MathJax_Preview">116</span><script type="math/tex">116</script></span> variables it climbs to <span><span class="MathJax_Preview">L_\infty=0.657496</span><script type="math/tex">L_\infty=0.657496</script></span>); we therefore recommend to warm-start a mixed-integer parameterization with a curl-reduced directional field.</p>
+<h3 id="502-integration-in-various-orders">502 Integration in various orders<a class="headerlink" href="#502-integration-in-various-orders" title="Permanent link">&para;</a></h3>
+<p>Directional can handle integration for every <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>, including less common ones like the non-periodic <span><span class="MathJax_Preview">N \neq 2,3,4,6</span><script type="math/tex">N \neq 2,3,4,6</script></span>. The properties of fields and integration in such unconventional <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> are explored in <sup id="fnref3:Meekes_2021"><a class="footnote-ref" href="#fn:Meekes_2021">19</a></sup>.</p>
+<p>In this example we demonstrate the results for <span><span class="MathJax_Preview">N=2,4,7,11</span><script type="math/tex">N=2,4,7,11</script></span>, for the same <code>lengthRatio</code>, and all fully seamless. Note that the density of the isolines increases with <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>, and that we round the singularity function values, leading to junctions of multiple isolines meeting. This is demonstrated in <a href="https://github.com/avaxman/Directional/tree/master/tutorial/502_DifferentOrders/main.cpp">Example 502</a>. </p>
 <p>
-<figure><img src="../images/502_MixedIntegerParameterization.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/502_MixedIntegerParameterization/main.cpp">Example 502</a>) Left to right: directional field,  rotationally-seamless parameterization (before rounding), fully-seamless parameterization.</figcaption>
+<figure><img src="../images/502_DifferentOrders.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/502_DifferentOrders/main.cpp">Example 502</a>) Left to right: <span><span class="MathJax_Preview">N=2,4,7,11</span><script type="math/tex">N=2,4,7,11</script></span>. Top: field. Bottom: integer isolines.</figcaption>
+</figure>
+</p>
+<h3 id="503-rounding-either-seams-or-singularities">503 Rounding either seams or singularities<a class="headerlink" href="#503-rounding-either-seams-or-singularities" title="Permanent link">&para;</a></h3>
+<p>It is possible to choose whether to round the seam jumps <span><span class="MathJax_Preview">T_e \in \mathbb{Z}^N</span><script type="math/tex">T_e \in \mathbb{Z}^N</script></span> directly, or the function values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will have integer values, but the latter case is more restrictive and will result in multiple isolines meeting at every singularity. For quad meshes with <span><span class="MathJax_Preview">N=4</span><script type="math/tex">N=4</script></span>, for instance, this is the difference between pure-quad results (round singularities), or just quad-dominant (round seams).</p>
+<p>
+<figure><img src="../images/503_SeamsSingsRounding.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/503_SeamsSingsRounding/main.cpp">Example 503</a>) Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.</figcaption>
+</figure>
+</p>
+<h3 id="504-linear-reductions">504 Linear Reductions<a class="headerlink" href="#504-linear-reductions" title="Permanent link">&para;</a></h3>
+<p>It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix <span><span class="MathJax_Preview">U: N \times n</span><script type="math/tex">U: N \times n</script></span> so that <span><span class="MathJax_Preview">n \leq N</span><script type="math/tex">n \leq N</script></span>, and where <span><span class="MathJax_Preview">F = U\cdot f</span><script type="math/tex">F = U\cdot f</script></span> for the independent degrees of freedom encoded in <span><span class="MathJax_Preview">f</span><script type="math/tex">f</script></span>. This relationship should be mirrored in the integrated directional field. <em>Warning</em>: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where <span><span class="MathJax_Preview">U_{3 \times 2} = [1, 0; 0, 1; -1, -1]</span><script type="math/tex">U_{3 \times 2} = [1, 0; 0, 1; -1, -1]</script></span>. Another is sign symmetry where <span><span class="MathJax_Preview">U = [Id_{n \times n}; -Id_{n \times n}]</span><script type="math/tex">U = [Id_{n \times n}; -Id_{n \times n}]</script></span>, and <span><span class="MathJax_Preview">n = \frac{N}{2}</span><script type="math/tex">n = \frac{N}{2}</script></span>. The latter is always assumed when <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span> is even, and both are always valid in any singularity configuration. Symmetries can also be combined. <span><span class="MathJax_Preview">U</span><script type="math/tex">U</script></span> is fed into <code>intData</code> through the field <code>linRed</code>, and there are pre-made funtcions to set it, such as <code>set_triangular_symmetry(int N)</code>.</p>
+<p>
+<figure><img src="../images/504_LinearReductions.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/504_LinearReductions/main.cpp">Example 504</a>) Left to right: <span><span class="MathJax_Preview">6</span><script type="math/tex">6</script></span>-directional fields with a singularity, <span><span class="MathJax_Preview">N=6</span><script type="math/tex">N=6</script></span> with only sign symmetry (the three lines don&rsquo;t always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.</figcaption>
+</figure>
+</p>
+<h3 id="505-meshing">505 Meshing<a class="headerlink" href="#505-meshing" title="Permanent link">&para;</a></h3>
+<p>This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in libhedra format<sup id="fnref:libhedra"><a class="footnote-ref" href="#fn:libhedra">21</a></sup> of <span><span class="MathJax_Preview">(V,D,F)</span><script type="math/tex">(V,D,F)</script></span>, where <span><span class="MathJax_Preview">D</span><script type="math/tex">D</script></span> is a vector <span><span class="MathJax_Preview">|F| \times 1</span><script type="math/tex">|F| \times 1</script></span> of face degrees, and <span><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> is a <span><span class="MathJax_Preview">|F| \times max(D)</span><script type="math/tex">|F| \times max(D)</script></span> matrix of indices into <span><span class="MathJax_Preview">V</span><script type="math/tex">V</script></span>. </p>
+<p>The meshing unit is independent from the integration unit, and can be potentially used with external functions; one should fill the <code>MeshFunctionIsolinesData</code> structure with the input, and call <code>mesh_function_isolines()</code>.</p>
+<p>The input is given as functions on the vertices of the whole (original) mesh in <code>vertexNFunction</code>, where the user must supply two sparse matrices: <code>orig2CutMat</code> to produce values per corner of the cut mesh, and the equivalent <code>exactOrig2CutMatInteger</code> to do the same in exact numbers. This ensures that the values across seams are perfectly matching in rationals, and the robustness of the meshing.</p>
+<p>There is a natural transition between the integrator and the mesher, which is done by calling <code>setup_mesh_function_isolines()</code>, which translates the <code>IntegratorData</code> to the meshing data.</p>
+<p>The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.</p>
+<p>
+<figure><img src="../images/505_Meshing.png" /><figcaption>(<a href="https://github.com/avaxman/Directional/tree/master/tutorial/505_Meshing/main.cpp">Example 505</a>) Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples (<span><span class="MathJax_Preview">N=2</span><script type="math/tex">N=2</script></span> is not yet supported) in <a href="#502-integration-in-various-orders">Example 502</a>. The screenshots are from Meshlab<sup id="fnref:Meshlab"><a class="footnote-ref" href="#fn:Meshlab">20</a></sup></figcaption>
 </figure>
 </p>
 <h2 id="chapter-6-subdivision-fields">Chapter 6: Subdivision Fields<a class="headerlink" href="#chapter-6-subdivision-fields" title="Permanent link">&para;</a></h2>
@@ -1132,9 +1215,6 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 <p>Support for tensor fields.</p>
 </li>
 <li>
-<p>Face-based polar representation, and mixed-integer directional algorithms.</p>
-</li>
-<li>
 <p>Vertex-based representations.</p>
 </li>
 <li>
@@ -1149,7 +1229,7 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 <p>Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, <a href="http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf">Consistent Functional Cross Field Design for Mesh Quadrangulation</a>, 2017.&#160;<a class="footnote-backref" href="#fnref:azencot_2017" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
 <li id="fn:Bommes_2009">
-<p>David Bommes, Henrik Zimmer, Leif Kobbelt, <a href="http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf">Mixed-integer quadrangulation</a>, 2009.&#160;<a class="footnote-backref" href="#fnref:Bommes_2009" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:Bommes_2009" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:Bommes_2009" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+<p>David Bommes, Henrik Zimmer, Leif Kobbelt, <a href="http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf">Mixed-integer quadrangulation</a>, 2009.&#160;<a class="footnote-backref" href="#fnref:Bommes_2009" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:Bommes_2009" title="Jump back to footnote 2 in the text">&#8617;</a></p>
 </li>
 <li id="fn:Bommes_2012">
 <p>David Bommes, Henrik Zimmer, Leif Kobbelt, <a href="https://www.graphics.rwth-aachen.de/publication/0319/">Practical Mixed-Integer Optimization for Geometry Processing</a>, 2012.&#160;<a class="footnote-backref" href="#fnref:Bommes_2012" title="Jump back to footnote 3 in the text">&#8617;</a></p>
@@ -1170,7 +1250,7 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 <p>Fernando de Goes, Mathieu Desbrun, Yiying Tong, <a href="http://geometry.caltech.edu/pubs/dGDT16.pdf">Vector Field Processing on Triangle Meshes</a>, 2016.&#160;<a class="footnote-backref" href="#fnref:degoes_2016" title="Jump back to footnote 8 in the text">&#8617;</a></p>
 </li>
 <li id="fn:Kaelberer_2007">
-<p>Felix K&auml;lberer, Matthias Nieser, Konrad Polthier, <a href="http://www.mi.fu-berlin.de/en/math/groups/ag-geom/publications/ressources/db/KNP07-QuadCover.pdf">QuadCover - Surface Parameterization using Branched Coverings</a>, 2007&#160;<a class="footnote-backref" href="#fnref:Kaelberer_2007" title="Jump back to footnote 9 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:Kaelberer_2007" title="Jump back to footnote 9 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:Kaelberer_2007" title="Jump back to footnote 9 in the text">&#8617;</a></p>
+<p>Felix K&auml;lberer, Matthias Nieser, Konrad Polthier, <a href="http://www.mi.fu-berlin.de/en/math/groups/ag-geom/publications/ressources/db/KNP07-QuadCover.pdf">QuadCover - Surface Parameterization using Branched Coverings</a>, 2007&#160;<a class="footnote-backref" href="#fnref:Kaelberer_2007" title="Jump back to footnote 9 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:Kaelberer_2007" title="Jump back to footnote 9 in the text">&#8617;</a></p>
 </li>
 <li id="fn:knoppel_2013">
 <p>Felix Kn&ouml;ppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, <a href="http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf">Globally Optimal Direction Fields</a>, 2013.&#160;<a class="footnote-backref" href="#fnref:knoppel_2013" title="Jump back to footnote 10 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:knoppel_2013" title="Jump back to footnote 10 in the text">&#8617;</a></p>
@@ -1195,6 +1275,18 @@ where <span><span class="MathJax_Preview">k_1</span><script type="math/tex">k_1<
 </li>
 <li id="fn:Custers_2020">
 <p>Bram Custers, Amir Vaxman, <a href="https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf">Subdivision Directional Fields</a>, 2020.&#160;<a class="footnote-backref" href="#fnref:Custers_2020" title="Jump back to footnote 17 in the text">&#8617;</a></p>
+</li>
+<li id="fn:Vaxman_2021">
+<p>Amir Vaxman  <a href="https://osf.io/s5ack/">Directional Technical Reports: Seamless Integration</a>, 2021.&#160;<a class="footnote-backref" href="#fnref:Vaxman_2021" title="Jump back to footnote 18 in the text">&#8617;</a></p>
+</li>
+<li id="fn:Meekes_2021">
+<p>Merel Meekes, Amir Vaxman [Unconventional Patterns on Surfaces] (<a href="https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf">https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf</a>), 2021.&#160;<a class="footnote-backref" href="#fnref:Meekes_2021" title="Jump back to footnote 19 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:Meekes_2021" title="Jump back to footnote 19 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:Meekes_2021" title="Jump back to footnote 19 in the text">&#8617;</a></p>
+</li>
+<li id="fn:Meshlab">
+<p>P. Cignoni, M. Callieri, M. Corsini, M. Dellepiane, F. Ganovelli, G. Ranzuglia, <a href="https://www.meshlab.net/">MeshLab: an Open-Source Mesh Processing Tool</a>.&#160;<a class="footnote-backref" href="#fnref:Meshlab" title="Jump back to footnote 20 in the text">&#8617;</a></p>
+</li>
+<li id="fn:libhedra">
+<p>Amir Vaxman and others, <a href="https://github.com/avaxman/libhedra">libhedra: geometric processing and optimization of polygonal meshes</a>.&#160;<a class="footnote-backref" href="#fnref:libhedra" title="Jump back to footnote 21 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
