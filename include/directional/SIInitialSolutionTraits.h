@@ -456,6 +456,12 @@ public:
     
     
     xSize = UExt.cols();
+
+    const Eigen::VectorXd xAndCurrFieldSmall;
+    Eigen::VectorXd EVec;
+    Eigen::SparseMatrix<double> jac;
+    objective_jacobian(initXandFieldSmall, EVec, jac, false);
+    ESize = EVec.size();
     
     
     

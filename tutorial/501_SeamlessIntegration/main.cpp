@@ -79,7 +79,7 @@ void update_triangle_mesh()
 
 void update_raw_field_mesh()
 {
-  for (int i=1;i<=4;i++)  //hide all other meshes
+  for (int i=1;i<4;i++)  //hide all other meshes
     viewer.data_list[i].show_faces=(viewingMode==FIELD);
 }
 

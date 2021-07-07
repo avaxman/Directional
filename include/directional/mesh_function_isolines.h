@@ -70,7 +70,7 @@ bool mesh_function_isolines(const Eigen::MatrixXd& origV,
   if (verbose)
     std::cout<<"Cleaning Mesh"<<std::endl;
   
-  bool success = FMesh.SimplifyMesh(verbose, mfiData.N);
+  bool success = true; // FMesh.SimplifyMesh(verbose, mfiData.N);
   
   if (success){
     if (verbose)

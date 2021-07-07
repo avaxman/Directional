@@ -924,7 +924,7 @@ public:
      for (int i=0;i<2;i++)
      minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));*/
     
-    long Resolution=1e8; //pow(10,ceil(10/log10(minRange)));
+    unsigned long Resolution=1e8; //pow(10,ceil(10/log10(minRange)));
     //cout<<"Resolution: "<<Resolution<<endl;
     
     for (int findex=0;findex<Faces.size();findex++){
@@ -984,9 +984,9 @@ public:
         Point3D Position=Vertices[Halfedges[eiterate].Origin].Coordinates;
         //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
         //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-        ENumber x=ENumber((long)round(Position.x()*Resolution),Resolution);
-        ENumber y=ENumber((long)round(Position.y()*Resolution),Resolution);
-        ENumber z=ENumber((long)round(Position.z()*Resolution),Resolution);
+        ENumber x=ENumber((signed long)round(Position.x()*Resolution),Resolution);
+        ENumber y=ENumber((signed long)round(Position.y()*Resolution),Resolution);
+        ENumber z=ENumber((signed long)round(Position.z()*Resolution),Resolution);
         //ETriPoints.push_back(EPoint2D(cx,cy));
         //TriPoints.push_back(Location);
         ETriPoints3D.push_back(EPoint3D(x,y,z));
@@ -1872,7 +1872,7 @@ public:
                      const Eigen::SparseMatrix<double>& vertexToCornerMat,
                      const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
                      const Eigen::VectorXi& integerVars,
-                     const long resolution=1e8){
+                     const unsigned long resolution=1e8){
     
     using namespace std;
     using namespace CGAL;
@@ -1911,7 +1911,7 @@ public:
     //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
     vector<ENumber> exactVertexNFunction(vertexNFunction.size());
     for (int i=0;i<vertexNFunction.size();i++){
-      exactVertexNFunction[i]=ENumber((long)round(vertexNFunction(i)*resolution),resolution);
+      exactVertexNFunction[i]=ENumber((signed long)round(vertexNFunction(i)*resolution),resolution);
     }
     
     for (int i=0;i<integerVars.size();i++){

@@ -112,14 +112,14 @@ int main()
     directional::effort_to_indices(VMeshWhole,FMeshWhole,EV, EF, effort[i],matching[i], N[i],singVertices[i], singIndices[i]);
     
     directional::IntegrationData intData(N[i]);
-    std::cout<<"Setting up Integration #"<<i<<std::endl;
+    std::cout<<"Setting up Integration N="<<N[i]<<std::endl;
     directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField[i], matching[i], singVertices[i], intData, VMeshCut[i], FMeshCut[i], combedField[i], combedMatching[i]);
     
     intData.verbose=false;
     intData.integralSeamless=true;
     intData.roundSeams=false;
   
-    std::cout<<"Solving integration #"<<i<<std::endl;
+    std::cout<<"Solving integration N=" << N[i]<<std::endl;
     directional::integrate(VMeshWhole, FMeshWhole, FE, combedField[i],  intData, VMeshCut[i], FMeshCut[i], NFunction[i],NCornerFunction[i]);
     
     std::cout<<"Done!"<<std::endl;

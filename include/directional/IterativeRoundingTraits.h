@@ -52,82 +52,93 @@ public:
   bool pre_optimization(const Eigen::VectorXd& prevx){return true;}
   void pre_iteration(const Eigen::VectorXd& prevx){}
   bool post_iteration(const Eigen::VectorXd& x){return false;}
-  
-  
-  bool initFixedIndices(){
-    using namespace Eigen;
-    using namespace std;
-    
-    xPrevSmall=xCurrSmall;
-    xCurr=UFull*xCurrSmall;
-    
 
-    VectorXd roundDiffs(leftIndices.size());
-    double minRoundDiff=3276700.0;
-    int minRoundIndex=-1;
-    for (int i=0;i<leftIndices.size();i++){
-      //cout<<"fraction*xCurr(leftIndices(i)): "<<fraction*xCurr(leftIndices(i))<<endl;
-      //cout<<"std::round(fraction*xCurr(leftIndices(i))): "<<std::round(fraction*xCurr(leftIndices(i)))<<endl;
-      roundDiffs(i) = std::fabs(fraction*xCurr(leftIndices(i))-std::round(fraction*xCurr(leftIndices(i))));
-      if (roundDiffs(i)<minRoundDiff){
-        minRoundIndex=i;
-        minRoundDiff=roundDiffs(i);
-        // cout<<"minRoundDiff: "<<minRoundDiff<<endl;
+  IterativeRoundingTraits() :ESize(0), xSize(0) {}
+  ~IterativeRoundingTraits() {}
+  
+  
+  bool initFixedIndices() {
+      using namespace Eigen;
+      using namespace std;
+
+      xPrevSmall = xCurrSmall;
+      xCurr = UFull * xCurrSmall;
+
+
+      VectorXd roundDiffs(leftIndices.size());
+      double minRoundDiff = 3276700.0;
+      int minRoundIndex = -1;
+      for (int i = 0; i < leftIndices.size(); i++) {
+          //cout<<"fraction*xCurr(leftIndices(i)): "<<fraction*xCurr(leftIndices(i))<<endl;
+          //cout<<"std::round(fraction*xCurr(leftIndices(i))): "<<std::round(fraction*xCurr(leftIndices(i)))<<endl;
+          roundDiffs(i) = std::fabs(fraction * xCurr(leftIndices(i)) - std::round(fraction * xCurr(leftIndices(i))));
+          if (roundDiffs(i) < minRoundDiff) {
+              minRoundIndex = i;
+              minRoundDiff = roundDiffs(i);
+              // cout<<"minRoundDiff: "<<minRoundDiff<<endl;
+          }
       }
-    }
-    
-    currRoundIndex = leftIndices(minRoundIndex);
-    origValue = xCurr(leftIndices(minRoundIndex));
-    roundValue = std::round(fraction*xCurr(leftIndices(minRoundIndex)))/fraction;
-    //cout<<"origValue,roundValue: "<<origValue<<","<<roundValue<<endl;
-    fixedIndices.conservativeResize(fixedIndices.size()+1);
-    fixedIndices(fixedIndices.size()-1)=leftIndices[minRoundIndex];  //is this under-performing?
-    fixedValues.conservativeResize(fixedValues.size()+1);
-    fixedValues(fixedValues.size()-1)=roundValue;
-    
-    //cout<<"fixedIndices: "<<fixedIndices<<endl;
-    //cout<<"fixedValues: "<<fixedValues<<endl;
-    
-    VectorXi newLeftIndices(leftIndices.size()-1);
-    newLeftIndices.head(minRoundIndex)=leftIndices.head(minRoundIndex);
-    newLeftIndices.tail(newLeftIndices.size()-minRoundIndex)=leftIndices.tail(newLeftIndices.size()-minRoundIndex);
-    leftIndices=newLeftIndices;
-    //VectorXd JVals;
-    //jacobian(Eigen::VectorXd::Random(UFull.cols()), JVals);
-    
-    if ((leftIndices.size()==0)&&(!roundSeams)&&(!roundedSingularities)){  //completed rounding singularities;starting to round rest of seams
-      leftIndices=integerIndices;
-      roundedSingularities=true;
-    }
-    
-    //Updating fixed elements of the jacobian
-    G2UFullParamLength = G2*UFull*paramLength;
-    
-    //Poisson error
-    gObj =G2UFullParamLength*wPoisson;
-    
-    //Closeness
-    igl::speye(xCurrSmall.size(), gClose);
-    gClose=gClose*wClose;  //TODO: bad performance
-    
-    //fixedIndices constness
-    gConst.resize(fixedIndices.size(), xCurr.size());
-    vector<Triplet<double>> gConstTriplets;
-    for (int i=0;i<fixedIndices.size();i++)
-      gConstTriplets.push_back(Triplet<double>(i,fixedIndices(i),1.0));
-    
-    gConst.setFromTriplets(gConstTriplets.begin(), gConstTriplets.end());
-  
-    gConst=gConst*UFull*wConst;
-    
-    MatrixXi blockIndices(3,1);
-    blockIndices<<0,1,2;
-    vector<SparseMatrix<double>*> JMats;
-    JMats.push_back(&gObj);
-    JMats.push_back(&gClose);
-    JMats.push_back(&gConst);
 
-    SaddlePoint::sparse_block(blockIndices, JMats,gObjCloseConst);
+      currRoundIndex = leftIndices(minRoundIndex);
+      origValue = xCurr(leftIndices(minRoundIndex));
+      roundValue = std::round(fraction * xCurr(leftIndices(minRoundIndex))) / fraction;
+      //cout<<"origValue,roundValue: "<<origValue<<","<<roundValue<<endl;
+      fixedIndices.conservativeResize(fixedIndices.size() + 1);
+      fixedIndices(fixedIndices.size() - 1) = leftIndices[minRoundIndex];  //is this under-performing?
+      fixedValues.conservativeResize(fixedValues.size() + 1);
+      fixedValues(fixedValues.size() - 1) = roundValue;
+
+      //cout<<"fixedIndices: "<<fixedIndices<<endl;
+      //cout<<"fixedValues: "<<fixedValues<<endl;
+
+      VectorXi newLeftIndices(leftIndices.size() - 1);
+      newLeftIndices.head(minRoundIndex) = leftIndices.head(minRoundIndex);
+      newLeftIndices.tail(newLeftIndices.size() - minRoundIndex) = leftIndices.tail(newLeftIndices.size() - minRoundIndex);
+      leftIndices = newLeftIndices;
+      //VectorXd JVals;
+      //jacobian(Eigen::VectorXd::Random(UFull.cols()), JVals);
+
+      if ((leftIndices.size() == 0) && (!roundSeams) && (!roundedSingularities)) {  //completed rounding singularities;starting to round rest of seams
+          leftIndices = integerIndices;
+          roundedSingularities = true;
+      }
+
+      //Updating fixed elements of the jacobian
+      G2UFullParamLength = G2 * UFull * paramLength;
+
+      //Poisson error
+      gObj = G2UFullParamLength * wPoisson;
+
+      //Closeness
+      igl::speye(xCurrSmall.size(), gClose);
+      gClose = gClose * wClose;  //TODO: bad performance
+
+      //fixedIndices constness
+      gConst.resize(fixedIndices.size(), xCurr.size());
+      vector<Triplet<double>> gConstTriplets;
+      for (int i = 0; i < fixedIndices.size(); i++)
+          gConstTriplets.push_back(Triplet<double>(i, fixedIndices(i), 1.0));
+
+      gConst.setFromTriplets(gConstTriplets.begin(), gConstTriplets.end());
+
+      gConst = gConst * UFull * wConst;
+
+      MatrixXi blockIndices(3, 1);
+      blockIndices << 0, 1, 2;
+      vector<SparseMatrix<double>*> JMats;
+      JMats.push_back(&gObj);
+      JMats.push_back(&gClose);
+      JMats.push_back(&gConst);
+
+      SaddlePoint::sparse_block(blockIndices, JMats, gObjCloseConst);
+
+
+      if (ESize == 0) {
+        SparseMatrix<double> J;
+        VectorXd EVec;
+        objective_jacobian(Eigen::VectorXd::Random(UFull.cols()), EVec, J, false);
+        ESize = EVec.size();
+      }
     
     return (minRoundDiff>10e-7); //only proceeding if there is a need to round
   }
@@ -327,13 +338,11 @@ public:
     xPrevSmall=xCurrSmall;
     fraction=1.0;
     
-    //SparseMatrix<double> J;
-    //VectorXd EVec;
-    //objective_jacobian(Eigen::VectorXd::Random(UFull.cols()), EVec, J, true);
+  
   }
 };
 
 
 
 
-#endif /* Iterative ROunding Traits */
+#endif /* Iterative Rounding Traits */
