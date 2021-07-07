@@ -24,8 +24,8 @@
 #include <directional/combing.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/write_raw_field.h>
-#include <directional/setup_parameterization.h>
-#include <directional/parameterize.h>
+#include <directional/setup_integration.h>
+#include <directional/integrate.h>
 #include <directional/subdivide_field.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -204,27 +204,22 @@ void parameterize_mesh(const Eigen::MatrixXd& VWhole,
 {
   Eigen::MatrixXd combedField;
   Eigen::VectorXi combedMatching;
-  directional::ParameterizationData pd;
-  directional::cut_mesh_with_singularities(VWhole, FWhole, singVertices, pd.face2cut);
-  directional::combing(VWhole, FWhole, EV, EF, FE, pd.face2cut, rawField, matching, combedField, combedMatching);
-  
-  std::cout << "Setting up parameterization" << std::endl;
-  
-  Eigen::MatrixXi symmFunc(4, 2);
-  symmFunc << 1, 0,
-  0, 1,
-  -1, 0,
-  0, -1;
-  
-  directional::setup_parameterization(symmFunc, VWhole, FWhole, EV, EF, FE, combedMatching, singVertices, pd, VCut, FCut);
-  
-  double lengthRatio = 0.03;
-  bool isInteger = false;  //do not do translational seamless.
-  std::cout << "Solving parameterization" << std::endl;
-  Eigen::MatrixXd cutReducedUV,  cornerWholeUV;
-  directional::parameterize(VWhole, FWhole, FE, combedField, lengthRatio, pd, VCut, FCut, isInteger, cutReducedUV, cutFullUV, cornerWholeUV);
-  cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2).eval();
+
+  directional::IntegrationData intData(N);
+  std::cout << "Setting up Integration" << std::endl;
+
+  intData.verbose = false;
+  intData.integralSeamless = false;
+  intData.lengthRatio = 0.03;
+
+  directional::setup_integration(VWhole, FWhole, EV, EF, FE, rawField, matching, singVertices, intData, VCut, FCut, combedField, combedMatching);
+
+  std::cout << "Integrating" << std::endl;
+  Eigen::MatrixXd cornerWholeUV;
+  directional::integrate(VWhole, FWhole, FE, combedField, intData, VCut, FCut, cutFullUV, cornerWholeUV);
   std::cout << "Done!" << std::endl;
+
+  cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2).eval();
 }
 
 
