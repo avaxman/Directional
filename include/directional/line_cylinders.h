@@ -49,7 +49,7 @@ namespace directional
     
     MatrixXd PlanePattern(res,2);
     for (int i=0;i<res;i++){
-      std::complex<double> CurrRoot=exp(2*M_PI*std::complex<double>(0,1)*(double)i/(double)res);
+      std::complex<double> CurrRoot=exp(2*igl::PI*std::complex<double>(0,1)*(double)i/(double)res);
       PlanePattern.row(i)<<CurrRoot.real(), CurrRoot.imag();
     }
     

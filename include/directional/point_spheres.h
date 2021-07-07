@@ -13,6 +13,7 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
+#include <igl/PI.h>
 
 
 namespace directional
@@ -46,10 +47,10 @@ namespace directional
       
       //creating vertices
       for (int j=0;j<res;j++){
-        double z=center(2)+radius*cos(M_PI*(double)j/(double(res-1)));
+        double z=center(2)+radius*cos(igl::PI*(double)j/(double(res-1)));
         for (int k=0;k<res;k++){
-          double x=center(0)+radius*sin(M_PI*(double)j/(double(res-1)))*cos(2*M_PI*(double)k/(double(res-1)));
-          double y=center(1)+radius*sin(M_PI*(double)j/(double(res-1)))*sin(2*M_PI*(double)k/(double(res-1)));
+          double x=center(0)+radius*sin(igl::PI*(double)j/(double(res-1)))*cos(2* igl::PI*(double)k/(double(res-1)));
+          double y=center(1)+radius*sin(igl::PI*(double)j/(double(res-1)))*sin(2* igl::PI*(double)k/(double(res-1)));
           V.row((res*res)*i+j*res+k)<<x,y,z;
         }
       }
