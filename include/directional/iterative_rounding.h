@@ -15,7 +15,7 @@
 #include <directional/SIInitialSolutionTraits.h>
 #include <directional/IterativeRoundingTraits.h>
 #include <iostream>
-#include <Eigen/core>
+#include <Eigen/Core>
 #include <iomanip>
 
 
