@@ -7,6 +7,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/boundary_loop.h>
 #include <igl/edge_topology.h>
+#include <igl/readOBJ.h>
 #include <directional/visualization_schemes.h>
 #include <directional/power_field.h>
 #include <directional/power_to_representative.h>

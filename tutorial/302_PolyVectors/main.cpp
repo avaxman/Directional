@@ -1,4 +1,12 @@
 #include <iostream>
+#include <Eigen/Core>
+#include <igl/opengl/glfw/Viewer.h>
+#include <igl/read_triangle_mesh.h>
+#include <igl/per_face_normals.h>
+#include <igl/unproject_onto_mesh.h>
+#include <igl/boundary_loop.h>
+#include <igl/edge_topology.h>
+#include <igl/readOFF.h>
 #include <directional/power_field.h>
 #include <directional/power_to_representative.h>
 #include <directional/power_to_raw.h>
@@ -9,13 +17,7 @@
 #include <directional/glyph_lines_raw.h>
 #include <directional/singularity_spheres.h>
 #include <directional/write_raw_field.h>
-#include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
-#include <igl/unproject_onto_mesh.h>
-#include <igl/boundary_loop.h>
-#include <igl/edge_topology.h>
+
 
 int currF, currVec;
 Eigen::VectorXi b, matching, singVertices, singIndices;
