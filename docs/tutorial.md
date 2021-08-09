@@ -30,6 +30,8 @@ Most examples require a modest amount of user interaction; the instructions of w
 
 ### Discretization
 
+**Input:** Directional requires the input to always be an *orientable* triangle mesh in a *single connected-component*. There are no general limitations on the genus or the boundaries. Specific algorithms may have additional requirements or consistency issues (for instance, index prescription requires that the singularity indices ad dup to the Euler characteristic). If your input comprises several connected components altogether, you  can just run any algorithm on each of them, loaded individually in sequence. 
+
 There are several ways to represent tangent planes on triangle meshes, although not all of them compatible with the different information that the fields convey. Mainstream discretizations roughly categorize into face-based, edge-based, and vertex-basex discretizations (see [^degoes_2016] for an in-depth analysis). The only discretization currently supported by Directional is that of tangent face-based fields, where the discrete tangent plane is taken to be the supporting plane to each (naturally flat) face. We also use a local basis (provided by `igl::local_basis()`) to parameterize each tangent plane. Notions like connection, parallel transport, and consequently smoothness, are measured on *dual edges* between adjacent faces.
 
 ### Representation
@@ -259,52 +261,98 @@ The singularity indices that are prescribed contain the singularity index corres
 
 ![([Example 401]({{ repo_url }}/tutorial/401_IndexPrescription/main.cpp)) Indices are prescribed on several vertex singularities, and on a generator loop, to match the index theorem.](images/401_IndexPrescription.png)
 
-## Chapter 5: Seamless Parameterization
+## Chapter 5: Seamless Integration and Meshing
 
-Directional fields are commonly used to create seamless parameterizations [^Bommes_2009],[^Kaelberer_2007],[^Myles_2014]. Recall that [combing](#203-combing) trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed $N$-directional $\left\{u_0,\cdots,u_{N-1}\right\}$ as a set of $N$ candidate gradients for $N$ vertex-based scalar functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. We then solve the Poisson problem:
+The full details of the method implemented in this chapter can be found in a technical report [^Vaxman_2021]. Many of the therotical ideas for general $N$-functions are explored in[^Meekes_2021].
 
-$$ F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}} $$.
+$N$-Directional fields are commonly used as candidate gradients to seamless $N$-Functions, which are in turn used to generate meshes that are aligned to the original fields [^Bommes_2009],[^Kaelberer_2007],[^Myles_2014],[^Meekes_2021]. Recall that [combing](#203-combing) trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed $N$-directional $\left\{u_0,\cdots,u_{N-1}\right\}$ as a set of $N$ candidate gradients for $N$ vertex-based scalar functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. We then solve the Poisson problem:
+
+$$F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}}$$
 
 Consider a seam edge $e_{ij}$ between original vertices $v_i$ and $v_j$, and between adjacent faces $f_k$ and $f_l$. The two vertices are then cut into four corners $v_{i,k},v_{j,k},v_{i,l},v_{j,l}$. Note that some corners might be identical, if the seam edge is at a singularity. Across the seam edge, we enforce the (linear) seamless conditions:
 
 $$F_{i,k}= \pi_e \cdot F_{i,l}  + T_e,$$
 
-where $\pi_e:N \times N$ is a permutation matrix attached to the (dual) edge $e$, matching values in the integrated function $F$ as it did for the directional field $v$. and $T_e:N \times 1$ is a *translational jump* (also: period jump), that encodes the discontinuity in $F$ across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a quad-mesh parameterization, it is the number of quads in such a loop.
+where $\pi_e:N \times N$ is a permutation matrix attached to the (dual) edge $e$, matching values in the integrated function $F$ as it did for the directional field $v$. and $T_e:N \times 1$ is a *translational jump* (also: period jump), that encodes the discontinuity in $F$ across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a $4$-function, leading to a quad mesh, it is the number of quads in such a loop. If $T_e \in \mathbb{Z}^N$, then the $N$-function is *fully* seamless: the integer isolines of a function connect perfectly along a seam. Otherwise, it is only *permutationally* seamless: the gradients match, which means they are only co-oriented.
 
-Seamless parameterizations are denoted as such for that obeying the seamless constraints; it can be easily shown [^Kaelberer_2007] that the translational jumps $T_e$ is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh ($\times N$)
+Seamless $N$-functions are denoted as such for that obeying the seamless constraints; it can be easily shown [^Kaelberer_2007] that the translational jumps $T_e$ is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh ($\times N$).
 
-### 501 Seamless Parameterization
 
-In [Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp) we demonstrate the computation of such a parameterization. The core functionality is in these lines:
+### 501 Seamless Integration
+
+In [Example 501]({{ repo_url }}/tutorial/501_SeamlessIntegration/main.cpp) we demonstrate the computation of such a integration, both permutationally, and fully seamless. The computed function is a $4$-function with sign-symmetry, computing seamless $(U,V,-U,-V)$ functions that we demonstrate as a quad texture. The core functionality is in these lines:
 
 ```cpp
-directional::ParameterizationData pd;
-directional::cut_mesh_with_singularities(VMeshWhole, FMeshWhole, singVertices, pd.face2cut);
-  ...
-directional::setup_parameterization(N, VMeshWhole, FMeshWhole,  EV, EF, FE, combedMatching, singVertices, pd, VMeshCut, FMeshCut);
- double lengthRatio=0.01;
- bool isInteger = false;  //do not do translational seamless.
- std::cout<<"Solving parameterization"<<std::endl;
- directional::parameterize(VMeshWhole, FMeshWhole, FE, combedField, lengthRatio, pd, VMeshCut, FMeshCut, isInteger, cutUV);
+directional::IntegrationData intData(N);
+directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  
+intData.verbose=true;
+intData.integralSeamless=false;
+  
+directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutUVRot ,cornerWholeUV);
+  
+//Extracting the UV from [U,V,-U, -V];
+cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
+ 
+intData.integralSeamless = true;  
+ directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutUVFull,cornerWholeUV);
+
+cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
 ```
 
-```directional::cut_mesh_with_singularities()``` encodes the the seams in ```pd.face2cut```. ```directional::setup_parameterization()``` creates the Poisson system and the constraints, and creates the actual cut mesh in ```VMeshCut``` and ```FMeshCut```.  ```directional::parameterize()``` solves the parameterization, and puts the result in ```cutUV```. The functionality is currently limited only to $2^2$ fields ($N=4$) with symmetry assumed. ```lengthRatio``` encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal.
+The data structure containing all relevant information about the integration is ```IntegrationData```. It contains some parameters that can be tuned to control the integration. Several relevant ones are:
 
-The variable ```isInteger``` refers set to ```false``` which means that the parameterization would only be *rotationally-seamless*; the appearance across the seams would align only in direction. The next example considers the stronger option.
+```cpp
+double lengthRatio;     //global scaling of functions
+
+//Flags
+bool integralSeamless;  //Whether to do full translational seamless.
+bool roundSeams;        //Whether to round seams or round singularities
+bool verbose;           //output the integration log.
+bool localInjectivity;  //Enforce local injectivity; might result in failure!
+```
+
+```lengthRatio``` encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal. Some of the other parameters are demonstrated in the other examples in this chapter. The integrator takes the original (whole) mesh, and generates a cut-mesh (in ```VMeshCut,FMeshCut```) of disc-topology. The singularities are on the boundary of this mesh, and the function can consequently be defined without branching ambiguity on its vertices, with the appropriate permutation and translation across the cut seams.
 
 
-![([Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp)) Left: directional field. Right: rotationally-seamless parameterization. Note that the direction of the texture aligns across seams.](images/501_SeamlessParameterization.png)
+![([Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp)) Left: directional field. Center: permutationally-seamless integration. Right: fully-seamless integration.](images/501_SeamlessIntegration.png)
 
-### 502 Mixed-Integer Parametrization
+### 502 Integration in various orders
 
-To use seamless parameterizations for the purpose of quad meshing, we require the texture to be *fully-seamless* across seams. With this, the seams are virtually invisible on the cut mesh. This can be done by setting all $T_e$ to values in $2\mathbb{Z}$ (for why *double* integers are necessary, see [^Kaelberer_2007]). The solving is done by simple iterative rounding [^Bommes_2009]: we choose the value in $T_e$ which is the closest to a double integer, round and fix it, and repeat until all $T_e$ are rounded. Note that CoMISo [^Bommes_2012] has a more sophisticated Gauss-Seidel rounding algorithm that is more efficient; however, we include an implementation of our simpler version in Directional to avoid the dependency, and since our version will be used for general $N$-function parameterization in future versions of Directional.
+Directional can handle integration for every $N$, including less common ones like the non-periodic $N \neq 2,3,4,6$. The properties of fields and integration in such unconventional $N$ are explored in [^Meekes_2021].
 
-Mixed-integer parameterization is demonstrated in [Example 502]({{ repo_url }}/tutorial/502_MixedIntegerParameterization/main.cpp). The essential difference from [Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp) is by simply setting ```isInteger=true```, when passed to ```directional::parameterize()```.
-
-*Note:* The input field ```horsers-cf.rawfield``` is computed according to [Example 303](#303-polycurl-reduction) to have negligible PolyCurl. As such, the rotationally-seamless parameterization has a very low error ($L_\infty$ of $1.25778\cdot 10^{-5}$). The rounding iterations incur some error, but it is rather low as well (after rounding $116$ variables it climbs to $L_\infty=0.657496$); we therefore recommend to warm-start a mixed-integer parameterization with a curl-reduced directional field.
+In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting. This is demonstrated in [Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp). 
 
 
-![([Example 502]({{ repo_url }}/tutorial/502_MixedIntegerParameterization/main.cpp)) Left to right: directional field,  rotationally-seamless parameterization (before rounding), fully-seamless parameterization.](images/502_MixedIntegerParameterization.png)
+![([Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp)) Left to right: $N=2,4,7,11$. Top: field. Bottom: integer isolines.](images/502_DifferentOrders.png)
+
+### 503 Rounding either seams or singularities
+
+It is possible to choose whether to round the seam jumps $T_e \in \mathbb{Z}^N$ directly, or the function values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will have integer values, but the latter case is more restrictive and will result in multiple isolines meeting at every singularity. For quad meshes with $N=4$, for instance, this is the difference between pure-quad results (round singularities), or just quad-dominant (round seams).
+
+![([Example 503]({{ repo_url }}/tutorial/503_SeamsSingsRounding/main.cpp)) Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.](images/503_SeamsSingsRounding.png)
+
+### 504 Linear Reductions
+
+It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix $U: N \times n$ so that $n \leq N$, and where $F = U\cdot f$ for the independent degrees of freedom encoded in $f$. This relationship should be mirrored in the integrated directional field. *Warning*: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where $U_{3 \times 2} = [1, 0; 0, 1; -1, -1]$. Another is sign symmetry where $U = [Id_{n \times n}; -Id_{n \times n}]$, and $n = \frac{N}{2}$. The latter is always assumed when $N$ is even, and both are always valid in any singularity configuration. Symmetries can also be combined. $U$ is fed into ```intData``` through the field ```linRed```, and there are pre-made funtcions to set it, such as ```set_triangular_symmetry(int N)```.
+
+
+![([Example 504]({{ repo_url }}/tutorial/504_LinearReductions/main.cpp)) Left to right: $6$-directional fields with a singularity, $N=6$ with only sign symmetry (the three lines don't always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.](images/504_LinearReductions.png)
+
+### 505 Meshing
+
+This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in libhedra format[^libhedra] of $(V,D,F)$, where $D$ is a vector $|F| \times 1$ of face degrees, and $F$ is a $|F| \times max(D)$ matrix of indices into $V$. 
+
+The meshing unit is independent from the integration unit, and can be potentially used with external functions; one should fill the ```MeshFunctionIsolinesData``` structure with the input, and call ```mesh_function_isolines()```.
+
+
+The input is given as functions on the vertices of the whole (original) mesh in ```vertexNFunction```, where the user must supply two sparse matrices: ```orig2CutMat``` to produce values per corner of the cut mesh, and the equivalent ```exactOrig2CutMatInteger``` to do the same in exact numbers. This ensures that the values across seams are perfectly matching in rationals, and the robustness of the meshing.
+
+There is a natural transition between the integrator and the mesher, which is done by calling ```setup_mesh_function_isolines()```, which translates the ```IntegratorData``` to the meshing data.
+
+The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.
+
+![([Example 505]({{ repo_url }}/tutorial/505_Meshing/main.cpp)) Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders). The screenshots are from Meshlab[^Meshlab]](images/505_Meshing.png)
 
 ## Chapter 6: Subdivision Fields
 
@@ -327,11 +375,9 @@ Directional is a budding project, and there are many algorithms in the state-of-
 
 4. Support for tensor fields.
 
-5. Face-based polar representation, and mixed-integer directional algorithms.
+5. Vertex-based representations.
 
-6. Vertex-based representations.
-
-7. Advanced and better visualization techniques.
+6. Advanced and better visualization techniques.
 
 ## References
 [^azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
@@ -351,3 +397,7 @@ Directional is a budding project, and there are many algorithms in the state-of-
 [^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
 [^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf), 2020.
+[^Vaxman_2021]: Amir Vaxman  [Directional Technical Reports: Seamless Integration](https://osf.io/s5ack/), 2021.
+[^Meekes_2021]: Merel Meekes, Amir Vaxman [Unconventional Patterns on Surfaces] (https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
+[^Meshlab]: P. Cignoni, M. Callieri, M. Corsini, M. Dellepiane, F. Ganovelli, G. Ranzuglia, [MeshLab: an Open-Source Mesh Processing Tool](https://www.meshlab.net/).
+[^libhedra]: Amir Vaxman and others, [libhedra: geometric processing and optimization of polygonal meshes](https://github.com/avaxman/libhedra).

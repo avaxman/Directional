@@ -20,11 +20,19 @@ namespace directional
   // Inputs:
   //   filename: The name used for the mesh and singularity file, without extention
   //   rawField: #F by 3*N in xyzxyz format (N is derived from F.cols())
+  //   high_precision: if true the numerical precision is set to std::numeric_limits<double>::digits10 + 1, 
+  //   and the output is written in the scientific format
   // Returns:
   //   Whether or not the file was written successfully
-  bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField)
+  bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField, bool high_precision = false)
   {
       std::ofstream f(fileName);
+      if (high_precision)
+      {
+          f.flags(std::ios::scientific);
+          f.precision(std::numeric_limits<double>::digits10 + 1);
+      }
+      
       int N = rawField.cols() / 3;
       assert(3 * N == rawField.cols());
       f << N << " " << rawField.rows() << std::endl;

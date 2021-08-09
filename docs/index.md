@@ -38,7 +38,7 @@ header file contains a single function (e.g. `igl/index_prescription.h` contains
 
 
 ## Tutorial
-A [Tutorial](https://avaxman.github.io/Directional/tutorial/tutorial.html) that walks through the entire functionality of Directional is available. To compile it, go to the `tutorial` folder, open a shell and call:
+A [Tutorial](https://avaxman.github.io/Directional/tutorial/) that walks through the entire functionality of Directional is available. To compile it, go to the `tutorial` folder, open a shell and call:
 
 ```
 mkdir build
@@ -46,7 +46,7 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
-This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, you should use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
+This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
 
 ## Coding Guidelines and Tips
 

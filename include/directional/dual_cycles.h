@@ -16,6 +16,7 @@
 #include <igl/unique.h>
 #include <igl/edge_topology.h>
 #include <vector>
+#include <set>
 #include <unordered_map>
 #include "tree.h"
 

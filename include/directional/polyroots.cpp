@@ -26,7 +26,7 @@ IGL_INLINE void igl::polyRoots(Eigen::Matrix<S, Eigen::Dynamic,1> &polyCoeff, //
   Eigen::Matrix<S, Eigen::Dynamic, Eigen::Dynamic> a(n,n);
   a<<-d.transpose(),I,z;
   roots = a.eigenvalues();
-
+  std::sort(roots.data(), roots.data() + roots.size(), [](std::complex<double> a, std::complex<double> b){return arg(a) < arg(b);});
 }
 
 

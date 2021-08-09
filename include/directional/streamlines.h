@@ -46,25 +46,23 @@ namespace directional
   // Given a mesh and a field the function computes the /data/ necessary for tracing the field'
   // streamlines, and creates the initial /state/ for the tracing.
   // Input:
-  //   V             #V by 3 list of mesh vertex coordinates
-  //   F             #F by 3 list of mesh faces
-  //   temp_field    #F by 3n list of the 3D coordinates of the per-face vectors
-  //                    (n-degrees stacked horizontally for each triangle)
-  //   treat_as_symmetric
-  //              if true, adds n symmetry directions to the field (N = 2n). Else N = n
-  //   percentage    [0-1] percentage of faces sampled
+  //   V                #V by 3 list of mesh vertex coordinates
+  //   F                #F by 3 list of mesh faces
+  //   rawField         #F by 3n list of the 3D coordinates of the per-face vectors (n-degrees stacked horizontally for each triangle)
+  //   seedLocations    indices into F of the seeds for streaming. Can be Eigen::VectorXi() for automatic generation.
+  //   ringDistance     Samples are generated automatically in case seedLocations.size()=0 according to exclusion of two seeds < ringDistance faces apart.
   // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_init(
-                                   const Eigen::MatrixXd V,
+  IGL_INLINE void streamlines_init(const Eigen::MatrixXd V,
                                    const Eigen::MatrixXi F,
-                                   const Eigen::MatrixXd &temp_field,
+                                   const Eigen::MatrixXd &rawField,
+                                   const Eigen::VectorXi& seedLocations,
+                                   const int ringDistance,
                                    StreamlineData &data,
-                                   StreamlineState &state,
-                                   double percentage = 0.3
-                                   
-                                   );
+                                   StreamlineState &state);
+
+
   
   // The function computes the next state for each point in the sample
   //   V             #V by 3 list of mesh vertex coordinates
@@ -76,7 +74,6 @@ namespace directional
                                    const Eigen::MatrixXi F,
                                    const StreamlineData & data,
                                    StreamlineState & state
-                                   
                                    );
 }
 

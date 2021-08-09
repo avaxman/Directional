@@ -1,5 +1,9 @@
 # Directional version tracking
 
+## Version 1.6.0 Changes
+
+- The seamless parameterization package was entirely replaced with a seamless integration and meshing package.
+- Several bug fixes.
 
 ## Version 1.5.0 Changes
 

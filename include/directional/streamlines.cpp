@@ -14,18 +14,80 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/barycenter.h>
 #include <igl/slice.h>
+#include <igl/speye.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
 
 
-IGL_INLINE void directional::streamlines_init(
-                                      const Eigen::MatrixXd V,
-                                      const Eigen::MatrixXi F,
-                                      const Eigen::MatrixXd &temp_field,
-                                      StreamlineData &data,
-                                      StreamlineState &state,
-                                      double percentage
-                                      ){
+namespace Directional {
+IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
+                                                       const Eigen::MatrixXi& EF,
+                                                       const int ringDistance,
+                                                       Eigen::VectorXi& samples)
+{
+  //creating adjacency matrix
+  std::vector<Eigen::Triplet<int>> adjTris;
+  for (int i=0;i<EF.rows();i++)
+    if ((EF(i,0)!=-1)&&(EF(i,1)!=-1)){
+      adjTris.push_back(Eigen::Triplet<int>(EF(i,0), EF(i,1),1));
+      adjTris.push_back(Eigen::Triplet<int>(EF(i,1), EF(i,0),1));
+    }
+  
+  Eigen::SparseMatrix<int> adjMat(F.rows(),F.rows());
+  adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
+  Eigen::SparseMatrix<int> newAdjMat(F.rows(),F.rows()),matMult;
+  igl::speye(F.rows(), F.rows(), matMult);
+  for (int i=0;i<ringDistance;i++){
+    matMult=matMult*adjMat;
+    newAdjMat+=matMult;
+  }
+  
+  //cout<<"newAdjMat: "<<newAdjMat<<endl;
+  
+  adjMat=newAdjMat;
+  
+  std::vector<std::set<int>> ringAdjacencies(F.rows());
+  for (int k=0; k<adjMat.outerSize(); ++k){
+    for (Eigen::SparseMatrix<int>::InnerIterator it(adjMat,k); it; ++it){
+      ringAdjacencies[it.row()].insert(it.col());
+      ringAdjacencies[it.col()].insert(it.row());
+    }
+  }
+
+  Eigen::VectorXi sampleMask=Eigen::VectorXi::Zero(F.rows());
+  for (int i=0;i<F.rows();i++){
+    if (sampleMask(i)!=0) //occupied face
+      continue;
+    
+    sampleMask(i)=2;
+    //clearing out all other faces
+    //cout<<"closeby set to face "<<i<<endl;
+    for (std::set<int>::iterator si=ringAdjacencies[i].begin();si!=ringAdjacencies[i].end();si++){
+      if (sampleMask(*si)==0)
+        sampleMask(*si)=1;
+      //cout<<*si<<" ";
+    }
+    //cout<<endl;
+    
+  }
+  
+  std::vector<int> samplesList;
+  for (int i=0;i<sampleMask.size();i++)
+    if (sampleMask(i)==2)
+      samplesList.push_back(i);
+  
+  samples = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(samplesList.data(), samplesList.size());
+}
+}
+
+
+IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
+                                              const Eigen::MatrixXi F,
+                                              const Eigen::MatrixXd &temp_field,
+                                              const Eigen::VectorXi& seedLocations,
+                                              const int ringDistance,
+                                              StreamlineData &data,
+                                              StreamlineState &state){
   using namespace Eigen;
   using namespace std;
   
@@ -66,12 +128,20 @@ IGL_INLINE void directional::streamlines_init(
   Eigen::VectorXi samples;
   int nsamples;
   
-  nsamples = percentage * F.rows();
-  Eigen::VectorXd r;
-  r.setRandom(nsamples, 1);
-  r = (1 + r.array()) / 2.;
-  samples = (r.array() * F.rows()).cast<int>();
-  data.nsample = nsamples;
+  if (seedLocations.rows()==0){
+    assert(ringDistance>=0);
+    Directional::generate_sample_locations(F,data.EF,ringDistance,samples);
+    nsamples = data.nsample = samples.size();
+    nsamples = data.nsample;
+    /*Eigen::VectorXd r;
+    r.setRandom(nsamples, 1);
+    r = (1 + r.array()) / 2.;
+    samples = (r.array() * F.rows()).cast<int>();
+    data.nsample = nsamples;*/
+  } else {
+    samples=seedLocations;
+    nsamples = data.nsample = seedLocations.size();
+  }
   
   Eigen::MatrixXd BC, BC_sample;
   igl::barycenter(V, F, BC);
