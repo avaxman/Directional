@@ -43,10 +43,10 @@ double globalRotation=0;
 
 void update_triangle_mesh()
 {
-  CMesh=directional::default_mesh_color().replicate(F.rows(),1);
+  CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
   
   for (int i=0;i<cycleFaces[currCycle].size();i++)
-    CMesh.row(cycleFaces[currCycle][i])<<directional::selected_face_color();
+    CMesh.row(cycleFaces[currCycle][i])<<directional::DirectionalViewer::selected_face_color();
   
   viewer.set_mesh_colors(CMesh);
 }
@@ -92,7 +92,7 @@ void update_singularities()
     singIndices(i)=singIndicesList[i];
   }
   
-  viewer.set_singularities(N, singVertices, singIndices);
+  viewer.set_singularities(singVertices, singIndices);
   
 }
 
