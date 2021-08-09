@@ -40,12 +40,12 @@ namespace directional
                                         const Eigen::MatrixXi& EF,
                                         const Eigen::MatrixXd& B1,
                                         const Eigen::MatrixXd& B2,
-                                        const Eigen::VectorXi& b,
+                                        const Eigen::VectorXi& bc,
                                         const int N, Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
                                         Eigen::SparseMatrix<std::complex<double>>& Afull,
                                         Eigen::SparseMatrix<std::complex<double>>& AVar)
   {
-    polyvector_precompute(V,F,EV,EF,B1,B2,b,N,solver,Afull,AVar);
+    polyvector_precompute(V,F,EV,EF,B1,B2,bc,N,solver,Afull,AVar);
   }
   
   // Computes a power field on the entire mesh from given values at the prescribed indices.
@@ -62,22 +62,22 @@ namespace directional
   //  powerField: #F by 2 The output interpolated field, in complex numbers.
   IGL_INLINE void power_field(const Eigen::MatrixXd& B1,
                               const Eigen::MatrixXd& B2,
-                              const Eigen::VectorXi& b,
-                              const Eigen::MatrixXd& bc,
+                              const Eigen::VectorXi& bc,
+                              const Eigen::MatrixXd& b,
                               const Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
                               const Eigen::SparseMatrix<std::complex<double>>& Afull,
                               const Eigen::SparseMatrix<std::complex<double>>& AVar,
                               const int N,
                               Eigen::MatrixXcd& powerField)
   {
-    polyvector_field(B1,B2,b,bc,solver,Afull,AVar,N,powerField);
+    polyvector_field(B1,B2,bc,b,solver,Afull,AVar,N,powerField);
   }
   
   // Minimal version without auxiliary data.
   IGL_INLINE void power_field(const Eigen::MatrixXd& V,
                               const Eigen::MatrixXi& F,
-                              const Eigen::VectorXi& b,
-                              const Eigen::MatrixXd& bc,
+                              const Eigen::VectorXi& bc,
+                              const Eigen::MatrixXd& b,
                               const int N,
                               Eigen::MatrixXcd& powerField)
   {
@@ -87,8 +87,9 @@ namespace directional
     igl::local_basis(V, F, B1, B2, xd);
     Eigen::SparseMatrix<std::complex<double>> Afull, AVar;
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
-    power_field_precompute(V,F,EV,EF,B1,B2,b,N, solver,Afull,AVar);
-    power_field(B1, B2, b, bc, solver, Afull, AVar, N, powerField);
+    power_field_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
+    power_field(B1, B2, bc, b, solver, Afull, AVar, N, powerField);
+    powerField=-powerField;  //powerfield is represented positively
   }
 }
 
