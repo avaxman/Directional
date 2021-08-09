@@ -34,9 +34,9 @@ bool zeroPressed = false;
 
 void update_triangle_mesh()
 {
-  Eigen::MatrixXd CMesh=directional::default_mesh_color().replicate(F.rows(),1);
+  Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
   for (int i = 0; i < b.rows(); i++)
-    CMesh.row(b(i)) = directional::selected_face_color();
+    CMesh.row(b(i)) = directional::DirectionalViewer::selected_face_color();
   
   viewer.set_mesh_colors(CMesh);
 }
@@ -55,14 +55,15 @@ void update_raw_field_mesh()
   
   directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
   
-  viewer.set_singularities(N, singVertices, singIndices);
-  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(F.rows(),N);
+  Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(F.rows(),N);
   if (b.rows()!=0){
-    glyphColors.row(b(b.rows()-1))=directional::selected_face_glyph_color().replicate(1,N);
-    glyphColors.block(b(b.rows()-1),3*currVec,1,3)=directional::selected_vector_glyph_color();
+    glyphColors.row(b(b.rows()-1))=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
+    glyphColors.block(b(b.rows()-1),3*currVec,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
   }
   
   viewer.set_field(rawField, glyphColors);
+  viewer.set_singularities(singVertices, singIndices);
+  
   
 }
 

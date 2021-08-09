@@ -13,3 +13,5 @@ viewer encapsulation branch TODO:
 11. face-skipping glyph drawing
 12. Weird power-field alignment
 13. reverse-engineer picking and editing single vectors
+14. Streamlines with faces rather than cylinders
+15.  allow default combed colorings in faces

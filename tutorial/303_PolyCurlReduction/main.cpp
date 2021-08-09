@@ -57,7 +57,7 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 void update_triangle_mesh()
 {
   if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
-    viewer.set_mesh_colors(directional::default_mesh_color());
+    viewer.set_mesh_colors(directional::DirectionalViewer::default_mesh_color());
   }else{  //curl viewing - currently averaged to the face
     Eigen::VectorXd currCurl = AE2F*(viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
     igl::jet(currCurl, 0.0,curlMaxOrig, CMesh);
@@ -72,15 +72,15 @@ void update_raw_field_mesh()
   using namespace Eigen;
   
   if ((viewingMode==ORIGINAL_CURL) || (viewingMode==OPTIMIZED_CURL)){
-    viewer.toggle_seams();
-    viewer.toggle_singularities();
-    viewer.toggle_field();
+    viewer.toggle_seams(false);
+    viewer.toggle_singularities(false);
+    viewer.toggle_field(false);
   } else {
-    viewer.toggle_seams();
-    viewer.toggle_singularities();
-    viewer.toggle_field();
-    viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF));
-    viewer.set_singularities(N, (viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
+    viewer.toggle_seams(true);
+    viewer.toggle_singularities(true);
+    viewer.toggle_field(true);
+    viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF));
+    viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
     viewer.set_seams(EV, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
   }
   

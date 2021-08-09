@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
   // Convert it to raw field
   directional::power_to_raw(V,F,powerField,3,rawField, true);
   
-  directional::streamlines_init(V, F, rawField, sl_data, sl_state);
+  directional::streamlines_init(V, F, rawField, Eigen::VectorXi(),3,sl_data, sl_state);
   
   //triangle mesh
   viewer.set_mesh(V,F);

@@ -42,9 +42,9 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 void update_triangle_mesh()
 {
   if ((viewingMode==ORIGINAL_FIELD)||(viewingMode==OPTIMIZED_FIELD)){
-    CMesh=directional::default_mesh_color().replicate(F.rows(),1);
+    CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
     for (int i = 0; i < b.rows(); i++)
-      CMesh.row(b(i)) = directional::selected_face_color();
+      CMesh.row(b(i)) = directional::DirectionalViewer::selected_face_color();
   }else{
     Eigen::VectorXd currConjugacy = (viewingMode==ORIGINAL_CONJUGACY ? conjugacyOrig: conjugacyConjugate);
     igl::jet(currConjugacy, 0.0,conjMaxOrig, CMesh);
@@ -59,12 +59,15 @@ void update_raw_field_mesh()
   using namespace Eigen;
   
   if ((viewingMode==ORIGINAL_CONJUGACY) || (viewingMode==OPTIMIZED_CONJUGACY)){
-    viewer.toggle_field();
-    viewer.toggle_singularities();
-    viewer.toggle_seams();
+    viewer.toggle_field(false);
+    viewer.toggle_singularities(false);
+    viewer.toggle_seams(false);
   } else {
-    viewer.set_field(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate, directional::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate));
-    viewer.set_singularities(N, viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj, viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj);
+    viewer.toggle_field(true);
+    viewer.toggle_singularities(true);
+    viewer.toggle_seams(true);
+    viewer.set_field(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate, directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate));
+    viewer.set_singularities(viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj, viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj);
   }
   
 }

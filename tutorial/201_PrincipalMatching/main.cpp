@@ -39,8 +39,8 @@ void update_raw_field_mesh()
     zeroInFace(i)=(EF(FE(currF,i),0)==currF ? matching(FE(currF,i)) : -matching(FE(currF,i)));
   }
   
-  Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(F.rows(),N);
-  glyphColors.row(currF)=directional::indexed_glyph_colors(rawField.row(currF));
+  Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(F.rows(),N);
+  glyphColors.row(currF)=directional::DirectionalViewer::indexed_glyph_colors(rawField.row(currF));
   for (int i=0;i<N;i++)
     for (int j=0;j<3;j++)
       glyphColors.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphColors.row(currF).segment(3*i,3);
@@ -118,7 +118,7 @@ int main()
   update_raw_field_mesh();
   
   //singularity mesh
-  viewer.set_singularities(N, singVertices, singIndices);
+  viewer.set_singularities(singVertices, singIndices);
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

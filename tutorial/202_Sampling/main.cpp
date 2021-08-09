@@ -80,10 +80,10 @@ void update_directional_field()
   viewer.set_field(rawField);
   
   if (viewingMode==TRIVIAL_ONE_SING)
-    viewer.set_singularities(N, singVertices, singIndices);
+    viewer.set_singularities(singVertices, singIndices);
    
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    viewer.set_singularities(N, prinSingVertices, prinSingIndices);
+    viewer.set_singularities(prinSingVertices, prinSingIndices);
   
 }
 
@@ -150,10 +150,10 @@ int main()
   singIndices(1)=N;
   
   //triangle mesh
-  Eigen::MatrixXd C=directional::default_mesh_color().replicate(F.rows(),1);
+  Eigen::MatrixXd C=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
   
   for (int i = 0; i < b.rows(); i++)
-    C.row(b(i)) = directional::selected_face_color();
+    C.row(b(i)) = directional::DirectionalViewer::selected_face_color();
   
   viewer.set_mesh(V, F, C);
   viewer.data().show_lines=false;
