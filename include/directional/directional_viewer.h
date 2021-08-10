@@ -23,7 +23,7 @@
 namespace directional
   {
   
-#define NUMBER_OF_SUBMESHES 6  //triangle mesh, field, singularities, seams, streamlines, edge-diamond mesh
+#define NUMBER_OF_SUBMESHES 7  //triangle mesh, field, singularities, seams, streamlines, edge-diamond mesh, isolines
   
   class DirectionalViewer: public igl::opengl::glfw::Viewer{
   private:
@@ -34,10 +34,9 @@ namespace directional
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
     std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
     
-    int N;              //degree of field
+    std::vector<int> N;              //degrees of fields
     std::vector<Eigen::MatrixXd> fieldVList;
     std::vector<Eigen::MatrixXi> fieldFList;
-    
     
   public:
     DirectionalViewer(){}
@@ -75,11 +74,10 @@ namespace directional
           edgeVList.resize(meshNum+1);
           edgeFList.resize(meshNum+1);
           edgeFEList.resize(meshNum+1);
-          //CList.resize(meshNum+1);
-          
+          N.resize(meshNum+1);
+      
           VList[meshNum]=V;
           FList[meshNum]=F;
-          //CList[meshNum]=C;
         }
         
       }
@@ -164,17 +162,17 @@ namespace directional
       set_mesh_colors(CMesh,meshNum);
       
       //coloring field
-      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N[meshNum]);
       for (int i=0;i<selectedFaces.rows();i++)
-        glyphColors.row(selectedFaces(i))=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
+        glyphColors.row(selectedFaces(i))=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N[meshNum]);
       
       set_field_colors(glyphColors,meshNum);
     }
     
     void IGL_INLINE set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
     {
-      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N);
-      glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N);
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N[meshNum]);
+      glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N[meshNum]);
       glyphColors.block(selectedFace,3*selectedVector,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
       set_field_colors(glyphColors, meshNum);
     }
@@ -190,7 +188,7 @@ namespace directional
       
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      N=rawField.cols()/3;
+      N[meshNum]=rawField.cols()/3;
       directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
@@ -206,7 +204,7 @@ namespace directional
         fieldColors=default_glyph_color();
       
       Eigen::MatrixXd CField;
-      directional::glyph_lines_mesh(FList[meshNum], N, fieldColors, CField);
+      directional::glyph_lines_mesh(FList[meshNum], N[meshNum], fieldColors, CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
     }
     
@@ -217,7 +215,7 @@ namespace directional
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(VList[meshNum], FList[meshNum], N, singVertices, singIndices, default_singularity_colors(N), VSings, FSings, CSings);
+      directional::singularity_spheres(VList[meshNum], FList[meshNum], N[meshNum], singVertices, singIndices, default_singularity_colors(N[meshNum]), VSings, FSings, CSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_colors(CSings);
@@ -252,6 +250,29 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_mesh(VStream, FStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_colors(CStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_lines = false;
+    }
+    
+    void IGL_INLINE set_isolines(const Eigen::MatrixXd& P1,
+                                 const Eigen::MatrixXd& P2,
+                                 const Eigen::VectorXi& funcNum,
+                                 const int meshNum=0,
+                                 const double isolineRadiusRatio=0.03)
+    {
+      Eigen::MatrixXd VIso, CIso;
+      Eigen::MatrixXi FIso;
+      
+      Eigen::MatrixXd funcColors = isoline_colors();
+      Eigen::MatrixXd CFunc;
+      CFunc.resize(funcNum.size(),3);
+      for (int i=0;i<funcNum.size();i++)
+        CFunc.row(i)=funcColors.row(funcNum(i));
+      
+      directional::line_cylinders(P1,P2, isolineRadiusRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]), CFunc, 4, VIso, FIso, CIso);
+      
+      data_list[NUMBER_OF_SUBMESHES*meshNum+6].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+6].set_mesh(VIso, FIso);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+6].set_colors(CIso);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+6].show_lines = false;
     }
     
     void IGL_INLINE set_uv(const Eigen::MatrixXd UV,
@@ -294,6 +315,10 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=active;
     }
     
+    void IGL_INLINE toggle_isolines(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+6].show_faces=active;
+    }
+    
     void IGL_INLINE toggle_texture(const bool active, const int meshNum=0){
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
     }
@@ -323,6 +348,30 @@ namespace directional
     static Eigen::RowVector3d IGL_INLINE selected_vector_glyph_color(){
       return Eigen::RowVector3d(0.0,1.0,0.5);
     }
+    
+    //Colors by indices in each directional object.
+    static Eigen::MatrixXd IGL_INLINE isoline_colors(){
+      
+      Eigen::Matrix<double, 15,3> glyphPrincipalColors;
+      glyphPrincipalColors<< 0.0,0.5,1.0,
+      1.0,0.5,0.0,
+      0.0,1.0,0.5,
+      1.0,0.0,0.5,
+      0.5,0.0,1.0,
+      0.5,1.0,0.0,
+      1.0,0.5,0.5,
+      0.5,1.0,0.5,
+      0.5,0.5,1.0,
+      0.5,1.0,1.0,
+      1.0,0.5,1.0,
+      1.0,1.0,0.5,
+      0.0,1.0,1.0,
+      1.0,0.0,1.0,
+      1.0,1.0,0.0;
+      
+      return glyphPrincipalColors;
+    }
+    
     
     //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
     static Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
