@@ -66,6 +66,7 @@ namespace directional
         if ((V.rows()==F.rows())||(meshColors.rows()!=V.rows()))  //assume face_based was meant
           data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
+        data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
         
         
         if (VList.size()<meshNum+1){

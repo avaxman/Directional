@@ -101,7 +101,7 @@ namespace directional
                                    const double sizeRatio = 1.25)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, rawField, glyphColors, l/6, l/30,  l/200, fieldV, fieldF, fieldC);
+    glyph_lines_mesh(V, F, rawField, glyphColors, l/3, l/15,  l/2000, fieldV, fieldF, fieldC);
   }
   
   //A version that just delivers (updated) colors)

@@ -171,7 +171,6 @@ int main(int argc, char *argv[])
  
   //triangle mesh setup
   viewer.set_mesh(V, F);
-  viewer.data().show_lines=false;
   update_triangle_mesh();
   update_raw_field_mesh();
   
