@@ -54,24 +54,15 @@ void update_viewer()
 {
   if (viewingMode==FIELD){
     //viewer.set_mesh_colors(directional::DirectionalViewer::default_mesh_color());
-    viewer.toggle_uv(false);
-    viewer.toggle_field(true);
-    viewer.toggle_seams(true);
+    viewer.set_active(true,0);
+    viewer.set_active(false,1);
   } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
     //viewer.set_mesh_colors(directional::default_mesh_color());
-    viewer.set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull);
-    viewer.toggle_uv(true);
-    viewer.toggle_field(false);
-    viewer.toggle_seams(false);
+    viewer.set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull,1);
+    viewer.set_active(true,1);
+    viewer.set_active(false,0);
   }
 }
-
-void update_raw_field_mesh()
-{
-  for (int i=1;i<4;i++)  //hide all other meshes
-    viewer.data_list[i].show_faces=(viewingMode==FIELD);
-}
-
 
 // Handle keyboard input
 bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
@@ -130,11 +121,21 @@ int main()
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
-  //raw field mesh
-  viewer.set_mesh(VMeshWhole, FMeshWhole);
+  //viewer cut (texture) and whole (field) meshes
+  viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(), 0);
+  viewer.set_mesh(VMeshCut, FMeshCut,directional::DirectionalViewer::default_mesh_color(), 1);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
   viewer.set_seams(EV, combedMatching);
+  viewer.set_texture(texture_R,texture_G,texture_B,1);
+  
+  viewer.toggle_texture(false,0);
+  viewer.toggle_field(true,0);
+  viewer.toggle_seams(true,0);
+  
+  viewer.toggle_texture(true,1);
+  viewer.toggle_field(false,1);
+  viewer.toggle_seams(false,1);
   
   update_viewer();
   

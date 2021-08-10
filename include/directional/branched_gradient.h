@@ -8,6 +8,8 @@
 #ifndef branched_gradient_h
 #define branched_gradient_h
 
+#include <igl/doublearea.h>
+
 
 namespace directional{
   

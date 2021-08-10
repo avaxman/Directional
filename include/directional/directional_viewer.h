@@ -258,16 +258,15 @@ namespace directional
                            const int meshNum=0)
     {
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_uv(UV);
-      data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=true;
+      //data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=true;
     }
     
-    void IGL_INLINE set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& textureMat, const int meshNum=0)
+    void IGL_INLINE set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
+                                const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& G,
+                                const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& B,
+                                const int meshNum=0)
     {
-      int textureSize=textureMat.rows()/3;
-      
-      data_list[NUMBER_OF_SUBMESHES*meshNum].set_texture(textureMat.block(0,0,textureSize,textureMat.cols()),
-                                                         textureMat.block(textureSize,0,textureSize,textureMat.cols()),
-                                                         textureMat.block(2*textureSize,0,textureSize,textureMat.cols()));
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_texture(R,G,B);
     }
     
     void IGL_INLINE set_active(const bool active, const int meshNum=0){
@@ -295,7 +294,7 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=active;
     }
     
-    void IGL_INLINE toggle_uv(const bool active, const int meshNum=0){
+    void IGL_INLINE toggle_texture(const bool active, const int meshNum=0){
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
     }
     
