@@ -73,54 +73,16 @@ ViewingModes viewingMode=COARSE_FIELD;
 
 void update_viewer()
 {
-  if (viewingMode==COARSE_FIELD){
-    viewer.set_active(true, 0);
-    viewer.set_active(false, 1);
-    viewer.toggle_field(true,0);
-    viewer.toggle_texture(false,0);
-    viewer.toggle_edge_data(false,0);
-  }
-  
-  if (viewingMode==COARSE_CURL){
-    viewer.set_active(true, 0);
-    viewer.set_active(false, 1);
-    viewer.toggle_field(false,0);
-    viewer.toggle_texture(false,0);
-    viewer.toggle_edge_data(true,0);
-  }
-  
-  if (viewingMode==COARSE_PARAMETERIZATION){
-    viewer.set_active(true, 0);
-    viewer.set_active(false, 1);
-    viewer.toggle_field(false,0);
-    viewer.toggle_texture(true,0);
-    viewer.toggle_edge_data(false,0);
-  }
-  
-  if (viewingMode==FINE_FIELD){
-    viewer.set_active(false, 0);
-    viewer.set_active(true, 1);
-    viewer.toggle_field(true,1);
-    viewer.toggle_texture(false,1);
-    viewer.toggle_edge_data(false,1);
-  }
-  
-  if (viewingMode==FINE_CURL){
-    viewer.set_active(false, 0);
-    viewer.set_active(true, 1);
-    viewer.toggle_field(false,1);
-    viewer.toggle_texture(false,1);
-    viewer.toggle_edge_data(true,1);
-  }
-  
-  if (viewingMode==FINE_PARAMETERIZATION){
-    viewer.set_active(false, 0);
-    viewer.set_active(true, 1);
-    viewer.toggle_field(false,1);
-    viewer.toggle_texture(true,1);
-    viewer.toggle_edge_data(false,1);
-  }
-
+  viewer.set_active(viewingMode==COARSE_FIELD || viewingMode==COARSE_CURL, 0);
+  viewer.set_active(viewingMode==FINE_FIELD || viewingMode==FINE_CURL, 1);
+  viewer.set_active(viewingMode==COARSE_PARAMETERIZATION, 2);
+  viewer.set_active(viewingMode==FINE_PARAMETERIZATION, 3);
+  viewer.toggle_field(viewingMode==COARSE_FIELD,0);
+  viewer.toggle_field(viewingMode==FINE_FIELD,1);
+  viewer.toggle_seams(viewingMode==COARSE_FIELD,0);
+  viewer.toggle_seams(viewingMode==FINE_FIELD,1);
+  viewer.toggle_edge_data(viewingMode==COARSE_CURL,0);
+  viewer.toggle_edge_data(viewingMode==FINE_CURL,1);
 }
 
 // Handle keyboard input
@@ -257,14 +219,22 @@ int main(int argc, char *argv[])
   viewer.set_field(combedFieldCoarse,Eigen::MatrixXd(),0);
   viewer.set_singularities(singVerticesCoarse,singIndicesCoarse,0);
   viewer.set_seams(EVCoarse, combedMatchingCoarse,0);
-  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVCoarse, FECoarse, EFCoarse);
+  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVCoarse, FECoarse, EFCoarse,0);
   
   //fine mesh
   viewer.set_mesh(VFine, FFine, Eigen::MatrixXd(), 1);
   viewer.set_field(combedFieldFine,Eigen::MatrixXd(),1);
   viewer.set_singularities(singVerticesFine,singIndicesFine,1);
   viewer.set_seams(EVFine, combedMatchingFine,1);
-  viewer.set_edge_data(curlFine, curlFine.minCoeff(), curlFine.maxCoeff(), EVFine, FEFine, EFFine);
+  viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVFine, FEFine, EFFine,1);
+  
+  //coarse texture mesh
+  viewer.set_mesh(VCutCoarse, FCutCoarse, Eigen::MatrixXd(), 2);
+  viewer.set_uv(cutFullUVCoarse,2);
+  
+  //coarse texture mesh
+  viewer.set_mesh(VCutFine, FCutCoarse, Eigen::MatrixXd(), 3);
+  viewer.set_uv(cutFullUVFine,3);
   
   // Update view
   update_viewer();

@@ -24,6 +24,13 @@ namespace directional
   {
   
 #define NUMBER_OF_SUBMESHES 7  //triangle mesh, field, singularities, seams, streamlines, edge-diamond mesh, isolines
+#define TRI_MESH 0
+#define FIELD_MESH 1
+#define SING_MESH 2
+#define SEAMS_MESH 3
+#define STREAMLINE_MESH 4
+#define EDGE_DIAMOND_MESH 5
+#define ISOLINES_MESH 6
   
   class DirectionalViewer: public igl::opengl::glfw::Viewer{
   private:
