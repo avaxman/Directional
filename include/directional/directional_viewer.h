@@ -323,6 +323,11 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
     }
     
+    void IGL_INLINE toggle_edge_data(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
+    }
+    
     //static functions for default values
     //Mesh colors
     static Eigen::RowVector3d IGL_INLINE default_mesh_color(){
