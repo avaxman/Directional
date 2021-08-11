@@ -154,9 +154,7 @@ namespace directional
       igl::parula(edgeFData, minRange,maxRange, C);
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_colors(C);
       
-      data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=false;
-      data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
-      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=true;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=false;
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_lines=false;
       
       selected_data_index=NUMBER_OF_SUBMESHES*meshNum+5;
@@ -302,6 +300,10 @@ namespace directional
         data_list[i].show_faces=active;
     }
     
+    void IGL_INLINE toggle_mesh(const bool active, const int meshNum=0){
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=active;
+    }
+    
     void IGL_INLINE toggle_mesh_edges(const bool active, const int meshNum=0){
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
     }
@@ -330,9 +332,10 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
     }
     
+    //disabling the original mesh
     void IGL_INLINE toggle_edge_data(const bool active, const int meshNum=0){
       data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=active;
-      data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
+      //data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
     }
     
     //static functions for default values

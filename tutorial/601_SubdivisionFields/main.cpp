@@ -73,10 +73,10 @@ ViewingModes viewingMode=COARSE_FIELD;
 
 void update_viewer()
 {
-  viewer.set_active(viewingMode==COARSE_FIELD || viewingMode==COARSE_CURL, 0);
-  viewer.set_active(viewingMode==FINE_FIELD || viewingMode==FINE_CURL, 1);
-  viewer.set_active(viewingMode==COARSE_PARAMETERIZATION, 2);
-  viewer.set_active(viewingMode==FINE_PARAMETERIZATION, 3);
+  viewer.toggle_mesh(viewingMode==COARSE_FIELD, 0);
+  viewer.toggle_mesh(viewingMode==FINE_FIELD, 1);
+  viewer.toggle_mesh(viewingMode==COARSE_PARAMETERIZATION, 2);
+  viewer.toggle_mesh(viewingMode==FINE_PARAMETERIZATION, 3);
   viewer.toggle_field(viewingMode==COARSE_FIELD,0);
   viewer.toggle_field(viewingMode==FINE_FIELD,1);
   viewer.toggle_seams(viewingMode==COARSE_FIELD,0);
@@ -231,10 +231,12 @@ int main(int argc, char *argv[])
   //coarse texture mesh
   viewer.set_mesh(VCutCoarse, FCutCoarse, Eigen::MatrixXd(), 2);
   viewer.set_uv(cutFullUVCoarse,2);
+  viewer.toggle_texture(true,2);
   
   //coarse texture mesh
   viewer.set_mesh(VCutFine, FCutCoarse, Eigen::MatrixXd(), 3);
   viewer.set_uv(cutFullUVFine,3);
+  viewer.toggle_texture(true,3);
   
   // Update view
   update_viewer();
