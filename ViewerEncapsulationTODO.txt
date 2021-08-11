@@ -14,4 +14,9 @@ viewer encapsulation branch TODO:
 12. Weird power-field alignment
 13. reverse-engineer picking and editing single vectors
 14. Streamlines with faces rather than cylinders
-15.  allow default combed colorings in faces
+15. allow default combed colorings in faces
+16. Encapsulate isolines/streamlines completely
+17. index_glyph_colors not accepting fields
+18. encapsulate color choices from user.
+19. Setting mesh separate from color
+20. Separate boundary and cycle singularities.
