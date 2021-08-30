@@ -13,9 +13,10 @@
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
 #include <igl/edge_topology.h>
-#include <igl/parallel_transport_angles.h>
+//#include <igl/parallel_transport_angles.h>
 #include <igl/per_face_normals.h>
-#include <igl/parallel_transport_angles.h>
+//#include <igl/parallel_transport_angles.h>
+#include <igl/boundary_loop.h>
 #include <directional/dual_cycles.h>
 
 
@@ -47,7 +48,7 @@ namespace directional
   }
   
   
-  // minimal version without precomputed cycles or inner edges, returning only vertex singularities
+  // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
   IGL_INLINE void effort_to_indices(const Eigen::MatrixXd& V,
                                     const Eigen::MatrixXi& F,
                                     const Eigen::MatrixXi& EV,
@@ -72,7 +73,14 @@ namespace directional
     Eigen::VectorXi indices(V.rows());
     for (int i=0;i<V.rows();i++)
       indices(i)=fullIndices(vertex2cycle(i));
-  
+    
+    //removing boundary indices
+   std::vector<std::vector<int> > L;
+    igl::boundary_loop(F, L);
+    for (int j=0;j<L.size();j++)
+      for (int k=0;k<L[j].size();k++)
+        indices(L[j][k])=0;
+                    
     std::vector<int> singVerticesList;
     std::vector<int> singIndicesList;
     for (int i=0;i<V.rows();i++)
@@ -81,8 +89,8 @@ namespace directional
         singIndicesList.push_back(indices(i));
       }
     
-    singVertices.conservativeResize(singVerticesList.size());
-    singIndices.conservativeResize(singIndicesList.size());
+    singVertices.resize(singVerticesList.size());
+    singIndices.resize(singIndicesList.size());
     for (int i=0;i<singVerticesList.size();i++){
       singVertices(i)=singVerticesList[i];
       singIndices(i)=singIndicesList[i];

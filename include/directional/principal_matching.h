@@ -31,7 +31,7 @@ namespace directional
   //  matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
   //  effort: #E principal matching efforts.
   //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
-  //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N).
+  //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N). This discludes boundary vertices (boundary cycles have their own index along generator cycles)
   IGL_INLINE void principal_matching(const Eigen::MatrixXd& V,
                                      const Eigen::MatrixXi& F,
                                      const Eigen::MatrixXi& EV,

@@ -15,6 +15,7 @@
 #include <directional/singularity_spheres.h>
 #include <directional/seam_lines.h>
 #include <directional/edge_diamond_mesh.h>
+#include <directional/branched_isolines.h>
 
 
 

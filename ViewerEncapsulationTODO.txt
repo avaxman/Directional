@@ -1,7 +1,7 @@
 viewer encapsulation branch TODO:
 
-1. index_prescription without basis cycles (and encapsulating all the rest of the technical data).
-2. nasty callback thing?
+1. index_prescription without basis cycles (and encapsulating all the rest of the technical data
+2. nasty callback thing? not much to do now
 3. power_field normalization option + remove _representative_ relation.
 4. Partial PV constraints
 5. Explicit choice of seams
@@ -11,12 +11,12 @@ viewer encapsulation branch TODO:
 9. assertions for everything
 10. color schemes for fields
 11. face-skipping glyph drawing
-12. Weird power-field alignment
+12. Weird power-field alignment - DONE
 13. reverse-engineer picking and editing single vectors
 14. Streamlines with faces rather than cylinders
 15. allow default combed colorings in faces
-16. Encapsulate isolines/streamlines completely
+16. Encapsulate isolines/streamlines completely - encapsulated isolines
 17. index_glyph_colors not accepting fields
 18. encapsulate color choices from user.
 19. Setting mesh separate from color
-20. Separate boundary and cycle singularities.
+20. Separate boundary and cycle singularities - DONE

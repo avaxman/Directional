@@ -89,6 +89,7 @@ int main()
   for (int i=0;i<NUM_N;i++){
     directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField[i], matching[i], effort[i],singVertices[i], singIndices[i]);
     
+    
     directional::IntegrationData intData(N[i]);
     std::cout<<"Setting up Integration N="<<N[i]<<std::endl;
     directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField[i], matching[i], singVertices[i], intData, VMeshCut[i], FMeshCut[i], combedField[i], combedMatching[i]);
@@ -102,38 +103,10 @@ int main()
     
     std::cout<<"Done!"<<std::endl;
     
-    //raw field mesh
-        
-    //removing boundary vertices from indices for clarity
-    std::vector<std::vector<int> > L;
-    std::vector<int> singVerticesList, singIndicesList;
-    igl::boundary_loop(FMeshWhole, L);
-    for (int l=0;l<singVertices[i].size();l++){
-      bool found=false;
-      for (int j=0;j<L.size();j++)
-           for (int k=0;k<L[j].size();k++)
-               if (L[j][k]==singVertices[i][l]){
-                 found = true; break;
-               }
-      
-      if (!found){
-        singVerticesList.push_back(singVertices[i][l]);
-        singIndicesList.push_back(singIndices[i][l]);
-      }
-    }
-    
-    singVertices[i].resize(singVerticesList.size());
-    singIndices[i].resize(singIndicesList.size());
-    for (int j=0;j<singVerticesList.size();j++){
-      singVertices[i][j]=singVerticesList[j];
-      singIndices[i][j]=singIndicesList[j];
-    }
-    
     viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(),i);
     viewer.set_field(combedField[i], directional::DirectionalViewer::indexed_glyph_colors(combedField[i]), i);
-    viewer.set_singularities(singVertices[i], singIndices[i]);
+    viewer.set_singularities(singVertices[i], singIndices[i],i);
     viewer.set_seams(EV, combedMatching[i], i);
-    
     viewer.set_isolines(VMeshCut[i], FMeshCut[i],NFunction[i],i);
 
     
