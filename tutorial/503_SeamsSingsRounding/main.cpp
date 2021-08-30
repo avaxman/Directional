@@ -49,9 +49,9 @@ void update_viewer()
   }
   
   if (viewingMode==SEAMS_ROUNDING)
-    viewer.set_isolines(P1Seams, P2Seams, funcNumSeams);
+    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSeams);
   if (viewingMode==SINGS_ROUNDING)
-    viewer.set_isolines(P1Sings, P2Sings, funcNumSings);
+    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSings);
 }
 
 
@@ -105,9 +105,6 @@ int main()
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
   viewer.set_seams(EV, combedMatching);
-  
-  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionSeams, P1Seams, P2Seams, funcNumSeams);
-  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionSings, P1Sings, P2Sings, funcNumSings);
 
   viewer.callback_key_down = &key_down;
   viewer.launch();

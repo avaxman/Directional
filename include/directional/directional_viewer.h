@@ -257,12 +257,18 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_lines = false;
     }
     
-    void IGL_INLINE set_isolines(const Eigen::MatrixXd& P1,
-                                 const Eigen::MatrixXd& P2,
-                                 const Eigen::VectorXi& funcNum,
+    void IGL_INLINE set_isolines(const Eigen::MatrixXd& cutV,
+                                 const Eigen::MatrixXi& cutF,
+                                 const Eigen::MatrixXd& vertexFunction,
                                  const int meshNum=0,
                                  const double isolineRadiusRatio=0.03)
     {
+      
+      
+      Eigen::MatrixXd P1, P2;
+      Eigen::VectorXi funcNum;
+      directional::branched_isolines(cutV, cutF, vertexFunction, P1, P2, funcNum);
+      
       Eigen::MatrixXd VIso, CIso;
       Eigen::MatrixXi FIso;
       

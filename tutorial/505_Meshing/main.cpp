@@ -121,11 +121,7 @@ int main()
     viewer.set_field(combedField[i], directional::DirectionalViewer::indexed_glyph_colors(combedField[i]), i);
     viewer.set_singularities(singVertices[i], singIndices[i]);
     viewer.set_seams(EV, combedMatching[i], i);
-    
-    Eigen::MatrixXd P1, P2;
-    Eigen::VectorXi funcNum;
-    directional::branched_isolines(VMeshCut[i], FMeshCut[i],NFunction[i], P1, P2, funcNum);
-    viewer.set_isolines(P1,P2,funcNum,i);
+    viewer.set_isolines(VMeshCut[i], FMeshCut[i],NFunction[i],i);
   }
   
   update_viewer();

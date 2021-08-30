@@ -49,9 +49,9 @@ void update_viewer()
   }
   
   if (viewingMode==SIGN_SYMMETRY)
-    viewer.set_isolines(P1Sign, P2Sign, funcNumSign);
+    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSign);
   if (viewingMode==TRI_SYMMETRY)
-    viewer.set_isolines(P1Tri, P2Tri, funcNumTri);
+    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionTri);
 }
 
 // Handle keyboard input
@@ -105,9 +105,6 @@ int main()
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
   viewer.set_seams(EV, combedMatching);
-  
-  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionSign, P1Sign, P2Sign, funcNumSign);
-  directional::branched_isolines(VMeshCut, FMeshCut, NFunctionTri, P1Tri, P2Tri, funcNumTri);
   
   update_viewer();
  
