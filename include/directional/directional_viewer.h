@@ -16,6 +16,7 @@
 #include <directional/seam_lines.h>
 #include <directional/edge_diamond_mesh.h>
 #include <directional/branched_isolines.h>
+#include <directional/bar_chain.h>
 
 
 
@@ -262,13 +263,17 @@ namespace directional
                                  const Eigen::MatrixXi& cutF,
                                  const Eigen::MatrixXd& vertexFunction,
                                  const int meshNum=0,
-                                 const double isolineRadiusRatio=0.03)
+                                 const double sizeRatio=10.0)
     {
       
       
-      Eigen::MatrixXd P1, P2;
+      Eigen::MatrixXd isoV, isoN;
+      Eigen::MatrixXi isoE;
       Eigen::VectorXi funcNum;
-      directional::branched_isolines(cutV, cutF, vertexFunction, P1, P2, funcNum);
+      std::cout<<"setting isolines"<<std::endl;
+      directional::branched_isolines(cutV, cutF, vertexFunction, isoV, isoE, isoN, funcNum);
+      
+      double l = sizeRatio*igl::avg_edge_length(cutV, cutF);
       
       Eigen::MatrixXd VIso, CIso;
       Eigen::MatrixXi FIso;
@@ -279,7 +284,17 @@ namespace directional
       for (int i=0;i<funcNum.size();i++)
         CFunc.row(i)=funcColors.row(funcNum(i));
       
-      directional::line_cylinders(P1,P2, isolineRadiusRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]), CFunc, 4, VIso, FIso, CIso);
+      Eigen::MatrixXd P1, P2;
+      P1.conservativeResize(isoE.rows(),3);
+      P2.conservativeResize(isoE.rows(),3);
+      for (int j=0;j<isoE.rows();j++){
+        P1.row(j)=isoV.row(isoE(j,0));
+        P2.row(j)=isoV.row(isoE(j,1));
+      }
+
+      //directional::line_cylinders(P1,P2, sizeRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]), CFunc, 4, VIso, FIso, CIso);
+      
+      directional::bar_chains(isoV,isoE,isoN,l,l/2000,CFunc, VIso, FIso, CIso);
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+6].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+6].set_mesh(VIso, FIso);
