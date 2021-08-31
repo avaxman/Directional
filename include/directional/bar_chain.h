@@ -45,10 +45,10 @@ namespace directional
     MatrixXd VBar(4,3);
     MatrixXi TBar(2,3);
     
-    VBar<<0.0,-width/2.0,0.0,
-    0.0,width/2.0,0.0,
-    1.0,width/2.0,0.0,
-    1.0,-width/2.0,0.0;
+    VBar<<0.0,0.0,0.0,
+    0.0,width,0.0,
+    1.0,width,0.0,
+    1.0,0.0,0.0;
     
     /*double angle=igl::PI/4;
     
@@ -73,7 +73,8 @@ namespace directional
       YAxis*=XAxis.norm();
       
       Matrix3d R; R<<XAxis, YAxis, ZAxis;
-      RowVector3d translation = isoV.row(isoE(i,0))+height*isoN.row(i);
+      RowVector3d midway; midway<<0.0,width/2.0,0.0;
+      RowVector3d translation = isoV.row(isoE(i,0))+midway+height*isoN.row(i);
       
       V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar*R+translation.replicate(VBar.rows(),1);
       T.block(TBar.rows()*i,0,TBar.rows(),3)=TBar.array()+VBar.rows()*i;
