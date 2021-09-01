@@ -270,7 +270,7 @@ namespace directional
       Eigen::MatrixXd isoV, isoN;
       Eigen::MatrixXi isoE;
       Eigen::VectorXi funcNum;
-      std::cout<<"setting isolines"<<std::endl;
+      
       directional::branched_isolines(cutV, cutF, vertexFunction, isoV, isoE, isoN, funcNum);
       
       double l = sizeRatio*igl::avg_edge_length(cutV, cutF);

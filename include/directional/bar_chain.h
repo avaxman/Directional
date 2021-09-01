@@ -45,17 +45,12 @@ namespace directional
     MatrixXd VBar(4,3);
     MatrixXi TBar(2,3);
     
+    //Using some margins to offset the intersection problem with face sides
+    double margin = 0.1;
     VBar<<0.0,0.0,0.0,
     0.0,-1.0,0.0,
     1.0,-1.0,0.0,
     1.0,0.0,0.0;
-
-    /*double angle=igl::PI/4;
-    
-    VBar<<0.0,0.0,0.0,
-    (width/2.0)*(cos(angle/2.0)/sin(angle/2.0)), -width/2.0, 0.0,
-    1.0,0.0,0.0,
-    (width/2.0)*(cos(angle/2.0)/sin(angle/2.0)), width/2.0, 0.0;*/
     
     TBar<<0,1,2,
     2,3,0;
@@ -72,12 +67,9 @@ namespace directional
       YAxis.normalize();
       YAxis*=width;
       
-      Matrix3d R; R<<XAxis, YAxis, ZAxis;
-      RowVector3d midway=YAxis/2.0;
+      Matrix3d R; R<<(1.0+margin*2.0)*XAxis, YAxis, ZAxis;
+      RowVector3d midway=YAxis/2.0-XAxis*margin;
       RowVector3d translation = isoV.row(isoE(i,0))+midway+height*isoN.row(i);
-      
-      //std::cout<<"isoV.row(isoE(i,0)): "<<isoV.row(isoE(i,0))<<std::endl;
-     // std::cout<<"VBar*R+translation.replicate(VBar.rows(),1): "<<VBar*R+translation.replicate(VBar.rows(),1)<<std::endl;
       
       V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar*R+translation.replicate(VBar.rows(),1);
       T.block(TBar.rows()*i,0,TBar.rows(),3)=TBar.array()+VBar.rows()*i;
