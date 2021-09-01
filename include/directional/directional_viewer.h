@@ -263,7 +263,7 @@ namespace directional
                                  const Eigen::MatrixXi& cutF,
                                  const Eigen::MatrixXd& vertexFunction,
                                  const int meshNum=0,
-                                 const double sizeRatio=10.0)
+                                 const double sizeRatio=0.1)
     {
       
       

@@ -46,10 +46,10 @@ namespace directional
     MatrixXi TBar(2,3);
     
     VBar<<0.0,0.0,0.0,
-    0.0,width,0.0,
-    1.0,width,0.0,
+    0.0,-1.0,0.0,
+    1.0,-1.0,0.0,
     1.0,0.0,0.0;
-    
+
     /*double angle=igl::PI/4;
     
     VBar<<0.0,0.0,0.0,
@@ -70,11 +70,14 @@ namespace directional
       RowVector3d ZAxis=isoN.row(i);
       RowVector3d YAxis =ZAxis.cross(XAxis);
       YAxis.normalize();
-      YAxis*=XAxis.norm();
+      YAxis*=width;
       
       Matrix3d R; R<<XAxis, YAxis, ZAxis;
-      RowVector3d midway; midway<<0.0,width/2.0,0.0;
+      RowVector3d midway=YAxis/2.0;
       RowVector3d translation = isoV.row(isoE(i,0))+midway+height*isoN.row(i);
+      
+      //std::cout<<"isoV.row(isoE(i,0)): "<<isoV.row(isoE(i,0))<<std::endl;
+     // std::cout<<"VBar*R+translation.replicate(VBar.rows(),1): "<<VBar*R+translation.replicate(VBar.rows(),1)<<std::endl;
       
       V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar*R+translation.replicate(VBar.rows(),1);
       T.block(TBar.rows()*i,0,TBar.rows(),3)=TBar.array()+VBar.rows()*i;
