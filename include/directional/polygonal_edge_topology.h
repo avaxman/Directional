@@ -25,8 +25,8 @@ namespace hedra
     // EV   #E by 2, Stores the edge description as pair of indices to vertices
     // FE : #F by max(D), Stores the Face-Edge relation
     // EF : #E by 2: Stores the Edge-Face relation
-    // EFi: #E by 2: corresponding to EF and stores the relative position of the edge in the face (e.g., if the edge is (v1,v2) and the face has (vx,vy,v2,v1,vz,va), then the value is 3)
-    // EFs: #E by 2: if the edge is oriented positively or negatively in the face (e.g. in the example above we get -1)
+    // EFi: #E by 2: corresponding to EF and stores the relative position of the edge in the face (e.g., if the edge is (v1,v2) and the face has (vx,vy,v2,v1,vz,va), then the value is 2)
+    // FEs: #F by max(D): if the edge is oriented positively or negatively in the face (e.g. in the example above we get -1)
     // InnerEdges: indices into EV of which edges are internal (not boundary)
 
     IGL_INLINE void polygonal_edge_topology(const Eigen::VectorXi& D,
