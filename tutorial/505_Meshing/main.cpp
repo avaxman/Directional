@@ -120,7 +120,7 @@ int main()
     viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(),i);
     viewer.set_field(combedField[i], directional::DirectionalViewer::indexed_glyph_colors(combedField[i]), i);
     viewer.set_singularities(singVertices[i], singIndices[i]);
-    viewer.set_seams(EV, combedMatching[i], i);
+    viewer.set_seams(EV, FE, EF, combedMatching[i], i);
     viewer.set_isolines(VMeshCut[i], FMeshCut[i],NFunction[i],i);
   }
   

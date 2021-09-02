@@ -218,14 +218,14 @@ int main(int argc, char *argv[])
   viewer.set_mesh(VCoarse, FCoarse, Eigen::MatrixXd(), 0);
   viewer.set_field(combedFieldCoarse,Eigen::MatrixXd(),0);
   viewer.set_singularities(singVerticesCoarse,singIndicesCoarse,0);
-  viewer.set_seams(EVCoarse, combedMatchingCoarse,0);
+  viewer.set_seams(EVCoarse, FECoarse, EFCoarse, combedMatchingCoarse,0);
   viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVCoarse, FECoarse, EFCoarse,0);
   
   //fine mesh
   viewer.set_mesh(VFine, FFine, Eigen::MatrixXd(), 1);
   viewer.set_field(combedFieldFine,Eigen::MatrixXd(),1);
   viewer.set_singularities(singVerticesFine,singIndicesFine,1);
-  viewer.set_seams(EVFine, combedMatchingFine,1);
+  viewer.set_seams(EVFine, FEFine, EFFine, combedMatchingFine,1);
   viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVFine, FEFine, EFFine,1);
   
   //coarse texture mesh

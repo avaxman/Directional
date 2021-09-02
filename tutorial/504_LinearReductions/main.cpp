@@ -9,7 +9,6 @@
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/curl_matching.h>
-#include <directional/combing.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
 #include <directional/cut_mesh_with_singularities.h>
@@ -104,7 +103,7 @@ int main()
   viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(), 0);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, combedMatching);
+  viewer.set_seams(EV, FE, EF, combedMatching);
   
   update_viewer();
  

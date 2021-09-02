@@ -104,7 +104,7 @@ int main()
   viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(), 0);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, combedMatching);
+  viewer.set_seams(EV, FE, EF, combedMatching);
 
   viewer.callback_key_down = &key_down;
   viewer.launch();

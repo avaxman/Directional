@@ -126,7 +126,7 @@ int main()
   viewer.set_mesh(VMeshCut, FMeshCut,directional::DirectionalViewer::default_mesh_color(), 1);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, combedMatching);
+  viewer.set_seams(EV, FE, EF, combedMatching);
   viewer.set_texture(texture_R,texture_G,texture_B,1);
   
   viewer.toggle_texture(false,0);
