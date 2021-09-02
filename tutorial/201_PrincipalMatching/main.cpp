@@ -31,7 +31,7 @@ void update_triangle_mesh()
 
 void update_raw_field_mesh()
 {
-  //TODO: allow default combed colorings in faces
+  //configuring just part of the faces to have combed coloring
   Eigen::Vector3i otherFaces;
   Eigen::Vector3i zeroInFace;
   for (int i=0;i<3;i++){
@@ -40,7 +40,7 @@ void update_raw_field_mesh()
   }
   
   Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(F.rows(),N);
-  glyphColors.row(currF)=directional::DirectionalViewer::indexed_glyph_colors(rawField.row(currF));
+  glyphColors.row(currF)=directional::DirectionalViewer::indexed_glyph_colors(rawField.row(currF), false);
   for (int i=0;i<N;i++)
     for (int j=0;j<3;j++)
       glyphColors.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphColors.row(currF).segment(3*i,3);

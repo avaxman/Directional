@@ -42,16 +42,13 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 void update_triangle_mesh()
 {
   if ((viewingMode==ORIGINAL_FIELD)||(viewingMode==OPTIMIZED_FIELD)){
-    CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
-    for (int i = 0; i < b.rows(); i++)
-      CMesh.row(b(i)) = directional::DirectionalViewer::selected_face_color();
+    viewer.set_selected_faces(b);
   }else{
     Eigen::VectorXd currConjugacy = (viewingMode==ORIGINAL_CONJUGACY ? conjugacyOrig: conjugacyConjugate);
-    igl::jet(currConjugacy, 0.0,conjMaxOrig, CMesh);
+    viewer.set_face_data(currConjugacy,0.0,conjMaxOrig);
   }
-  viewer.set_mesh_colors(CMesh);
-}
 
+}
 
 void update_raw_field_mesh()
 {
@@ -131,7 +128,6 @@ int main(int argc, char *argv[])
   
   //triangle mesh setup
   viewer.set_mesh(V, F);
-  viewer.data().show_lines=false;
   update_triangle_mesh();
   update_raw_field_mesh();
 

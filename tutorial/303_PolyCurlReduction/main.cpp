@@ -36,9 +36,6 @@ Eigen::VectorXi singVerticesOrig, singVerticesCF;
 Eigen::VectorXi singIndicesOrig, singIndicesCF;
 
 
-//for averaging curl to faces, for visualization
-Eigen::SparseMatrix<double> AE2F;
-
 double curlMax, curlMaxOrig;
 int N;
 int iter=0;
@@ -56,13 +53,9 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 
 void update_triangle_mesh()
 {
-  if ((viewingMode ==ORIGINAL_FIELD)||(viewingMode ==OPTIMIZED_FIELD)){
-    viewer.set_mesh_colors(directional::DirectionalViewer::default_mesh_color());
-  }else{  //curl viewing - currently averaged to the face
-    Eigen::VectorXd currCurl = AE2F*(viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
-    igl::jet(currCurl, 0.0,curlMaxOrig, CMesh);
-    viewer.set_mesh_colors(CMesh);
-  }
+  Eigen::VectorXd currCurl = (viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
+    viewer.set_edge_data(currCurl, 0.0,curlMaxOrig, EV, FE, EF);
+
 }
 
 
@@ -75,13 +68,17 @@ void update_raw_field_mesh()
     viewer.toggle_seams(false);
     viewer.toggle_singularities(false);
     viewer.toggle_field(false);
+    viewer.toggle_mesh(false);
+    viewer.toggle_edge_data(true);
   } else {
     viewer.toggle_seams(true);
     viewer.toggle_singularities(true);
     viewer.toggle_field(true);
+    viewer.toggle_mesh(true);
+    viewer.toggle_edge_data(false);
     viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF));
     viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
-    viewer.set_seams(EV, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
+    viewer.set_seams(EV, FE, EF, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
   }
   
 }
@@ -173,15 +170,6 @@ int main(int argc, char *argv[])
   viewer.set_mesh(V, F);
   update_triangle_mesh();
   update_raw_field_mesh();
-  
-  //creating the AE2F operator
-  std::vector<Eigen::Triplet<double> > AE2FTriplets;
-  for (int i=0;i<EF.rows();i++){
-    AE2FTriplets.push_back(Eigen::Triplet<double>(EF(i,0), i,1.0));
-    AE2FTriplets.push_back(Eigen::Triplet<double>(EF(i,1), i,1.0));
-  }
-  AE2F.resize(F.rows(), EF.rows());
-  AE2F.setFromTriplets(AE2FTriplets.begin(), AE2FTriplets.end());
   
   viewer.callback_key_down = &key_down;
   viewer.launch();

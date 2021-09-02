@@ -64,7 +64,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
     if ((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Left){
       currF=fid;
       Eigen::VectorXi selectedFaces(1); selectedFaces(0)=currF;
-      viewer.set_selected_faces(selectedFaces);
+      directionalViewer->set_selected_faces(selectedFaces);
       directionalViewer->set_selected_vector(currF, currVec);
       return true;
     }

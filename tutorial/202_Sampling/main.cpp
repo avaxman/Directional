@@ -149,14 +149,9 @@ int main()
   singIndices(0)=N;
   singIndices(1)=N;
   
-  //triangle mesh
-  Eigen::MatrixXd C=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
-  
-  for (int i = 0; i < b.rows(); i++)
-    C.row(b(i)) = directional::DirectionalViewer::selected_face_color();
-  
-  viewer.set_mesh(V, F, C);
-  viewer.data().show_lines=false;
+  //viewing mesh
+  viewer.set_mesh(V, F);
+  viewer.set_selected_faces(b);
   update_directional_field();
   
   viewer.callback_key_down = &key_down;

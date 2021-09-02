@@ -27,7 +27,7 @@ Eigen::MatrixXd V, BC, FN;
 Eigen::MatrixXd CMesh;
 Eigen::MatrixXd rawField;
 Eigen::VectorXd rotationField;
-std::vector<std::vector<int>> cycleFaces;
+std::vector<Eigen::VectorXi> cycleFaces;
 int currCycle=0;
 
 directional::DirectionalViewer viewer;
@@ -40,16 +40,6 @@ bool drag = false;
 bool _select = false;
 
 double globalRotation=0;
-
-void update_triangle_mesh()
-{
-  CMesh=directional::DirectionalViewer::default_mesh_color().replicate(F.rows(),1);
-  
-  for (int i=0;i<cycleFaces[currCycle].size();i++)
-    CMesh.row(cycleFaces[currCycle][i])<<directional::DirectionalViewer::selected_face_color();
-  
-  viewer.set_mesh_colors(CMesh);
-}
 
 void update_raw_field()
 {
@@ -73,6 +63,7 @@ void update_raw_field()
   directional::representative_to_raw(V,F,representative,N, rawField);
   
   viewer.set_field(rawField);
+  viewer.set_selected_faces(cycleFaces[currCycle]);
 }
 
 void update_singularities()
@@ -105,7 +96,7 @@ bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   }
   return true;
 }
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool key_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -135,7 +126,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
           currCycle++;
         else
           currCycle = basisCycles.rows()-numBoundaries-numGenerators;
-        update_triangle_mesh();
+          viewer.set_selected_faces(cycleFaces[currCycle]);
       }
       break;
     case 'G':
@@ -146,7 +137,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
           currCycle++;
         else
           currCycle = basisCycles.rows() - numGenerators;
-        update_triangle_mesh();
+        viewer.set_selected_faces(cycleFaces[currCycle]);
       }
       break;
     case 'W':
@@ -159,7 +150,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 
-bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
 {
   if ((key != 0)||(!_select))
     return false;
@@ -176,7 +167,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     bc.maxCoeff(&maxCol);
     int currVertex=F(fid, maxCol);
     currCycle=vertex2cycle(currVertex);
-    update_triangle_mesh();
+    viewer.set_selected_faces(cycleFaces[currCycle]);
     return true;
   }
   return false;
@@ -220,21 +211,25 @@ int main()
   std::cout<<"#boundaries: "<<numBoundaries<<std::endl;
   
   //collecting cycle faces for visualization
-  cycleFaces.resize(basisCycles.rows());
+  std::vector<std::vector<int> > cycleFaceList(basisCycles.rows());
   for (int k=0; k<basisCycles.outerSize(); ++k){
     for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it){
       int f1=EF(innerEdges(it.col()),0);
       int f2=EF(innerEdges(it.col()),1);
       if (f1!=-1)
-        cycleFaces[it.row()].push_back(f1);
+        cycleFaceList[it.row()].push_back(f1);
       if (f2!=-1)
-        cycleFaces[it.row()].push_back(f2);
+        cycleFaceList[it.row()].push_back(f2);
     }
   }
   
+  cycleFaces.resize(basisCycles.rows());
+  for (int i=0;i<cycleFaceList.size();i++)
+    cycleFaces[i] = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(cycleFaceList[i].data(), cycleFaceList[i].size());
+  
   //triangle mesh setup
   viewer.set_mesh(V, F);  
-  update_triangle_mesh();
+  viewer.set_selected_faces(cycleFaces[currCycle]);
   update_raw_field();
   update_singularities();
   

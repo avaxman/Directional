@@ -17,6 +17,7 @@
 #include <directional/edge_diamond_mesh.h>
 #include <directional/branched_isolines.h>
 #include <directional/bar_chain.h>
+#include <directional/halfedge_highlights.h>
 
 
 
@@ -231,12 +232,44 @@ namespace directional
     }
     
     void IGL_INLINE set_seams(const Eigen::MatrixXi& EV,
+                              const Eigen::MatrixXi& FE,
+                              const Eigen::MatrixXi& EF,
+
                               const Eigen::VectorXi& combedMatching,
                               const int meshNum=0)
     {
+      
+      
       Eigen::MatrixXd VSeams, CSeams;
       Eigen::MatrixXi FSeams;
-      directional::seam_lines(VList[meshNum], FList[meshNum],EV,combedMatching, default_seam_color(), VSeams,FSeams,CSeams);
+      
+      Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(FList[meshNum].rows(),3,-1);
+      
+      //figuring out the highlighted halfedges
+      for (int i=0;i<combedMatching.size();i++){
+        if (combedMatching(i)==0)
+          continue;
+        
+        int inFaceIndex=-1;
+        
+        if (EF(i,0)!=-1){
+          for (int j=0;j<3;j++)
+              if (FE(EF(i,0),j)==i)
+                inFaceIndex=j;
+          hlHalfedges(EF(i,0), inFaceIndex)=0;
+        }
+        inFaceIndex=-1;
+        if (EF(i,1)!=-1){
+          for (int j=0;j<3;j++)
+            if (FE(EF(i,1),j)==i)
+              inFaceIndex=j;
+          hlHalfedges(EF(i,1), inFaceIndex)=0;
+        }
+      }
+      
+      //directional::seam_lines(VList[meshNum], FList[meshNum],EV,combedMatching, default_seam_color(), VSeams,FSeams,CSeams);
+      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams,FSeams,CSeams);
+
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_mesh(VSeams, FSeams);
       data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_colors(CSeams);

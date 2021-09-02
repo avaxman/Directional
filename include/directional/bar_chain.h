@@ -37,7 +37,8 @@ namespace directional
                              const Eigen::MatrixXd& barColors,
                              Eigen::MatrixXd& V,
                              Eigen::MatrixXi& T,
-                             Eigen::MatrixXd& C)
+                             Eigen::MatrixXd& C,
+                             const double margin = 0.1)
   {
     using namespace Eigen;
     
@@ -45,8 +46,7 @@ namespace directional
     MatrixXd VBar(4,3);
     MatrixXi TBar(2,3);
     
-    //Using some margins to offset the intersection problem with face sides
-    double margin = 0.1;
+    //Using some margins to offset the intersection problem with face sides - that's a hack until figuring out the edge trapezoid thing
     VBar<<0.0,0.0,0.0,
     0.0,-1.0,0.0,
     1.0,-1.0,0.0,

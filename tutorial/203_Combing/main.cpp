@@ -54,6 +54,7 @@ int main()
   //computing
   directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort,singVertices, singIndices);
   directional::combing(V,F, EV, EF, FE, rawField, matching, combedField);
+  //to get the (mostly trivial) matching of the combed field
   directional::principal_matching(V, F,EV, EF, FE, combedField, combedMatching, combedEffort,singVertices, singIndices);
   
   //Mesh setup
@@ -61,7 +62,7 @@ int main()
   viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, combedMatching);  //TODO: allow to define seams in several ways
+  viewer.set_seams(EV, FE, EF, combedMatching);  //TODO: allow to define seams in several ways
   
   viewer.callback_key_down = &key_down;
   viewer.launch();

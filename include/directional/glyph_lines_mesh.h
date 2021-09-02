@@ -98,7 +98,7 @@ namespace directional
                                    Eigen::MatrixXd &fieldV,
                                    Eigen::MatrixXi &fieldF,
                                    Eigen::MatrixXd &fieldC,
-                                   const double sizeRatio = 1.25)
+                                   const double sizeRatio = 1.1)
   {
     double l = sizeRatio*igl::avg_edge_length(V, F);
     glyph_lines_mesh(V, F, rawField, glyphColors, l/3, l/15,  l/2000, fieldV, fieldF, fieldC);

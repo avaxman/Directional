@@ -43,8 +43,6 @@ void update_raw_field_mesh()
   directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  
-  
 }
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
