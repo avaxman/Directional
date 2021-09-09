@@ -22,7 +22,7 @@ namespace directional
   //  V, F:          original mesh
   //  hlHalfedges:    #F by 3 color indicators of the highlighted halfedges (corresponding to face corners where the edge i os corner [i,(i+1)%3]). -1 means not highlighted
   //  hlColors:      #scolors for highlighted, into which hlHalfedges indexes
-  //  widthRatio:     width of highlight bar w.r.t. face hight (default = 0.05)
+  //  widthRatio:     width of highlight bar w.r.t. face hight
   // Output:
   //  hlV:              #V by 3 highlight mesh coordinates
   //  hlT:              #T by 3 mesh triangles
@@ -35,8 +35,8 @@ namespace directional
                                       Eigen::MatrixXd& hlV,
                                       Eigen::MatrixXi& hlT,
                                       Eigen::MatrixXd& hlC,
-                                      const double widthRatio = 0.05,
-                                      const double height = 1e-4)
+                                      const double widthRatio,
+                                      const double height)
   {
     using namespace Eigen;
 

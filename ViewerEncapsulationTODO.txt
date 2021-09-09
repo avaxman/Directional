@@ -1,7 +1,7 @@
 
 Viewer release:
 
-1. User-configurable sizings/color schemes
+1. User-configurable sizings - DONE
 2. sparse field viewing
 3. assertions for everything
 4. Encapsulate streamlines

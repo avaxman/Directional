@@ -18,16 +18,14 @@
 #include <directional/branched_isolines.h>
 #include <directional/bar_chain.h>
 #include <directional/halfedge_highlights.h>
-
-
+#include <igl/edge_topology.h>
 
 
 //This file contains the default libdirectional visualization paradigms
 namespace directional
   {
   
-#define NUMBER_OF_SUBMESHES 7  //triangle mesh, field, singularities, seams, streamlines, edge-diamond mesh, isolines
-#define TRI_MESH 0
+#define NUMBER_OF_SUBMESHES 7
 #define FIELD_MESH 1
 #define SING_MESH 2
 #define SEAMS_MESH 3
@@ -39,6 +37,9 @@ namespace directional
   private:
     std::vector<Eigen::MatrixXd> VList;  //vertices of mesh list
     std::vector<Eigen::MatrixXi> FList;  //faces of mesh list
+    std::vector<Eigen::MatrixXi> EFList;  //edge information for the mesh
+    std::vector<Eigen::MatrixXi> FEList;
+    std::vector<Eigen::MatrixXi> EVList;
     
     std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
@@ -54,43 +55,46 @@ namespace directional
     
     void IGL_INLINE set_mesh(const Eigen::MatrixXd& V,
                              const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+                             const Eigen::MatrixXi& EV,
+                             const Eigen::MatrixXi& FE,
+                             const Eigen::MatrixXi& EF,
                              const int meshNum=0)
     {
       Eigen::MatrixXd meshColors;
-      if (C.rows()==0)
-        meshColors=default_mesh_color();
-      else
-        meshColors=C;
+      meshColors=default_mesh_color();
       
       if (NUMBER_OF_SUBMESHES*(meshNum+1)>data_list.size()){  //allocating until there
         int currDLSize=data_list.size();
         for (int i=currDLSize;i<NUMBER_OF_SUBMESHES*(meshNum+1);i++)
           append_mesh();
-        
-        selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
-        
-        data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
-        data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(V,F);
-        if ((V.rows()==F.rows())||(meshColors.rows()!=V.rows()))  //assume face_based was meant
-          data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
-        data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
-        data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
-        
-        
-        if (VList.size()<meshNum+1){
-          VList.resize(meshNum+1);
-          FList.resize(meshNum+1);
-          edgeVList.resize(meshNum+1);
-          edgeFList.resize(meshNum+1);
-          edgeFEList.resize(meshNum+1);
-          N.resize(meshNum+1);
-      
-          VList[meshNum]=V;
-          FList[meshNum]=F;
-        }
-        
       }
+        
+      selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
+      data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(V,F);
+      if ((V.rows()==F.rows())||(meshColors.rows()!=V.rows()))  //assume face_based was meant
+        data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
+      data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
+      
+      
+      if (VList.size()<meshNum+1){
+        VList.resize(meshNum+1);
+        FList.resize(meshNum+1);
+        edgeVList.resize(meshNum+1);
+        edgeFList.resize(meshNum+1);
+        edgeFEList.resize(meshNum+1);
+        EVList.resize(meshNum+1)
+        FEList.resize(meshNum+1)
+        EFList.resize(meshNum+1)
+        N.resize(meshNum+1);
+      }
+    
+      VList[meshNum]=V;
+      FList[meshNum]=F;
+      EVList[meshNum]=EV;
+      FEList[meshNum]=FE;
+      EFList[meshNum]=EF;
     }
     
     void IGL_INLINE set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -107,8 +111,8 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=true;
       if (edgeVList[meshNum].size()!=0){
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=false;
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_lines=false;
+        data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=false;
+        data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_lines=false;
       }
       selected_data_index=NUMBER_OF_SUBMESHES*meshNum;
       //CList[meshNum]=C;
@@ -142,11 +146,11 @@ namespace directional
                                   const Eigen::MatrixXi& EF,
                                   const int meshNum=0)
     {
-      
+    
       if (edgeVList[meshNum].size()==0){  //allocate
         edge_diamond_mesh(VList[meshNum],FList[meshNum],EV,EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].clear();
-        data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
+        data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].clear();
+        data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
       }
       
       Eigen::VectorXd edgeFData(edgeFList[meshNum].rows());
@@ -155,12 +159,12 @@ namespace directional
       
       Eigen::MatrixXd C;
       igl::parula(edgeFData, minRange,maxRange, C);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+5].set_colors(C);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_colors(C);
       
-      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=false;
-      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_lines=false;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=false;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_lines=false;
       
-      selected_data_index=NUMBER_OF_SUBMESHES*meshNum+5;
+      selected_data_index=NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH;
     }
     
     void IGL_INLINE set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
@@ -187,7 +191,9 @@ namespace directional
     
     void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                              const int meshNum=0)
+                              const int meshNum=0,
+                              const int sizeRatio = 1.1,
+                              const int sparsity=0)
     
     {
       Eigen::MatrixXd fieldColors=C;
@@ -197,11 +203,11 @@ namespace directional
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
       N[meshNum]=rawField.cols()/3;
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], rawField, fieldColors, VField, FField, CField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_mesh(VField,FField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_lines=false;
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField, fieldColors, VField, FField, CField,sizeRatio, sparsity);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
     }
     
     void IGL_INLINE set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -213,30 +219,31 @@ namespace directional
       
       Eigen::MatrixXd CField;
       directional::glyph_lines_mesh(FList[meshNum], N[meshNum], fieldColors, CField);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].set_colors(CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
     }
     
     
     void IGL_INLINE set_singularities(const Eigen::VectorXi& singVertices,
                                       const Eigen::VectorXi& singIndices,
-                                      const int meshNum=0)
+                                      const int meshNum=0,
+                                      const double radiusRatio=1.25)
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(VList[meshNum], FList[meshNum], N[meshNum], singVertices, singIndices, default_singularity_colors(N[meshNum]), VSings, FSings, CSings);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_mesh(VSings,FSings);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].set_colors(CSings);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_lines=false;
+      directional::singularity_spheres(VList[meshNum], FList[meshNum], N[meshNum], singVertices, singIndices, default_singularity_colors(N[meshNum]), VSings, FSings, CSings, radiusRatio);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_lines=false;
       
     }
     
     void IGL_INLINE set_seams(const Eigen::MatrixXi& EV,
                               const Eigen::MatrixXi& FE,
                               const Eigen::MatrixXi& EF,
-
                               const Eigen::VectorXi& combedMatching,
-                              const int meshNum=0)
+                              const int meshNum=0,
+                              const double widthRatio = 0.05)
     {
       
       
@@ -267,13 +274,12 @@ namespace directional
         }
       }
       
-      //directional::seam_lines(VList[meshNum], FList[meshNum],EV,combedMatching, default_seam_color(), VSeams,FSeams,CSeams);
-      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams,FSeams,CSeams);
+      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams,FSeams,CSeams, widthRatio, 1e-4);
 
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_mesh(VSeams, FSeams);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].set_colors(CSeams);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_lines = false;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_colors(CSeams);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;
     }
     
     void IGL_INLINE set_streamlines(const Eigen::MatrixXd& P1,
@@ -286,10 +292,10 @@ namespace directional
       Eigen::MatrixXi FStream;
       directional::line_cylinders(P1,P2, width, C, 4, VStream, FStream, CStream);
       
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_mesh(VStream, FStream);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].set_colors(CStream);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_lines = false;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_mesh(VStream, FStream);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_colors(CStream);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_lines = false;
     }
     
     void IGL_INLINE set_isolines(const Eigen::MatrixXd& cutV,
@@ -325,21 +331,18 @@ namespace directional
         P2.row(j)=isoV.row(isoE(j,1));
       }
 
-      //directional::line_cylinders(P1,P2, sizeRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]), CFunc, 4, VIso, FIso, CIso);
-      
       directional::bar_chains(isoV,isoE,isoN,l,l/2000,CFunc, VIso, FIso, CIso);
       
-      data_list[NUMBER_OF_SUBMESHES*meshNum+6].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum+6].set_mesh(VIso, FIso);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+6].set_colors(CIso);
-      data_list[NUMBER_OF_SUBMESHES*meshNum+6].show_lines = false;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].clear();
+      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_colors(CIso);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_lines = false;
     }
     
     void IGL_INLINE set_uv(const Eigen::MatrixXd UV,
                            const int meshNum=0)
     {
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_uv(UV);
-      //data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=true;
     }
     
     void IGL_INLINE set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
@@ -364,23 +367,23 @@ namespace directional
     }
     
     void IGL_INLINE toggle_field(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+1].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_faces=active;
     }
     
     void IGL_INLINE toggle_singularities(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+2].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_faces=active;
     }
     
     void IGL_INLINE toggle_seams(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+3].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_faces=active;
     }
     
     void IGL_INLINE toggle_streamlines(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+4].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_faces=active;
     }
     
     void IGL_INLINE toggle_isolines(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+6].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_faces=active;
     }
     
     void IGL_INLINE toggle_texture(const bool active, const int meshNum=0){
@@ -389,7 +392,7 @@ namespace directional
     
     //disabling the original mesh
     void IGL_INLINE toggle_edge_data(const bool active, const int meshNum=0){
-      data_list[NUMBER_OF_SUBMESHES*meshNum+5].show_faces=active;
+      data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=active;
       //data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
     }
     
