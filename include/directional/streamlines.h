@@ -31,6 +31,7 @@ namespace directional
     Eigen::VectorXi matching;
     int nsample;                //  #S, number of sample points
     int degree;                 //  #N, degrees of the vector field
+    Eigen::VectorXi samples;    //all original faces
   };
   
   struct StreamlineState
@@ -39,6 +40,11 @@ namespace directional
     Eigen::MatrixXd end_point;          //  #N*S by 3 endpoints points of segment (stacked vertically for each degree)
     Eigen::MatrixXi current_face;       //  #S by N face indices (stacked horizontally for each degree)
     Eigen::MatrixXi current_direction;  //  #S by N field direction indices (stacked horizontally for each degree)
+    int numSteps;                       // number of steps taken so far
+    
+    Eigen::MatrixXd P1, P2;             //entire set of streamline segments
+    Eigen::VectorXi origFace, origVector; //original vectors from faces
+    Eigen::VectorXi timeSignature;        //time (in steps) of the current segment
     
   };
   

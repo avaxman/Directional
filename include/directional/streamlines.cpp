@@ -21,9 +21,9 @@
 
 namespace Directional {
 IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
-                                                       const Eigen::MatrixXi& EF,
-                                                       const int ringDistance,
-                                                       Eigen::VectorXi& samples)
+                                          const Eigen::MatrixXi& EF,
+                                          const int ringDistance,
+                                          Eigen::VectorXi& samples)
 {
   //creating adjacency matrix
   std::vector<Eigen::Triplet<int>> adjTris;
@@ -83,7 +83,7 @@ IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
 
 IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
                                               const Eigen::MatrixXi F,
-                                              const Eigen::MatrixXd &temp_field,
+                                              const Eigen::MatrixXd& temp_field,
                                               const Eigen::VectorXi& seedLocations,
                                               const int ringDistance,
                                               StreamlineData &data,
@@ -93,6 +93,8 @@ IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
   
   igl::edge_topology(V, F, data.EV, data.FE, data.EF);
   igl::triangle_triangle_adjacency(F, data.TT);
+  
+  state.numSteps=0;
   
   // prepare vector field
   // --------------------------
@@ -125,13 +127,13 @@ IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
   
   // create seeds for tracing
   // --------------------------
-  Eigen::VectorXi samples;
+ 
   int nsamples;
   
   if (seedLocations.rows()==0){
     assert(ringDistance>=0);
-    Directional::generate_sample_locations(F,data.EF,ringDistance,samples);
-    nsamples = data.nsample = samples.size();
+    Directional::generate_sample_locations(F,data.EF,ringDistance,data.samples);
+    nsamples = data.nsample = data.samples.size();
     nsamples = data.nsample;
     /*Eigen::VectorXd r;
     r.setRandom(nsamples, 1);
@@ -139,20 +141,25 @@ IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
     samples = (r.array() * F.rows()).cast<int>();
     data.nsample = nsamples;*/
   } else {
-    samples=seedLocations;
+    data.samples=seedLocations;
     nsamples = data.nsample = seedLocations.size();
   }
   
   Eigen::MatrixXd BC, BC_sample;
   igl::barycenter(V, F, BC);
-  igl::slice(BC, samples, 1, BC_sample);
+  igl::slice(BC, data.samples, 1, BC_sample);
   
   // initialize state for tracing vector field
   
   state.start_point = BC_sample.replicate(degree,1);
   state.end_point = state.start_point;
   
-  state.current_face = samples.replicate(1, degree);
+  state.current_face = data.samples.replicate(1, degree);
+  
+  /*state.P1 =state.start_point;
+  state.P2 =state.end_point;
+  state.origFace = state.current_face;
+  state.origVector.resize(state.origFace.rows(), state.)*/
   
   state.current_direction.setZero(nsamples, degree);
   for (int i = 0; i < nsamples; ++i)
@@ -167,6 +174,8 @@ IGL_INLINE void directional::streamlines_next(
                                       const StreamlineData & data,
                                       StreamlineState & state
                                       ){
+  
+  
   using namespace Eigen;
   using namespace std;
   
@@ -174,11 +183,20 @@ IGL_INLINE void directional::streamlines_next(
   int nsample = data.nsample;
   
   state.start_point = state.end_point;
+  state.numSteps++;
+  
+  Eigen::VectorXi currFace=Eigen::VectorXi::Zero(state.start_point.rows());
+  Eigen::VectorXi currVector=Eigen::VectorXi::Zero(state.start_point.rows());
+  Eigen::VectorXi currTime=Eigen::VectorXi::Zero(state.start_point.rows());
   
   for (int i = 0; i < degree; ++i)
   {
     for (int j = 0; j < nsample; ++j)
     {
+      currFace(j + nsample * i)=data.samples(j);
+      currVector(j + nsample * i)=i;
+      currTime(j + nsample * i)=state.numSteps;
+      
       int f0 = state.current_face(j,i);
       if (f0 == -1) // reach boundary
         continue;
@@ -186,6 +204,7 @@ IGL_INLINE void directional::streamlines_next(
       
       // the starting point of the vector
       const Eigen::RowVector3d &p = state.start_point.row(j + nsample * i);
+      
       // the direction where we are trying to go
       const Eigen::RowVector3d &r = data.field.block(f0, 3 * m0, 1, 3);
       
@@ -225,4 +244,17 @@ IGL_INLINE void directional::streamlines_next(
       }
     }
   }
+  
+  //aggregating
+  state.P1.conservativeResize(state.P1.rows()+state.start_point.rows(),3);
+  state.P2.conservativeResize(state.P2.rows()+state.end_point.rows(),3);
+  state.P1.block(state.P1.rows()-state.start_point.rows(),0,state.start_point.rows(),3)=state.start_point;
+  state.P2.block(state.P2.rows()-state.end_point.rows(),0,state.end_point.rows(),3)=state.end_point;
+  state.origFace.conservativeResize(state.origFace.size()+state.start_point.rows());
+  state.origVector.conservativeResize(state.origVector.size()+state.start_point.rows());
+  state.timeSignature.conservativeResize(state.timeSignature.size()+state.start_point.rows());
+  state.origFace.tail(state.start_point.rows())=currFace;
+  state.origVector.tail(state.end_point.rows())=currVector;
+  state.timeSignature.tail(state.end_point.rows())=currTime;
+  
 }

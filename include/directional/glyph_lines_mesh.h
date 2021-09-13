@@ -124,9 +124,9 @@ namespace directional
     normals.array() *= width;
     for (int i=0;i<sampledFaces.size();i++)
       for (int j=0;j<N;j++){
-        P1.row(i*N+j) = barycenters.row(sampledFaces(i));
-        P2.row(i*N+j) = rawField.block(sampledFaces(i),j*3,1,3);
-        vectNormals.row(i*N+j) = normals.row(sampledFaces(i));
+        P1.row(j*sampledFaces.size()+i) = barycenters.row(sampledFaces(i));
+        P2.row(j*sampledFaces.size()+i) = rawField.block(sampledFaces(i),j*3,1,3);
+        vectNormals.row(j*sampledFaces.size()+i) = normals.row(sampledFaces(i));
       }
     
     /*P1 = barycenters.replicate(N, 1);
@@ -137,14 +137,19 @@ namespace directional
     P2.array() *= length;
     P2 += P1;
     
+    
     // Duplicate colors so each glyph gets the proper color
     if (glyphColor.rows() == 1)
       vectorColors = glyphColor.replicate(P1.rows(), 1);
-    else if ((glyphColor.rows() == sampledFaces.rows())&&(glyphColor.cols()==3))
-      vectorColors = glyphColor.replicate(N, 1);
+    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3)){
+      MatrixXd sampledColors(sampledFaces.size(),3);
+      for (int i=0;i<sampledFaces.size();i++)
+        sampledColors.row(i)=glyphColor.row(sampledFaces(i));
+      vectorColors = sampledColors.replicate(N, 1);
+    }
     else{
       for (int i=0;i<N;i++)
-        vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
+        vectorColors.block(i*sampledFaces.rows(),0,sampledFaces.rows(),3)=glyphColor.block(0,3*i,sampledFaces.rows(),3);
     }
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
@@ -164,14 +169,14 @@ namespace directional
                                    Eigen::MatrixXi &fieldF,
                                    Eigen::MatrixXd &fieldC,
                                    const double sizeRatio,
-                                   const int sparsity)
+                                   const int sparsity=0)
   {
     double l = igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  1.1*l/1000.0, sparsity, fieldV, fieldF, fieldC);
+    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l/100.0, sparsity, fieldV, fieldF, fieldC);
   }
   
   //A version that just delivers (updated) colors)
-  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXi& F,
+  /*void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXi& F,
                                    const int N,
                                    const Eigen::MatrixXd &glyphColor,
                                    Eigen::MatrixXd &fieldC)
@@ -192,7 +197,7 @@ namespace directional
     directional::angled_arrows(vectorColors, fieldC);
     
     
-  }
+  }*/
   
   
   }

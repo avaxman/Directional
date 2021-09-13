@@ -18,6 +18,7 @@
 #include <directional/branched_isolines.h>
 #include <directional/bar_chain.h>
 #include <directional/halfedge_highlights.h>
+#include <directional/streamlines.h>
 #include <igl/edge_topology.h>
 
 
@@ -40,6 +41,11 @@ namespace directional
     std::vector<Eigen::MatrixXi> EFList;  //edge information for the mesh
     std::vector<Eigen::MatrixXi> FEList;
     std::vector<Eigen::MatrixXi> EVList;
+    
+    std::vector<Eigen::MatrixXd> rawField;
+    std::vector<Eigen::MatrixXd> fieldColors;
+    std::vector<directional::StreamlineData> slData;
+    std::vector<directional::StreamlineState> slState;
     
     std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
     std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
@@ -192,21 +198,26 @@ namespace directional
       set_field_colors(glyphColors, meshNum);
     }
     
-    void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
+    void IGL_INLINE set_field(const Eigen::MatrixXd& _rawField,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                               const int meshNum=0,
                               const double sizeRatio = 0.9,
                               const int sparsity=0)
     
     {
-      Eigen::MatrixXd fieldColors=C;
+      if (rawField.size()<meshNum+1)
+        rawField.resize(meshNum+1);
+      if (fieldColors.size()<meshNum+1)
+        fieldColors.resize(meshNum+1);
+      rawField[meshNum]=_rawField;
+      fieldColors[meshNum]=C;
       if (C.rows()==0)
-        fieldColors=default_glyph_color();
+        fieldColors[meshNum]=default_glyph_color();
       
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      N[meshNum]=rawField.cols()/3;
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField, fieldColors, VField, FField, CField,sizeRatio, sparsity);
+      N[meshNum]=rawField[meshNum].cols()/3;
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -214,15 +225,26 @@ namespace directional
     }
     
     void IGL_INLINE set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                                     const int meshNum=0)
+                                     const int meshNum=0,
+                                     const double sizeRatio = 0.9,
+                                     const int sparsity=0)
     {
-      Eigen::MatrixXd fieldColors=C;
+      if (fieldColors.size()<meshNum+1)
+        fieldColors.resize(meshNum+1);
+      fieldColors[meshNum]=C;
       if (C.rows()==0)
-        fieldColors=default_glyph_color();
+        fieldColors[meshNum]=default_glyph_color();
       
-      Eigen::MatrixXd CField;
-      directional::glyph_lines_mesh(FList[meshNum], N[meshNum], fieldColors, CField);
+      //directional::glyph_lines_mesh(FList[meshNum], N[meshNum], fieldColors, CField);
+     
+      //TODO: something more efficient than feeding the entire field again
+      Eigen::MatrixXd VField, CField;
+      Eigen::MatrixXi FField;
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
+      
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
+      data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
     }
     
     
@@ -285,20 +307,51 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;
     }
     
-    void IGL_INLINE set_streamlines(const Eigen::MatrixXd& P1,
-                                    const Eigen::MatrixXd& P2,
-                                    const Eigen::MatrixXd& C,
-                                    const int meshNum=0,
-                                    const double width=0.0005)
+    
+    
+    void IGL_INLINE init_streamlines(const int meshNum=0,
+                                     const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
+                                     const int sparsity=3)
     {
+      if (slData.size()<meshNum+1){
+        slData.resize(meshNum+1);
+        slState.resize(meshNum+1);
+      }
+      directional::streamlines_init(VList[meshNum], FList[meshNum], rawField[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      
+    }
+    
+    void IGL_INLINE advance_streamlines(const int meshNum=0,
+                                        const double widthRatio=0.02,
+                                        const double colorAttenuation = 0.5){
+      
+      directional::streamlines_next(VList[meshNum], FList[meshNum], slData[meshNum], slState[meshNum]);
+      double width = widthRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]);
+      
+      //generating colors according to original elements and their time signature
+      Eigen::MatrixXd slColors(slState[meshNum].P1.rows(),3);
+      
+      for (int i=0;i<slState[meshNum].origFace.size();i++){
+        if (fieldColors[meshNum].rows()==1)
+          slColors.row(i)=fieldColors[meshNum];
+        else{
+          //std::cout<<"slState[meshNum].origVector(i): "<<slState[meshNum].origVector(i)<<std::endl;
+          slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(i), 3*slState[meshNum].origVector(i), 1,3);
+          slColors.row(i).array()=slColors.row(i).array()*pow(2.0,colorAttenuation/(double)slState[meshNum].timeSignature(i));
+        }
+      }
+      
+          
       Eigen::MatrixXd VStream, CStream;
       Eigen::MatrixXi FStream;
-      directional::line_cylinders(P1,P2, width, C, 4, VStream, FStream, CStream);
-      
+      directional::line_cylinders(slState[meshNum].P1,slState[meshNum].P2, width, slColors, 4, VStream, FStream, CStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_mesh(VStream, FStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_colors(CStream);
       data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_lines = false;
+      
+      
+      
     }
     
     void IGL_INLINE set_isolines(const Eigen::MatrixXd& cutV,
