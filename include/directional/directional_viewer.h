@@ -55,13 +55,19 @@ namespace directional
     
     void IGL_INLINE set_mesh(const Eigen::MatrixXd& V,
                              const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXi& EV,
-                             const Eigen::MatrixXi& FE,
-                             const Eigen::MatrixXi& EF,
+                             const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
+                             const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
+                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi(),
                              const int meshNum=0)
     {
       Eigen::MatrixXd meshColors;
       meshColors=default_mesh_color();
+      Eigen::MatrixXi EV,FE,EF;
+      if (_EV.rows()==0){
+        igl::edge_topology(V,F,EV,FE,EF);
+      } else{
+        EV=_EV; FE=_FE; EF=_EF;
+      }
       
       if (NUMBER_OF_SUBMESHES*(meshNum+1)>data_list.size()){  //allocating until there
         int currDLSize=data_list.size();
@@ -84,9 +90,9 @@ namespace directional
         edgeVList.resize(meshNum+1);
         edgeFList.resize(meshNum+1);
         edgeFEList.resize(meshNum+1);
-        EVList.resize(meshNum+1)
-        FEList.resize(meshNum+1)
-        EFList.resize(meshNum+1)
+        EVList.resize(meshNum+1);
+        FEList.resize(meshNum+1);
+        EFList.resize(meshNum+1);
         N.resize(meshNum+1);
       }
     
@@ -141,14 +147,11 @@ namespace directional
     void IGL_INLINE set_edge_data(const Eigen::VectorXd& edgeData,
                                   const double minRange,
                                   const double maxRange,
-                                  const Eigen::MatrixXi& EV,
-                                  const Eigen::MatrixXi& FE,
-                                  const Eigen::MatrixXi& EF,
                                   const int meshNum=0)
     {
     
       if (edgeVList[meshNum].size()==0){  //allocate
-        edge_diamond_mesh(VList[meshNum],FList[meshNum],EV,EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
+        edge_diamond_mesh(VList[meshNum],FList[meshNum],EVList[meshNum],EFList[meshNum],edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
         data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].clear();
         data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
       }
@@ -192,7 +195,7 @@ namespace directional
     void IGL_INLINE set_field(const Eigen::MatrixXd& rawField,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                               const int meshNum=0,
-                              const int sizeRatio = 1.1,
+                              const double sizeRatio = 0.9,
                               const int sparsity=0)
     
     {

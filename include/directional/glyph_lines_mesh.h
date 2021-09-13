@@ -13,6 +13,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/avg_edge_length.h>
 #include <igl/colon.h>
+#include <igl/speye.h>
 #include <directional/representative_to_raw.h>
 #include <directional/angled_arrows.h>
 #include <Eigen/Core>
@@ -55,8 +56,6 @@ namespace directional
     MatrixXd normals;
     igl::per_face_normals(V, F, normals);
     int N=rawField.cols()/3;
-    
-    MatrixXd vectNormals = normals.replicate(N,1);
     
     double angle = 2*igl::PI/(double)(N);
     if (N==1) angle=igl::PI;
@@ -117,17 +116,17 @@ namespace directional
       
     } else igl::colon(0,1,F.rows()-1,sampledFaces);
     
+    MatrixXd vectNormals(sampledFaces.rows()*N,3);
     P1.resize(sampledFaces.rows() * N, 3);
     P2.resize(sampledFaces.rows() * N, 3);
     vectorColors.resize(sampledFaces.rows() * N, 3);
     
     normals.array() *= width;
-    //barycenters += normals;
-    
     for (int i=0;i<sampledFaces.size();i++)
       for (int j=0;j<N;j++){
-        P1.row(i*N+j) =  barycenters.row(i);
-        P2.row(i*N+j) = rawField.block(i,0,j*3,3);
+        P1.row(i*N+j) = barycenters.row(sampledFaces(i));
+        P2.row(i*N+j) = rawField.block(sampledFaces(i),j*3,1,3);
+        vectNormals.row(i*N+j) = normals.row(sampledFaces(i));
       }
     
     /*P1 = barycenters.replicate(N, 1);
@@ -141,7 +140,7 @@ namespace directional
     // Duplicate colors so each glyph gets the proper color
     if (glyphColor.rows() == 1)
       vectorColors = glyphColor.replicate(P1.rows(), 1);
-    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
+    else if ((glyphColor.rows() == sampledFaces.rows())&&(glyphColor.cols()==3))
       vectorColors = glyphColor.replicate(N, 1);
     else{
       for (int i=0;i<N;i++)
@@ -150,8 +149,6 @@ namespace directional
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
     Eigen::MatrixXi Fc, Fs;
-    // Draw boxes
-    //directional::line_boxes(P1, P2, vectNormals, width, height, vectorColors, fieldV, fieldF, fieldC);
     directional::angled_arrows(P1,P2,vectNormals, width/length, height, angle, vectorColors, fieldV, fieldF, fieldC);
     
     
@@ -169,8 +166,8 @@ namespace directional
                                    const double sizeRatio,
                                    const int sparsity)
   {
-    double l = sizeRatio*igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, EF, rawField, glyphColors, l/3, l/15,  l/2000, sparsity, fieldV, fieldF, fieldC);
+    double l = igl::avg_edge_length(V, F);
+    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  1.1*l/1000.0, sparsity, fieldV, fieldF, fieldC);
   }
   
   //A version that just delivers (updated) colors)
