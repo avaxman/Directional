@@ -22,9 +22,11 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   {
     case '1': directionalViewer->set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff()); break;
     case '2': directionalViewer->set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff()); break;
-    case '3': directionalViewer->set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), EV, FE, EF); break;
+    case '3': directionalViewer->set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff()); break;
     default: return false;
   }
+  directionalViewer->toggle_edge_data(key=='3');
+  directionalViewer->toggle_mesh(key!='3');
   return true;
 }
 

@@ -172,7 +172,7 @@ namespace directional
                                    const int sparsity=0)
   {
     double l = igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l/100.0, sparsity, fieldV, fieldF, fieldC);
+    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l/50.0, sparsity, fieldV, fieldF, fieldC);
   }
   
   //A version that just delivers (updated) colors)

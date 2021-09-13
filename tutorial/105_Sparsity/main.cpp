@@ -1,16 +1,18 @@
 #include <math.h>
 #include <igl/edge_topology.h>
-#include <igl/per_face_normals.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/principal_matching.h>
+#include <directional/power_field.h>
+#include <directional/power_to_raw.h>
 
-int N;
+int N=2;
 Eigen::MatrixXi F, EV, FE, EF;
 Eigen::MatrixXd V, rawField, normals;
 Eigen::VectorXi singVertices, singIndices, matching;
-Eigen::VectorXd vertexData, faceData, edgeData;
+Eigen::MatrixXcd powerField;
+int sparsity=0;
 
 directional::DirectionalViewer viewer;
 
@@ -20,37 +22,29 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
   switch (key)
   {
-    case '1': directionalViewer->set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff()); break;
-    case '2': directionalViewer->set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff()); break;
-    case '3': directionalViewer->set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), EV, FE, EF); break;
+    case '1': sparsity++; break;
+    case '2': sparsity--; break;
     default: return false;
   }
+  if (sparsity<0) sparsity = 0;
+  std::cout<<"Sparsity: "<<sparsity<<std::endl;
+  directionalViewer->set_field(rawField,Eigen::MatrixXd(),0,0.9*((double)sparsity+1.0),sparsity);
   return true;
 }
 
 int main()
 {
-  std::cout <<"1  Show Face-based values" << std::endl;
-  std::cout <<"2  Show Verex-based values" << std::endl;
-  std::cout <<"3  Show Edge-based values" << std::endl;
-  
-  igl::readOFF(TUTORIAL_SHARED_PATH "/eight.off", V, F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", N, rawField);
-  igl::edge_topology(V, F, EV, FE, EF);
-
-  //Face data - the x component of normals
-  igl::per_face_normals(V, F, normals);
-  faceData=normals.col(0);
-  
-  //vertex data: sin(z coordinate)
-  vertexData=sin(10.0*V.col(2).array());
-  
-  //Edge data - the (squared) effort of the field (under principal matching)
-  directional::principal_matching(V, F, EV, EF, FE, rawField, matching, edgeData, singVertices, singIndices);
-  edgeData.array()*=edgeData.array();
+  std::cout <<"1  Sparser field view" << std::endl;
+  std::cout <<"2  Denser field view" << std::endl;
+ 
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj", V, F);
+  Eigen::VectorXi bc(1); bc(0)=0;
+  Eigen::MatrixXd b(1,3); b.row(0)=V.row(F(0,1))-V.row(F(0,2));
+  directional::power_field(V, F, bc,b, N, powerField);
+  directional::power_to_raw(V,F,powerField,N,rawField, true);
   
   viewer.set_mesh(V,F);
-  viewer.set_field(rawField, Eigen::RowVector3d::Constant(1.0));
+  viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
   viewer.toggle_mesh_edges(false);
   
