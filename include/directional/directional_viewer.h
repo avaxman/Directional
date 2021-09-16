@@ -62,10 +62,10 @@ namespace directional
     
     void IGL_INLINE set_mesh(const Eigen::MatrixXd& V,
                              const Eigen::MatrixXi& F,
+                             const int meshNum=0,
                              const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
                              const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
-                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi(),
-                             const int meshNum=0)
+                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi())
     {
       Eigen::MatrixXd meshColors;
       meshColors=default_mesh_color();
@@ -312,14 +312,14 @@ namespace directional
       
       //uniting both meshes
       VSeams.resize(VSeams1.rows()+VSeams2.rows(),3);
-      VSeams.toprows(VSeams1.rows())=VSeams1;
-      VSeams.bottomrows(VSeams2.rows())=VSeams2;
-      TSeams.resize(TSeams1.rows()+TSeams2.rows(),3);
-      TSeams.toprows(TSeams1.rows())=TSeams1;
-      TSeams.bottomrows(TSeams2.rows())=TSeams2+VSeams1.rows();
+      VSeams.topRows(VSeams1.rows())=VSeams1;
+      VSeams.bottomRows(VSeams2.rows())=VSeams2;
+      FSeams.resize(FSeams1.rows()+FSeams2.rows(),3);
+      FSeams.topRows(FSeams1.rows())=FSeams1;
+      FSeams.bottomRows(FSeams2.rows())=FSeams2.array()+VSeams1.rows();
       CSeams.resize(CSeams1.rows()+CSeams2.rows(),3);
-      CSeams.toprows(CSeams1.rows())=CSeams1;
-      CSeams.bottomrows(CSeams2.rows())=CSeams2;
+      CSeams.topRows(CSeams1.rows())=CSeams1;
+      CSeams.bottomRows(CSeams2.rows())=CSeams2;
 
       data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);

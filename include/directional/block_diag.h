@@ -13,14 +13,14 @@ void block_diag(
 
   const size_t newRows = std::accumulate(matrices.begin(), matrices.end(), 0, [](const size_t& s1, const SMat* s2)-> size_t
   {
-	  std::cout << "s2: " << s2->rows() << std::endl;
+	  //std::cout << "s2: " << s2->rows() << std::endl;
 	  return s1 + s2->rows();
   });
   const size_t newCols = std::accumulate(matrices.begin(), matrices.end(), 0, [](const size_t& s1, const SMat* s2)-> size_t
   {
 	  return s1 + s2->cols();
   });
-  std::cout << "Creating block diag mat with " << newRows << ", " << newCols << std::endl;
+  //std::cout << "Creating block diag mat with " << newRows << ", " << newCols << std::endl;
   C = SMat(newRows, newCols);
 
   VectorXi colCount;
@@ -54,7 +54,7 @@ void block_diag(
 		cOff += matrices[i]->cols();
 	}
   C.makeCompressed();
-  std::cout << "Block diag created" << std::endl;
+  //std::cout << "Block diag created" << std::endl;
 }
 }
 

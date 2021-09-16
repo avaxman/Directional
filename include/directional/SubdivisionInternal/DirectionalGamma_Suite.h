@@ -162,7 +162,7 @@ namespace directional
 		Curl = Eigen::SparseMatrix<double>(N * EF.rows(), N * 3 * sFE.rows());
 		Curl.setFromTriplets(trips.begin(), trips.end());
 		Curl = Curl * G2ToG3;
-		std::cout << "Built matched curl" << std::endl;
+		//std::cout << "Built matched curl" << std::endl;
 	}
 
 	inline void Matched_Curl_To_Gamma3(
@@ -245,7 +245,7 @@ namespace directional
 				}
 			}
 		}
-		std::cout << "Matched_A_To_Gamma3 built" << std::endl;
+		//std::cout << "Matched_A_To_Gamma3 built" << std::endl;
 		A_To_Gamma3 = sh.toMat();
 	}
 

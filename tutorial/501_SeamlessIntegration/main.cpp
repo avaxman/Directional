@@ -53,11 +53,10 @@ void setup_line_texture()
 void update_viewer()
 {
   if (viewingMode==FIELD){
-    //viewer.set_mesh_colors(directional::DirectionalViewer::default_mesh_color());
+  
     viewer.set_active(true,0);
     viewer.set_active(false,1);
   } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
-    //viewer.set_mesh_colors(directional::default_mesh_color());
     viewer.set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull,1);
     viewer.set_active(true,1);
     viewer.set_active(false,0);
@@ -122,11 +121,11 @@ int main()
   std::cout<<"Done!"<<std::endl;
   
   //viewer cut (texture) and whole (field) meshes
-  viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(), 0);
-  viewer.set_mesh(VMeshCut, FMeshCut,directional::DirectionalViewer::default_mesh_color(), 1);
+  viewer.set_mesh(VMeshWhole, FMeshWhole,0);
+  viewer.set_mesh(VMeshCut, FMeshCut,1);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, FE, EF, combedMatching);
+  viewer.set_seams(combedMatching);
   viewer.set_texture(texture_R,texture_G,texture_B,1);
   
   viewer.toggle_texture(false,0);

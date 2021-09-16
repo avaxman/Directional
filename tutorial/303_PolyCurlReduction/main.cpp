@@ -54,7 +54,7 @@ ViewingModes viewingMode=ORIGINAL_FIELD;
 void update_triangle_mesh()
 {
   Eigen::VectorXd currCurl = (viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
-    viewer.set_edge_data(currCurl, 0.0,curlMaxOrig, EV, FE, EF);
+    viewer.set_edge_data(currCurl, 0.0,curlMaxOrig);
 
 }
 
@@ -78,7 +78,7 @@ void update_raw_field_mesh()
     viewer.toggle_edge_data(false);
     viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF));
     viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
-    viewer.set_seams(EV, FE, EF, (viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
+    viewer.set_seams((viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
   }
   
 }

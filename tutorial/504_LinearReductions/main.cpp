@@ -100,10 +100,10 @@ int main()
   directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut,  NFunctionTri, NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
-  viewer.set_mesh(VMeshWhole, FMeshWhole,directional::DirectionalViewer::default_mesh_color(), 0);
+  viewer.set_mesh(VMeshWhole, FMeshWhole, 0);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, FE, EF, combedMatching);
+  viewer.set_seams(combedMatching);
   
   update_viewer();
  

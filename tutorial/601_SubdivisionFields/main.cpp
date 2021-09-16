@@ -215,26 +215,26 @@ int main(int argc, char *argv[])
   cout<<"Done!"<<endl;
   
   //coarse mesh
-  viewer.set_mesh(VCoarse, FCoarse, Eigen::MatrixXd(), 0);
+  viewer.set_mesh(VCoarse, FCoarse, 0);
   viewer.set_field(combedFieldCoarse,Eigen::MatrixXd(),0);
   viewer.set_singularities(singVerticesCoarse,singIndicesCoarse,0);
-  viewer.set_seams(EVCoarse, FECoarse, EFCoarse, combedMatchingCoarse,0);
-  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVCoarse, FECoarse, EFCoarse,0);
+  viewer.set_seams(combedMatchingCoarse,0);
+  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(),0);
   
   //fine mesh
-  viewer.set_mesh(VFine, FFine, Eigen::MatrixXd(), 1);
+  viewer.set_mesh(VFine, FFine, 1);
   viewer.set_field(combedFieldFine,Eigen::MatrixXd(),1);
   viewer.set_singularities(singVerticesFine,singIndicesFine,1);
-  viewer.set_seams(EVFine, FEFine, EFFine, combedMatchingFine,1);
-  viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), EVFine, FEFine, EFFine,1);
+  viewer.set_seams(combedMatchingFine,1);
+  viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), 1);
   
   //coarse texture mesh
-  viewer.set_mesh(VCutCoarse, FCutCoarse, Eigen::MatrixXd(), 2);
+  viewer.set_mesh(VCutCoarse, FCutCoarse,2);
   viewer.set_uv(cutFullUVCoarse,2);
   viewer.toggle_texture(true,2);
   
   //coarse texture mesh
-  viewer.set_mesh(VCutFine, FCutCoarse, Eigen::MatrixXd(), 3);
+  viewer.set_mesh(VCutFine, FCutCoarse, 3);
   viewer.set_uv(cutFullUVFine,3);
   viewer.toggle_texture(true,3);
   

@@ -65,16 +65,13 @@ namespace directional
         
         int face=VF[hlVertices(i)][j], inFace=VFi[hlVertices(i)][j];
         
-        //std::cout<<"F(face,inFace):"<<F(face,inFace)<<std::endl;
-        //std::cout<<"hlVertices(i): "<<hlVertices(i)<<std::endl;
-
         //edge coordinates
         VCornerTri.row(0)=V.row(F(face,inFace));
         //coordinates into the other edges
         VCornerTri.row(1) = V.row(F(face,(inFace+1)%3))*widthRatio+V.row(F(face,inFace))*(1.0-widthRatio);
         VCornerTri.row(2) = V.row(F(face,(inFace+2)%3))*widthRatio+V.row(F(face,inFace))*(1.0-widthRatio);
         
-        VCornerTri=VCornerTri.array()+normals.row(i).replicate(VCornerTri.rows(),1).array()*height;
+        VCornerTri=VCornerTri.array()+normals.row(face).replicate(VCornerTri.rows(),1).array()*height;
 
         hlV.block(numHighlights*VCornerTri.rows(),0,VCornerTri.rows(),3)=VCornerTri;
         hlT.row(numHighlights)<<3*numHighlights, 3*numHighlights+1, 3*numHighlights+2;
