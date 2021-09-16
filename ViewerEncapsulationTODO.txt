@@ -2,10 +2,11 @@
 Viewer release:
 
 1. User-configurable sizings - DONE
-2. sparse field viewing
+2. sparse field viewing - DONE
 3. assertions for everything
-4. Encapsulate streamlines
+4. Encapsulate streamlines - DONE
 5. kill subdivision/meshing printouts
+6. Nicer edge bars
 
 Next release:
 

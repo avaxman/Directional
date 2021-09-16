@@ -18,6 +18,7 @@
 #include <directional/branched_isolines.h>
 #include <directional/bar_chain.h>
 #include <directional/halfedge_highlights.h>
+#include <directional/vertex_highlights.h>
 #include <directional/streamlines.h>
 #include <igl/edge_topology.h>
 
@@ -231,6 +232,8 @@ namespace directional
     {
       if (fieldColors.size()<meshNum+1)
         fieldColors.resize(meshNum+1);
+      if (rawField.size()<meshNum+1)
+        rawField.resize(meshNum+1);
       fieldColors[meshNum]=C;
       if (C.rows()==0)
         fieldColors[meshNum]=default_glyph_color();
@@ -263,19 +266,18 @@ namespace directional
       
     }
     
-    void IGL_INLINE set_seams(const Eigen::MatrixXi& EV,
-                              const Eigen::MatrixXi& FE,
-                              const Eigen::MatrixXi& EF,
-                              const Eigen::VectorXi& combedMatching,
+    void IGL_INLINE set_seams(const Eigen::VectorXi& combedMatching,
                               const int meshNum=0,
                               const double widthRatio = 0.05)
     {
       
       
-      Eigen::MatrixXd VSeams, CSeams;
-      Eigen::MatrixXi FSeams;
+      Eigen::MatrixXd VSeams1, CSeams1,VSeams2, CSeams2, VSeams, CSeams;
+      Eigen::MatrixXi FSeams1, FSeams2, FSeams;
       
       Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(FList[meshNum].rows(),3,-1);
+      
+      std::set<int> seamVertexSet;
       
       //figuring out the highlighted halfedges
       for (int i=0;i<combedMatching.size();i++){
@@ -284,22 +286,40 @@ namespace directional
         
         int inFaceIndex=-1;
         
-        if (EF(i,0)!=-1){
+        if (EFList[meshNum](i,0)!=-1){
           for (int j=0;j<3;j++)
-              if (FE(EF(i,0),j)==i)
+              if (FEList[meshNum](EFList[meshNum](i,0),j)==i)
                 inFaceIndex=j;
-          hlHalfedges(EF(i,0), inFaceIndex)=0;
+          hlHalfedges(EFList[meshNum](i,0), inFaceIndex)=0;
+          seamVertexSet.insert(FList[meshNum](EFList[meshNum](i,0), inFaceIndex));
         }
         inFaceIndex=-1;
-        if (EF(i,1)!=-1){
+        if (EFList[meshNum](i,1)!=-1){
           for (int j=0;j<3;j++)
-            if (FE(EF(i,1),j)==i)
+            if (FEList[meshNum](EFList[meshNum](i,1),j)==i)
               inFaceIndex=j;
-          hlHalfedges(EF(i,1), inFaceIndex)=0;
+          hlHalfedges(EFList[meshNum](i,1), inFaceIndex)=0;
+          seamVertexSet.insert(FList[meshNum](EFList[meshNum](i,1), inFaceIndex));
         }
       }
       
-      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams,FSeams,CSeams, widthRatio, 1e-4);
+      Eigen::VectorXi seamVertices(seamVertexSet.size());
+      int currPos=0;
+      for (std::set<int>::iterator si=seamVertexSet.begin();si!=seamVertexSet.end();si++)
+        seamVertices(currPos++)=*si;
+      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
+      directional::vertex_highlights(VList[meshNum], FList[meshNum], seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
+      
+      //uniting both meshes
+      VSeams.resize(VSeams1.rows()+VSeams2.rows(),3);
+      VSeams.toprows(VSeams1.rows())=VSeams1;
+      VSeams.bottomrows(VSeams2.rows())=VSeams2;
+      TSeams.resize(TSeams1.rows()+TSeams2.rows(),3);
+      TSeams.toprows(TSeams1.rows())=TSeams1;
+      TSeams.bottomrows(TSeams2.rows())=TSeams2+VSeams1.rows();
+      CSeams.resize(CSeams1.rows()+CSeams2.rows(),3);
+      CSeams.toprows(CSeams1.rows())=CSeams1;
+      CSeams.bottomrows(CSeams2.rows())=CSeams2;
 
       data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);

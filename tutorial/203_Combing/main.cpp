@@ -62,7 +62,7 @@ int main()
   viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();
   viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(EV, FE, EF, combedMatching);  //TODO: allow to define seams in several ways
+  viewer.set_seams(combedMatching);
   
   viewer.callback_key_down = &key_down;
   viewer.launch();

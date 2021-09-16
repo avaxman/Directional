@@ -22,7 +22,7 @@ namespace directional
   //  V, F:          original mesh
   //  hlHalfedges:    #F by 3 color indicators of the highlighted halfedges (corresponding to face corners where the edge i os corner [i,(i+1)%3]). -1 means not highlighted
   //  hlColors:      #scolors for highlighted, into which hlHalfedges indexes
-  //  widthRatio:     width of highlight bar w.r.t. face hight
+  //  widthRatio:     width of highlight bar w.r.t. opposite edge height in face
   // Output:
   //  hlV:              #V by 3 highlight mesh coordinates
   //  hlT:              #T by 3 mesh triangles
