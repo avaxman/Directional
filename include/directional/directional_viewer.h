@@ -408,7 +408,7 @@ namespace directional
         P2.row(j)=isoV.row(isoE(j,1));
       }
 
-      directional::bar_chains(isoV,isoE,isoN,l,l/2000,CFunc, VIso, FIso, CIso);
+      directional::bar_chains(isoV,isoE,isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);

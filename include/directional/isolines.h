@@ -51,7 +51,7 @@ namespace igl
     //Constants
     const int dim = V.cols();
     assert(dim==2 || dim==3);
-    const int nVerts = V.rows();
+    //const int nVerts = V.rows();
     assert(z.rows() == nVerts &&
            "There must be as many function entries as vertices");
     const int nFaces = F.rows();

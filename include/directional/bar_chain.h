@@ -22,7 +22,8 @@ namespace directional
   //  isoV:          Each #P by 3 coordinates of the bar chains
   //  isoE:          #E by 2 edges of the bar
   //  isoN:          #E by 3 normals to the bars (corresponding to face normals at these points)
-  //  width, height:  bar dimensions
+  //  width           bars widths
+  //  heights:        bar heights (individual in #isoE)
   //  barColors:      #E by 3 RGB colors per bar
   // Output:
   //  V:              #V by 3 bar mesh coordinates
@@ -33,7 +34,7 @@ namespace directional
                              const Eigen::MatrixXi& isoE,
                              const Eigen::MatrixXd& isoN,
                              const double& width,
-                             const double& height,
+                             const Eigen::MatrixXd& heights,
                              const Eigen::MatrixXd& barColors,
                              Eigen::MatrixXd& V,
                              Eigen::MatrixXi& T,
@@ -69,7 +70,7 @@ namespace directional
       
       Matrix3d R; R<<(1.0+margin*2.0)*XAxis, YAxis, ZAxis;
       RowVector3d midway=YAxis/2.0-XAxis*margin;
-      RowVector3d translation = isoV.row(isoE(i,0))+midway+height*isoN.row(i);
+      RowVector3d translation = isoV.row(isoE(i,0))+midway+heights(i)*isoN.row(i);
       
       V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar*R+translation.replicate(VBar.rows(),1);
       T.block(TBar.rows()*i,0,TBar.rows(),3)=TBar.array()+VBar.rows()*i;

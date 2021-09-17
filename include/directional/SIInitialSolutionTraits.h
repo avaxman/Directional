@@ -390,8 +390,8 @@ public:
     origFieldVolumes.resize(F.rows(),N);
     for (int i=0;i<F.rows();i++){
       for (int j=0;j<N;j++){
-        RowVector2d currVec=rawField2.block(i,2*j,1,2);
-        RowVector2d nextVec=rawField2.block(i,2*((j+1)%N),1,2);
+        //RowVector2d currVec=rawField2.block(i,2*j,1,2);
+        //RowVector2d nextVec=rawField2.block(i,2*((j+1)%N),1,2);
         IImagField.row(i*N+j)=VectorXi::Constant(4,i*N+j);
         JImagField.row(i*N+j)<<2*N*i+2*j, 2*N*i+2*j+1, 2*N*i+2*((j+1)%N), 2*N*i+2*((j+1)%N)+1;
         origFieldVolumes(i,j)=1.0; //currVec.norm()*nextVec.norm();//currVec(0)*nextVec(1)-currVec(1)*nextVec(0);
@@ -462,6 +462,8 @@ public:
     Eigen::SparseMatrix<double> jac;
     objective_jacobian(initXandFieldSmall, EVec, jac, false);
     ESize = EVec.size();
+    
+    return true;
     
     
     

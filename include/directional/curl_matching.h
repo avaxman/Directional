@@ -77,7 +77,7 @@ namespace directional
       if (EF(i, 0) == -1 || EF(i, 1) == -1)
         continue;
       //computing free coefficient effort (a.k.a. [Diamanti et al. 2014])
-      Complex freeCoeffEffort(1.0, 0.0);
+      //Complex freeCoeffEffort(1.0, 0.0);
       int indexMinFromZero=0;
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
       double minCurl = 32767000.0;

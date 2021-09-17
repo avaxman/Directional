@@ -53,7 +53,7 @@ public:
   void pre_iteration(const Eigen::VectorXd& prevx){}
   bool post_iteration(const Eigen::VectorXd& x){return false;}
 
-  IterativeRoundingTraits() :ESize(0), xSize(0) {}
+  IterativeRoundingTraits() :xSize(0), ESize(0){}
   ~IterativeRoundingTraits() {}
   
   
