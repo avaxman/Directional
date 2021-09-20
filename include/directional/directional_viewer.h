@@ -384,10 +384,11 @@ namespace directional
       
       
       Eigen::MatrixXd isoV, isoN;
-      Eigen::MatrixXi isoE;
+      Eigen::MatrixXi isoE, isoOrigE;
       Eigen::VectorXi funcNum;
       
-      directional::branched_isolines(cutV, cutF, vertexFunction, isoV, isoE, isoN, funcNum);
+      std::cout<<"Before branched_isolines: "<<std::endl;
+      directional::branched_isolines(cutV, cutF, vertexFunction, isoV, isoE, isoOrigE, isoN, funcNum);
       
       double l = sizeRatio*igl::avg_edge_length(cutV, cutF);
       
@@ -400,15 +401,17 @@ namespace directional
       for (int i=0;i<funcNum.size();i++)
         CFunc.row(i)=funcColors.row(funcNum(i));
       
-      Eigen::MatrixXd P1, P2;
+      /*Eigen::MatrixXd P1, P2;
       P1.conservativeResize(isoE.rows(),3);
       P2.conservativeResize(isoE.rows(),3);
       for (int j=0;j<isoE.rows();j++){
         P1.row(j)=isoV.row(isoE(j,0));
         P2.row(j)=isoV.row(isoE(j,1));
-      }
+      }*/
 
-      directional::bar_chains(isoV,isoE,isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
+      std::cout<<"Before bar_chains: "<<std::endl;
+      directional::bar_chains(cutV, cutF, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
+      std::cout<<"After bar_chains: "<<std::endl;
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);

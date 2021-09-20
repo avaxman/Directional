@@ -14,13 +14,16 @@
 #include <cmath>
 #include <complex>
 #include <igl/igl_inline.h>
+#include <igl/doublearea.h>
 
 namespace directional
   {
   // creates a mesh of conforming bar chains to visualize polylines (like function isolines) on meshes)
   // Input:
+  //  V, F:           The original mesh
   //  isoV:          Each #P by 3 coordinates of the bar chains
   //  isoE:          #E by 2 edges of the bar
+  //  isoOrigE:       #E by 3 edges of each bar in (f,if1,if2) format  (if - index of halfedge opposite to vertex if).
   //  isoN:          #E by 3 normals to the bars (corresponding to face normals at these points)
   //  width           bars widths
   //  heights:        bar heights (individual in #isoE)
@@ -30,8 +33,11 @@ namespace directional
   //  T:              #T by 3 mesh triangles
   //  C:              #T by 3 colors
   
-  bool IGL_INLINE bar_chains(const Eigen::MatrixXd& isoV,
+  bool IGL_INLINE bar_chains(const Eigen::MatrixXd& origV,
+                             const Eigen::MatrixXi& origF,
+                             const Eigen::MatrixXd& isoV,
                              const Eigen::MatrixXi& isoE,
+                             const Eigen::MatrixXi& isoOrigE,
                              const Eigen::MatrixXd& isoN,
                              const double& width,
                              const Eigen::MatrixXd& heights,
@@ -47,11 +53,14 @@ namespace directional
     MatrixXd VBar(4,3);
     MatrixXi TBar(2,3);
     
+    VectorXd origA;
+    igl::doublearea(origV,origF, origA);
+    
     //Using some margins to offset the intersection problem with face sides - that's a hack until figuring out the edge trapezoid thing
-    VBar<<0.0,0.0,0.0,
+    /*VBar<<0.0,0.0,0.0,
     0.0,-1.0,0.0,
     1.0,-1.0,0.0,
-    1.0,0.0,0.0;
+    1.0,0.0,0.0;*/
     
     TBar<<0,1,2,
     2,3,0;
@@ -62,17 +71,82 @@ namespace directional
     C.resize(NewColorSize,3);
     
     for (int i=0;i<isoE.rows();i++){
-      RowVector3d XAxis=(isoV.row(isoE(i,1))-isoV.row(isoE(i,0)));
+      /*RowVector3d XAxis=(isoV.row(isoE(i,1))-isoV.row(isoE(i,0)));
       RowVector3d ZAxis=isoN.row(i);
       RowVector3d YAxis =ZAxis.cross(XAxis);
       YAxis.normalize();
       YAxis*=width;
       
       Matrix3d R; R<<(1.0+margin*2.0)*XAxis, YAxis, ZAxis;
-      RowVector3d midway=YAxis/2.0-XAxis*margin;
-      RowVector3d translation = isoV.row(isoE(i,0))+midway+heights(i)*isoN.row(i);
+      RowVector3d midway=YAxis/2.0-XAxis*margin;*/
+      RowVector3d translation = /*isoV.row(isoE(i,0))+midway+*/heights(i)*isoN.row(i);
       
-      V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar*R+translation.replicate(VBar.rows(),1);
+      //std::cout<<"isoOrigE.row(i): "<<isoOrigE.row(i)<<std::endl;
+      int v0e0=origF(isoOrigE(i,0),(isoOrigE(i,1)+1)%3);
+      int v1e0=origF(isoOrigE(i,0),(isoOrigE(i,1)+2)%3);
+      int v0e1=origF(isoOrigE(i,0),(isoOrigE(i,2)+1)%3);
+      int v1e1=origF(isoOrigE(i,0),(isoOrigE(i,2)+2)%3);
+      
+      RowVector3d e0Vec = origV.row(v1e0)-origV.row(v0e0);
+      RowVector3d e1Vec = origV.row(v1e1)-origV.row(v0e1);
+      double e0Length = e0Vec.norm();
+      double e1Length = e1Vec.norm();
+      RowVector3d e0NormVec = e0Vec/e0Length;
+      RowVector3d e1NormVec = e1Vec/e1Length;
+      
+      RowVector3d p12 = isoV.row(isoE(i,1))-isoV.row(isoE(i,0));
+      double p12Length = p12.norm();
+      
+      double baryCoords0 = (isoV.row(isoE(i,0))-origV.row(v0e0)).norm()/e0Length;
+      double baryCoords1 = (isoV.row(isoE(i,1))-origV.row(v0e1)).norm()/e1Length;
+      
+      //std::cout<<"baryCoords0: "<<baryCoords0<<std::endl;
+      //std::cout<<"baryCoords1: "<<baryCoords1<<std::endl;
+      /*int absentEdge;
+      if (isoOrigE(i,1)+isoOrigE(i,2)==1) absentEdge = 2;
+      if (isoOrigE(i,1)+isoOrigE(i,2)==3) absentEdge = 0;
+      if (isoOrigE(i,1)+isoOrigE(i,2)==2) absentEdge = 1;
+      int v0e2=origF(isoOrigE(i,0),(absentEdge+1)%3);
+      int v1e2=origF(isoOrigE(i,0),(absentEdge+2)%3);*/
+      //double totalHeight = origA(isoOrigE(i,0))/(origV.row(v1e2)-origV.row(v0e2)).norm();
+      //double baryDeviation = widthRatio;
+      
+      double cosWith0 = p12.dot(e0NormVec)/p12Length;
+      double cosWith1 = p12.dot(e1NormVec)/p12Length;
+      
+      //std::cout<<"cosWith0, cosWith1: "<<cosWith0<<","<<cosWith1<<std::endl;
+      
+      double lengthDeviation0=width/(sqrt(1.0-cosWith0*cosWith0))/2.0;
+      double lengthDeviation1=width/(sqrt(1.0-cosWith1*cosWith1))/2.0;
+      
+      
+      
+      /*VBar<<isoV.row(isoE(i,0))-e0NormVec*lengthDeviation0,
+      isoV.row(isoE(i,0))+e0NormVec*lengthDeviation0,
+      isoV.row(isoE(i,1))-e1NormVec*lengthDeviation1,
+      isoV.row(isoE(i,1))+e1NormVec*lengthDeviation1;*/
+      
+      
+      
+      double baryDeviation0 =lengthDeviation0/e0Length;
+      double baryDeviation1 =lengthDeviation1/e1Length;
+      
+      //baryDeviation = 0.01;
+      
+      //std::cout<<"barydeviation: "<<baryCoords1<<std::endl;
+      
+      double baryTop0 = (baryCoords0+baryDeviation0 > 1.0 ? 1.0 : baryCoords0+baryDeviation0);
+      double baryBottom0 = (baryCoords0-baryDeviation0 < 0.0 ? 0.0 : baryCoords0-baryDeviation0);
+      double baryTop1 = (baryCoords1+baryDeviation1 > 1.0 ? 1.0 : baryCoords1+baryDeviation1);
+      double baryBottom1 = (baryCoords1-baryDeviation1 < 0.0 ? 0.0 : baryCoords1-baryDeviation1);
+      
+      
+      VBar<<origV.row(v0e0).array() + (origV.row(v1e0)-origV.row(v0e0)).array()*baryBottom0,
+      origV.row(v0e0).array() + (origV.row(v1e0)-origV.row(v0e0)).array()*baryTop0,
+      origV.row(v0e1).array() + (origV.row(v1e1)-origV.row(v0e1)).array()*baryBottom1,
+      origV.row(v0e1).array() + (origV.row(v1e1)-origV.row(v0e1)).array()*baryTop1;
+      
+      V.block(VBar.rows()*i,0,VBar.rows(),3)=VBar+translation.replicate(VBar.rows(),1);
       T.block(TBar.rows()*i,0,TBar.rows(),3)=TBar.array()+VBar.rows()*i;
       C.block(TBar.rows()*i,0,TBar.rows(),3)=barColors.row(i).replicate(TBar.rows(),1);
     }

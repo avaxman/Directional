@@ -31,6 +31,7 @@ namespace igl
   //   n  the number of desired isolines
   // Outputs:
   //   isoV  #isoV by dim list of isoline vertex positions
+  //   isoOrigE  #isoE by 3 list of indices to original halfedges on mesh (in f,if1,if2 format where if is index of halfedge opposite to vertex if in mesh).
   //   isoE  #isoE by 2 list of isoline edge positions
   //   isoN  $isoE by 3 list of normals to the edges
   //
@@ -47,12 +48,12 @@ namespace igl
                            const int n,
                            Eigen::PlainObjectBase<DerivedIsoV>& isoV,
                            Eigen::PlainObjectBase<DerivedIsoE>& isoE,
+                           Eigen::PlainObjectBase<DerivedIsoE>& isoOrigE,
                            Eigen::PlainObjectBase<DerivedIsoV>& isoN){
     //Constants
     const int dim = V.cols();
     assert(dim==2 || dim==3);
-    //const int nVerts = V.rows();
-    assert(z.rows() == nVerts &&
+    assert(z.rows() == V.rows() &&
            "There must be as many function entries as vertices");
     const int nFaces = F.rows();
     int np1 = n+1;
@@ -70,17 +71,9 @@ namespace igl
     Vec iso(np1);
     
     
-    /*std::cout<<"roundmin: "<<roundmin<<std::endl;
-     std::cout<<"roundmax: "<<roundmax<<std::endl;*/
-    
     for (int i=roundmin;i<=roundmax;i++)
       iso(i-roundmin)=i;
     
-    
-    /*for(int i=0; i<np1; ++i)
-     iso(i) = Scalar(i)/Scalar(np1-1)*(roundmax-roundmin) + roundmin;*/
-    
-    //std::cout<<"iso: "<<iso<<std::endl;
     
     Eigen::Matrix<Scalar, Eigen::Dynamic, 3> normals;
     igl::per_face_normals(V, F, normals);
@@ -117,6 +110,7 @@ namespace igl
     isoV.resize(2*K, dim);
     if (dim==3)
       isoN.resize(K,3);
+    isoOrigE.resize(K,3);
     
     int b = 0;
     for(int k=0; k<3; ++k) {
@@ -128,6 +122,7 @@ namespace igl
         isoV.row(K+b+i) = (1.-t[kp2](Fij[k][i],Iij[k][i]))*
         V.row(F(Fij[k][i],kp2)) +
         t[kp2](Fij[k][i],Iij[k][i])*V.row(F(Fij[k][i],k));
+        isoOrigE.row(b+i)<<Fij[k][i],k, (k+1)%3;
         if (dim==3)
           isoN.row(b+i)=normals.row(Fij[k][i]);
       }
@@ -140,14 +135,14 @@ namespace igl
     
     
     //Remove double entries
-    typedef typename DerivedIsoV::Scalar LScalar;
+    /*typedef typename DerivedIsoV::Scalar LScalar;
     typedef typename DerivedIsoE::Scalar LInt;
     typedef Eigen::Matrix<LInt, Eigen::Dynamic, 1> LIVec;
     typedef Eigen::Matrix<LScalar, Eigen::Dynamic, Eigen::Dynamic> LMat;
     typedef Eigen::Matrix<LInt, Eigen::Dynamic, Eigen::Dynamic> LIMat;
     LIVec dummy1, dummy2;
     igl::remove_duplicate_vertices(LMat(isoV), LIMat(isoE),
-                                   2.2204e-15, isoV, dummy1, dummy2, isoE);
+                                   2.2204e-15, isoV, dummy1, dummy2, isoE);*/
     
   }
   }
