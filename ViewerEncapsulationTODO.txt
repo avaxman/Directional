@@ -7,7 +7,6 @@ Viewer release:
 4. Encapsulate streamlines - DONE
 5. kill subdivision/meshing printouts - DONE
 6. Nicer edge bars - DONE
-7. Isolines artifacts
 
 Next release:
 
