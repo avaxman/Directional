@@ -510,7 +510,7 @@
 ![](libigl-teaser.png)!--->
 
 <p><a href="https://github.com/avaxman/Directional/">https://github.com/avaxman/Directional/</a></p>
-<p>Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes, built as an extension to <a href="https://www.github.com/libigl/libigl">libigl</a> on the foundations of <a href="http://eigen.tuxfamily.org/">Eigen</a>. Directional represents directional fields:  discrete sets of vectors on meshes. The content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on <a href="https://github.com/avaxman/DirectionalFieldSynthesis">Directional Field Synthesis, Design, and Processing</a>. Some visualization code is borrowed from the <a href="https://github.com/avaxman/libhedra">libhedra</a> library. </p>
+<p>Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes. It is based on both <a href="https://www.github.com/libigl/libigl">libigl</a> and <a href="http://eigen.tuxfamily.org/">Eigen</a>. Directional represents directional fields:  discrete sets of vectors on meshes. Much of the content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on <a href="https://github.com/avaxman/DirectionalFieldSynthesis">Directional Field Synthesis, Design, and Processing</a>. Some visualization code is borrowed from the <a href="https://github.com/avaxman/libhedra">libhedra</a> library. </p>
 <p>Directional was called &ldquo;libdirectional&rdquo; until version 1.5. The name was shortened to avoid a clash with <a href="https://github.com/libDirectional/libDirectional">libDirectional</a>.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Directional is a header-only library where each file generally includes one function. To use the library, simply add the <em>include</em> directory to your include path and make sure Directional and its prerequisites are set up properly. After that you can include any files you need normally, using for example <code>#include &lt;directional/index_prescription.h&gt;</code>.</p>
@@ -518,22 +518,24 @@
 <div class="codehilite"><pre><span></span>git clone --recursive https://github.com/avaxman/Directional.git
 </pre></div></p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<p>The current version is 1.5, comprising the following features:</p>
+<p>The current version is 1.7, comprising the following features:</p>
 <ol>
 <li>Representation of per-face directional fields of any given degree and symmetry.</li>
-<li>Visualization using glyphs and streamline tracing.</li>
+<li>Visualization of fields using (sparsified) glyphs and streamline tracing.</li>
 <li>Principal and curl matching, and combing for <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-directional fields.</li>
 <li>Computation of power fields of <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-RoSy fields.</li>
 <li>PolyVector fields.</li>
 <li>Optimization for curl reduction.</li>
 <li>Conjugate fields.</li>
 <li>Prescription of singularity, generator, and boundary indices.</li>
-<li>Rotationally- and fully-seamless parameterization.</li>
+<li>Rotationally- and fully-seamless integration of branched <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-functions.</li>
+<li>Meshing of the arrangement of <span><span class="MathJax_Preview">N</span><script type="math/tex">N</script></span>-functions isolines into polygonal meshes.</li>
+<li>Subdivision fields.</li>
 </ol>
 <p>Directional is <strong>a header-only library</strong>. You do not need to compile anything to use,
 just include directional headers (e.g. <code>#include &lt;directional/index_prescription.h&gt;</code>) and run.  Each
 header file contains a single function (e.g. <code>igl/index_prescription.h</code> contains
-<code>igl::index_prescription()</code>). </p>
+<code>igl::index_prescription()</code>). Nevertheless, the meshing packages requires <a href="https://www.cgal.org/">CGAL</a>, which is facilitated using the <a href="https://www.github.com/libigl/libigl">libigl</a> interface.</p>
 <h2 id="tutorial">Tutorial<a class="headerlink" href="#tutorial" title="Permanent link">&para;</a></h2>
 <p>A <a href="https://avaxman.github.io/Directional/tutorial/">Tutorial</a> that walks through the entire functionality of Directional is available. To compile it, go to the <code>tutorial</code> folder, open a shell and call:</p>
 <p><div class="codehilite"><pre><span></span>mkdir build
@@ -561,16 +563,14 @@ url          = {https://doi.org/10.5281/zenodo.3338174}
 
 <h2 id="contact">Contact<a class="headerlink" href="#contact" title="Permanent link">&para;</a></h2>
 <p>Directional is led by <a href="http://www.staff.science.uu.nl/~vaxma001/">Amir Vaxman</a>. Please <a href="mailto:avaxman@gmail.com">contact me</a> if you have questions or comments. For troubleshooting, please post an <a href="https://github.com/avaxman/Directional/issues">issue</a> on github.</p>
-<p>If you&rsquo;re using libirectional in your projects, quickly <a href="mailto:avaxman@gmail.com">drop me a note</a>. Tell me who you are and what you&rsquo;re using it for. This helps justify spending time maintaining this library!</p>
+<p>If you&rsquo;re using Directional in your projects, quickly <a href="mailto:avaxman@gmail.com">drop me a note</a>. Tell me who you are and what you&rsquo;re using it for. This helps justify spending time maintaining this library!</p>
 <h2 id="future-plans">Future Plans<a class="headerlink" href="#future-plans" title="Permanent link">&para;</a></h2>
-<p>The following functionality is still in workds for Directional:</p>
+<p>The following functionality is still in workds for Directional. Please contact me for any suggestions or contributions from this wish list which are very welcome!</p>
 <ol>
-<li>Other discretizations: discrete exterior calculus, vector-based fields.</li>
+<li>Other discretizations: discrete exterior calculus, vertex-based fields.</li>
 <li>3D fields.</li>
 <li>Discrete vector calculus: operators and Hodge decomposition.</li>
 <li>Line-integral convolution visualization.</li>
-<li>N-Symmetry seamless parameterization (for hexagonal and triangle remeshing).</li>
-<li>Subdivision fields.</li>
 </ol>
 <p>If you would like to suggest further topics, would like to collaborate in implementation, complain about bugs or ask questions, please address <a href="avaxman@gmail.com">Amir Vaxman</a> (or open an issue in the repository).</p>
 <h2 id="copyright">Copyright<a class="headerlink" href="#copyright" title="Permanent link">&para;</a></h2>
