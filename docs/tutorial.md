@@ -6,9 +6,9 @@
 
 Directional is a C++ geometry processing library written as an extension library to [libigl](http://libigl.github.io/libigl/), with a specialization in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.
 
-The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, relying instead on standalone functions. The visualization is done on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with some extended options that allow the rendering of directional fields.
+The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, relying instead on standalone functions. The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
 
-The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process them.
+The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
 
 ### Installing the tutorial examples
 
@@ -42,7 +42,7 @@ The representation of a directional field is the way it is encoded in each discr
 2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$. That means the all functions should also accept $N$ as input to decode the full field.
 3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two adjacent triangles. The rotation represents the deviation from the Levi-Civita parallel transport [^crane_2010],[^ray_2008]. This representation may only encode $N$-direction fields (no magnitude). Note that the *effort* (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely decode the full face-based field.
 4. **Power Field** - An $|F|$-sized *complex* vector, encoding an $N$-RoSy object as a single complex number $y=u^N$ encoded in the local basis, where the $N$-RoSy is the set of roots $u \cdot e^{\frac{2\pi i k}{N}}, k \in [0,N-1]$. The magnitude is also encoded this way, though it may be neglected in some applications. The representation depends on a local $2D$ basis, such as one that could be obtained from ```igl::local_basis()```.
-5. **PolyVector** - A $|F| \times N$ complex matrix, representing the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero.
+5. **PolyVector** - A $|F| \times N$ complex matrix, representing the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero. ***Note***: A PolyVector that represents a perfect $N$-RoSy would have all $a_i=0,\ \forall i>0$, but $a_0$ would have opposite sign from the power-field representation of the same $N$-RoSy. This is since the power field represents $u^N$ directly, whereas a PolyVector represents the coefficients of $z^N-U^N$ in this case.
 
 Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```rotation_to_representative()``` and  ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence. However, note that not every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not possess the same power of expression (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, or rotation-angle representation. converting into the more explicit raw representation is often needed for I/O and visualization.
 
@@ -51,55 +51,38 @@ Directional provides a number of conversion functions to switch between differen
 
 ### Visualization paradigm
 
-Directional uses the libigl viewer (although a viewer is not necessary for the core functionality), and augments it with auxiliary functionality and color schemes that pertain to directional fields specifically. The drawing paradigm in Directional is that the visualization functions create actual meshes (vertices, faces, and per-face colors) for the different components of the field: box-like meshes for per-face glyphs representing vectors, sphere meshes for representing singularities, piecewise-cylinder curves to represent streamlines, and more. These visualization meshes can then be stored in libigl viewer as multiple meshes and visualized as needed.
-
-The color schemes and directional visualization mesh creation functionality are mostly given in [visualization_schemes.h]({{ repo_url }}/include/directional/visualization_schemes.h), and can be called to create a homogeneous look for visualizing fields in applications. Most notable are ```indexed_glyph_colors()``` that gives back glyph meshes colored by index per face, and ```default_singularity_colors()``` that produces singularity meshes according to index. Other visualization functionality is detailed below in the context of the different examples.
+Directional uses a specialized class called ```DirectionalViewer``` which inherits and extends the libigl ```Viewer``` class, augmenting it with functionality that pertains to directional fields. A mesh is then stored with its accompanying geometric quantities: the field, edge, vertex, and face-based scalar data, isolines, and more, that we detail in the tutorial per chapter in context. Like libigl viewer, Directional supports independent multiple meshes, each with its own set of quantities. Internally, the visualization schemes carete sub-meshes which serve as layers on the original meshes: arrows for glyphs, bars for edge highlights, etc. In practice this is encapsulated from the user and does not need to be controlled directly.
 
 ### 101 Glyph Rendering
 
-The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp), a field is read from a file as follows:
+The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp), a mesh and a field are read from a file and visualized as follows:
 
 ```cpp
-directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
-directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
+ directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
+  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
+  
+  directional::DirectionalViewer viewer;
+  
+  viewer.set_mesh(V,F);
+  viewer.set_field(rawField);
+  viewer.set_singularities(singVertices, singIndices);
 ```
 
-The field is read in *raw* format (see [File Formats](../file_formats/index.html)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*, where ```singVertices``` are the singular vertices, and ```singIndices``` are the corresponding integer indices, so that the actual fractional indices are $\frac{singIndices}{N}$.
+The field is read in *raw* format (see [File Formats](../file_formats/index.html)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*, where ```singVertices``` are the singular vertices, and ```singIndices``` are the corresponding integer indices, so that the actual fractional indices are $\frac{singIndices}{N}$. If the mesh number is not prescribed explicitly, the default single mesh (number 0) is assumed. 
 
-The visualization meshes for the glyphs and the singularities are obtained as follows
+The singularities and glyphs (and most other properties) can be toggled by functions of the type  ```DirectionalViewer::toggle_field()``` and  ```DirectionalViewer::toggle_singularities()```.
 
-```cpp
-directional::glyph_lines_raw(VMesh, FMesh, rawField, directional::default_glyph_color(), VField, FField, CField);
-directional::singularity_spheres(VMesh, FMesh, N, singVertices, singIndices, VSings, FSings, CSings);
-```
-
-These two operations do not produce any active drawing; they create meshes that extend the original geometry, and then get passed to libigl viewer.
-
-``directional::glyph_lines_raw()`` creates box-like meshes on the faces that constitute the *glyph drawing*: simply drawing the vectors upon the faces in their $\left(x,y,z\right)$ coordinates, starting from the face barycenter. There are several possibilities to color these vectors, which can be local or global; check the documentation to the function in the header. In this case, we give the ```default_glyph_color()``` from the Directional visualization schemes. Vectors are drawn in their given magnitudes, up to a global scale. By default, this scale is set to be related to the average edge length---it can be manually set by all visualization-mesh-creating function.
-
-``directional::singularity_spheres()`` creates a mesh of small spheres on vertices, where the size of the sphere is devised by default. The spheres are only created where the index is different than $0$.
-
-
-![[Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png)
+![([Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png)
 
 
 ### 102 Picking and editing
 
-This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different setting of colors for glyphs: for the selected face and for the selected vector in the face particularly, via the following code in [Example 102]({{ repo_url }}/tutorial/101_PickingEditing/main.cpp).
+This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code in [Example 102]({{ repo_url }}/tutorial/102_PickingEditing/main.cpp).
 
 ```cpp
-Eigen::MatrixXd glyphColors=directional::default_glyph_color().replicate(FMesh.rows(),N);
-glyphColors.row(currF)=directional::selected_face_glyph_color().replicate(1,N);
-glyphColors.block(currF,3*currVec,1,3)=directional::selected_vector_glyph_color();
-
-directional::glyph_lines_raw(VMesh, FMesh, rawField, glyphColors, VField, FField, CField);
-```
-
-The selected face coloring is done as follows:
-
-```cpp
-CMesh=directional::default_mesh_color().replicate(FMesh.rows(),1);
-CMesh.row(currF)=directional::selected_face_color();
+directionalViewer->set_selected_faces(selectedFaces);
+directionalViewer->set_selected_vector(currF, currVec);
+    
 ```
 
 
@@ -107,14 +90,21 @@ CMesh.row(currF)=directional::selected_face_color();
 
 ### 103 Streamline Tracing
 
-Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `streamlines_init`, and the lines are traced using `streamlines_next`. Each call to `streamlines_next` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp). The streamline are compiled into meshes with the following:
+Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `streamlines_next`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp). The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
 
-```cpp
-  directional::line_cylinders(sl_state.start_point, sl_state.end_point, 0.0005, color.replicate(sl_state.start_point.rows(),1), 4, VFieldNew, FFieldNew, CFieldNew);
-```
-This creates meshes from many cylinders to have the appearance of continuous curves.
+![([Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
 
-![([Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.gif)
+### 104 Scalar quantities on meshes
+
+It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, that also allow the setting of the viewable range of the function (the rest is clipped).
+
+![([Example 104]({{ repo_url }}/tutorial/104_FaceVertexEdgeData/main.cpp)) Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs..](images/104_FaceVertexEdgeData.png)
+
+### Sparse Glyph View
+
+On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
+
+![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse(r) views of a field as glyphs.](images/105_Sparsity.png)
 
 ## Chapter 2: Discretization and Representation
 
@@ -130,10 +120,9 @@ Given a raw field (in assumed CCW order in every face), it is possible to devise
 principal matching is done through the function ```principal_matching()```  (from in [Example 201]({{ repo_url }}/tutorial/201_PrincipalMatching/main.cpp)) as follow:
 
 ```cpp
-directional::principal_matching(VMesh, FMesh,EV, EF, FE, rawField, matching, effort);
-directional::effort_to_indices(VMesh,FMesh,EV, EF, effort,matching,N,singVertices,singIndices);
+directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
 ```
-`directional::effort_to_indices()` computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional object undergoes along a cycle around the vertex. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index is unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). ```singVertices``` and ```singIndices``` only enumerate the singular vertices.
+The function also computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional object undergoes along a cycle around the vertex. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index is unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). ```singVertices``` and ```singIndices``` only enumerate the singular vertices.
 
 ![([Example 201]({{ repo_url }}/tutorial/201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
 
@@ -148,23 +137,23 @@ This is an educational example that demonstrates the loss of information when mo
 
 3. In the Cartesian mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
 
-![([Example 202]({{ repo_url }}/tutorial/202_Sampling/main.cpp)) Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.](images/202_Sampling.gif)
+![([Example 202]({{ repo_url }}/tutorial/202_Sampling/main.cpp)) Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.](images/202_Sampling.png)
 
 ### 203 Combing
 
 Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to prepare a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a forest of paths that connect between singularities, also known as *seams*. Note that such paths do not necessarily cut the mesh into a simply-connected patch, but may only connects subgroups of singularities with indices adding up to an integer; as a trivial example, a 1-vector field is always trivially combed, even in the presence of integral singularities, and the set of seams is zero. The combing is done through the function ```directional::combing()``` as follows, taken from [Example 203]({{ repo_url }}/tutorial/203_Combing/main.cpp)
 
 ```cpp
-directional::combing(VMesh,FMesh, EV, EF, FE, rawField, matching, combedField);
+irectional::combing(V,F, EV, EF, FE, rawField, matching, combedField);
 ```
 
 where ```combedField``` is the re-indexed ```rawField```, done according to the input matching. We can recompute the matching on the combed field to retrieve the seams:
 
 ```cpp
-directional::principal_matching(VMesh, FMesh,EV, EF, FE, combedField, combedMatching, combedEffort);
+  directional::principal_matching(V, F,EV, EF, FE, combedField, combedMatching, combedEffort,singVertices, singIndices);
 ```
 
-![([Example 203]({{ repo_url }}/tutorial/203_Combing/main.cpp)) Colored indices of directionals, alternating between combed (with seams) and uncombed) indexing.](images/203_Combing.gif)
+![([Example 203]({{ repo_url }}/tutorial/203_Combing/main.cpp)) Colored indices of directionals, alternating between combed (with seams) and uncombed) indexing.](images/203_Combing.png)
 
 ## Chapter 3: Cartesian Methods
 
@@ -174,7 +163,7 @@ The Cartesian representation is a meta-category for representation of vectors in
 
 ### 301 Power Fields
 
-This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" given in [^azencot_2017].
+This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" coined in [^azencot_2017].
 
 A power field representation uses a complex basis in each tangent plane (face in our implementation), and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
 
@@ -186,7 +175,7 @@ where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$,
 
 For a fixed set $B$ and varying $y_B$, It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field. This is done by using the function `directional::power_field_precompute()`, coupled with the appropriate version of `directional::power_field()`. Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
 
-If the set $B$ is empty, then the computed field is the first Eigenvector of the Dirichlet energy.
+If the set $B$ is empty, then the computed field is the eigenvector of the power-field Laplcian associated with the smallest non-zero eigenvalue.
 
 ![([Example 301]({{ repo_url }}/tutorial/301_PowerFields/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
 
