@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Directional is a C++ geometry processing library written as an extension library to [libigl](http://libigl.github.io/libigl/), with a specialization in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.
+Directional is a C++ geometry processing library written on the basis of [libigl](http://libigl.github.io/libigl/), with a specialization in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.
 
 The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, relying instead on standalone functions. The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
 
@@ -104,7 +104,7 @@ It is possible to set and visualize scalar quantities on meshes at different dis
 
 On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
 
-![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse(r) views of a field as glyphs.](images/105_Sparsity.png)
+![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/105_Sparsity.png)
 
 ## Chapter 2: Discretization and Representation
 
