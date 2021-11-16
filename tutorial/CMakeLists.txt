@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 project(Directional_tutorials)
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
@@ -69,8 +69,9 @@ endif()
 if(TUTORIALS_CHAPTER3)
   add_subdirectory("301_PowerFields")
   add_subdirectory("302_PolyVectors")
-  add_subdirectory("303_PolyCurlReduction")
-  add_subdirectory("304_ConjugateFields")
+  add_subdirectory("303_FlexibleConstraints")
+  add_subdirectory("304_PolyCurlReduction")
+  add_subdirectory("305_ConjugateFields")
 endif()
 
 # Chapter 4

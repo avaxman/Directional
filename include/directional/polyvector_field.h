@@ -22,6 +22,33 @@
 
 namespace directional
 {
+
+
+  struct PolyVectorData{
+    Eigen::VectorXi constFaces;   //list of faces where there are constraints. The faces can repeat.
+    int N;                        //Degree of field
+    bool signSymmetry;            //whever field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+    std::vector<Eigen::SparseMatrix<std::complex<double>>> AFulls;
+    std::vector<Eigen::SparseMatrix<std::complex<double>>> AVars;
+    Eigen::SparseMatrix<double> M, Mbc;
+    Eigen::VectorXd MfArray, MfInvArray, MfNArray;
+    Eigen::SparseMatrix<std::complex<double>> W;
+    Eigen::SparseMatrix<std::complex<double>> idMatX;   //identity matrix of size X for prev solution, orthogonality, or unit energies
+    Eigen::SparseMatrix<std::complex<double>> idMatY;  //identity matrix for prev solution in Y.
+    std::vector<Eigen::SparseMatrix<std::complex<double>>> smoothEnergy;  //smoothness
+    std::vector<Eigen::SparseMatrix<std::complex<double>>> rosyEnergy;    //orth  + unit laplacian
+    Eigen::SparseMatrix<double> bigSymmMat, bigInvSymmMat;
+    double sumTotalArea, sumbcArea, sumEdgeWeights;
+    double initSmoothCoeff;  //initial smoothness coefficient
+    double rosyRatio;         //symmetry coefficient
+    //double curlCoeff;       //curl reduction coefficient
+    double prevCoeff;        //previous solution coefficient
+    double alignCoeff;        //alignment coefficient to constraints
+    int maxCurlIterations;  //how many gradient descent iterations
+    
+    PVGLData(){}
+    ~PVGLData(){}
+  };
   
   // Precalculate the polyvector LDLt solvers. Must be recalculated whenever
   // bc changes or the mesh changes.
