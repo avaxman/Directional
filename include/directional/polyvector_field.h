@@ -16,42 +16,49 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
+#include <igl/barycentric.h>
 #include <igl/speye.h>
 #include <igl/eigs.h>
 #include <iostream>
+#include <directional/circumcircle.h>
 
 namespace directional
 {
 
+#define UNIFORM_WEIGHTS 0
+#define BARYCENTRIC_WEIGHTS 1
+#define INV_COT_WEIGHTS 2
 
   struct PolyVectorData{
-    Eigen::VectorXi constFaces;   //list of faces where there are constraints. The faces can repeat.
+  public:
+    
+    //User parameters
+    Eigen::VectorXi constFaces;   //list of faces where there are (partial) constraints. The faces can repeat to constrain more vectors
+    Eigen::MatrixXd constVectors; //corresponding to constFaces.
+    
     int N;                        //Degree of field
     bool signSymmetry;            //whever field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
-    std::vector<Eigen::SparseMatrix<std::complex<double>>> AFulls;
-    std::vector<Eigen::SparseMatrix<std::complex<double>>> AVars;
-    Eigen::SparseMatrix<double> M, Mbc;
-    Eigen::VectorXd MfArray, MfInvArray, MfNArray;
-    Eigen::SparseMatrix<std::complex<double>> W;
-    Eigen::SparseMatrix<std::complex<double>> idMatX;   //identity matrix of size X for prev solution, orthogonality, or unit energies
-    Eigen::SparseMatrix<std::complex<double>> idMatY;  //identity matrix for prev solution in Y.
-    std::vector<Eigen::SparseMatrix<std::complex<double>>> smoothEnergy;  //smoothness
-    std::vector<Eigen::SparseMatrix<std::complex<double>>> rosyEnergy;    //orth  + unit laplacian
-    Eigen::SparseMatrix<double> bigSymmMat, bigInvSymmMat;
-    double sumTotalArea, sumbcArea, sumEdgeWeights;
-    double initSmoothCoeff;  //initial smoothness coefficient
-    double rosyRatio;         //symmetry coefficient
-    //double curlCoeff;       //curl reduction coefficient
-    double prevCoeff;        //previous solution coefficient
-    double alignCoeff;        //alignment coefficient to constraints
-    int maxCurlIterations;  //how many gradient descent iterations
+    double wSmooth;               //Weight of smoothness
+    double wOrth;                 //Weight of orthogonality
+    Eigen::VectorXd wAlignment;   //Weight of alignment per each of the constfaces. "-1" means a fixed face
     
-    PVGLData(){}
-    ~PVGLData(){}
+    int lapType;                  //Choice of weights (from UNIFORM_WEIGHTS,BARYCENTRIC_WEIGHTS or INV_COT_WEIGHTS)
+    
+
+    Eigen::SparseMatrix<std::complex<double>> smoothEnergy;
+    Eigen::SparseMatrix<std::complex<double>> roSyEnergy;
+    Eigen::SparseMatrix<std::complex<double>> alignmentEnergy;  //(soft) alignment energy.
+    Eigen::SparseMatrix<std::complex<double>> reducMat;         //reducing the fixed dofs (for instance with sign symmetry or fixed partial constraints)
+    
+    //Mass and stiffness matrices
+    Eigen::SparseMatrix<std::complex<double>> W, M, diffMat;
+    
+    PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS){}
+    ~PolyVectorData(){}
   };
   
-  // Precalculate the polyvector LDLt solvers. Must be recalculated whenever
-  // bc changes or the mesh changes.
+  
+  // Precalculate the operators according to the user-prescribed parameters. Must be called whenever any of them changes
   // Inputs:
   //  V:      #V by 3 vertex coordinates.
   //  F:      #F by 3 face vertex indices.
@@ -59,10 +66,9 @@ namespace directional
   //  EF:     #E by 2 matrix of oriented adjacent faces
   //  B1, B2: #F by 3 matrices representing the local base of each face.
   //  bc:     The face ids where the pv is prescribed.
-  //  N:      The degree of the field.
+  //  PolyVectorData (must fill constFaces, N, wSmooth, wOrth, wAlignment; lapType is default BARYCENTRIC and signSymmetry is "true"):     User parameters for the requested variation of the algorithm.
   // Outputs:
-  //  solver:       with prefactorized left-hand side
-  //  AFull, AVar:  The resulting left-hand side matrices
+  //  PolyVectorData:       Updated structure with all operators
   IGL_INLINE void polyvector_precompute(const Eigen::MatrixXd& V,
                                         const Eigen::MatrixXi& F,
                                         const Eigen::MatrixXi& EV,
@@ -70,18 +76,54 @@ namespace directional
                                         const Eigen::MatrixXd& B1,
                                         const Eigen::MatrixXd& B2,
                                         const Eigen::VectorXi& bc,
-                                        const int N,
-                                        Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>>& solver,
-                                        Eigen::SparseMatrix<std::complex<double>>& Afull,
-                                        Eigen::SparseMatrix<std::complex<double>>& AVar)
+                                        PolyVectorData& pvData)
   {
     
     using namespace std;
     using namespace Eigen;
+    
+    
+    //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
-    // Build the sparse matrix, with an energy term for each edge and degree
-    std::vector< Triplet<complex<double> > > AfullTriplets;
-    for (int n = 0; n < N; n++)
+    std::vector< Triplet<complex<double> > > dTriplets, WTriplets;
+    if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
+    
+    
+    //Stiffness weights
+    VectorXd stiffnessWeights=VectorXd::Zero(EF.rows());
+    
+    if (pvData.lapType==UNIFORM){
+      stiffnessWeights.setOnes();
+    } else {
+      VectorXd faceCenter;
+      double radius;  //stub
+      if (pvData.lapType==BARYCENTRIC_WEIGHTS)
+        igl::barycentric(V,F,barycentric);
+      if (pvData.lapType==INV_COT_WEIGHTS)
+        directional::circumcircle(V,F,faceCenter,radius);
+      for (int i=0;i<EF.rows;i++){
+        if ((EF(i,0)==-1)||(EF(i,1)==-1))
+          continue;  //boundary edge
+        
+        RowVector3d midEdge = (V.row(EV(i,0))+V.row(EV(i,1)))/2.0;
+        dualLength = (faceCenter.row(EF(i,0))-midEdge).norm()+(faceCenter.row(EF(i,1))-midEdge).norm();   //TODO: that's only an approximation of barycentric height...
+        primalLength = (V.row(EV(i,0))-V.row(EV(i,1))).norm();
+        if (dualLength>10e-9)  //smaller than 10e-9might happen for inv cot weights
+          stiffnessWeights(i)=primalLength/dualLength;
+      }
+    }
+    
+    //masses - just the diamond area
+    VectorXd doubleAreas, masses=VectorXd::Zero(F.rows()));
+    igl::doublearea(V,F,doubleAreas);
+    for (int i=0;i<EF.rows();i++){
+      if ((EF(i,0)==-1)||(EF(i,1)==-1))
+        continue;  //boundary edge
+      
+      masses(i) = (doubleAreas(EF(i,0))+doubleAreas(EF(i,1)))/6.0;
+    }
+
+    for (int n = 0; n < pvData.N; n++)
     {
       for (int i=0;i<EF.rows();i++){
         
@@ -95,15 +137,30 @@ namespace directional
         Vector2d veg = Vector2d(e.dot(B1.row(EF(i,1))), e.dot(B2.row(EF(i,1)))).normalized();
         complex<double> eg(veg(0), veg(1));
         
-        // Add the term conj(f)^n*ui - conj(g)^n*uj to the energy matrix
-        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter, n*F.rows()+EF(i,0), pow(conj(ef), N-n)));
-        AfullTriplets.push_back(Triplet<complex<double> >(rowCounter++, n*F.rows()+EF(i,1), -1.*pow(conj(eg), N-n)));
+        // Add the term conj(f)^n*ui - conj(g)^n*uj to the differential matrix
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*F.rows()+EF(i,0), pow(conj(ef), pvData.N-n)));
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*F.rows()+EF(i,1), -1.*pow(conj(eg), pvData.N-n)));
+        
+        //stiffness weights
+        WTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, stiffnessWeights(i)));
+        rowCounter++;
       }
+      
+      for (int i=0;i<F.rows();i++)
+        MTriplets.push_back(Triplet<complex<double>>(n*F.rows()+i, n*F,rows()+i, masses(i)));
     }
     
+    pvData.diff.resize(rowCounter, pvData.N*F.rows());
+    pvData.diff.setFromTriplets(dTriplets.begin(), dTriplets.end());
     
-    Afull.conservativeResize(rowCounter, N*F.rows());
-    Afull.setFromTriplets(AfullTriplets.begin(), AfullTriplets.end());
+    pvData.W.resize(
+    
+    
+
+                            
+                            
+                            
+                            
     
     VectorXi constIndices(N*bc.size());
     
