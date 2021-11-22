@@ -1,5 +1,5 @@
 // This file is part of Directional, a library for directional field processing.
-// Copyright (C) 2017 Daniele Panozzo <daniele.panozzo@gmail.com>, Amir Vaxman <avaxman@gmail.com>
+// Copyright (C) 2021 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -21,6 +21,7 @@
 #include <igl/eigs.h>
 #include <iostream>
 #include <directional/circumcircle.h>
+#include <directional/complex_eigs.h>
 
 namespace directional
 {
@@ -282,11 +283,31 @@ namespace directional
     
     //TODO: make sparse matrix have a zero row in case no soft alignments
     
-    SparseMatrix<complex<double>> totalLhs = totalUnreducedLhs*pvData.reducMat;
-    VectorXcd totalRhs = -totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs;
-    
+    SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
+    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);  //TODO: check signs
+    polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
     if (pvData.constFaces == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {
+      //Extracting first eigenvcetor
+      gen::MatrixXcd U;
+      Eigen::VectorXcd S;
+      directional::complex_eigs(totalLhs, M, 10, U, S);
+      
+      int smallestIndex; S.minCoeff(&smallestIndex);
+      
+      
+      
+      polyVectorField.col(0) = U.block(0,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+      U.block(U.rows()/2,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1);
+    } else { //just solving the system
+      SimplicialLDLT<SparseMatrix<double> > solver;
+      solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
+      solver.factorize(totalLhs);
+      VectorXcd reducedDofs = solver.solve(totalRhs);
+      assert(solver.info() == Success);
+      VectorXcd fullDofs = pvData.reducMat*reducedDof+pvData.reducRhs;
+      for (int i=0;i<N;i++)
+        polyVectorField.col(i) = PVVector.segment(i*F.rows(),F.rows());
       
     }
     
