@@ -22,16 +22,17 @@ Eigen::MatrixXcd pvFieldHard, pvFieldSoft;
 
 directional::DirectionalViewer viewer;
 
-int N = 4;
+int N = 3;
 
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
-ViewingModes viewingMode=CONSTRAINTS;
+ViewingModes viewingMode=HARD_PRESCRIPTION;
 
 bool normalized=false;
 
 void recompute_field()
 {
   directional::polyvector_field(V, F, b, bc, N, pvFieldHard);
+  //std::cout<<"Done computing field!"<<std::endl;
   //directional::polyvector_field(V, F, b, bc, w, N, pvFieldSoft);
 }
 
@@ -42,12 +43,21 @@ void update_visualization()
     viewer.set_field(rawFieldConstraints);
   }
   if (viewingMode==HARD_PRESCRIPTION){
-    directional::polyvector_to_raw(V, F, pvFieldHard, N, rawFieldHard, true);
+    //std::cout<<"before polyvector_to_raw()"<<std::endl;
+    //std::cout<<"pvFieldHard.rows(): "<<pvFieldHard.rows()<<std::endl;
+    //std::cout<<"pvFieldHard.cols(): "<<pvFieldHard.cols()<<std::endl;
+    //std::cout<<"F.rows(): "<<F.rows()<<std::endl;
+    directional::polyvector_to_raw(V, F, pvFieldHard, N, rawFieldHard, N%2==0);
+    //std::cout<<"after polyvector_to_raw()"<<std::endl;
     if (normalized)
       for(int n = 0; n < N; n++)
         rawFieldHard.middleCols(n*3, 3).rowwise().normalize();
     
+    //std::cout<<"after normalize()"<<std::endl;
+    
     directional::principal_matching(V, F, EV, EF, FE, rawFieldHard, matching, effort, singVertices, singIndices);
+    //std::cout<<"after principal_matching()"<<std::endl;
+    viewer.set_field(rawFieldHard);
 
   }
   
@@ -58,6 +68,7 @@ void update_visualization()
         rawFieldSoft.middleCols(n*3, 3).rowwise().normalize();
     
     directional::principal_matching(V, F, EV, EF, FE, rawFieldSoft, matching, effort, singVertices, singIndices);
+    viewer.set_field(rawFieldSoft);
 
   }
   
@@ -127,7 +138,7 @@ int main()
   "  N          Toggle field normalization" << std::endl;
   
   // Load mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/joint.obj", V, F);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", V, F);
   igl::edge_topology(V, F, EV, FE, EF);
   
   igl::per_face_normals(V, F, normals);
@@ -154,12 +165,12 @@ int main()
   w=Eigen::VectorXd::Constant(F.rows(),1.0);  //Equal weight with the smoothness
   
   //generating the viewing fields
-  rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
+  /*rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
   Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(F.rows());
   for (int i=0;i<b.size();i++){
     rawFieldConstraints.block(b(i),3*posInFace(b(i)), 1,3)=bc.row(i);
     posInFace(b(i))++;
-  }
+  }*/
   
   //triangle mesh setup
   viewer.set_mesh(V, F);

@@ -12,11 +12,12 @@
 namespace directional {
 
   IGL_INLINE void complex_eigs(const Eigen::SparseMatrix<std::complex<double>>& Q,
-                               const Eigen::SparseMatrix<double> M,
+                               const Eigen::SparseMatrix<std::complex<double>> M,
                                const int numEigs,
                                Eigen::MatrixXcd& U,
                                Eigen::VectorXcd& S)
   {
+    //TODO: should insist on real matrix M also nominally
     Eigen::SparseMatrix<double> QReal(2*Q.rows(),2*Q.rows());
     std::vector<Eigen::Triplet<double> > QRealTriplets, MRealTriplets;
     for (int k=0; k<Q.outerSize(); ++k)
@@ -32,10 +33,10 @@ namespace directional {
     
     Eigen::SparseMatrix<double> MReal(2*M.rows(),2*M.rows());
     for (int k=0; k<M.outerSize(); ++k)
-      for (Eigen::SparseMatrix<double>::InnerIterator it(M,k); it; ++it)
+      for (Eigen::SparseMatrix<std::complex<double>>::InnerIterator it(M,k); it; ++it)
       {
-        MRealTriplets.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
-        MRealTriplets.push_back(Eigen::Triplet<double>(it.row()+M.rows(), it.col()+M.cols(), it.value()));
+        MRealTriplets.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value().real()));
+        MRealTriplets.push_back(Eigen::Triplet<double>(it.row()+M.rows(), it.col()+M.cols(), it.value().real()));
         
       }
     
@@ -43,18 +44,13 @@ namespace directional {
     Eigen::MatrixXd UReal;
     Eigen::VectorXd SReal;
     
-    Eigen::MatrixXd U;
-    Eigen::VectorXd S;
-    igl::eigs(L,M,numEigs,igl::EIGS_TYPE_SM,UReal,SReal);
-    int smallestIndex; S.minCoeff(&smallestIndex);
+    igl::eigs(QReal,MReal,numEigs,igl::EIGS_TYPE_SM,UReal,SReal);
+
+    U.resize(UReal.rows()/2, UReal.cols());
+    S=SReal;
     
-    U.resize(UReal.rows()/2, N);
-    S.resize(SReal.rows()/2);
-    
-    U = UReal.block(0,smallestIndex,UReal.rows()/2,N).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
-    UReal.block(UReal.rows()/2,smallestIndex,UReal.rows()/2,N).cast<std::complex<double> >().array()*std::complex<double>(0,1);
-    
-    S = SReal.segment(0,S.Real.rows()/2).array()*std::complex<double>(1,0)+SReal.segment(S.Real.rows()/2,S.Real.rows()).array()*std::complex<double>(0,1);
+    U = UReal.block(0,0,UReal.rows()/2,UReal.cols()).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
+    UReal.block(UReal.rows()/2,0,UReal.rows()/2,UReal.cols()).cast<std::complex<double> >().array()*std::complex<double>(0,1);
     
   }
 
