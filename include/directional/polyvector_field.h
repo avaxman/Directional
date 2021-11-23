@@ -116,7 +116,7 @@ namespace directional
         RowVector3d midEdge = (V.row(EV(i,0))+V.row(EV(i,1)))/2.0;
         double dualLength = (faceCenter.row(EF(i,0))-midEdge).norm()+(faceCenter.row(EF(i,1))-midEdge).norm();   //TODO: that's only an approximation of barycentric height...
         double primalLength = (V.row(EV(i,0))-V.row(EV(i,1))).norm();
-        if (dualLength>10e-9)  //smaller than 10e-9might happen for inv cot weights
+        if (dualLength>10e-9)  //smaller than 10e-9 might happen for inv cot weights
           stiffnessWeights(i)=primalLength/dualLength;
       }
     }
@@ -126,8 +126,8 @@ namespace directional
     igl::doublearea(V,F,doubleAreas);
     for (int n = 0; n < pvData.N; n++)
     {
-      for (int i=0;i<EF.rows();i++){
-        
+      for (int i=0;i<EF.rows();i++)
+      {
         if ((EF(i,0)==-1)||(EF(i,1)==-1))
           continue;  //boundary edge
         
@@ -201,15 +201,21 @@ namespace directional
     vector<Triplet<complex<double>>> reducMatTriplets;
     int jump = (pvData.signSymmetry ? 2 : 1);
     for (int i=0;i<F.rows();i++){
+      //std::cout<<"localFaceReducMats[i]: "<<localFaceReducMats[i]<<std::endl;
       for (int j=0;j<pvData.N;j+=jump)
         for (int k=0;k<localFaceReducMats[i].cols();k++)
-          reducMatTriplets.push_back(Triplet<complex<double>>(j*F.rows()+i, colCounter+k, localFaceReducMats[i](j,k)));
+          reducMatTriplets.push_back(Triplet<complex<double>>(j*F.rows()+i, colCounter+k, localFaceReducMats[i](j/jump,k)));
       pvData.reducRhs.segment(colCounter, localFaceReducMats[i].cols()) = localFaceReducRhs[i];
       colCounter+=localFaceReducMats[i].cols();
     }
     
     pvData.reducMat.resize(pvData.N*F.rows(), colCounter);
     pvData.reducMat.setFromTriplets(reducMatTriplets.begin(), reducMatTriplets.end());
+    
+    /*for (int k=0; k< pvData.reducMat.outerSize(); ++k)
+      for (SparseMatrix<std::complex<double>>::InnerIterator it( pvData.reducMat,k); it; ++it){
+        cout<<it.row()<<","<<it.col()<<","<<it.value()<<endl;
+      }*/
     
     
     /****************rotational-symmetry matrices********************/
@@ -286,21 +292,21 @@ namespace directional
     using namespace Eigen;
     
     //forming total energy matrix;
-    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat + pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat + pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat;
-    VectorXcd totalUnreducedRhs = -pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs;
+    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat;/* + pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat + pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat;*/
+    VectorXcd totalUnreducedRhs= -pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs;
     
     //TODO: make sparse matrix have a zero row in case no soft alignments
     
     SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
-    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);  //TODO: check signs
+    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);  //TODO: check signs*/
     polyVectorField=MatrixXcd::Zero(pvData.sizeF, pvData.N);
     if (pvData.constFaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {
      //using a matrix with only the first sizeFxsizeF block
       vector<Triplet<complex<double>>> X0LhsTriplets, X0MTriplets;
       SparseMatrix<complex<double>> X0Lhs, X0M;
-      for (int k=0; k<totalLhs.outerSize(); ++k)
-        for (SparseMatrix<std::complex<double>>::InnerIterator it(totalLhs,k); it; ++it)
+      for (int k=0; k<totalUnreducedLhs.outerSize(); ++k)
+        for (SparseMatrix<std::complex<double>>::InnerIterator it(totalUnreducedLhs,k); it; ++it)
           if ((it.row()<pvData.sizeF)&&(it.col()<pvData.sizeF))
             X0LhsTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()));
       
@@ -318,7 +324,7 @@ namespace directional
       //Extracting first eigenvector
       Eigen::MatrixXcd U;
       Eigen::VectorXcd S;
-      complex_eigs(X0Lhs, X0M, 20, U, S);
+      complex_eigs(X0Lhs, X0M, 10, U, S);
       cout<<"S: "<<S<<endl;
       
       int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);

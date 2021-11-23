@@ -22,7 +22,7 @@ Eigen::MatrixXcd pvFieldHard, pvFieldSoft;
 
 directional::DirectionalViewer viewer;
 
-int N = 3;
+int N = 4;
 
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=HARD_PRESCRIPTION;
