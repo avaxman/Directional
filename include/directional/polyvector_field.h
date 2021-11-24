@@ -172,27 +172,37 @@ namespace directional
       localFaceReducRhs[i]=VectorXcd::Zero(realN);
     }
     
-    /*************Reduction matrices******************/
+    /*************Hard-constraint reduction matrices******************/
     for (int i=0;i<pvData.constFaces.size();i++){
       if (pvData.wAlignment(i)>=0.0)
         continue;  //here we only handle the reduction caused by a fixed dof
       if (numFaceConstraints(pvData.constFaces(i))==realN)
         continue; //overconstrained; we ignore any further constraints on that face
       
+      int currFaceNumDof = numFaceConstraints(pvData.constFaces(i));
+      
       complex<double> constVectorComplex=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
       constVectorComplex = (pvData.signSymmetry ? constVectorComplex*constVectorComplex : constVectorComplex);
-      faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
       
-      MatrixXcd singleReducMat=MatrixXcd::Zero(realN,realN-1);
-      VectorXcd singleReducRhs=VectorXcd::Zero(realN);
-      for (int j=0;j<realN-1;j++){
+      MatrixXcd singleReducMat=MatrixXcd::Zero(realN-currFaceNumDof,realN-currFaceNumDof-1);
+      VectorXcd singleReducRhs=VectorXcd::Zero(realN-currFaceNumDof);
+      for (int j=0;j<realN-currFaceNumDof-1;j++){
         singleReducMat(j,j)=-constVectorComplex;
         singleReducMat(j+1,j)=complex<double>(1.0,0.0);
       }
-      singleReducRhs(realN-1) = -constVectorComplex;
+      singleReducRhs(realN-currFaceNumDof-1) = -constVectorComplex;
       
-      localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
+      cout<<"localFaceReducMats[pvData.constFaces(i)]: "<< localFaceReducMats[pvData.constFaces(i)]<<endl;
+      cout<<"localFaceReducRhs[pvData.constFaces(i)]: "<< localFaceReducRhs[pvData.constFaces(i)]<<endl;
+      
+      cout<<"singleReducMat: "<<singleReducMat<<endl;
+      cout<<"singleReducRhs: "<<singleReducRhs<<endl;
+      cout<<"currFaceNumDof: "<<currFaceNumDof<<endl;
+      
       localFaceReducRhs[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducRhs + localFaceReducRhs[pvData.constFaces(i)];
+      localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
+    
+      faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
     }
     
    
@@ -202,10 +212,13 @@ namespace directional
     int jump = (pvData.signSymmetry ? 2 : 1);
     for (int i=0;i<F.rows();i++){
       //std::cout<<"localFaceReducMats[i]: "<<localFaceReducMats[i]<<std::endl;
-      for (int j=0;j<pvData.N;j+=jump)
+      for (int j=0;j<pvData.N;j+=jump){
         for (int k=0;k<localFaceReducMats[i].cols();k++)
           reducMatTriplets.push_back(Triplet<complex<double>>(j*F.rows()+i, colCounter+k, localFaceReducMats[i](j/jump,k)));
-      pvData.reducRhs.segment(colCounter, localFaceReducMats[i].cols()) = localFaceReducRhs[i];
+        
+        pvData.reducRhs(j*F.rows()+i) = localFaceReducRhs[i](j/jump);
+      }
+     
       colCounter+=localFaceReducMats[i].cols();
     }
     
@@ -238,10 +251,8 @@ namespace directional
     vector<VectorXcd> alignRhsList;
     vector<Triplet<complex<double>>> WAlignTriplets;
     for (int i=0;i<pvData.constFaces.size();i++){
-      if (pvData.wAlignment(i)>0.0)
+      if (pvData.wAlignment(i)<0.0)
         continue;  //here we only handle soft alignments
-      if (numFaceConstraints(pvData.constFaces(i))==realN)
-        continue; //overconstrained; we ignore any further constraints on that face
       
       complex<double> constVectorComplex=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
       constVectorComplex = (pvData.signSymmetry ? constVectorComplex*constVectorComplex : constVectorComplex);
@@ -255,7 +266,8 @@ namespace directional
       }
       singleReducRhs(realN-1) = -constVectorComplex;
       
-      MatrixXcd IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*(singleReducMat.completeOrthogonalDecomposition().pseudoInverse());
+      MatrixXcd invSingleReducMat = singleReducMat.completeOrthogonalDecomposition().pseudoInverse();
+      MatrixXcd IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*invSingleReducMat;
       singleReducRhs = IAiA*singleReducRhs;
       for (int j=0;j<pvData.N;j++)
         for (int k=0;k<pvData.N;k+=jump)
@@ -456,8 +468,9 @@ namespace directional
   // minimal version without auxiliary data
   IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
                                    const Eigen::MatrixXi& F,
-                                   const Eigen::VectorXi& bc,
-                                   const Eigen::MatrixXd& b,
+                                   const Eigen::VectorXi& constFaces,
+                                   const Eigen::MatrixXd& constVectors,
+                                   const Eigen::VectorXd& alignWeights,
                                    const int N,
                                    Eigen::MatrixXcd& polyVectorField)
   {
@@ -474,6 +487,9 @@ namespace directional
     Eigen::MatrixXd B1, B2, xd;
     igl::local_basis(V, F, B1, B2, xd);
     PolyVectorData pvData;
+    pvData.constFaces=constFaces;
+    pvData.constVectors=constVectors;
+    pvData.wAlignment = alignWeights;
     igl::edge_topology(V, F, EV, xi, EF);
     polyvector_precompute(V,F,EV,EF, B1,B2, N, pvData);
     polyvector_field(pvData, polyVectorField);

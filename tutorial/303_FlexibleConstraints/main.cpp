@@ -11,11 +11,11 @@
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
 
-Eigen::VectorXi b, matching, singVertices, singIndices;
+Eigen::VectorXi constFaces, matching, singVertices, singIndices;
 Eigen::VectorXd effort;
 Eigen::MatrixXi F, EV, EF, FE;
 Eigen::MatrixXd V;
-Eigen::MatrixXd normals,bc;
+Eigen::MatrixXd normals,constVectors;
 Eigen::MatrixXd rawFieldConstraints, rawFieldHard, rawFieldSoft;
 Eigen::VectorXd w;
 Eigen::MatrixXcd pvFieldHard, pvFieldSoft;
@@ -25,13 +25,13 @@ directional::DirectionalViewer viewer;
 int N = 4;
 
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
-ViewingModes viewingMode=HARD_PRESCRIPTION;
+ViewingModes viewingMode=CONSTRAINTS;
 
 bool normalized=false;
 
 void recompute_field()
 {
-  directional::polyvector_field(V, F, b, bc, N, pvFieldHard);
+  directional::polyvector_field(V, F, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
   //std::cout<<"Done computing field!"<<std::endl;
   //directional::polyvector_field(V, F, b, bc, w, N, pvFieldSoft);
 }
@@ -40,9 +40,11 @@ void update_visualization()
 {
   
   if (viewingMode==CONSTRAINTS){
+    viewer.set_selected_faces(constFaces);
     viewer.set_field(rawFieldConstraints);
   }
   if (viewingMode==HARD_PRESCRIPTION){
+    viewer.set_selected_faces(Eigen::VectorXi());
     //std::cout<<"before polyvector_to_raw()"<<std::endl;
     //std::cout<<"pvFieldHard.rows(): "<<pvFieldHard.rows()<<std::endl;
     //std::cout<<"pvFieldHard.cols(): "<<pvFieldHard.cols()<<std::endl;
@@ -58,10 +60,11 @@ void update_visualization()
     directional::principal_matching(V, F, EV, EF, FE, rawFieldHard, matching, effort, singVertices, singIndices);
     //std::cout<<"after principal_matching()"<<std::endl;
     viewer.set_field(rawFieldHard);
-
+    viewer.set_singularities(singVertices, singIndices);
   }
   
   if (viewingMode==SOFT_PRESCRIPTION){
+    viewer.set_selected_faces(Eigen::VectorXi());
     directional::polyvector_to_raw(V, F, pvFieldSoft, N, rawFieldSoft, true);
     if (normalized)
       for(int n = 0; n < N; n++)
@@ -69,15 +72,9 @@ void update_visualization()
     
     directional::principal_matching(V, F, EV, EF, FE, rawFieldSoft, matching, effort, singVertices, singIndices);
     viewer.set_field(rawFieldSoft);
+    viewer.set_singularities(singVertices, singIndices);
 
   }
-  
-  viewer.set_singularities(singVertices, singIndices);
-  /*if (b.size()!=0){
-    viewer.set_selected_faces(b);
-    viewer.set_selected_vector(b(b.rows()-1), currVec);
-  }*/
-  
 }
 
 
@@ -144,7 +141,7 @@ int main()
   igl::per_face_normals(V, F, normals);
   
   //discovering sharp edges
-  std::vector<int> blist;
+  /*std::vector<int> blist;
   std::vector<Eigen::Vector3d> bclist;
   for (int i=0;i<EF.rows();i++){
     if (normals.row(EF(i,0)).dot(normals.row(EF(i,1)))<0.5){
@@ -162,15 +159,24 @@ int main()
     bc.row(i)=bclist[i];
   }
                                 
-  w=Eigen::VectorXd::Constant(F.rows(),1.0);  //Equal weight with the smoothness
+  w=Eigen::VectorXd::Constant(F.rows(),1.0);  //Equal weight with the smoothness*/
+  
+  //Inserting a few hard constraints
+  constFaces.resize(5);
+  constFaces<<0,250,500, 1000,0;
+  constVectors.resize(constFaces.rows(),3);
+  for (int i=0;i<constFaces.size()-1;i++)
+    constVectors.row(i)=(V.row(F(constFaces(i),1))-V.row(F(constFaces(i),0))).normalized();
+  
+  constVectors.row(constFaces.size()-1)=(V.row(F(constFaces(constFaces.size()-1),2))-V.row(F(constFaces(constFaces.size()-1),1))).normalized();
   
   //generating the viewing fields
-  /*rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
+  rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
   Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(F.rows());
-  for (int i=0;i<b.size();i++){
-    rawFieldConstraints.block(b(i),3*posInFace(b(i)), 1,3)=bc.row(i);
-    posInFace(b(i))++;
-  }*/
+  for (int i=0;i<constFaces.size();i++){
+    rawFieldConstraints.block(constFaces(i),3*posInFace(constFaces(i)), 1,3)=constVectors.row(i);
+    posInFace(constFaces(i))++;
+  }
   
   //triangle mesh setup
   viewer.set_mesh(V, F);
