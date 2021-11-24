@@ -235,7 +235,7 @@ namespace directional
     vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
     for (int i=F.rows();i<pvData.N*F.rows();i++){
       roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-      WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,doubleAreas(i%F.rows())));
+      WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,doubleAreas(i%F.rows())/2.0));
     }
     
     pvData.roSyMat.resize(N*F.rows(), N*F.rows());
@@ -269,10 +269,9 @@ namespace directional
       MatrixXcd invSingleReducMat = singleReducMat.completeOrthogonalDecomposition().pseudoInverse();
       MatrixXcd IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*invSingleReducMat;
       singleReducRhs = IAiA*singleReducRhs;
-      //This assumes the sign symmetry is dealt by a reduction matrix, so acts on realN
       for (int j=0;j<IAiA.rows();j++)
         for (int k=0;k<IAiA.cols();k++)
-          alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*F.rows()+i, IAiA(j,k)));
+          alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*jump*F.rows()+pvData.constFaces(i), IAiA(j,k)));
       
       alignRhsList.push_back(singleReducRhs);
       for (int j=0;j<singleReducRhs.size();j++)
@@ -305,13 +304,13 @@ namespace directional
     using namespace Eigen;
     
     //forming total energy matrix;
-    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat;/* + pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat + pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat;*/
-    VectorXcd totalUnreducedRhs= -pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs;
+    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat+ pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat + pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat;
+    VectorXcd totalUnreducedRhs= pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs;
     
     //TODO: make sparse matrix have a zero row in case no soft alignments
     
     SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
-    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);  //TODO: check signs*/
+    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);
     polyVectorField=MatrixXcd::Zero(pvData.sizeF, pvData.N);
     if (pvData.constFaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {

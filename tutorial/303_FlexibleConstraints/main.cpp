@@ -23,7 +23,7 @@ double smoothWeight, roSyWeight;
 
 directional::DirectionalViewer viewer;
 
-int N = 3;
+int N = 4;
 
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
@@ -86,25 +86,25 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   {
       // Select vector
     case '1':
-      roSyWeight+=0.1;
+      roSyWeight*=2.0;
       std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
       recompute_field();
       break;
     case '2':
-      roSyWeight-=0.1;
+      roSyWeight/=2.0;
       roSyWeight = (roSyWeight < 0.0 ? 0.0 : roSyWeight);
       std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
       recompute_field();
       break;
       
     case '3':
-      alignWeights.array()+=0.1;
+      alignWeights.array()*=2.0;
       std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
       recompute_field();
       break;
       
     case '4':
-      alignWeights.array()-=0.1;
+      alignWeights.array()/=2.0;
       alignWeights = (alignWeights(1) < 0.0 ? Eigen::VectorXd::Zero(alignWeights.size()) : alignWeights);
       std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
       recompute_field();
@@ -196,8 +196,8 @@ int main()
   }
   
   smoothWeight = 1.0;
-  roSyWeight = 0.0;
-  alignWeights = Eigen::VectorXd::Constant(constFaces.size(),10000.0);
+  roSyWeight = 1.0;
+  alignWeights = Eigen::VectorXd::Constant(constFaces.size(),1.0);
   
   //triangle mesh setup
   viewer.set_mesh(V, F);
