@@ -17,12 +17,13 @@ Eigen::MatrixXi F, EV, EF, FE;
 Eigen::MatrixXd V;
 Eigen::MatrixXd normals,constVectors;
 Eigen::MatrixXd rawFieldConstraints, rawFieldHard, rawFieldSoft;
-Eigen::VectorXd w;
+Eigen::VectorXd alignWeights;
 Eigen::MatrixXcd pvFieldHard, pvFieldSoft;
+double smoothWeight, roSyWeight;
 
 directional::DirectionalViewer viewer;
 
-int N = 4;
+int N = 3;
 
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
@@ -31,9 +32,9 @@ bool normalized=false;
 
 void recompute_field()
 {
-  directional::polyvector_field(V, F, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
+  directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
   //std::cout<<"Done computing field!"<<std::endl;
-  //directional::polyvector_field(V, F, b, bc, w, N, pvFieldSoft);
+  directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
 }
 
 void update_visualization()
@@ -65,7 +66,7 @@ void update_visualization()
   
   if (viewingMode==SOFT_PRESCRIPTION){
     viewer.set_selected_faces(Eigen::VectorXi());
-    directional::polyvector_to_raw(V, F, pvFieldSoft, N, rawFieldSoft, true);
+    directional::polyvector_to_raw(V, F, pvFieldSoft, N, rawFieldSoft, N%2==0);
     if (normalized)
       for(int n = 0; n < N; n++)
         rawFieldSoft.middleCols(n*3, 3).rowwise().normalize();
@@ -85,23 +86,39 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   {
       // Select vector
     case '1':
-      w.array()*=2.0;
+      roSyWeight+=0.1;
+      std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
       recompute_field();
       break;
     case '2':
-      w.array()/=2.0;
+      roSyWeight-=0.1;
+      roSyWeight = (roSyWeight < 0.0 ? 0.0 : roSyWeight);
+      std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
       recompute_field();
       break;
       
     case '3':
-      viewingMode=CONSTRAINTS;
+      alignWeights.array()+=0.1;
+      std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
+      recompute_field();
       break;
       
     case '4':
-      viewingMode=SOFT_PRESCRIPTION;
+      alignWeights.array()-=0.1;
+      alignWeights = (alignWeights(1) < 0.0 ? Eigen::VectorXd::Zero(alignWeights.size()) : alignWeights);
+      std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
+      recompute_field();
       break;
       
     case '5':
+      viewingMode=CONSTRAINTS;
+      break;
+      
+    case '6':
+      viewingMode=SOFT_PRESCRIPTION;
+      break;
+      
+    case '7':
       viewingMode=HARD_PRESCRIPTION;
       break;
     
@@ -177,6 +194,10 @@ int main()
     rawFieldConstraints.block(constFaces(i),3*posInFace(constFaces(i)), 1,3)=constVectors.row(i);
     posInFace(constFaces(i))++;
   }
+  
+  smoothWeight = 1.0;
+  roSyWeight = 0.0;
+  alignWeights = Eigen::VectorXd::Constant(constFaces.size(),10000.0);
   
   //triangle mesh setup
   viewer.set_mesh(V, F);

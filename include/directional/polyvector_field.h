@@ -192,12 +192,12 @@ namespace directional
       }
       singleReducRhs(realN-currFaceNumDof-1) = -constVectorComplex;
       
-      cout<<"localFaceReducMats[pvData.constFaces(i)]: "<< localFaceReducMats[pvData.constFaces(i)]<<endl;
+      /*cout<<"localFaceReducMats[pvData.constFaces(i)]: "<< localFaceReducMats[pvData.constFaces(i)]<<endl;
       cout<<"localFaceReducRhs[pvData.constFaces(i)]: "<< localFaceReducRhs[pvData.constFaces(i)]<<endl;
       
       cout<<"singleReducMat: "<<singleReducMat<<endl;
       cout<<"singleReducRhs: "<<singleReducRhs<<endl;
-      cout<<"currFaceNumDof: "<<currFaceNumDof<<endl;
+      cout<<"currFaceNumDof: "<<currFaceNumDof<<endl;*/
       
       localFaceReducRhs[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducRhs + localFaceReducRhs[pvData.constFaces(i)];
       localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
@@ -269,8 +269,9 @@ namespace directional
       MatrixXcd invSingleReducMat = singleReducMat.completeOrthogonalDecomposition().pseudoInverse();
       MatrixXcd IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*invSingleReducMat;
       singleReducRhs = IAiA*singleReducRhs;
-      for (int j=0;j<pvData.N;j++)
-        for (int k=0;k<pvData.N;k+=jump)
+      //This assumes the sign symmetry is dealt by a reduction matrix, so acts on realN
+      for (int j=0;j<IAiA.rows();j++)
+        for (int k=0;k<IAiA.cols();k++)
           alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*F.rows()+i, IAiA(j,k)));
       
       alignRhsList.push_back(singleReducRhs);
@@ -470,6 +471,8 @@ namespace directional
                                    const Eigen::MatrixXi& F,
                                    const Eigen::VectorXi& constFaces,
                                    const Eigen::MatrixXd& constVectors,
+                                   const double smoothWeight,
+                                   const double roSyWeight,
                                    const Eigen::VectorXd& alignWeights,
                                    const int N,
                                    Eigen::MatrixXcd& polyVectorField)
@@ -490,6 +493,8 @@ namespace directional
     pvData.constFaces=constFaces;
     pvData.constVectors=constVectors;
     pvData.wAlignment = alignWeights;
+    pvData.wSmooth = smoothWeight;
+    pvData.wRoSy = roSyWeight;
     igl::edge_topology(V, F, EV, xi, EF);
     polyvector_precompute(V,F,EV,EF, B1,B2, N, pvData);
     polyvector_field(pvData, polyVectorField);
