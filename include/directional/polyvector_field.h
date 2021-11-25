@@ -57,6 +57,7 @@ namespace directional
     
     //Mass and stiffness matrices
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
+    double totalRoSyWeight, totalConstrainedWeight;    //for co-scaling energies
     
     PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS), wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constFaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
@@ -96,8 +97,6 @@ namespace directional
     
     
     /************Smoothness matrices****************/
-    
-    //Stiffness weights
     VectorXd stiffnessWeights=VectorXd::Zero(EF.rows());
     
     if (pvData.lapType==UNIFORM_WEIGHTS){
@@ -192,13 +191,6 @@ namespace directional
       }
       singleReducRhs(realN-currFaceNumDof-1) = -constVectorComplex;
       
-      /*cout<<"localFaceReducMats[pvData.constFaces(i)]: "<< localFaceReducMats[pvData.constFaces(i)]<<endl;
-      cout<<"localFaceReducRhs[pvData.constFaces(i)]: "<< localFaceReducRhs[pvData.constFaces(i)]<<endl;
-      
-      cout<<"singleReducMat: "<<singleReducMat<<endl;
-      cout<<"singleReducRhs: "<<singleReducRhs<<endl;
-      cout<<"currFaceNumDof: "<<currFaceNumDof<<endl;*/
-      
       localFaceReducRhs[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducRhs + localFaceReducRhs[pvData.constFaces(i)];
       localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
     
@@ -224,12 +216,7 @@ namespace directional
     
     pvData.reducMat.resize(pvData.N*F.rows(), colCounter);
     pvData.reducMat.setFromTriplets(reducMatTriplets.begin(), reducMatTriplets.end());
-    
-    /*for (int k=0; k< pvData.reducMat.outerSize(); ++k)
-      for (SparseMatrix<std::complex<double>>::InnerIterator it( pvData.reducMat,k); it; ++it){
-        cout<<it.row()<<","<<it.col()<<","<<it.value()<<endl;
-      }*/
-    
+  
     
     /****************rotational-symmetry matrices********************/
     vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
@@ -245,14 +232,20 @@ namespace directional
     pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
     
     
+    pvData.totalRoSyWeight=((double)pvData.N)*doubleAreas.sum()/2.0;
+    
     /*****************Soft alignment matrices*******************/
     rowCounter=0;
     vector<Triplet<complex<double>>> alignTriplets;
     vector<VectorXcd> alignRhsList;
     vector<Triplet<complex<double>>> WAlignTriplets;
+    pvData.totalConstrainedWeight=0.0;
+    bool noSoftAlignment = true;
     for (int i=0;i<pvData.constFaces.size();i++){
       if (pvData.wAlignment(i)<0.0)
         continue;  //here we only handle soft alignments
+      
+      noSoftAlignment=false;
       
       complex<double> constVectorComplex=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
       constVectorComplex = (pvData.signSymmetry ? constVectorComplex*constVectorComplex : constVectorComplex);
@@ -274,11 +267,17 @@ namespace directional
           alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*jump*F.rows()+pvData.constFaces(i), IAiA(j,k)));
       
       alignRhsList.push_back(singleReducRhs);
-      for (int j=0;j<singleReducRhs.size();j++)
-        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*doubleAreas(i)/2.0));
+      for (int j=0;j<singleReducRhs.size();j++){
+        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*doubleAreas(pvData.constFaces(i))/2.0));
+        pvData.totalConstrainedWeight+=doubleAreas(pvData.constFaces(i))/2.0;
+      }
       rowCounter+=realN;
+      
     }
     
+    if (noSoftAlignment)
+      pvData.totalConstrainedWeight=1.0;  //it wouldn't be used, except just to avoid a division by zero in the energy formulation
+  
     pvData.alignRhs.resize(rowCounter);
     for (int i=0;i<alignRhsList.size();i++)
       pvData.alignRhs.segment(i*realN,realN)=alignRhsList[i];
@@ -288,6 +287,7 @@ namespace directional
     
     pvData.WAlign.resize(rowCounter,rowCounter);
     pvData.WAlign.setFromTriplets(WAlignTriplets.begin(), WAlignTriplets.end());
+    
     
   }
 
@@ -304,8 +304,8 @@ namespace directional
     using namespace Eigen;
     
     //forming total energy matrix;
-    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat+ pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat + pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat;
-    VectorXcd totalUnreducedRhs= pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs;
+    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat + (pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight + (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
+    VectorXcd totalUnreducedRhs= (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight;
     
     //TODO: make sparse matrix have a zero row in case no soft alignments
     
@@ -352,116 +352,13 @@ namespace directional
       for (int i=0;i<pvData.N;i++)
         polyVectorField.col(i) = fullDofs.segment(i*pvData.sizeF,pvData.sizeF);
       
+      std::cout<<"Smoothness energy: "<<pvData.wSmooth * fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs<<std::endl;
+      std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
+      std::cout<<"Alignment energy: "<< fullDofs.adjoint()*((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat*fullDofs - pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight)<<std::endl;
+      
     }
     
-   
-    /*if (bc.size() == 0)
-    {
-      //extracting first eigenvector into the field
-      //Have to use reals because libigl does not currently support complex eigs.
-      SparseMatrix<double> M; igl::speye(2*B1.rows(), 2*B1.rows(), M);
-      //creating a matrix of only the N-rosy interpolation
-      SparseMatrix<std::complex<double> > AfullNRosy(Afull.rows()/N,Afull.cols()/N);
-      std::vector<Triplet<std::complex<double> > > AfullNRosyTriplets;
-      for (int k=0; k<Afull.outerSize(); ++k)
-        for (SparseMatrix<std::complex<double> >::InnerIterator it(Afull,k); it; ++it)
-        {
-          if ((it.row()<Afull.rows()/N)&&(it.col()<Afull.cols()/N))
-            AfullNRosyTriplets.push_back(Triplet<std::complex<double> > (it.row(), it.col(), it.value()));
-        }
-      
-      AfullNRosy.setFromTriplets(AfullNRosyTriplets.begin(), AfullNRosyTriplets.end());
-      
-      SparseMatrix<std::complex<double>> LComplex =AfullNRosy.adjoint()*AfullNRosy;
-      SparseMatrix<double> L(2*B1.rows(),2*B1.rows());
-      std::vector<Triplet<double> > LTriplets;
-      for (int k=0; k<LComplex.outerSize(); ++k)
-        for (SparseMatrix<std::complex<double>>::InnerIterator it(LComplex,k); it; ++it)
-        {
-          LTriplets.push_back(Triplet<double>(it.row(), it.col(), it.value().real()));
-          LTriplets.push_back(Triplet<double>(it.row(), LComplex.cols()+it.col(), -it.value().imag()));
-          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), it.col(), it.value().imag()));
-          LTriplets.push_back(Triplet<double>(LComplex.rows()+it.row(), LComplex.cols()+it.col(), it.value().real()));
-        }
-      L.setFromTriplets(LTriplets.begin(), LTriplets.end());
-      Eigen::MatrixXd U;
-      Eigen::VectorXd S;
-      igl::eigs(L,M,10,igl::EIGS_TYPE_SM,U,S);
-      int smallestIndex; S.minCoeff(&smallestIndex);
-      
-      polyVectorField=MatrixXcd::Constant(B1.rows(), N, complex<double>());
-      
-      polyVectorField.col(0) = U.block(0,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(1,0)+
-      U.block(U.rows()/2,smallestIndex,U.rows()/2,1).cast<std::complex<double> >().array()*std::complex<double>(0,1);
-      //cout<<"polyVectorField.col(0): "<<polyVectorField.col(0)<<endl;
-      //cout<<"B1: "<<B1<<endl;
-      return;
-    }
-    
-    MatrixXcd constValuesMat(b.rows(),N);
-    assert((b.cols()==3*N)||(b.cols()==3));
-    if (b.cols()==3)  //N-RoSy constraint
-    {
-      constValuesMat.setZero();
-      for (int i=0;i<b.rows();i++){
-        complex<double> bComplex=complex<double>(b.row(i).dot(B1.row(bc(i))), b.row(i).dot(B2.row(bc(i))));
-        constValuesMat(i,0)=-pow(bComplex, N);
-      }
-    } else {
-      for (int i=0;i<b.rows();i++){
-        RowVectorXcd poly,roots(N);
-        for (int n=0;n<N;n++){
-          RowVector3d vec=b.block(i,3*n,1,3);
-          roots(n)=complex<double>(vec.dot(B1.row(bc(i))), vec.dot(B2.row(bc(i))));
-        }
-        roots_to_monicPolynomial(roots, poly);
-        constValuesMat.row(i)<<poly.head(N);
-      }
-    }
-    
-    VectorXi constIndices(N*bc.size());
-    VectorXcd constValues(N*b.size());
-    
-    for (int n=0;n<N;n++){
-      constIndices.segment(bc.rows()*n,bc.rows())=bc.array()+n*B1.rows();
-      constValues.segment(b.rows()*n,b.rows())=constValuesMat.col(n);
-    }
-    
-    VectorXcd torhs(N*B1.rows(),1);
-    torhs.setZero();
-    for (int i=0;i<constIndices.size();i++)
-      torhs(constIndices(i))=constValues(i);
-    
-    VectorXcd rhs=-AVar.adjoint()*Afull*torhs;
-    VectorXcd varFieldVector=solver.solve(rhs);
-    assert(solver.info() == Success);
-    
-    VectorXcd polyVectorFieldVector(N*B1.rows());
-    VectorXi varMask=VectorXi::Constant(N*B1.rows(),1);
-    for (int i=0;i<constIndices.size();i++)
-      varMask(constIndices(i))=0;
-    
-    VectorXi full2var=VectorXi::Constant(N*B1.rows(),-1);
-    int varCounter=0;
-    for (int i=0;i<N*B1.rows();i++)
-      if (varMask(i))
-        full2var(i)=varCounter++;
-    
-    assert(varCounter==N*(B1.rows()-bc.size()));
-    
-    for (int i=0;i<constIndices.size();i++)
-      polyVectorFieldVector(constIndices(i))=constValues(i);
-    
-    for (int i=0;i<N*B1.rows();i++)
-      if (full2var(i)!=-1)
-        polyVectorFieldVector(i)=varFieldVector(full2var(i));
-    
-    //converting to matrix form
-    polyVectorField.conservativeResize(B1.rows(),N);
-    for (int n=0;n<N;n++)
-      polyVectorField.col(n)=polyVectorFieldVector.segment(n*B1.rows(),B1.rows());*/
-    
-    
+
   }
 
   
@@ -476,15 +373,6 @@ namespace directional
                                    const int N,
                                    Eigen::MatrixXcd& polyVectorField)
   {
-    /*Eigen::MatrixXi EV, xi, EF;
-    igl::edge_topology(V, F, EV, xi, EF);
- 
-    Eigen::SparseMatrix<std::complex<double>> Afull, AVar;
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> solver;
-    polyvector_precompute(V,F,EV,EF,B1,B2,bc,N, solver,Afull,AVar);
-    polyvector_field(B1, B2, bc, b, solver, Afull, AVar, N, polyVectorField);*/
-    
-    //Currently ignoring constraints
     Eigen::MatrixXi EV, xi, EF;
     Eigen::MatrixXd B1, B2, xd;
     igl::local_basis(V, F, B1, B2, xd);
@@ -498,6 +386,27 @@ namespace directional
     polyvector_precompute(V,F,EV,EF, B1,B2, N, pvData);
     polyvector_field(pvData, polyVectorField);
   }
+
+IGL_INLINE void polyvector_field(const Eigen::MatrixXd& V,
+                                 const Eigen::MatrixXi& F,
+                                 const Eigen::VectorXi& constFaces,
+                                 const Eigen::MatrixXd& constVectors,
+                                 const int N,
+                                 Eigen::MatrixXcd& polyVectorField)
+{
+  Eigen::MatrixXi EV, xi, EF;
+  Eigen::MatrixXd B1, B2, xd;
+  igl::local_basis(V, F, B1, B2, xd);
+  PolyVectorData pvData;
+  pvData.constFaces=constFaces;
+  pvData.constVectors=constVectors;
+  pvData.wAlignment = Eigen::VectorXd::Constant(constFaces.size(),-1.0);
+  pvData.wSmooth = 1.0;
+  pvData.wRoSy = 0.0;
+  igl::edge_topology(V, F, EV, xi, EF);
+  polyvector_precompute(V,F,EV,EF, B1,B2, N, pvData);
+  polyvector_field(pvData, polyVectorField);
+}
 }
 
 #endif

@@ -33,7 +33,6 @@ bool normalized=false;
 void recompute_field()
 {
   directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
-  //std::cout<<"Done computing field!"<<std::endl;
   directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
 }
 
@@ -46,20 +45,12 @@ void update_visualization()
   }
   if (viewingMode==HARD_PRESCRIPTION){
     viewer.set_selected_faces(Eigen::VectorXi());
-    //std::cout<<"before polyvector_to_raw()"<<std::endl;
-    //std::cout<<"pvFieldHard.rows(): "<<pvFieldHard.rows()<<std::endl;
-    //std::cout<<"pvFieldHard.cols(): "<<pvFieldHard.cols()<<std::endl;
-    //std::cout<<"F.rows(): "<<F.rows()<<std::endl;
     directional::polyvector_to_raw(V, F, pvFieldHard, N, rawFieldHard, N%2==0);
-    //std::cout<<"after polyvector_to_raw()"<<std::endl;
     if (normalized)
       for(int n = 0; n < N; n++)
         rawFieldHard.middleCols(n*3, 3).rowwise().normalize();
     
-    //std::cout<<"after normalize()"<<std::endl;
-    
     directional::principal_matching(V, F, EV, EF, FE, rawFieldHard, matching, effort, singVertices, singIndices);
-    //std::cout<<"after principal_matching()"<<std::endl;
     viewer.set_field(rawFieldHard);
     viewer.set_singularities(singVertices, singIndices);
   }
