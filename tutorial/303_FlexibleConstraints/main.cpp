@@ -2,9 +2,11 @@
 #include <Eigen/Core>
 #include <igl/read_triangle_mesh.h>
 #include <igl/per_face_normals.h>
+#include <igl/local_basis.h>
 #include <igl/sharp_edges.h>
 #include <igl/edge_topology.h>
 #include <directional/polyvector_to_raw.h>
+#include <directional/polyvector_to_raw_companion.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
 #include <directional/effort_to_indices.h>
@@ -14,7 +16,7 @@
 Eigen::VectorXi constFaces, matching, singVertices, singIndices;
 Eigen::VectorXd effort;
 Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V;
+Eigen::MatrixXd V, B1, B2;
 Eigen::MatrixXd normals,constVectors;
 Eigen::MatrixXd rawFieldConstraints, rawFieldHard, rawFieldSoft;
 Eigen::VectorXd alignWeights;
@@ -45,7 +47,7 @@ void update_visualization()
   }
   if (viewingMode==HARD_PRESCRIPTION){
     viewer.set_selected_faces(Eigen::VectorXi());
-    directional::polyvector_to_raw(V, F, pvFieldHard, N, rawFieldHard, N%2==0);
+    directional::polyvector_to_raw(B1,B2, pvFieldHard, N, rawFieldHard, N%2==0);
     if (normalized)
       for(int n = 0; n < N; n++)
         rawFieldHard.middleCols(n*3, 3).rowwise().normalize();
@@ -57,7 +59,7 @@ void update_visualization()
   
   if (viewingMode==SOFT_PRESCRIPTION){
     viewer.set_selected_faces(Eigen::VectorXi());
-    directional::polyvector_to_raw(V, F, pvFieldSoft, N, rawFieldSoft, N%2==0);
+    directional::polyvector_to_raw(B1, B2, pvFieldSoft, N, rawFieldSoft);
     if (normalized)
       for(int n = 0; n < N; n++)
         rawFieldSoft.middleCols(n*3, 3).rowwise().normalize();
@@ -145,8 +147,7 @@ int main()
   // Load mesh
   igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", V, F);
   igl::edge_topology(V, F, EV, FE, EF);
-  
-  igl::per_face_normals(V, F, normals);
+  igl::local_basis(V, F, B1, B2, normals);
   
   //discovering sharp edges
   /*std::vector<int> blist;
