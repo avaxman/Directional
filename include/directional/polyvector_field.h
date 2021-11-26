@@ -57,7 +57,7 @@ namespace directional
     
     //Mass and stiffness matrices
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
-    double totalRoSyWeight, totalConstrainedWeight;    //for co-scaling energies
+    double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
     PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS), wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constFaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
@@ -119,6 +119,8 @@ namespace directional
           stiffnessWeights(i)=primalLength/dualLength;
       }
     }
+    
+    pvData.totalSmoothWeight = stiffnessWeights.sum();
     
     vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
     VectorXd doubleAreas;
@@ -304,7 +306,7 @@ namespace directional
     using namespace Eigen;
     
     //forming total energy matrix;
-    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat + (pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight + (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
+    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * (pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat)/pvData.totalSmoothWeight + (pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight + (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
     VectorXcd totalUnreducedRhs= (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight;
     
     //TODO: make sparse matrix have a zero row in case no soft alignments
@@ -352,7 +354,7 @@ namespace directional
       for (int i=0;i<pvData.N;i++)
         polyVectorField.col(i) = fullDofs.segment(i*pvData.sizeF,pvData.sizeF);
       
-      std::cout<<"Smoothness energy: "<<pvData.wSmooth * fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs<<std::endl;
+      std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;
       std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
       std::cout<<"Alignment energy: "<< fullDofs.adjoint()*((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat*fullDofs - pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight)<<std::endl;
       

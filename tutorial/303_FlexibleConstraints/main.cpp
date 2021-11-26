@@ -145,40 +145,29 @@ int main()
   "  N          Toggle field normalization" << std::endl;
   
   // Load mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", V, F);
+  igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", V, F);
   igl::edge_topology(V, F, EV, FE, EF);
   igl::local_basis(V, F, B1, B2, normals);
   
-  //discovering sharp edges
-  /*std::vector<int> blist;
-  std::vector<Eigen::Vector3d> bclist;
+  //discovering and constraining sharp edges
+  std::vector<int> constFaceslist;
+  std::vector<Eigen::Vector3d> constVectorslist;
   for (int i=0;i<EF.rows();i++){
     if (normals.row(EF(i,0)).dot(normals.row(EF(i,1)))<0.5){
-      blist.push_back(EF(i,0));
-      blist.push_back(EF(i,1));
-      bclist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
-      bclist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
+      constFaceslist.push_back(EF(i,0));
+      constFaceslist.push_back(EF(i,1));
+      constVectorslist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
+      constVectorslist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
     }
   }
   
-  b.resize(blist.size());
-  bc.resize(bclist.size(),3);
-  for (int i=0;i<blist.size();i++){
-    b(i)=blist[i];
-    bc.row(i)=bclist[i];
+  constFaces.resize(constFaceslist.size());
+  constVectors.resize(constVectorslist.size(),3);
+  for (int i=0;i<constFaces.size();i++){
+    constFaces(i)=constFaceslist[i];
+    constVectors.row(i)=constVectorslist[i];
   }
                                 
-  w=Eigen::VectorXd::Constant(F.rows(),1.0);  //Equal weight with the smoothness*/
-  
-  //Inserting a few hard constraints
-  constFaces.resize(5);
-  constFaces<<0,250,500, 1000,0;
-  constVectors.resize(constFaces.rows(),3);
-  for (int i=0;i<constFaces.size()-1;i++)
-    constVectors.row(i)=(V.row(F(constFaces(i),1))-V.row(F(constFaces(i),0))).normalized();
-  
-  constVectors.row(constFaces.size()-1)=(V.row(F(constFaces(constFaces.size()-1),2))-V.row(F(constFaces(constFaces.size()-1),1))).normalized();
-  
   //generating the viewing fields
   rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
   Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(F.rows());
