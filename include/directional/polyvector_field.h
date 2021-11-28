@@ -40,18 +40,18 @@ namespace directional
     
     int N;                        //Degree of field
     int sizeF;                    //#faces
-    bool signSymmetry;            //whever field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+    bool signSymmetry;            //Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+    bool perfectRoSy;             //Whether the field must be perfect rotationally-symmetric (but not unit).
     double wSmooth;               //Weight of smoothness
-    double wRoSy;                 //Weight of rotational-symmetry
+    double wRoSy;                 //Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;   //Weight of alignment per each of the constfaces. "-1" means a fixed vector
     
     int lapType;                  //Choice of weights (from UNIFORM_WEIGHTS,BARYCENTRIC_WEIGHTS or INV_COT_WEIGHTS)
     
-
-    Eigen::SparseMatrix<std::complex<double>> smoothMat;
-    Eigen::SparseMatrix<std::complex<double>> roSyMat;
+    Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
+    Eigen::SparseMatrix<std::complex<double>> roSyMat;      //Rotational-symmetry energy
     Eigen::SparseMatrix<std::complex<double>> alignMat;     //(soft) alignment energy.
-    Eigen::SparseMatrix<std::complex<double>> reducMat;         //reducing the fixed dofs (for instance with sign symmetry or fixed partial constraints)
+    Eigen::SparseMatrix<std::complex<double>> reducMat;     //reducing the fixed dofs (for instance with sign symmetry or fixed partial constraints)
     Eigen::VectorXcd reducRhs;                                   //The uncompressed PV coeffs are reducMat*true_dofs+reducRhs
     Eigen::VectorXcd alignRhs;                                   //encoding the soft constraints
     
@@ -94,7 +94,6 @@ namespace directional
     pvData.N = N;
     pvData.sizeF = F.rows();
     if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
-    
     
     /************Smoothness matrices****************/
     VectorXd stiffnessWeights=VectorXd::Zero(EF.rows());
@@ -164,7 +163,8 @@ namespace directional
     //creating reduction transformation
     VectorXi numFaceConstraints = Eigen::VectorXi::Zero(F.rows());
     int realN = (pvData.signSymmetry ? N/2 : N);
-    MatrixXcd faceConstraints(F.rows(),realN);
+    realN = (pvData.wRoSy < 0.0 ? 1 : realN);
+    //MatrixXcd faceConstraints(F.rows(),realN);
     std::vector<MatrixXcd> localFaceReducMats; localFaceReducMats.resize(F.rows());
     std::vector<VectorXcd> localFaceReducRhs;  localFaceReducRhs.resize(F.rows());
     
@@ -182,8 +182,9 @@ namespace directional
       
       int currFaceNumDof = numFaceConstraints(pvData.constFaces(i));
       
-      complex<double> constVectorComplex=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
-      constVectorComplex = (pvData.signSymmetry ? constVectorComplex*constVectorComplex : constVectorComplex);
+      complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexSingle*constVectorComplexSingle : constVectorComplexSingle);
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexSingle, N) : constVectorComplex);
       
       MatrixXcd singleReducMat=MatrixXcd::Zero(realN-currFaceNumDof,realN-currFaceNumDof-1);
       VectorXcd singleReducRhs=VectorXcd::Zero(realN-currFaceNumDof);
@@ -195,15 +196,18 @@ namespace directional
       
       localFaceReducRhs[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducRhs + localFaceReducRhs[pvData.constFaces(i)];
       localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
+      
+      numFaceConstraints(pvData.constFaces(i))++;
     
-      faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
+      //faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
     }
     
-   
+    //creating the global reduction matrices
     double colCounter=0;
-    pvData.reducRhs.resize(pvData.N*F.rows());
+    pvData.reducRhs=VectorXcd::Zero(pvData.N*F.rows());
     vector<Triplet<complex<double>>> reducMatTriplets;
     int jump = (pvData.signSymmetry ? 2 : 1);
+    jump = (pvData.wRoSy < 0.0 ? pvData.N : jump);
     for (int i=0;i<F.rows();i++){
       //std::cout<<"localFaceReducMats[i]: "<<localFaceReducMats[i]<<std::endl;
       for (int j=0;j<pvData.N;j+=jump){
@@ -221,20 +225,26 @@ namespace directional
   
     
     /****************rotational-symmetry matrices********************/
-    vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
-    for (int i=F.rows();i<pvData.N*F.rows();i++){
-      roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-      WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,doubleAreas(i%F.rows())/2.0));
+    
+    if (pvData.wRoSy >= 0.0){ //this is anyhow enforced, this matrix is unnecessary)
+      vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
+      for (int i=F.rows();i<pvData.N*F.rows();i++){
+        roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
+        WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,doubleAreas(i%F.rows())/2.0));
+      }
+      
+      pvData.roSyMat.resize(N*F.rows(), N*F.rows());
+      pvData.roSyMat.setFromTriplets(roSyTriplets.begin(), roSyTriplets.end());
+      
+      pvData.WRoSy.resize(N*F.rows(), N*F.rows());
+      pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
+      
+      pvData.totalRoSyWeight=((double)pvData.N)*doubleAreas.sum()/2.0;
+    } else {
+      pvData.roSyMat.resize(0, N*F.rows());
+      pvData.WRoSy.resize(0,0);  //Eeven necessary?
+      pvData.totalRoSyWeight=1.0;
     }
-    
-    pvData.roSyMat.resize(N*F.rows(), N*F.rows());
-    pvData.roSyMat.setFromTriplets(roSyTriplets.begin(), roSyTriplets.end());
-    
-    pvData.WRoSy.resize(N*F.rows(), N*F.rows());
-    pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
-    
-    
-    pvData.totalRoSyWeight=((double)pvData.N)*doubleAreas.sum()/2.0;
     
     /*****************Soft alignment matrices*******************/
     rowCounter=0;
@@ -249,9 +259,11 @@ namespace directional
       
       noSoftAlignment=false;
       
-      complex<double> constVectorComplex=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
-      constVectorComplex = (pvData.signSymmetry ? constVectorComplex*constVectorComplex : constVectorComplex);
-      faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
+      complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(B1.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(B2.row(pvData.constFaces(i))));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexSingle*constVectorComplexSingle : constVectorComplexSingle);
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexSingle, N) : constVectorComplex);
+      numFaceConstraints(pvData.constFaces(i))++;
+      //faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
       
       MatrixXcd singleReducMat=MatrixXcd::Zero(realN,realN-1);
       VectorXcd singleReducRhs=VectorXcd::Zero(realN);
@@ -261,8 +273,11 @@ namespace directional
       }
       singleReducRhs(realN-1) = -constVectorComplex;
       
-      MatrixXcd invSingleReducMat = singleReducMat.completeOrthogonalDecomposition().pseudoInverse();
-      MatrixXcd IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*invSingleReducMat;
+      MatrixXcd IAiA;
+      if (realN>1){
+        MatrixXcd invSingleReducMat = singleReducMat.completeOrthogonalDecomposition().pseudoInverse();
+        IAiA = MatrixXcd::Identity(realN,realN) - singleReducMat*invSingleReducMat;
+      } else IAiA = MatrixXcd::Ones(realN,realN);
       singleReducRhs = IAiA*singleReducRhs;
       for (int j=0;j<IAiA.rows();j++)
         for (int k=0;k<IAiA.cols();k++)
@@ -274,7 +289,6 @@ namespace directional
         pvData.totalConstrainedWeight+=doubleAreas(pvData.constFaces(i))/2.0;
       }
       rowCounter+=realN;
-      
     }
     
     if (noSoftAlignment)
@@ -289,8 +303,6 @@ namespace directional
     
     pvData.WAlign.resize(rowCounter,rowCounter);
     pvData.WAlign.setFromTriplets(WAlignTriplets.begin(), WAlignTriplets.end());
-    
-    
   }
 
 
@@ -308,11 +320,9 @@ namespace directional
     //forming total energy matrix;
     SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * (pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat)/pvData.totalSmoothWeight + (pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight + (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
     VectorXcd totalUnreducedRhs= (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight;
-    
-    //TODO: make sparse matrix have a zero row in case no soft alignments
-    
+        
     SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
-    VectorXcd totalRhs = pvData.reducMat.adjoint()*(-totalUnreducedLhs*pvData.reducRhs + totalUnreducedRhs);
+    VectorXcd totalRhs = pvData.reducMat.adjoint()*(totalUnreducedRhs - totalUnreducedLhs*pvData.reducRhs);
     polyVectorField=MatrixXcd::Zero(pvData.sizeF, pvData.N);
     if (pvData.constFaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {
@@ -339,24 +349,23 @@ namespace directional
       Eigen::MatrixXcd U;
       Eigen::VectorXcd S;
       complex_eigs(X0Lhs, X0M, 10, U, S);
-      cout<<"S: "<<S<<endl;
-      
       int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);
       
       polyVectorField.col(0) = U.block(0, smallestIndex, pvData.sizeF, 1);
     } else { //just solving the system
-      SimplicialLDLT<SparseMatrix<complex<double>>> solver;  //TODO: use real solver
-      solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
-      solver.factorize(totalLhs);
+      SimplicialLDLT<SparseMatrix<complex<double>>> solver;
+      //solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
+      solver.compute(totalLhs);
       VectorXcd reducedDofs = solver.solve(totalRhs);
       assert(solver.info() == Success);
       VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
       for (int i=0;i<pvData.N;i++)
         polyVectorField.col(i) = fullDofs.segment(i*pvData.sizeF,pvData.sizeF);
       
-      std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;
-      std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
-      std::cout<<"Alignment energy: "<< fullDofs.adjoint()*((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat*fullDofs - pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight)<<std::endl;
+      //std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;
+      //std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
+      //TODO: measure energy in the correct way
+      /*std::cout<<"Alignment energy: "<< fullDofs.adjoint()*((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat*fullDofs - pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight)<<std::endl;*/
       
     }
     

@@ -35,6 +35,7 @@ bool normalized=false;
 void recompute_field()
 {
   directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
+
   directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
 }
 
