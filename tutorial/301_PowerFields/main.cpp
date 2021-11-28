@@ -43,9 +43,20 @@ void update_visualization()
   
   directional::representative_to_raw(V,F,representative, N, rawField);
   directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
-  viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
-  viewer.set_selected_faces(constFaces);
+  viewer.set_field(rawField,Eigen::MatrixXd(),0);
+  viewer.set_singularities(singVertices, singIndices,0);
+  
+  //Ghost mesh just showing field, to compare against constraints
+  Eigen::VectorXcd constraintField = Eigen::VectorXcd::Zero(powerFieldHard.rows());
+  for (int i=0;i<constFaces.size();i++)
+    constraintField(constFaces(i))=powerFieldHard(constFaces(i));
+  directional::power_to_raw(V, F,constraintField, N, rawField);
+  viewer.set_field(rawField,Eigen::MatrixXd(), 1);
+  viewer.toggle_mesh(false,0);
+  viewer.toggle_field(true,0);
+  viewer.toggle_field(true,1);
+  viewer.set_selected_faces(constFaces,1);
+  
 }
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
@@ -177,7 +188,10 @@ int main()
   constFaces.resize(0);
   constVectors.resize(0, 3);
   
-  viewer.set_mesh(V,F);
+  viewer.set_mesh(V,F,0);
+  
+  //ghost mesh only for constraints
+  viewer.set_mesh(V,F, 1);
   recompute_field();
   update_visualization();
   
