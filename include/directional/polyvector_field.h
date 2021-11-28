@@ -326,13 +326,13 @@ namespace directional
     polyVectorField=MatrixXcd::Zero(pvData.sizeF, pvData.N);
     if (pvData.constFaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {
-     //using a matrix with only the first sizeFxsizeF block
+     //using a matrix with only the first sizeF x sizeF block
       vector<Triplet<complex<double>>> X0LhsTriplets, X0MTriplets;
       SparseMatrix<complex<double>> X0Lhs, X0M;
       for (int k=0; k<totalUnreducedLhs.outerSize(); ++k)
         for (SparseMatrix<std::complex<double>>::InnerIterator it(totalUnreducedLhs,k); it; ++it)
           if ((it.row()<pvData.sizeF)&&(it.col()<pvData.sizeF))
-            X0LhsTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()));
+            X0LhsTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()*pvData.totalSmoothWeight));  //to bypass the early convergence of igl eigenvalues...
       
       X0Lhs.resize(pvData.sizeF, pvData.sizeF);
       X0Lhs.setFromTriplets(X0LhsTriplets.begin(), X0LhsTriplets.end());
@@ -340,7 +340,7 @@ namespace directional
       for (int k=0; k<pvData.M.outerSize(); ++k)
         for (SparseMatrix<std::complex<double>>::InnerIterator it(pvData.M,k); it; ++it)
           if ((it.row()<pvData.sizeF)&&(it.col()<pvData.sizeF))
-            X0MTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()));
+            X0MTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()*pvData.totalSmoothWeight));
       
       X0M.resize(pvData.sizeF, pvData.sizeF);
       X0M.setFromTriplets(X0MTriplets.begin(), X0MTriplets.end());
@@ -351,7 +351,7 @@ namespace directional
       complex_eigs(X0Lhs, X0M, 10, U, S);
       int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);
       
-      polyVectorField.col(0) = U.block(0, smallestIndex, pvData.sizeF, 1);
+      polyVectorField.col(0) = U.col(smallestIndex);
     } else { //just solving the system
       SimplicialLDLT<SparseMatrix<complex<double>>> solver;
       //solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used

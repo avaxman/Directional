@@ -46,8 +46,6 @@ namespace directional
     igl::local_basis(V, F, B1, B2, xd);
     
     polyvector_field(V,F,constFaces,constVectors,1.0, -1.0, alignWeights, N, powerField);
-    std::cout<<"powerField.row(0): "<<powerField.row(0)<<std::endl;
-    
     powerField=-powerField.col(0);  //powerfield is represented positively
   }
 }

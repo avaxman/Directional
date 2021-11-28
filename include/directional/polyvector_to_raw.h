@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <igl/triangle_triangle_adjacency.h>
+#include <igl/PI.h>
 #include <igl/local_basis.h>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>

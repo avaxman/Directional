@@ -164,8 +164,8 @@ int main()
   std::cout <<
   "  R        Reset the constraints" << std::endl <<
   "  N        Toggle field normalization" << std::endl <<
-  "  P/M      Increase/Decrease soft alignment weights"<< std::endl <<
-  "  H        Toggle Hard/Soft alignment"<< std::endl <<
+  "  P/M      Increase/Decrease soft-alignment weights"<< std::endl <<
+  "  H        Toggle hard/soft alignment"<< std::endl <<
   "  W        Save raw field" << std::endl <<
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   

@@ -18,7 +18,7 @@
 Eigen::VectorXi matching, indices;
 Eigen::VectorXd effort;
 Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V, CMesh;
+Eigen::MatrixXd V, CMesh, B1, B2, normals;
 Eigen::MatrixXd rawField,representative, barycenters;
 Eigen::MatrixXcd pvField;
 directional::DirectionalViewer viewer;
@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
   // Load a mesh in OBJ format
   igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", V, F);
   igl::edge_topology(V, F, EV, FE, EF);
+  igl::local_basis(V,F,B1,B2,normals);
   
   // Compute face barycenters
   igl::barycenter(V, F, barycenters);
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])
   //initial solution
   Eigen::MatrixXcd pvField;
   directional::polyvector_field(V, F, b, bc, N, pvField);
-  directional::polyvector_to_raw(V, F, pvField, N, rawFieldOrig);
+  directional::polyvector_to_raw(B1, B2, pvField, N, rawFieldOrig);
   
   Eigen::VectorXi prinIndices;
   directional::principal_matching(V, F,EV, EF, FE, rawFieldOrig, matching, effort,singVerticesOrig, singIndicesOrig);
