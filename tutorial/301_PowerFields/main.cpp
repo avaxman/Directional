@@ -15,27 +15,29 @@
 #include <directional/directional_viewer.h>
 
 
-Eigen::VectorXi b, matching, singVertices, singIndices;
+Eigen::VectorXi constFaces, matching, singVertices, singIndices;
 Eigen::VectorXd effort;
 Eigen::MatrixXi F, EV, EF, FE;
 Eigen::MatrixXd V;
 Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField,representative, bc, barycenters;
-Eigen::MatrixXcd powerField;
+Eigen::MatrixXd rawField,representative, constVectors, barycenters;
+Eigen::MatrixXcd powerFieldHard, powerFieldSoft;
 directional::DirectionalViewer viewer;
+Eigen::VectorXd alignWeights;
 
 int N = 4;
 bool normalized = false;
 bool zeroPressed = false;
-
+bool viewFieldHard = true;
 
 void recompute_field(){
-  directional::power_field(V, F, b, bc, N, powerField);
+  directional::power_field(V, F, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFieldHard);
+  directional::power_field(V, F, constFaces, constVectors, alignWeights, N, powerFieldSoft);
 }
 
-void update_raw_field_mesh()
+void update_visualization()
 {
-  directional::power_to_representative(V, F, powerField, N, representative);
+  directional::power_to_representative(V, F, (viewFieldHard ? powerFieldHard : powerFieldSoft), N, representative);
   if (normalized)
     representative.rowwise().normalize();
   
@@ -43,6 +45,7 @@ void update_raw_field_mesh()
   directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
   viewer.set_field(rawField);
   viewer.set_singularities(singVertices, singIndices);
+  viewer.set_selected_faces(constFaces);
 }
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
@@ -67,29 +70,46 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
       
       // Reset the constraints
     case 'R':
-      b.resize(0);
-      bc.resize(0, 3);
+      constFaces.resize(0);
+      constVectors.resize(0, 3);
       recompute_field();
-      update_raw_field_mesh();
-      directionalViewer->set_selected_faces(b);
       break;
       
       // Toggle normalization
     case 'N':
       normalized = !normalized;
-      update_raw_field_mesh();
-      directionalViewer->set_selected_faces(b);
       break;
       
+    case 'P':
+      alignWeights.array()*=2.0;
+      if (alignWeights.size()!=0)
+        std::cout<<"alignWeights: "<<alignWeights(0)<<std::endl;
+      recompute_field();
+      break;
       
+    case 'M':
+      alignWeights.array()/=2.0;
+      if (alignWeights.size()!=0)
+        std::cout<<"alignWeights: "<<alignWeights(0)<<std::endl;
+      recompute_field();
+      break;
+
     case 'W':
       if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/rocker-arm2500.rawfield", rawField))
         std::cout << "Saved raw field" << std::endl;
       else
         std::cout << "Unable to save raw field. Error: " << errno << std::endl;
       
+    case 'H':
+      viewFieldHard = !viewFieldHard;
+      if (viewFieldHard)
+        std::cout<<"Viewing hard-constrained field"<<std::endl;
+      else
+        std::cout<<"Viewing Soft-constrained field"<<std::endl;
+      break;
   }
   
+  update_visualization();
   return true;
 }
 
@@ -112,23 +132,27 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   {
    
     int i;
-    for (i = 0; i < b.rows(); i++)
-      if (b(i) == fid)
+    for (i = 0; i < constFaces.rows(); i++)
+      if (constFaces(i) == fid)
         break;
-    if (i == b.rows())
+    if (i == constFaces.rows())
     {
-      b.conservativeResize(b.rows() + 1);
-      b(i) = fid;
-      bc.conservativeResize(bc.rows() + 1, 3);
+      constFaces.conservativeResize(constFaces.rows() + 1);
+      constFaces(i) = fid;
+      constVectors.conservativeResize(constVectors.rows() + 1, 3);
+      alignWeights.conservativeResize(alignWeights.size()+1);
+      if (alignWeights.size()==1)
+        alignWeights(0)=1.0;
+      else
+        alignWeights(alignWeights.size()-1)=alignWeights(alignWeights.size()-2);
     }
     
     // Compute direction from the center of the face to the mouse
-    bc.row(i) =(V.row(F(fid, 0)) * baryInFace(0) +
-                V.row(F(fid, 1)) * baryInFace(1) +
-                V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
+    constVectors.row(i) =(V.row(F(fid, 0)) * baryInFace(0) +
+                          V.row(F(fid, 1)) * baryInFace(1) +
+                          V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
     recompute_field();
-    update_raw_field_mesh();
-    directionalViewer->set_selected_faces(b);
+    update_visualization();
     return true;
   }
   return false;
@@ -140,6 +164,8 @@ int main()
   std::cout <<
   "  R        Reset the constraints" << std::endl <<
   "  N        Toggle field normalization" << std::endl <<
+  "  P/M      Increase/Decrease soft alignment weights"<< std::endl <<
+  "  H        Toggle Hard/Soft alignment"<< std::endl <<
   "  W        Save raw field" << std::endl <<
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
   
@@ -148,13 +174,12 @@ int main()
   igl::edge_topology(V, F, EV,FE,EF);
   igl::barycenter(V, F, barycenters);
   
-  b.resize(0);
-  bc.resize(0, 3);
+  constFaces.resize(0);
+  constVectors.resize(0, 3);
   
-  //triangle mesh setup
   viewer.set_mesh(V,F);
   recompute_field();
-  update_raw_field_mesh();
+  update_visualization();
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
