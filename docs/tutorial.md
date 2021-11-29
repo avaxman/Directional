@@ -169,28 +169,35 @@ A power field representation uses a complex basis in each tangent plane (face in
 
 By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based quadratic Dirichlet energy:
 
-$$y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\left|y_fe_f^N - y_ge_g^N\right|^2},$$
+$$Y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\omega_e\left|Y_fe_f^N - Y_ge_g^N\right|^2},$$
 
-where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and $e_g$ is for $g$ respectively. The field is computed through the function `directional::power_field()`.
+where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and $e_g$ is for $g$ respectively. The weights $\omega_e$ are the harmonic weights as given by [^brandt_2018]. The field is computed through the function `directional::power_field()`. It is possible to alternatively only softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
 
-For a fixed set $B$ and varying $y_B$, It is possible to speed up computations by precomputing the solver (sparse Cholsky for the positive-definite matrix) used to compute the power field. This is done by using the function `directional::power_field_precompute()`, coupled with the appropriate version of `directional::power_field()`. Note that field can be converted to representative and raw forms using the appropriate `power_to_X` functions.
+$$y_I=\text{argmin} \left[\lambda_S\sum_{e=(f,g)}{\omega_e\left|Y_fe_f^N - Y_ge_g^N\right|^2}+\lambda_B\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
+where $\lambda_S,\lambda_C, \omega_{\forall c\in C}$ are user-controlled.
+
 
 If the set $B$ is empty, then the computed field is the eigenvector of the power-field Laplcian associated with the smallest non-zero eigenvalue.
 
-![([Example 301]({{ repo_url }}/tutorial/301_PowerFields/main.cpp)) Setting up a small subset of constraints (red faces), and interpolating (and normalizing in magnitude) the power field to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
+![([Example 301]({{ repo_url }}/tutorial/301_PowerFields/main.cpp)) hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
 
 
 ### 302 PolyVectors
 
 A Polyvector field [^diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent plane. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local compex basis:
 
-$$P(z) = a_0 + a_1z + \ldots + a_{N-1} z^{N-1} + z^N,$$
+$$P(z) = X_0 + X_1z + \ldots + X_{N-1} z^{N-1} + z^N,$$
 
 where the roots $P(z)=0$ are the vectors of the face-based directional object, represented as complex numbers in the local basis. The Dirichlet energy is as for power fields, except with a term for each $a_i$, with the appropriate power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
 
-[Example 302]({{ repo_url }}/tutorial/302_PolyVectors/main.cpp) allows a user to set individual vectors within each face, and see the interpolated result. The responsible function is `directional::polyvector_field()`. In this case as well, the solver can be prefactored in advance using `directional::polyvector_precompute()`.
+With the function ```Directional::polyvector_field()``` one can solve the linear Polyvector problem in its full capacity; the input is a set of prescribed constraints $v_b$ per face set $B \subset F$, where you can prescribe any amount of vectors smaller of equal than $N$ (unless there is symmetry) per face; that means we consider set $B$ to have repeating faces, and the enumerator in this set is the vectors. Further consider the soft-alignment vectors $v_c$ for face set $c \subset C$, accompanied by an alignment weight $\omega_c$ (again with repeating faces). We then solve the following quadratic optimization problem:
 
-![([Example 302](302_PolyVectors/main.cpp)) Vectors are constrained individually in the constrained faces (red), and interpolated to the rest of the faces](images/302_PolyVectors.png)
+$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\left|X_{n,f}e_f^{N-n} - X_{n,g}e_g^{N-n}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{f}{A_f\left|X_{n,f}\right|^2}}\right)+\left(\lambda_C\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
+
+So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Mekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```Directional::power_field()``` is implemented by calling ```Directional::polyvector_field()```. See an example that also allows playing with the weights in [Example 302]({{ repo_url }}/tutorial/302_PolyVectors/main.cpp).
+
+
+![([Example 302](302_PolyVectors/main.cpp)) Top: Sharp-edge onstraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), rotational symmetry (middle) and soft alignment (right).](images/302_PolyVectors.png)
 
 ### 303 PolyCurl Reduction
 
@@ -373,6 +380,7 @@ Directional is a budding project, and there are many algorithms in the state-of-
 [^Bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Mixed-integer quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf), 2009.
 [^Bommes_2012]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Practical Mixed-Integer Optimization for Geometry Processing](https://www.graphics.rwth-aachen.de/publication/0319/), 2012.
 [^bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly, [Shape-Up: Shaping Discrete Geometry with Projections](http://lgg.epfl.ch/publications/2012/shapeup.pdf), 2012.
+[^brandt_2018]: Christopher Brandt, Leonardo Scandolo, Elmar Eisemann, and Klaus Hildebrandt, [Modeling n-Symmetry Vector Fields using Higher-Order Energies](https://graphics.tudelft.nl/~klaus/papers/nFields.pdf), 2018.
 [^crane_2010]: Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, [Trivial Connections on Discrete Surfaces](https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/), 2010.
 [^diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Designing N-PolyVector Fields with Complex Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014.
 [^diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015.
@@ -381,12 +389,13 @@ Directional is a budding project, and there are many algorithms in the state-of-
 [^knoppel_2013]: Felix Kn&ouml;ppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
 [^ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy, [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
 [^liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, [General Planar Quadrilateral Mesh Design Using Conjugate Direction Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf), 2008.
+[^Mekes_2021]: Merel Meekes, Amir Vaxman, [Unconventional Patterns on Surfaces](https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
 [^Myles_2014]: Ashish Myles, Nico Pietroni, Denis Zorin, [Robust Field-aligned Global Parametrization](http://vcg.isti.cnr.it/Publications/2014/MPZ14/), 2014.
 [^solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf), 2017.
 [^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
 [^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf), 2020.
 [^Vaxman_2021]: Amir Vaxman  [Directional Technical Reports: Seamless Integration](https://osf.io/s5ack/), 2021.
-[^Meekes_2021]: Merel Meekes, Amir Vaxman [Unconventional Patterns on Surfaces] (https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
-[^Meshlab]: P. Cignoni, M. Callieri, M. Corsini, M. Dellepiane, F. Ganovelli, G. Ranzuglia, [MeshLab: an Open-Source Mesh Processing Tool](https://www.meshlab.net/).
+[^Meekes_2021]: Merel Meekes, Amir Vaxman, [Unconventional Patterns on Surfaces] (https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
+[^Meshlab]: Paolo Cignoni, Marco Callieri, Massimiliano Corsini, Matteo Dellepiane, Fabio Ganovelli, Guido Ranzuglia, , [MeshLab: an Open-Source Mesh Processing Tool](https://www.meshlab.net/).
 [^libhedra]: Amir Vaxman and others, [libhedra: geometric processing and optimization of polygonal meshes](https://github.com/avaxman/libhedra).
