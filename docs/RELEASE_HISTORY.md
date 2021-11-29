@@ -1,5 +1,9 @@
 # Directional Version Log
 
+## Version 1.8.0 Changes
+
+- Extension of the PolyVector and power field implementation to include soft and hard partial alignment, and rotational symmetry objectives.
+
 ## Version 1.7.0 Changes
 
 - Major overhaul of the viewer, where most operation are encapsulated in a new  ```DIrectionalViewer``` class, allowing properties such as isolines, vertex, face, and edge data to be associated with a mesh. User does not (need to) directly control shapes and colors, but rather only provide the geometric quantities.
