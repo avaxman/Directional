@@ -203,7 +203,8 @@ namespace directional
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                               const int meshNum=0,
                               const double sizeRatio = 0.9,
-                              const int sparsity=0)
+                              const int sparsity=0,
+                              const double offsetRatio = 0.2)
     
     {
       if (rawField.size()<meshNum+1)
@@ -218,7 +219,7 @@ namespace directional
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
       N[meshNum]=rawField[meshNum].cols()/3;
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
+      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity, offsetRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);

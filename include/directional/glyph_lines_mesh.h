@@ -20,7 +20,7 @@
 
 
 namespace directional
-  {
+{
   
   
   // Creates mesh elements that comprise glyph drawing of a directional field.
@@ -169,37 +169,13 @@ namespace directional
                                    Eigen::MatrixXi &fieldF,
                                    Eigen::MatrixXd &fieldC,
                                    const double sizeRatio,
-                                   const int sparsity=0)
+                                   const int sparsity=0,
+                                   const double offsetRatio = 0.2)
   {
     double l = igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l/5.0, sparsity, fieldV, fieldF, fieldC);
+    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l*offsetRatio, sparsity, fieldV, fieldF, fieldC);
   }
   
-  //A version that just delivers (updated) colors)
-  /*void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXi& F,
-                                   const int N,
-                                   const Eigen::MatrixXd &glyphColor,
-                                   Eigen::MatrixXd &fieldC)
-  {
-    
-    Eigen::MatrixXd vectorColors(F.rows() * N, 3);
-    
-    // Duplicate colors so each glyph gets the proper color
-    if (glyphColor.rows() == 1)
-      vectorColors = glyphColor.replicate(F.rows() * N, 1);
-    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3))
-      vectorColors = glyphColor.replicate(N, 1);
-    else{
-      for (int i=0;i<N;i++)
-        vectorColors.block(i*F.rows(),0,F.rows(),3)=glyphColor.block(0,3*i,F.rows(),3);
-    }
-    
-    directional::angled_arrows(vectorColors, fieldC);
-    
-    
-  }*/
-  
-  
-  }
+}
 
 #endif

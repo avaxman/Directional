@@ -59,8 +59,6 @@ namespace directional
     
     vector<Triplet<double> > basisCycleTriplets(EV.rows() * 2);
     
-    basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
-    
     //all 1-ring cycles, including boundaries
     for (int i = 0; i < EV.rows(); i++) {
       basisCycleTriplets.push_back(Triplet<double>(EV(i, 0), i, -1.0));
@@ -155,7 +153,10 @@ namespace directional
           if ((visitedOnce(candidateTriplets[i].col()))&&(pureInnerEdgeMask(candidateTriplets[i].col())))
             isBoundaryCycle=false;
         
-        int currRow = (isBoundaryCycle ? numV+currBoundaryCycle : numV+numBoundaries+currGeneratorCycle);
+        if (isBoundaryCycle)
+          continue; //ignoring those
+        
+        int currRow = (isBoundaryCycle ? numV+currBoundaryCycle : numV+currGeneratorCycle);
         (isBoundaryCycle ? currBoundaryCycle++ : currGeneratorCycle++);
         
         basisCycleTriplets.push_back(Triplet<double>(currRow, i, 1.0));
@@ -168,7 +169,9 @@ namespace directional
       //assert(currBoundaryCycle==numBoundaries && currGeneratorCycle==numGenerators);
     }
     
-    SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numBoundaries+numGenerators);
+    numGenerators =currGeneratorCycle+1;
+    
+    SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numGenerators);
     vector<Triplet<double>> sumBoundaryLoopsTriplets;
     vector<int> innerVerticesList, innerEdgesList;
     VectorXi remainRows, remainColumns;
@@ -194,12 +197,12 @@ namespace directional
     
     
     //just passing generators through;
-    for (int i=numV+numBoundaries;i<numV+numBoundaries+numGenerators;i++)
+    for (int i=numV;i<numV+numGenerators;i++)
       sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0));
     
     sumBoundaryLoops.setFromTriplets(sumBoundaryLoopsTriplets.begin(), sumBoundaryLoopsTriplets.end());
     
-    basisCycles.resize(numV+numBoundaries+numGenerators, EV.rows());
+    basisCycles.resize(numV+numGenerators, EV.rows());
     basisCycles.setFromTriplets(basisCycleTriplets.begin(), basisCycleTriplets.end());
     basisCycles=sumBoundaryLoops*basisCycles;
     

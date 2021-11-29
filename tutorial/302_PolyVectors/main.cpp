@@ -41,28 +41,27 @@ void recompute_field()
 
 void update_visualization()
 {
-  
-  if (viewingMode==CONSTRAINTS){
-    viewer.set_selected_faces(constFaces);
-    viewer.set_field(rawFieldConstraints);
-  }
+  viewer.set_field(rawFieldConstraints,Eigen::MatrixXd(), 1,0.9,0,0.2);
+  viewer.set_selected_faces(constFaces,1);
+  viewer.toggle_field(true,1);
+  viewer.toggle_mesh(false,0);
+  if (viewingMode==CONSTRAINTS)
+    viewer.toggle_field(false,0);
+    
   if (viewingMode==HARD_PRESCRIPTION){
-    viewer.set_selected_faces(Eigen::VectorXi());
     directional::polyvector_to_raw(B1,B2, pvFieldHard, N, rawFieldHard, N%2==0);
-   
     directional::principal_matching(V, F, EV, EF, FE, rawFieldHard, matching, effort, singVertices, singIndices);
-    viewer.set_field(rawFieldHard);
-    viewer.set_singularities(singVertices, singIndices);
+    viewer.set_field(rawFieldHard,Eigen::MatrixXd(), 0,0.9,0,2.0);
+    viewer.set_singularities(singVertices, singIndices,0);
+    viewer.toggle_field(true,0);
   }
   
   if (viewingMode==SOFT_PRESCRIPTION){
-    viewer.set_selected_faces(Eigen::VectorXi());
     directional::polyvector_to_raw(B1, B2, pvFieldSoft, N, rawFieldSoft);
-    
     directional::principal_matching(V, F, EV, EF, FE, rawFieldSoft, matching, effort, singVertices, singIndices);
-    viewer.set_field(rawFieldSoft);
-    viewer.set_singularities(singVertices, singIndices);
-
+    viewer.set_field(rawFieldSoft,Eigen::MatrixXd(), 0,0.9,0,2.0);
+    viewer.set_singularities(singVertices, singIndices,0);
+    viewer.toggle_field(true,0);
   }
 }
 
@@ -134,9 +133,9 @@ int main()
 {
   
   std::cout <<
-  "  1    Choose either RoSy or Alignment weight altering (default: RoSy)" << std::endl <<
-  "  +-   Alter (RoSy or Alignment) weight" << std::endl<<
-  "  2    Show constraints" << std::endl <<
+  "  1    Choose either RoSy or Alignment weight altering (default: Alignment)" << std::endl <<
+  "  P/M  Increase/Decrease (RoSy or Alignment) weight" << std::endl<<
+  "  2    Show only constraints" << std::endl <<
   "  3    Show fixed-alignment result" << std::endl <<
   "  4    Shoe soft-alignment result" << std::endl <<
   "  W    Save field"<< std::endl;
@@ -173,12 +172,20 @@ int main()
     posInFace(constFaces(i))++;
   }
   
+  //Just to show the other direction if N is even, since we are by default cosntraining it
+  if (N%2==0){
+    rawFieldConstraints.conservativeResize(rawFieldConstraints.rows(), 2*rawFieldConstraints.cols());
+    rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
+  }
+  
   smoothWeight = 1.0;
   roSyWeight = 1.0;
   alignWeights = Eigen::VectorXd::Constant(constFaces.size(),1.0);
   
   //triangle mesh setup
-  viewer.set_mesh(V, F);
+  viewer.set_mesh(V, F,0);
+  //ghost mesh only for constraints
+  viewer.set_mesh(V,F, 1);
   recompute_field();
   update_visualization();
   
