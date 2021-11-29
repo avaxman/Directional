@@ -197,7 +197,7 @@ $$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\
 So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Mekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```Directional::power_field()``` is implemented by calling ```Directional::polyvector_field()```. See an example that also allows playing with the weights in [Example 302]({{ repo_url }}/tutorial/302_PolyVectors/main.cpp).
 
 
-![([Example 302](302_PolyVectors/main.cpp)) Top: Sharp-edge onstraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), rotational symmetry (middle) and soft alignment (right).](images/302_PolyVectors.png)
+![([Example 302](302_PolyVectors/main.cpp)) Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right).](images/302_PolyVectors.png)
 
 ### 303 PolyCurl Reduction
 
