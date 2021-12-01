@@ -173,7 +173,8 @@ $$Y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\omega_e\left|Y_fe_f^N - Y_ge_g^
 
 where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and $e_g$ is for $g$ respectively. The weights $\omega_e$ are the harmonic weights as given by [^brandt_2018]. The field is computed through the function `directional::power_field()`. It is possible to alternatively only softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
 
-$$y_I=\text{argmin} \left[\lambda_S\sum_{e=(f,g)}{\omega_e\left|Y_fe_f^N - Y_ge_g^N\right|^2}+\lambda_B\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
+$$y_I=\text{argmin} \left[\lambda_S\sum_{e=(f,g)}{\omega_e\left|Y_fe_f^N  - Y_ge_g^N\right|^2}+\lambda_B\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
+
 where $\lambda_S,\lambda_C, \omega_{\forall c\in C}$ are user-controlled.
 
 
