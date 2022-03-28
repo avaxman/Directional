@@ -169,7 +169,7 @@ namespace directional
       //assert(currBoundaryCycle==numBoundaries && currGeneratorCycle==numGenerators);
     }
     
-    numGenerators =currGeneratorCycle+1;
+    numGenerators =currGeneratorCycle;
     
     SparseMatrix<double> sumBoundaryLoops(numV+numBoundaries+numGenerators,numV+numGenerators);
     vector<Triplet<double>> sumBoundaryLoopsTriplets;

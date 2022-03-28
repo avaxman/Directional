@@ -40,7 +40,7 @@ int main()
   igl::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj", V, F);
   Eigen::VectorXi bc(1); bc(0)=0;
   Eigen::MatrixXd b(1,3); b.row(0)=V.row(F(0,1))-V.row(F(0,2));
-  directional::power_field(V, F, bc,b, N, powerField);
+  directional::power_field(V, F, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);
   directional::power_to_raw(V,F,powerField,N,rawField, true);
   
   viewer.set_mesh(V,F);

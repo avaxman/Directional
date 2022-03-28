@@ -187,7 +187,7 @@ int main()
   "  -          Decrease index  of current cycle" << std::endl <<
   "  1          rotate field globally" << std::endl;
   
-  igl::readOBJ("/Users/amirvaxman/Downloads/tpms.obj", V, F);
+  igl::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj", V, F);
   igl::edge_topology(V, F, EV,FE,EF);
   
   directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
@@ -195,7 +195,7 @@ int main()
   
   //loading singularities
   Eigen::VectorXi singVertices, singIndices;
-  //directional::read_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices);
+  directional::read_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N, singVertices, singIndices);
   
   for (int i=0;i<singVertices.size();i++)
     cycleIndices(vertex2cycle(singVertices(i)))=singIndices(i);

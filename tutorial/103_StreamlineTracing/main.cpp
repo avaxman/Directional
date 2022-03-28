@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
   // Load a mesh in OFF format
   igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", V, F);
   // Create a Vector Field
-  directional::power_field(V, F, Eigen::VectorXi(),  Eigen::MatrixXd() , 3, powerField);
+  directional::power_field(V, F, Eigen::VectorXi(),  Eigen::MatrixXd() , Eigen::VectorXd() ,3, powerField);
   
   // Convert it to raw field
   directional::power_to_raw(V,F,powerField,3,rawField, true);
