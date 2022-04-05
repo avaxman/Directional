@@ -178,7 +178,7 @@ $$y_I=\text{argmin} \left[\lambda_S\sum_{e=(f,g)}{\omega_e\left|Y_fe_f^N  - Y_ge
 where $\lambda_S,\lambda_C, \omega_{\forall c\in C}$ are user-controlled.
 
 
-If the set $B$ is empty, then the computed field is the eigenvector of the power-field Laplcian associated with the smallest non-zero eigenvalue.
+If the set $B$ is empty, then the computed field is the eigenvector of the power-field Laplacian associated with the smallest non-zero eigenvalue.
 
 ![([Example 301]({{ repo_url }}/tutorial/301_PowerFields/main.cpp)) hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
 
