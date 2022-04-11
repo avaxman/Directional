@@ -44,9 +44,9 @@ namespace directional
     igl::edge_topology(V, F, EV, xi, EF);
     Eigen::MatrixXd B1, B2, xd;
     igl::local_basis(V, F, B1, B2, xd);
-    
-    polyvector_field(V,F,constFaces,constVectors,1.0, -1.0, alignWeights, N, powerField);
-    powerField=-powerField.col(0);  //powerfield is represented positively
+    Eigen::MatrixXcd pvField;
+    polyvector_field(V,F,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
+    powerField=-pvField.col(0);  //powerfield is represented positively
   }
 }
 
