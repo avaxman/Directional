@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 project(Directional_tutorials)
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
 ### conditionally compile certain modules depending on libraries found on the system
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 ### Choose which chapters to compile
 option(TUTORIALS_CHAPTER1 "Compile chapter 1" ON)
@@ -15,21 +15,20 @@ option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
 option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
 
 
-
 ### libIGL options:
-option(LIBIGL_WITH_VIEWER      "Use OpenGL viewer"  ON)
-option(LIBIGL_WITH_OPENGL      "Use OpenGL"         ON)
-option(LIBIGL_WITH_OPENGL_GLFW "Use GLFW"           ON)
-option(LIBIGL_WITH_EMBREE      "Use Embree"         ON)
-option(LIBIGL_WITH_PNG         "Use PNG"            ON)
+option(LIBIGL_EMBREE           "Build target igl::embree"           ON)
+option(LIBIGL_GLFW             "Build target igl::glfw"             ON)
+option(LIBIGL_IMGUI            "Build target igl::imgui"            ON)
+option(LIBIGL_OPENGL           "Build target igl::opengl"           ON)
+option(LIBIGL_PNG              "Build target igl::png"              ON)
 if(TUTORIALS_CHAPTER5)
-  option(LIBIGL_WITH_CGAL              "Use CGAL"  	  ON)
+  option(LIBIGL_COPYLEFT_CGAL    "Build target igl_copyleft::cgal"    ON)
 endif()
-set(LIBIGL_WITH_PNG CACHE BOOL ON)
+### set(LIBIGL_WITH_PNG CACHE BOOL ON)
 
 
 ### Adding libIGL and Directional: choose the path to your local copy
-find_package(LIBIGL REQUIRED QUIET)
+include(libigl)
 include(Directional)
 
 ### Output directories
