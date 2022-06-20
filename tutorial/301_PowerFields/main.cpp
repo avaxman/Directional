@@ -46,10 +46,12 @@ void update_visualization()
 
   //Ghost mesh just showing field, to compare against constraints
   Eigen::VectorXcd constraintField = Eigen::VectorXcd::Zero(powerFieldHard.rows());
+  Eigen::MatrixXd constraintRawField;
   for (int i=0;i<constFaces.size();i++)
     constraintField(constFaces(i))=powerFieldHard(constFaces(i));
-  directional::power_to_raw(V, F,constraintField, N, rawField);
-  viewer.set_field(rawField,Eigen::MatrixXd(), 1,0.9, 0, 0.1);
+  
+  directional::power_to_raw(V, F,constraintField, N, constraintRawField);
+  viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 0.1);
   viewer.toggle_mesh(false,0);
   viewer.toggle_field(true,0);
   viewer.toggle_field(true,1);
