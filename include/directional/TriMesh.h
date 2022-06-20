@@ -12,7 +12,6 @@
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <igl/local_basis.h>
-#include <directional/polyvector_field.h>
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
 

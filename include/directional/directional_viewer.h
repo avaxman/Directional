@@ -80,6 +80,9 @@ namespace directional
       if (meshList.size()<meshNum+1){
         meshList.resize(meshNum+1);
         fieldList.resize(meshNum+1);
+        edgeVList.resize(meshNum+1);
+        edgeFList.resize(meshNum+1);
+        edgeFEList.resize(meshNum+1);
       }
       meshList[meshNum]=&mesh;
     }
@@ -316,7 +319,7 @@ namespace directional
         slState.resize(meshNum+1);
       }
       Eigen::MatrixXd stam;
-      directional::streamlines_init(meshList[meshNum]->V, meshList[meshNum]->F, stam/*fieldList[meshNum]->extField*/, seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      directional::streamlines_init(meshList[meshNum]->V, meshList[meshNum]->F, fieldList[meshNum]->extField, seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }
     

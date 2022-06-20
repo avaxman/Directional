@@ -13,9 +13,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/local_basis.h>
 #include <directional/polyvector_field.h>
+#include <directional/TriMesh.h>
 
 
 namespace directional
@@ -32,20 +31,15 @@ namespace directional
   //  N: The degree of the field.
   // Outputs:
   //  powerField: #F by 2 The output interpolated field, in complex numbers.
-  IGL_INLINE void power_field(const Eigen::MatrixXd& V,
-                              const Eigen::MatrixXi& F,
+  IGL_INLINE void power_field(const directional::TriMesh& mesh,
                               const Eigen::VectorXi& constFaces,
                               const Eigen::MatrixXd& constVectors,
                               const Eigen::VectorXd& alignWeights,
                               const int N,
                               Eigen::MatrixXcd& powerField)
   {
-    Eigen::MatrixXi EV, xi, EF;
-    igl::edge_topology(V, F, EV, xi, EF);
-    Eigen::MatrixXd B1, B2, xd;
-    igl::local_basis(V, F, B1, B2, xd);
     Eigen::MatrixXcd pvField;
-    polyvector_field(V,F,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
+    polyvector_field(mesh,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
     powerField=-pvField.col(0);  //powerfield is represented positively
   }
 }

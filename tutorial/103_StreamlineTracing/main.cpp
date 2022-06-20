@@ -5,17 +5,13 @@
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/directional_viewer.h>
-
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 // Mesh
-Eigen::MatrixXd V;
-Eigen::MatrixXi F;
 Eigen::MatrixXcd powerField;
-Eigen::MatrixXd rawField;
-Eigen::MatrixXd P1,P2;
-
-/*directional::StreamlineData sl_data;
-directional::StreamlineState sl_state;*/
+directional::TriMesh mesh;
+directional::FaceField field;
 
 int N=3;         // degree of the vector field
 int anim_t = 0;
@@ -57,20 +53,23 @@ int main(int argc, char *argv[])
   directional::DirectionalViewer viewer;
   
   // Load a mesh in OFF format
+  Eigen::MatrixXd V;
+  Eigen::MatrixXi F;
   igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", V, F);
+  mesh.set_mesh(V,F);
   // Create a Vector Field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
   Eigen::MatrixXd constVectors(1, 3); constVectors.row(0) <<( V.row(F(0, 1)) - V.row(F(0, 0))).normalized();
   Eigen::VectorXd alignWeights(1); alignWeights(0) = -1.0;
-  directional::power_field(V, F, constFaces, constVectors, alignWeights ,3, powerField);
+  directional::power_field(mesh, constFaces, constVectors, alignWeights ,N, powerField);
   
   // Convert it to raw field
-  directional::power_to_raw(V,F,powerField,3,rawField, true);
+  directional::power_to_raw(mesh,powerField,N,field, true);
   
   //triangle mesh
-  viewer.set_mesh(V,F);
-  viewer.set_field(rawField);
-  Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(rawField);
+  viewer.set_mesh(mesh);
+  viewer.set_field(field);
+  Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
   viewer.init_streamlines();

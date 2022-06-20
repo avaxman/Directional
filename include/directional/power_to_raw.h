@@ -12,6 +12,8 @@
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
 #include <directional/power_to_representative.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 namespace directional
 {
@@ -23,33 +25,20 @@ namespace directional
   // normalize: whether to produce a normalized result (length = 1)
   // Output:
   //  rawField: #F by 3*N matrix with all N explicit vectors of each directional in the order X,Y,Z,X,Y,Z, ...
-  IGL_INLINE void power_to_raw(const Eigen::MatrixXd& B1,
-                               const Eigen::MatrixXd& B2,
-                               const Eigen::MatrixXd& B3,
+  IGL_INLINE void power_to_raw(const directional::TriMesh& mesh,
                                const Eigen::MatrixXcd& powerField,
                                int N,
-                               Eigen::MatrixXd& rawField,
+                               directional::FaceField& field,
                                bool normalize=false)
   {
-    Eigen::MatrixXd representative;
-    power_to_representative(B1, B2, powerField, N, representative);
+    Eigen::MatrixXd representative,rawField;
+    power_to_representative(mesh.Bx, mesh.By, powerField, N, representative);
     if (normalize)
       representative.rowwise().normalize();
-    representative_to_raw(B3, representative, N, rawField);
+    representative_to_raw(mesh.faceNormals, representative, N, rawField);
+    field.set_field(rawField,mesh);
   }
   
-  // version without auxiliary data
-  IGL_INLINE void power_to_raw(const Eigen::MatrixXd& V,
-                               const Eigen::MatrixXi& F,
-                               const Eigen::MatrixXcd& powerField,
-                               int N,
-                               Eigen::MatrixXd& rawField,
-                               bool normalize=false)
-  {
-    Eigen::MatrixXd B1, B2, B3;
-    igl::local_basis(V, F, B1, B2, B3);
-    power_to_raw(B1, B2, B3, powerField, N, rawField,normalize);
-  }
 }
 
 #endif

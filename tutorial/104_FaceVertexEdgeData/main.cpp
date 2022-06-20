@@ -1,15 +1,14 @@
 #include <math.h>
-#include <igl/edge_topology.h>
-#include <igl/per_face_normals.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/principal_matching.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 int N;
-Eigen::MatrixXi F, EV, FE, EF;
-Eigen::MatrixXd V, rawField, normals;
-Eigen::VectorXi singVertices, singIndices, matching;
+directional::TriMesh mesh;
+directional::FaceField field;
 Eigen::VectorXd vertexData, faceData, edgeData;
 
 directional::DirectionalViewer viewer;
@@ -36,24 +35,25 @@ int main()
   std::cout <<"2  Show Verex-based values" << std::endl;
   std::cout <<"3  Show Edge-based values" << std::endl;
   
+  Eigen::MatrixXd V,rawField;
+  Eigen::MatrixXi F;
   igl::readOFF(TUTORIAL_SHARED_PATH "/eight.off", V, F);
+  mesh.set_mesh(V,F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", N, rawField);
-  igl::edge_topology(V, F, EV, FE, EF);
-
-  //Face data - the x component of normals
-  igl::per_face_normals(V, F, normals);
-  faceData=normals.col(0);
+  field.set_field(rawField, mesh);
+  
+  //Face data - the x component of the face normals
+  faceData=mesh.faceNormals.col(0);
   
   //vertex data: sin(z coordinate)
   vertexData=sin(10.0*V.col(2).array());
   
   //Edge data - the (squared) effort of the field (under principal matching)
-  directional::principal_matching(V, F, EV, EF, FE, rawField, matching, edgeData, singVertices, singIndices);
-  edgeData.array()*=edgeData.array();
+  directional::principal_matching(field);
+  edgeData=field.effort().array()*field.effort().array();
   
-  viewer.set_mesh(V,F);
-  viewer.set_field(rawField, Eigen::RowVector3d::Constant(1.0));
-  viewer.set_singularities(singVertices, singIndices);
+  viewer.set_mesh(mesh);
+  viewer.set_field(field, Eigen::RowVector3d::Constant(1.0));
   viewer.toggle_mesh_edges(false);
   
   viewer.callback_key_down = &key_down;

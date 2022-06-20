@@ -17,6 +17,7 @@
 #include <igl/speye.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
+#include <directional/FaceField.h>
 
 
 namespace Directional {
@@ -81,9 +82,7 @@ IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
 }
 
 
-IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd& V,
-                                              const Eigen::MatrixXi& F,
-                                              const Eigen::MatrixXd& temp_field,
+IGL_INLINE void directional::streamlines_init(const directional::FaceField& field,
                                               const Eigen::VectorXi& seedLocations,
                                               const int ringDistance,
                                               StreamlineData &data,
@@ -91,15 +90,13 @@ IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd& V,
   using namespace Eigen;
   using namespace std;
   
-  igl::edge_topology(V, F, data.EV, data.FE, data.EF);
+  data.field = &field;
   igl::triangle_triangle_adjacency(F, data.TT);
   
   state.numSteps=0;
   
   // prepare vector field
   // --------------------------
-  int degree = temp_field.cols()/3;
-  data.degree = degree;
   
   Eigen::MatrixXd FN;
   Eigen::VectorXi order;

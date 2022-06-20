@@ -1,15 +1,15 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 int currF, currVec, N;
-Eigen::MatrixXi F;
-Eigen::MatrixXd V, barycenters;
-Eigen::MatrixXd rawField;
+directional::TriMesh mesh;
+directional::FaceField field;
 directional::DirectionalViewer viewer;
 
 //User input variables
@@ -57,7 +57,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
   double x = viewer.current_mouse_x;
   double y = viewer.core().viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, V, F, fid, baryInFace))
+                               viewer.core().proj, viewer.core().viewport, mesh.V, mesh.F, fid, baryInFace))
   {
     
     //choosing face
@@ -71,12 +71,12 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
     //moving vector
     if (((igl::opengl::glfw::Viewer::MouseButton)button==igl::opengl::glfw::Viewer::MouseButton::Right)&&(fid==currF)){
       // Calculate direction from the center of the face to the mouse
-      Eigen::RowVector3d newVec =(V.row(F(fid, 0)) * baryInFace(0) +
-                                  V.row(F(fid, 1)) * baryInFace(1) +
-                                  V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
+      Eigen::RowVector3d newVec =(mesh.V.row(mesh.F(fid, 0)) * baryInFace(0) +
+                                  mesh.V.row(mesh.F(fid, 1)) * baryInFace(1) +
+                                  mesh.V.row(mesh.F(fid, 2)) * baryInFace(2) - mesh.barycenters.row(fid)).normalized();
       
-      rawField.block(currF, currVec*3, 1,3)=newVec;
-      directionalViewer->set_field(rawField);
+      field.extField.block(currF, currVec*3, 1,3)=newVec;
+      directionalViewer->set_field(field);
       directionalViewer->set_selected_vector(currF, currVec);
       return true;
       
@@ -87,18 +87,20 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
 
 int main()
 {
+  Eigen::MatrixXd V,rawField;
+  Eigen::MatrixXi F;
   igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
+  mesh.set_mesh(V,F);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", N, rawField);
+  field.set_field(rawField,mesh);
   
   std::cout <<
   "  1                Choose vector in current face." << std::endl <<
   "  0+Left button    Choose face" << std::endl <<
   "  0+Right button   Edit vector in current face" << std::endl;
   
-  igl::barycenter(V, F, barycenters);
-  
-  viewer.set_mesh(V,F);
-  viewer.set_field(rawField);
+  viewer.set_mesh(mesh);
+  viewer.set_field(field);
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

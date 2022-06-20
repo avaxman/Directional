@@ -12,12 +12,10 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
-#include <igl/edge_topology.h>
-//#include <igl/parallel_transport_angles.h>
-#include <igl/per_face_normals.h>
-//#include <igl/parallel_transport_angles.h>
 #include <igl/boundary_loop.h>
 #include <directional/dual_cycles.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 
 namespace directional
@@ -49,51 +47,43 @@ namespace directional
   
   
   // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
-  IGL_INLINE void effort_to_indices(const Eigen::MatrixXd& V,
-                                    const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::VectorXd& effort,
-                                    const Eigen::VectorXi& matching,
-                                    const int N,
-                                    Eigen::VectorXi& singVertices,
-                                    Eigen::VectorXi& singIndices)
+  IGL_INLINE void effort_to_indices(directional::FaceField& field)
   {
     Eigen::SparseMatrix<double> basisCycles;
     Eigen::VectorXd cycleCurvature;
     Eigen::VectorXi vertex2cycle;
     Eigen::VectorXi innerEdges;
-    directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
+    directional::dual_cycles(field.mesh->V, field.mesh->F,field.mesh->EV, field.mesh->EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
     Eigen::VectorXd effortInner(innerEdges.size());
     for (int i=0;i<innerEdges.size();i++)
-      effortInner(i)=effort(innerEdges(i));
+      effortInner(i)=field.effort(innerEdges(i));
     Eigen::VectorXi fullIndices;
-    directional::effort_to_indices(basisCycles, effortInner, matching, cycleCurvature, N, fullIndices);
+    directional::effort_to_indices(basisCycles, effortInner, field.matching, cycleCurvature, field.N, fullIndices);
    
-    Eigen::VectorXi indices(V.rows());
-    for (int i=0;i<V.rows();i++)
+    Eigen::VectorXi indices(field.mesh->V.rows());
+    for (int i=0;i<field.mesh->V.rows();i++)
       indices(i)=fullIndices(vertex2cycle(i));
     
     //removing boundary indices
    std::vector<std::vector<int> > L;
-    igl::boundary_loop(F, L);
+    igl::boundary_loop(field.mesh->F, L);
     for (int j=0;j<L.size();j++)
       for (int k=0;k<L[j].size();k++)
         indices(L[j][k])=0;
                     
     std::vector<int> singVerticesList;
     std::vector<int> singIndicesList;
-    for (int i=0;i<V.rows();i++)
+    for (int i=0;i<field.mesh->V.rows();i++)
       if (indices(i)!=0){
         singVerticesList.push_back(i);
         singIndicesList.push_back(indices(i));
       }
     
-    singVertices.resize(singVerticesList.size());
-    singIndices.resize(singIndicesList.size());
+    field.singVertices.resize(singVerticesList.size());
+    field.singIndices.resize(singIndicesList.size());
     for (int i=0;i<singVerticesList.size();i++){
-      singVertices(i)=singVerticesList[i];
-      singIndices(i)=singIndicesList[i];
+      field.singVertices(i)=singVerticesList[i];
+      field.singIndices(i)=singIndicesList[i];
     }
   }
 }

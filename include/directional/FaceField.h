@@ -33,7 +33,8 @@ public:
   
   Eigen::MatrixXd cycles;  //the adjaceny matrix of dual cycles
   Eigen::VectorXd cycleCurvatures;  //The Gaussian curvature of dual cycles.
-  
+  Eigen::VectorXi matching;
+  Eigen::VectorXd effort;
   Eigen::VectorXi singVertices;
   Eigen::VectorXi singIndices;
   
