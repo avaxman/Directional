@@ -16,7 +16,7 @@
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
 
-namespace Directional{
+namespace directional{
 
 class TriMesh{
 public:

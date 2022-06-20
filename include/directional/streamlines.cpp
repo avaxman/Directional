@@ -81,8 +81,8 @@ IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
 }
 
 
-IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
-                                              const Eigen::MatrixXi F,
+IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd& V,
+                                              const Eigen::MatrixXi& F,
                                               const Eigen::MatrixXd& temp_field,
                                               const Eigen::VectorXi& seedLocations,
                                               const int ringDistance,
@@ -168,12 +168,10 @@ IGL_INLINE void directional::streamlines_init(const Eigen::MatrixXd V,
   
 }
 
-IGL_INLINE void directional::streamlines_next(
-                                      const Eigen::MatrixXd V,
-                                      const Eigen::MatrixXi F,
-                                      const StreamlineData & data,
-                                      StreamlineState & state
-                                      ){
+IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
+                                              const Eigen::MatrixXi& F,
+                                              const StreamlineData & data,
+                                              StreamlineState & state){
   
   
   using namespace Eigen;

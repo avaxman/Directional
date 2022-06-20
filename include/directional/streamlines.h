@@ -60,8 +60,8 @@ namespace directional
   // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_init(const Eigen::MatrixXd V,
-                                   const Eigen::MatrixXi F,
+  IGL_INLINE void streamlines_init(const Eigen::MatrixXd& V,
+                                   const Eigen::MatrixXi& F,
                                    const Eigen::MatrixXd &rawField,
                                    const Eigen::VectorXi& seedLocations,
                                    const int ringDistance,
@@ -75,9 +75,8 @@ namespace directional
   //   F             #F by 3 list of mesh faces
   //   data          struct containing topology information
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_next(
-                                   const Eigen::MatrixXd V,
-                                   const Eigen::MatrixXi F,
+  IGL_INLINE void streamlines_next(const Eigen::MatrixXd& V,
+                                   const Eigen::MatrixXi& F,
                                    const StreamlineData & data,
                                    StreamlineState & state
                                    );

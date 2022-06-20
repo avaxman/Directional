@@ -2,11 +2,11 @@
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 int N;
-Directional::TriMesh mesh;
-Eigen::MatrixXd rawField;
-Eigen::VectorXi singVertices, singIndices;
+directional::TriMesh mesh;
+directional::FaceField field;
 directional::DirectionalViewer viewer;
 bool showField=true, showSingularities=true;
 
@@ -30,16 +30,18 @@ int main()
   
   Eigen::MatrixXd V;
   Eigen::MatrixXi F;
+  Eigen::VectorXi singVertices, singIndices;
   igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", V, F);
   mesh.set_mesh(V,F);
+  Eigen::MatrixXd rawField;
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
+  field.set_field(rawField, mesh);
   directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
-  
+  field.set_singularities(singVertices, singIndices);
   directional::DirectionalViewer viewer;
   
   viewer.set_mesh(mesh);
-  viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
+  viewer.set_field(field);
   viewer.toggle_mesh_edges(false);
   
   viewer.callback_key_down = &key_down;

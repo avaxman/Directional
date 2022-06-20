@@ -23,11 +23,48 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
                                                          const Eigen::MatrixXi& TT,
                                                          const Eigen::MatrixXi& TTi,
                                                          const Eigen::VectorXi &singularities,
+                                                         const Eigen::MatrixXi& EF,
+                                                         const Eigen::MatrixXi& FE,
+                                                         const Eigen::VectorXi& FKF,
+                                                         const Eigen::VectorXi& matching,
                                                          Eigen::MatrixXi &cuts)
 {
   
   //first, get a spanning tree for the mesh (no missmatch needed)
-  igl::cut_mesh_from_singularities(V, F, Eigen::MatrixXd::Zero(F.rows(), 3).eval(), cuts);
+  Eigen::MatrixXi mustCut=Eigen::MatrixXi::Zero(F.rows(),3);
+  Eigen::MatrixXi mustNotCut=Eigen::MatrixXi::Zero(F.rows(),3,1);
+  
+  for (int i=0;i<EF.rows();i++){
+    if ((EF(i,0)==-1)||(EF(i,1)==-1))  //boundary edge
+      continue;
+    
+    int faceLeft = EF(i,0);
+    int faceRight = EF(i,1);
+    int edgeInLeft=-1, edgeInRight=-1;
+    for (int j=0;j<3;j++){
+      if (abs(FE(faceLeft,j))==i)
+        edgeInLeft = j;
+      if (abs(FE(faceRight,j))==i)
+        edgeInRight = j;
+    }
+    assert(edgeInLeft!=-1);
+    assert(edgeInRight!=-1);
+    if (matching(i)!=0){  //must cut
+      mustCut(faceLeft, edgeInLeft)=1;
+      mustCut(faceRight, edgeInRight)=1;
+    }
+    if (FKF(faceLeft)==FKF(faceRight)){
+      mustNotCut(faceLeft, edgeInLeft)=1;
+      mustNotCut(faceRight, edgeInRight)=1;
+    }
+  }
+  
+  //checking the consistency of mustCut and mustNotCut
+  for (int i=0;i<F.rows();i++)
+    for (int j=0;j<F.rows();j++)
+      assert((mustNotCut(i,j)!=1)||(mustCut(i,j)!=1));
+  
+  igl::cut_mesh_from_singularities(V, F, mustCut, mustNotCut, cuts);
   
   std::set<int> vertices_in_cut;
   for (int i =0; i< cuts.rows(); ++i)
@@ -84,6 +121,10 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
 IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& V,
                                                          const Eigen::MatrixXi& F,
                                                          const Eigen::VectorXi& singularities,
+                                                         const Eigen::MatrixXi& EF,
+                                                         const Eigen::MatrixXi& FE,
+                                                         const Eigen::VectorXi& FKF,
+                                                         const Eigen::VectorXi& matching,
                                                          Eigen::MatrixXi& cuts)
 {
   
@@ -96,7 +137,7 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
   Eigen::MatrixXi TT, TTi;
   igl::triangle_triangle_adjacency(F,TT,TTi);
   
-  directional::cut_mesh_with_singularities(V, F, VF, VV, TT, TTi, singularities, cuts);
+  directional::cut_mesh_with_singularities(V, F, VF, VV, TT, TTi, EF, FE, FKF, matching, singularities, cuts);
   
   
 }
