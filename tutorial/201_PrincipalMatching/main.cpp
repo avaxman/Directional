@@ -1,7 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
 #include <igl/edge_topology.h>
 #include <directional/read_raw_field.h>

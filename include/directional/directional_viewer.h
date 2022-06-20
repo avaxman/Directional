@@ -20,6 +20,7 @@
 #include <directional/halfedge_highlights.h>
 #include <directional/vertex_highlights.h>
 #include <directional/streamlines.h>
+#include <directional/TriMesh.h>
 #include <igl/edge_topology.h>
 
 
@@ -37,12 +38,8 @@ namespace directional
   
   class DirectionalViewer: public igl::opengl::glfw::Viewer{
   private:
-    std::vector<Eigen::MatrixXd> VList;  //vertices of mesh list
-    std::vector<Eigen::MatrixXi> FList;  //faces of mesh list
-    std::vector<Eigen::MatrixXi> EFList;  //edge information for the mesh
-    std::vector<Eigen::MatrixXi> FEList;
-    std::vector<Eigen::MatrixXi> EVList;
-    
+    std::vector<const Directional::TriMesh*> meshList;  //meshes that are being viewed
+
     std::vector<Eigen::MatrixXd> rawField;
     std::vector<Eigen::MatrixXd> fieldColors;
     std::vector<directional::StreamlineData> slData;
@@ -60,22 +57,12 @@ namespace directional
     DirectionalViewer(){}
     ~DirectionalViewer(){}
     
-    void IGL_INLINE set_mesh(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const int meshNum=0,
-                             const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
-                             const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
-                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi())
+    void IGL_INLINE set_mesh(const Directional::TriMesh& mesh,
+                             const int meshNum=0)
     {
       Eigen::MatrixXd meshColors;
       meshColors=default_mesh_color();
-      Eigen::MatrixXi EV,FE,EF;
-      if (_EV.rows()==0){
-        igl::edge_topology(V,F,EV,FE,EF);
-      } else{
-        EV=_EV; FE=_FE; EF=_EF;
-      }
-      
+
       if (NUMBER_OF_SUBMESHES*(meshNum+1)>data_list.size()){  //allocating until there
         int currDLSize=data_list.size();
         for (int i=currDLSize;i<NUMBER_OF_SUBMESHES*(meshNum+1);i++)
@@ -84,30 +71,17 @@ namespace directional
         
       selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
       data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
-      data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(V,F);
-      if ((V.rows()==F.rows())||(meshColors.rows()!=V.rows()))  //assume face_based was meant
+      data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(mesh.V,mesh.F);
+      if ((mesh.V.rows()==mesh.F.rows())||(meshColors.rows()!=mesh.V.rows()))  //assume face_based was meant
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
       
-      
-      if (VList.size()<meshNum+1){
-        VList.resize(meshNum+1);
-        FList.resize(meshNum+1);
-        edgeVList.resize(meshNum+1);
-        edgeFList.resize(meshNum+1);
-        edgeFEList.resize(meshNum+1);
-        EVList.resize(meshNum+1);
-        FEList.resize(meshNum+1);
-        EFList.resize(meshNum+1);
+      if (meshList.size()<meshNum+1){
+        meshList.resize(meshNum+1);
         N.resize(meshNum+1);
       }
-    
-      VList[meshNum]=V;
-      FList[meshNum]=F;
-      EVList[meshNum]=EV;
-      FEList[meshNum]=FE;
-      EFList[meshNum]=EF;
+      meshList[meshNum]=&mesh;
     }
     
     void IGL_INLINE set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -119,7 +93,7 @@ namespace directional
       else
         meshColors=C;
       
-      if ((VList[meshNum].rows()==FList[meshNum].rows())&&(meshColors.rows()!=VList[meshNum].rows()))  //assume face_based was meant
+      if ((meshList[meshNum]->V.rows()==meshList[meshNum]->F.rows())&&(meshColors.rows()!=meshList[meshNum]->F.rows()))  //assume face_based was meant
         data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
       data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
       data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=true;
@@ -158,7 +132,7 @@ namespace directional
     {
     
       if (edgeVList[meshNum].size()==0){  //allocate
-        edge_diamond_mesh(VList[meshNum],FList[meshNum],EVList[meshNum],EFList[meshNum],edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
+        edge_diamond_mesh(meshList[meshNum]->V,meshList[meshNum]->F,meshList[meshNum]->EV,meshList[meshNum]->EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
         data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].clear();
         data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
       }
@@ -178,13 +152,13 @@ namespace directional
     }
     
     void IGL_INLINE set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
-      Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(FList[meshNum].rows(),1);
+      Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(meshList[meshNum]->F.rows(),1);
       for (int i=0;i<selectedFaces.size();i++)
         CMesh.row(selectedFaces(i))=selected_face_color();
       set_mesh_colors(CMesh,meshNum);
       
       //coloring field
-      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N[meshNum]);
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(meshList[meshNum]->F.rows(),N[meshNum]);
       for (int i=0;i<selectedFaces.rows();i++)
         glyphColors.row(selectedFaces(i))=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N[meshNum]);
       
@@ -193,7 +167,7 @@ namespace directional
     
     void IGL_INLINE set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
     {
-      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(FList[meshNum].rows(),N[meshNum]);
+      Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(meshList[meshNum]->F.rows(),N[meshNum]);
       glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,N[meshNum]);
       glyphColors.block(selectedFace,3*selectedVector,1,3)=directional::DirectionalViewer::selected_vector_glyph_color();
       set_field_colors(glyphColors, meshNum);
@@ -219,7 +193,7 @@ namespace directional
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
       N[meshNum]=rawField[meshNum].cols()/3;
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity, offsetRatio);
+      directional::glyph_lines_mesh(meshList[meshNum]->V, meshList[meshNum]->F, meshList[meshNum]->EF, rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity, offsetRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -239,12 +213,12 @@ namespace directional
       if (C.rows()==0)
         fieldColors[meshNum]=default_glyph_color();
       
-      //directional::glyph_lines_mesh(FList[meshNum], N[meshNum], fieldColors, CField);
+      //directional::glyph_lines_mesh(meshList[meshNum]->F, N[meshNum], fieldColors, CField);
      
       //TODO: something more efficient than feeding the entire field again
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      directional::glyph_lines_mesh(VList[meshNum], FList[meshNum], EFList[meshNum], rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
+      directional::glyph_lines_mesh(meshList[meshNum]->V, meshList[meshNum]->F, meshList[meshNum]->EF, rawField[meshNum], fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -259,7 +233,7 @@ namespace directional
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(VList[meshNum], FList[meshNum], N[meshNum], singVertices, singIndices, default_singularity_colors(N[meshNum]), VSings, FSings, CSings, radiusRatio);
+      directional::singularity_spheres(meshList[meshNum]->V, meshList[meshNum]->F, N[meshNum], singVertices, singIndices, default_singularity_colors(N[meshNum]), VSings, FSings, CSings, radiusRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
@@ -276,7 +250,7 @@ namespace directional
       Eigen::MatrixXd VSeams1, CSeams1,VSeams2, CSeams2, VSeams, CSeams;
       Eigen::MatrixXi FSeams1, FSeams2, FSeams;
       
-      Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(FList[meshNum].rows(),3,-1);
+      Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(meshList[meshNum]->F.rows(),3,-1);
       
       std::set<int> seamVertexSet;
       
@@ -287,20 +261,20 @@ namespace directional
         
         int inFaceIndex=-1;
         
-        if (EFList[meshNum](i,0)!=-1){
+        if (meshList[meshNum]->EF(i,0)!=-1){
           for (int j=0;j<3;j++)
-              if (FEList[meshNum](EFList[meshNum](i,0),j)==i)
+              if (meshList[meshNum]->FE(meshList[meshNum]->EF(i,0),j)==i)
                 inFaceIndex=j;
-          hlHalfedges(EFList[meshNum](i,0), inFaceIndex)=0;
-          seamVertexSet.insert(FList[meshNum](EFList[meshNum](i,0), inFaceIndex));
+          hlHalfedges(meshList[meshNum]->EF(i,0), inFaceIndex)=0;
+          seamVertexSet.insert(meshList[meshNum]->F(meshList[meshNum]->EF(i,0), inFaceIndex));
         }
         inFaceIndex=-1;
-        if (EFList[meshNum](i,1)!=-1){
+        if (meshList[meshNum]->EF(i,1)!=-1){
           for (int j=0;j<3;j++)
-            if (FEList[meshNum](EFList[meshNum](i,1),j)==i)
+            if (meshList[meshNum]->FE(meshList[meshNum]->EF(i,1),j)==i)
               inFaceIndex=j;
-          hlHalfedges(EFList[meshNum](i,1), inFaceIndex)=0;
-          seamVertexSet.insert(FList[meshNum](EFList[meshNum](i,1), inFaceIndex));
+          hlHalfedges(meshList[meshNum]->EF(i,1), inFaceIndex)=0;
+          seamVertexSet.insert(meshList[meshNum]->F(meshList[meshNum]->EF(i,1), inFaceIndex));
         }
       }
       
@@ -308,8 +282,8 @@ namespace directional
       int currPos=0;
       for (std::set<int>::iterator si=seamVertexSet.begin();si!=seamVertexSet.end();si++)
         seamVertices(currPos++)=*si;
-      directional::halfedge_highlights(VList[meshNum], FList[meshNum], hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
-      directional::vertex_highlights(VList[meshNum], FList[meshNum], seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
+      directional::halfedge_highlights(meshList[meshNum]->V, meshList[meshNum]->F, hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
+      directional::vertex_highlights(meshList[meshNum]->V, meshList[meshNum]->F, seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
       
       //uniting both meshes
       VSeams.resize(VSeams1.rows()+VSeams2.rows(),3);
@@ -338,7 +312,7 @@ namespace directional
         slData.resize(meshNum+1);
         slState.resize(meshNum+1);
       }
-      directional::streamlines_init(VList[meshNum], FList[meshNum], rawField[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      directional::streamlines_init(meshList[meshNum]->V, meshList[meshNum]->F, rawField[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }
     
@@ -346,8 +320,8 @@ namespace directional
                                         const double widthRatio=0.05,
                                         const double colorAttenuation = 0.9){
       
-      directional::streamlines_next(VList[meshNum], FList[meshNum], slData[meshNum], slState[meshNum]);
-      double width = widthRatio*igl::avg_edge_length(VList[meshNum], FList[meshNum]);
+      directional::streamlines_next(meshList[meshNum]->V, meshList[meshNum]->F, slData[meshNum], slState[meshNum]);
+      double width = widthRatio*igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);
       
       //generating colors according to original elements and their time signature
       Eigen::MatrixXd slColors(slState[meshNum].P1.rows(),3);
