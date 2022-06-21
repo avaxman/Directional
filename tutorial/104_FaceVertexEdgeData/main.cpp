@@ -1,4 +1,5 @@
 #include <math.h>
+#include <directional/readOFF.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
@@ -35,18 +36,15 @@ int main()
   std::cout <<"2  Show Verex-based values" << std::endl;
   std::cout <<"3  Show Edge-based values" << std::endl;
   
-  Eigen::MatrixXd V,rawField;
-  Eigen::MatrixXi F;
-  igl::readOFF(TUTORIAL_SHARED_PATH "/eight.off", V, F);
-  mesh.set_mesh(V,F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", N, rawField);
-  field.set_field(rawField, mesh);
-  
+  directional::readOFF(TUTORIAL_SHARED_PATH "/eight.off", mesh);
+  field.set_mesh(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", N, field);
+ 
   //Face data - the x component of the face normals
   faceData=mesh.faceNormals.col(0);
   
   //vertex data: sin(z coordinate)
-  vertexData=sin(10.0*V.col(2).array());
+  vertexData=sin(10.0*mesh.V.col(2).array());
   
   //Edge data - the (squared) effort of the field (under principal matching)
   directional::principal_matching(field);

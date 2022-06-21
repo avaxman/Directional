@@ -14,8 +14,7 @@
 #include <igl/igl_inline.h>
 #include <igl/boundary_loop.h>
 #include <directional/dual_cycles.h>
-#include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 
 
 namespace directional
@@ -47,44 +46,33 @@ namespace directional
   
   
   // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
-  IGL_INLINE void effort_to_indices(directional::FaceField& field)
+  IGL_INLINE void effort_to_indices(directional::CartesianField& field)
   {
-    Eigen::SparseMatrix<double> basisCycles;
-    Eigen::VectorXd cycleCurvature;
-    Eigen::VectorXi vertex2cycle;
-    Eigen::VectorXi innerEdges;
-    directional::dual_cycles(field.mesh->V, field.mesh->F,field.mesh->EV, field.mesh->EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
-    Eigen::VectorXd effortInner(innerEdges.size());
-    for (int i=0;i<innerEdges.size();i++)
-      effortInner(i)=field.effort(innerEdges(i));
+    Eigen::VectorXd effortInner(field.innerAdjacencies.size());
+    for (int i=0;i<field.innerAdjacencies.size();i++)
+      effortInner(i)=field.effort(field.innerAdjacencies(i));
     Eigen::VectorXi fullIndices;
-    directional::effort_to_indices(basisCycles, effortInner, field.matching, cycleCurvature, field.N, fullIndices);
+    directional::effort_to_indices(field.dualCycles, effortInner, field.matching, field.cycleCurvatures, field.N, fullIndices);
    
-    Eigen::VectorXi indices(field.mesh->V.rows());
-    for (int i=0;i<field.mesh->V.rows();i++)
-      indices(i)=fullIndices(vertex2cycle(i));
-    
-    //removing boundary indices
-   std::vector<std::vector<int> > L;
-    igl::boundary_loop(field.mesh->F, L);
-    for (int j=0;j<L.size();j++)
-      for (int k=0;k<L[j].size();k++)
-        indices(L[j][k])=0;
-                    
-    std::vector<int> singVerticesList;
+    Eigen::VectorXi indices(field.element2Cycle.size());
+    for (int i=0;i<field.element2Cycle.size();i++)
+      indices(i)=fullIndices(field.element2Cycle(i));
+                        
+    std::vector<int> singCyclesList;
     std::vector<int> singIndicesList;
-    for (int i=0;i<field.mesh->V.rows();i++)
+    for (int i=0;i<field.element2Cycle.size();i++)
       if (indices(i)!=0){
-        singVerticesList.push_back(i);
+        singCyclesList.push_back(i);
         singIndicesList.push_back(indices(i));
       }
     
-    field.singVertices.resize(singVerticesList.size());
-    field.singIndices.resize(singIndicesList.size());
-    for (int i=0;i<singVerticesList.size();i++){
-      field.singVertices(i)=singVerticesList[i];
-      field.singIndices(i)=singIndicesList[i];
+    Eigen::VectorXi singCycles(singCyclesList.size());
+    Eigen::VectorXi singIndices(singIndicesList.size());
+    for (int i=0;i<singCyclesList.size();i++){
+      singCycles(i)=singCyclesList[i];
+      singIndices(i)=singIndicesList[i];
     }
+    field.set_singularities(singCycles, singIndices);
   }
 }
 

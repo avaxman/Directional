@@ -7,6 +7,7 @@
 #include <directional/principal_matching.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
+#include <directional/readOBJ.h>
 
 int N=2;
 directional::FaceField field;
@@ -37,7 +38,8 @@ int main()
   std::cout <<"1  Sparser field view" << std::endl;
   std::cout <<"2  Denser field view" << std::endl;
  
-  mesh.readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj");
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj",mesh);
+  field.set_mesh(mesh);
   Eigen::VectorXi bc(1); bc(0)=0;
   Eigen::MatrixXd b(1,3); b.row(0)=mesh.V.row(mesh.F(0,1))-mesh.V.row(mesh.F(0,2));
   directional::power_field(mesh, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);

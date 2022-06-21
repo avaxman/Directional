@@ -201,7 +201,7 @@ namespace directional
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
       
-      set_singularities(fieldList[meshNum]->singVertices,
+      set_singularities(fieldList[meshNum]->singCycles,
                         fieldList[meshNum]->singIndices,
                         meshNum);
     }

@@ -1,23 +1,17 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/edge_topology.h>
+#include <directional/readOBJ.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/directional_viewer.h>
 
 
 int currF=0, N;
-Eigen::MatrixXi F, FField, FSings;
-Eigen::MatrixXd V, VField, VSings;
-Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField, barycenters;
-Eigen::VectorXd effort;
-Eigen::VectorXi matching;
-Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi singIndices, singVertices;
 
+Eigen::MatrixXd barycenters;
+directional::TriMesh mesh;
+directional::FaceField field;
 directional::DirectionalViewer viewer;
 
 bool zeroPressed=false;
@@ -34,17 +28,17 @@ void update_raw_field_mesh()
   Eigen::Vector3i otherFaces;
   Eigen::Vector3i zeroInFace;
   for (int i=0;i<3;i++){
-    otherFaces(i)=(EF(FE(currF,i),0)==currF ? EF(FE(currF,i),1) : EF(FE(currF,i),0));
-    zeroInFace(i)=(EF(FE(currF,i),0)==currF ? matching(FE(currF,i)) : -matching(FE(currF,i)));
+    otherFaces(i)=(mesh.EF(mesh.FE(currF,i),0)==currF ? mesh.EF(mesh.FE(currF,i),1) : mesh.EF(mesh.FE(currF,i),0));
+    zeroInFace(i)=(mesh.EF(mesh.FE(currF,i),0)==currF ? field.matching(mesh.FE(currF,i)) : -field.matching(mesh.FE(currF,i)));
   }
   
-  Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(F.rows(),N);
-  glyphColors.row(currF)=directional::DirectionalViewer::indexed_glyph_colors(rawField.row(currF), false);
+  Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(mesh.F.rows(),N);
+  glyphColors.row(currF)=directional::DirectionalViewer::indexed_glyph_colors(field.extField.row(currF), false);
   for (int i=0;i<N;i++)
     for (int j=0;j<3;j++)
       glyphColors.block(otherFaces(j),3*((i+zeroInFace(j)+N)%N),1,3)<<glyphColors.row(currF).segment(3*i,3);
   
-  viewer.set_field(rawField, glyphColors);
+  viewer.set_field(field, glyphColors);
   
 }
 
@@ -86,7 +80,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
   double x = directional_viewer->current_mouse_x;
   double y = directional_viewer->core().viewport(3) - directional_viewer->current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), directional_viewer->core().view,
-                               directional_viewer->core().proj, directional_viewer->core().viewport, V, F, fid, baryInFace))
+                               directional_viewer->core().proj, directional_viewer->core().viewport, mesh.V, mesh.F, fid, baryInFace))
   {
     
     //choosing face
@@ -104,20 +98,20 @@ int main()
 {
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", V, F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, rawField);
-  igl::edge_topology(V, F, EV, FE, EF);
-  igl::barycenter(V, F, barycenters);
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", mesh);
+  field.set_mesh(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, field);
   
-  directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
+  directional::principal_matching(field);
 
   //triangle mesh setup
-  viewer.set_mesh(V, F);
+  viewer.set_mesh(mesh);
+  viewer.set_field(field);
   update_triangle_mesh();
   update_raw_field_mesh();
   
   //singularity mesh
-  viewer.set_singularities(singVertices, singIndices);
+  //viewer.set_singularities(singVertices, singIndices);
   
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;

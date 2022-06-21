@@ -32,49 +32,36 @@ namespace directional
   //  effort: #E principal matching efforts.
   //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
   //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N). This discludes boundary vertices (boundary cycles have their own index along generator cycles)
-  IGL_INLINE void principal_matching(directional::FaceField& field)
+  IGL_INLINE void principal_matching(directional::CartesianField& field)
   {
     
     typedef std::complex<double> Complex;
     using namespace Eigen;
     using namespace std;
     
-    field.matching.conservativeResize(field.mesh->EF.rows());
+    field.matching.conservativeResize(field.adjSpaces.rows());
     field.matching.setConstant(-1);
     
-    VectorXcd edgeTransport(field.mesh->EF.rows());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
-    MatrixXd edgeVectors(field.mesh->EF.rows(), 3);
-    for (int i = 0; i < field.mesh->EF.rows(); i++) {
-      if (field.mesh->EF(i, 0) == -1 || field.mesh->EF(i, 1) == -1)
+    field.effort = VectorXd::Zero(field.adjSpaces.rows());
+    for (int i = 0; i < field.adjSpaces.rows(); i++) {
+      if (field.adjSpaces(i, 0) == -1 || field.adjSpaces(i, 1) == -1)
         continue;
-      edgeVectors.row(i) = (field.mesh->V.row(field.mesh->EV(i, 1)) - field.mesh->V.row(field.mesh->EV(i, 0))).normalized();
-      Complex ef(edgeVectors.row(i).dot(field.mesh->Bx.row(field.mesh->EF(i, 0))), edgeVectors.row(i).dot(field.mesh->By.row(field.mesh->EF(i, 0))));
-      Complex eg(edgeVectors.row(i).dot(field.mesh->Bx.row(field.mesh->EF(i, 1))), edgeVectors.row(i).dot(field.mesh->By.row(field.mesh->EF(i, 1))));
-      edgeTransport(i) = eg / ef;
-    }
     
-    field.effort = VectorXd::Zero(field.mesh->EF.rows());
-    for (int i = 0; i < field.mesh->EF.rows(); i++) {
-      if (field.mesh->EF(i, 0) == -1 || field.mesh->EF(i, 1) == -1)
-        continue;
-      //computing free coefficient effort (a.k.a. [Diamanti et al. 2014])
-      //Complex freeCoeffEffort(1.0, 0.0);
       double minRotAngle=10000.0;
       int indexMinFromZero=0;
       
       //computing some effort and the extracting principal one
       Complex freeCoeff(1.0,0.0);
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
-      
-      RowVector3d vec0f = field.extField.block(field.mesh->EF(i, 0), 0, 1, 3);
-      Complex vec0fc = Complex(vec0f.dot(field.mesh->Bx.row(field.mesh->EF(i, 0))), vec0f.dot(field.mesh->By.row(field.mesh->EF(i, 0))));
-      Complex transvec0fc = vec0fc*edgeTransport(i);
+      RowVector2d vec0f = field.intField.block(field.adjSpaces(i, 0), 0, 1, 2);
+      Complex vec0fc = Complex(vec0f(0), vec0f(1));
+      Complex transvec0fc = vec0fc*field.connection(i);
       for (int j = 0; j < field.N; j++) {
-        RowVector3d vecjf = field.extField.block(field.mesh->EF(i, 0), 3 * j, 1, 3);
-        Complex vecjfc = Complex(vecjf.dot(field.mesh->Bx.row(field.mesh->EF(i, 0))), vecjf.dot(field.mesh->By.row(field.mesh->EF(i, 0))));
-        RowVector3d vecjg = field.extField.block(field.mesh->EF(i, 1), 3 * j, 1, 3);
-        Complex vecjgc = Complex(vecjg.dot(field.mesh->Bx.row(field.mesh->EF(i, 1))), vecjg.dot(field.mesh->By.row(field.mesh->EF(i, 1))));
-        Complex transvecjfc = vecjfc*edgeTransport(i);
+        RowVector2d vecjf = field.intField.block(field.adjSpaces(i, 0), 2 * j, 1, 2);
+        Complex vecjfc = Complex(vecjf(0),vecjf(1));
+        RowVector2d vecjg = field.intField.block(field.adjSpaces(i, 1), 2 * j, 1, 2);
+        Complex vecjgc = Complex(vecjg(0),vecjg(1));
+        Complex transvecjfc = vecjfc*field.connection(i);
         freeCoeff *= (vecjgc / transvecjfc);
         double currRotAngle =arg(vecjgc / transvec0fc);
         if (abs(currRotAngle)<abs(minRotAngle)){
@@ -91,11 +78,11 @@ namespace directional
       //This is still not perfect
       double currEffort=0;
       for (int j = 0; j < field.N; j++) {
-        RowVector3d vecjf = field.extField.block(field.mesh->EF(i, 0), 3*j, 1, 3);
-        Complex vecjfc = Complex(vecjf.dot(field.mesh->Bx.row(field.mesh->EF(i, 0))), vecjf.dot(field.mesh->By.row(field.mesh->EF(i, 0))));
-        RowVector3d vecjg = field.extField.block(field.mesh->EF(i, 1), 3 *((j+indexMinFromZero+field.N)%field.N), 1, 3);
-        Complex vecjgc = Complex(vecjg.dot(field.mesh->Bx.row(field.mesh->EF(i, 1))), vecjg.dot(field.mesh->By.row(field.mesh->EF(i, 1))));
-        Complex transvecjfc = vecjfc*edgeTransport(i);
+        RowVector2d vecjf = field.intField.block(field.adjSpaces(i, 0), 2*j, 1, 2);
+        Complex vecjfc = Complex(vecjf(0), vecjf(1));
+        RowVector2d vecjg = field.intField.block(field.adjSpaces(i, 1), 2 *((j+indexMinFromZero+field.N)%field.N), 1, 2);
+        Complex vecjgc = Complex(vecjg(0), vecjg(1));
+        Complex transvecjfc = vecjfc*field.connection(i);
         currEffort+= arg(vecjgc / transvecjfc);
       }
    
