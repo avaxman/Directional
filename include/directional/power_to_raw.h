@@ -36,7 +36,7 @@ namespace directional
     if (normalize)
       representative.rowwise().normalize();
     representative_to_raw(mesh.faceNormals, representative, N, rawField);
-    field.set_field(rawField,mesh);
+    field.set_extrinsic_field(rawField);
   }
   
 }

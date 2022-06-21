@@ -1,5 +1,6 @@
 #include <math.h>
-#include <igl/edge_topology.h>
+#include <directional/FaceField.h>
+#include <directional/TriMesh.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
@@ -8,9 +9,8 @@
 #include <directional/power_to_raw.h>
 
 int N=2;
-Eigen::MatrixXi F, EV, FE, EF;
-Eigen::MatrixXd V, rawField, normals;
-Eigen::VectorXi singVertices, singIndices, matching;
+directional::FaceField field;
+directional::TriMesh mesh;
 Eigen::MatrixXcd powerField;
 int sparsity=0;
 
@@ -28,7 +28,7 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   }
   if (sparsity<0) sparsity = 0;
   std::cout<<"Sparsity: "<<sparsity<<std::endl;
-  directionalViewer->set_field(rawField,Eigen::MatrixXd(),0,0.9*((double)sparsity+1.0),sparsity);
+  directionalViewer->set_field(field,Eigen::MatrixXd(),0,0.9*((double)sparsity+1.0),sparsity);
   return true;
 }
 
@@ -37,15 +37,14 @@ int main()
   std::cout <<"1  Sparser field view" << std::endl;
   std::cout <<"2  Denser field view" << std::endl;
  
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj", V, F);
+  mesh.readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj");
   Eigen::VectorXi bc(1); bc(0)=0;
-  Eigen::MatrixXd b(1,3); b.row(0)=V.row(F(0,1))-V.row(F(0,2));
-  directional::power_field(V, F, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);
-  directional::power_to_raw(V,F,powerField,N,rawField, true);
+  Eigen::MatrixXd b(1,3); b.row(0)=mesh.V.row(mesh.F(0,1))-mesh.V.row(mesh.F(0,2));
+  directional::power_field(mesh, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);
+  directional::power_to_raw(mesh, powerField,N,field, true);
   
-  viewer.set_mesh(V,F);
-  viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
+  viewer.set_mesh(mesh);
+  viewer.set_field(field);
   viewer.toggle_mesh_edges(false);
   
   viewer.callback_key_down = &key_down;

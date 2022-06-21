@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <directional/FaceField.h>
 
 
 namespace directional
@@ -27,7 +28,7 @@ namespace directional
   //   Whether or not the file was read successfully
   bool IGL_INLINE read_raw_field(const std::string &fileName,
                                  int& N,
-                                 Eigen::MatrixXd& rawField)
+                                 directional::FaceField& field)
   {
     try
     {
@@ -38,14 +39,16 @@ namespace directional
       int numF;
       f>>N;
       f>>numF;
-      rawField.conservativeResize(numF, 3*N);
+      Eigen::MatrixXd extField;
+      extField.conservativeResize(numF, 3*N);
       
       //Can we do better than element-wise reading?
-      for (int i=0;i<rawField.rows();i++)
-        for (int j=0;j<rawField.cols();j++)
-          f>>rawField(i,j);
+      for (int i=0;i<extField.rows();i++)
+        for (int j=0;j<extField.cols();j++)
+          f>>extField(i,j);
       
       f.close();
+      field.set_extrinsic_field(extField);
       return f.good();
     }
     catch (std::exception e)

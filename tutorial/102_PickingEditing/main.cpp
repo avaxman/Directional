@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
+#include <directional/readOBJ.h>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
@@ -87,13 +87,11 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int button, int modifiers)
 
 int main()
 {
-  Eigen::MatrixXd V,rawField;
-  Eigen::MatrixXi F;
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", V, F);
-  mesh.set_mesh(V,F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", N, rawField);
-  field.set_field(rawField,mesh);
-  
+
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", mesh);
+  field.set_mesh(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", N, field);
+
   std::cout <<
   "  1                Choose vector in current face." << std::endl <<
   "  0+Left button    Choose face" << std::endl <<

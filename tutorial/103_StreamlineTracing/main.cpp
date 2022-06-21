@@ -1,6 +1,5 @@
 #include <igl/edge_topology.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/readOFF.h>
+#include <directional/readOFF.h>
 #include <directional/streamlines.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -52,18 +51,15 @@ int main(int argc, char *argv[])
   
   directional::DirectionalViewer viewer;
   
-  // Load a mesh in OFF format
-  Eigen::MatrixXd V;
-  Eigen::MatrixXi F;
-  igl::readOFF(TUTORIAL_SHARED_PATH "/lion.off", V, F);
-  mesh.set_mesh(V,F);
+  directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
   // Create a Vector Field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
-  Eigen::MatrixXd constVectors(1, 3); constVectors.row(0) <<( V.row(F(0, 1)) - V.row(F(0, 0))).normalized();
+  Eigen::MatrixXd constVectors(1, 3); constVectors.row(0) <<(mesh.V.row(mesh.F(0, 1)) - mesh.V.row(mesh.F(0, 0))).normalized();
   Eigen::VectorXd alignWeights(1); alignWeights(0) = -1.0;
   directional::power_field(mesh, constFaces, constVectors, alignWeights ,N, powerField);
   
   // Convert it to raw field
+  field.set_mesh(mesh);
   directional::power_to_raw(mesh,powerField,N,field, true);
   
   //triangle mesh

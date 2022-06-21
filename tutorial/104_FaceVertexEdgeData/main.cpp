@@ -50,7 +50,7 @@ int main()
   
   //Edge data - the (squared) effort of the field (under principal matching)
   directional::principal_matching(field);
-  edgeData=field.effort().array()*field.effort().array();
+  edgeData=field.effort.array()*field.effort.array();
   
   viewer.set_mesh(mesh);
   viewer.set_field(field, Eigen::RowVector3d::Constant(1.0));

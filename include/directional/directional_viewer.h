@@ -318,8 +318,7 @@ namespace directional
         slData.resize(meshNum+1);
         slState.resize(meshNum+1);
       }
-      Eigen::MatrixXd stam;
-      directional::streamlines_init(meshList[meshNum]->V, meshList[meshNum]->F, fieldList[meshNum]->extField, seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      directional::streamlines_init(*(fieldList[meshNum]), seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }
     
@@ -327,7 +326,7 @@ namespace directional
                                         const double widthRatio=0.05,
                                         const double colorAttenuation = 0.9){
       
-      directional::streamlines_next(meshList[meshNum]->V, meshList[meshNum]->F, slData[meshNum], slState[meshNum]);
+      directional::streamlines_next(slData[meshNum], slState[meshNum]);
       double width = widthRatio*igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);
       
       //generating colors according to original elements and their time signature
@@ -344,7 +343,6 @@ namespace directional
         }
       }
       
-          
       Eigen::MatrixXd VStream, CStream;
       Eigen::MatrixXi FStream;
       directional::line_cylinders(slState[meshNum].P1,slState[meshNum].P2, width, slColors, 4, VStream, FStream, CStream);

@@ -10,6 +10,7 @@
 #define DIRECTIONAL_STREAMLINES_H
 
 #include <igl/igl_inline.h>
+#include <directional/FaceField.h>
 
 #include <Eigen/Core>
 #include <vector>
@@ -18,19 +19,13 @@ namespace directional
 {
   struct StreamlineData
   {
-    Eigen::MatrixXi TT;         //  #F by #3 adjacent matrix
-    Eigen::MatrixXi EV;          //  #E by #3
-    Eigen::MatrixXi FE;        //  #Fx3, Stores the Triangle-Edge relation
-    Eigen::MatrixXi EF;        //  #Ex2, Stores the Edge-Triangle relation
-    Eigen::MatrixXd field;      //  #F by 3N list of the 3D coordinates of the per-face vectors
+    directional::FaceField field;
     //      (N degrees stacked horizontally for each triangle)
     //Eigen::MatrixXi match_ab;   //  #E by N matrix, describing for each edge the matching a->b, where a
     //      and b are the faces adjacent to the edge (i.e. vector #i of
     //      the vector set in a is matched to vector #mab[i] in b)
     // Eigen::MatrixXi match_ba;   //  #E by N matrix, describing the inverse relation to match_ab
-    Eigen::VectorXi matching;
     int nsample;                //  #S, number of sample points
-    int degree;                 //  #N, degrees of the vector field
     Eigen::VectorXi samples;    //all original faces
   };
   
@@ -60,9 +55,7 @@ namespace directional
   // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_init(const Eigen::MatrixXd& V,
-                                   const Eigen::MatrixXi& F,
-                                   const Eigen::MatrixXd &rawField,
+  IGL_INLINE void streamlines_init(const directional::FaceField& field,
                                    const Eigen::VectorXi& seedLocations,
                                    const int ringDistance,
                                    StreamlineData &data,
@@ -75,9 +68,7 @@ namespace directional
   //   F             #F by 3 list of mesh faces
   //   data          struct containing topology information
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_next(const Eigen::MatrixXd& V,
-                                   const Eigen::MatrixXi& F,
-                                   const StreamlineData & data,
+  IGL_INLINE void streamlines_next(const StreamlineData & data,
                                    StreamlineState & state
                                    );
 }

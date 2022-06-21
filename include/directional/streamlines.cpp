@@ -9,7 +9,6 @@
 #include <Eigen/Geometry>
 #include <igl/edge_topology.h>
 #include <igl/sort_vectors_ccw.h>
-#include <igl/per_face_normals.h>
 #include <igl/segment_segment_intersect.h>
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/barycenter.h>
@@ -90,9 +89,6 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   using namespace Eigen;
   using namespace std;
   
-  data.field = &field;
-  igl::triangle_triangle_adjacency(F, data.TT);
-  
   state.numSteps=0;
   
   // prepare vector field
@@ -101,26 +97,25 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   Eigen::MatrixXd FN;
   Eigen::VectorXi order;
   Eigen::RowVectorXd sorted;
-  
-  igl::per_face_normals(V, F, FN);
-  data.field.setZero(F.rows(), degree * 3);
-  for (unsigned i = 0; i < F.rows(); ++i){
-    const Eigen::RowVectorXd &n = FN.row(i);
-    Eigen::RowVectorXd temp(1, degree * 3);
-    temp = temp_field.row(i);
+  data.field = field;
+  data.field.extField.setZero(field.mesh->F.rows(), field.N * 3);
+  for (unsigned i = 0; i < field.mesh->F.rows(); ++i){
+    const Eigen::RowVectorXd &n = field.mesh->faceNormals.row(i);
+    Eigen::RowVectorXd temp(1, field.N * 3);
+    temp = field.extField.row(i);
     igl::sort_vectors_ccw(temp, n, order, sorted);
     
     // project vectors to tangent plane
-    for (int j = 0; j < degree; ++j)
+    for (int j = 0; j < field.N; ++j)
     {
       Eigen::RowVector3d pd = sorted.segment(j * 3, 3);
       pd = (pd - (n.dot(pd)) * n).normalized();
-      data.field.block(i, j * 3, 1, 3) = pd;
+      data.field.extField.block(i, j * 3, 1, 3) = pd;
     }
   }
   Eigen::VectorXd effort;
   Eigen::VectorXi singIndices, singVertices;
-  directional::principal_matching(V, F, data.EV, data.EF, data.FE, data.field, data.matching, effort, singVertices, singIndices);
+  directional::principal_matching(data.field);
   
   // create seeds for tracing
   // --------------------------
@@ -129,7 +124,7 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   
   if (seedLocations.rows()==0){
     assert(ringDistance>=0);
-    Directional::generate_sample_locations(F,data.EF,ringDistance,data.samples);
+    Directional::generate_sample_locations(field.mesh->F,field.mesh->EF,ringDistance,data.samples);
     nsamples = data.nsample = data.samples.size();
     nsamples = data.nsample;
     /*Eigen::VectorXd r;
@@ -142,39 +137,35 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
     nsamples = data.nsample = seedLocations.size();
   }
   
-  Eigen::MatrixXd BC, BC_sample;
-  igl::barycenter(V, F, BC);
-  igl::slice(BC, data.samples, 1, BC_sample);
+  Eigen::MatrixXd BC_sample;
+  igl::slice(field.mesh->barycenters, data.samples, 1, BC_sample);
   
   // initialize state for tracing vector field
   
-  state.start_point = BC_sample.replicate(degree,1);
+  state.start_point = BC_sample.replicate(field.N,1);
   state.end_point = state.start_point;
   
-  state.current_face = data.samples.replicate(1, degree);
+  state.current_face = data.samples.replicate(1, field.N);
   
   /*state.P1 =state.start_point;
   state.P2 =state.end_point;
   state.origFace = state.current_face;
   state.origVector.resize(state.origFace.rows(), state.)*/
   
-  state.current_direction.setZero(nsamples, degree);
+  state.current_direction.setZero(nsamples, field.N);
   for (int i = 0; i < nsamples; ++i)
-    for (int j = 0; j < degree; ++j)
+    for (int j = 0; j < field.N; ++j)
       state.current_direction(i, j) = j;
   
 }
 
-IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
-                                              const Eigen::MatrixXi& F,
-                                              const StreamlineData & data,
+IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                                               StreamlineState & state){
   
   
   using namespace Eigen;
   using namespace std;
   
-  int degree = data.degree;
   int nsample = data.nsample;
   
   state.start_point = state.end_point;
@@ -184,7 +175,7 @@ IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
   Eigen::VectorXi currVector=Eigen::VectorXi::Zero(state.start_point.rows());
   Eigen::VectorXi currTime=Eigen::VectorXi::Zero(state.start_point.rows());
   
-  for (int i = 0; i < degree; ++i)
+  for (int i = 0; i < data.field.N; ++i)
   {
     for (int j = 0; j < nsample; ++j)
     {
@@ -201,7 +192,7 @@ IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
       const Eigen::RowVector3d &p = state.start_point.row(j + nsample * i);
       
       // the direction where we are trying to go
-      const Eigen::RowVector3d &r = data.field.block(f0, 3 * m0, 1, 3);
+      const Eigen::RowVector3d &r = data.field.extField.block(f0, 3 * m0, 1, 3);
       
       
       // new state,
@@ -209,11 +200,11 @@ IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
       
       for (int k = 0; k < 3; ++k)
       {
-        f1 = data.TT(f0, k);
+        f1 = data.field.mesh->TT(f0, k);
         
         // edge vertices
-        const Eigen::RowVector3d &q = V.row(F(f0, k));
-        const Eigen::RowVector3d &qs = V.row(F(f0, (k + 1) % 3));
+        const Eigen::RowVector3d &q = data.field.mesh->V.row(data.field.mesh->F(f0, k));
+        const Eigen::RowVector3d &qs = data.field.mesh->V.row(data.field.mesh->F(f0, (k + 1) % 3));
         // edge direction
         Eigen::RowVector3d s = qs - q;
         
@@ -226,11 +217,11 @@ IGL_INLINE void directional::streamlines_next(const Eigen::MatrixXd& V,
           state.current_face(j,i) = f1;
           
           // matching direction on next face
-          int e1 = data.FE(f0, k);
-          if (data.EF(e1, 0) == f0)
-            m1 = (data.matching(e1)+m0)%data.degree; //m1 = data.match_ab(e1, m0);
+          int e1 = data.field.mesh->FE(f0, k);
+          if (data.field.mesh->EF(e1, 0) == f0)
+            m1 = (data.field.matching(e1)+m0)%data.field.N; //m1 = data.match_ab(e1, m0);
           else
-            m1 = (-data.matching(e1)+m0+data.degree)%data.degree;  //data.match_ba(e1, m0);
+            m1 = (-data.field.matching(e1)+m0+data.field.N)%data.field.N;  //data.match_ba(e1, m0);
           
           state.current_direction(j, i) = m1;
           break;

@@ -11,9 +11,13 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
+#include <igl/barycenter.h>
+#include <igl/readOBJ.h>
+#include <igl/readOFF.h>
 #include <igl/local_basis.h>
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
+#include <igl/triangle_triangle_adjacency.h>
 
 namespace directional{
 
@@ -25,7 +29,7 @@ public:
   Eigen::MatrixXi F;
   
   //Topological quantities
-  Eigen::MatrixXi EF, FE, EV;
+  Eigen::MatrixXi EF, FE, EV,TT;
   
   //Geometric quantities
   Eigen::MatrixXd faceNormals;
@@ -50,7 +54,9 @@ public:
     }
     igl::barycenter(V, F, barycenters);
     igl::local_basis(V, F, Bx, By, faceNormals);
+    igl::triangle_triangle_adjacency(F, TT);
   }
+
 };
 
 }

@@ -1,4 +1,5 @@
 #include <directional/directional_viewer.h>
+#include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/TriMesh.h>
@@ -28,16 +29,10 @@ int main()
   std::cout <<"1    Show/hide Field" << std::endl;
   std::cout <<"2    Show/hide Singularities" << std::endl;
   
-  Eigen::MatrixXd V;
-  Eigen::MatrixXi F;
-  Eigen::VectorXi singVertices, singIndices;
-  igl::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off", V, F);
-  mesh.set_mesh(V,F);
-  Eigen::MatrixXd rawField;
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
-  field.set_field(rawField, mesh);
-  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
-  field.set_singularities(singVertices, singIndices);
+  directional::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off",mesh);
+  field.set_mesh(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, field);
+  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, field);
   directional::DirectionalViewer viewer;
   
   viewer.set_mesh(mesh);

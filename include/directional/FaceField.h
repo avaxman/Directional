@@ -11,6 +11,7 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
+#include <directional/TriMesh.h>
 
 namespace directional{
 
@@ -39,15 +40,22 @@ public:
   Eigen::VectorXi singIndices;
   
   FaceField(){}
+  FaceField(const TriMesh& _mesh):mesh(&_mesh){}
   ~FaceField(){}
   
-  void IGL_INLINE set_field(const Eigen::MatrixXd& _extField,
-                            const TriMesh& _mesh,
-                            const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
-                            const Eigen::VectorXi& _face=Eigen::VectorXi()){
+  void IGL_INLINE set_mesh(const TriMesh& _mesh){
+    mesh = &_mesh;
+    
+    adjSpaces = mesh->EF;
+    //TODO: connection, cycles, cycleCurvature
+    
+  };
+  
+  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
+                                      const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
+                                      const Eigen::VectorXi& _face=Eigen::VectorXi()){
   
     extField=_extField;
-    mesh = &_mesh;
     source = _source;
     face = _face;
     N = extField.cols()/3;
@@ -62,8 +70,7 @@ public:
           intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->Bx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->By.row(face(j)).array()).sum();
     }
     
-    adjSpaces = mesh->EF;
-    //TODO: connection, cycles, cycleCurvature
+
   }
   
   void IGL_INLINE set_singularities(const Eigen::VectorXi& _singVertices,
@@ -71,7 +78,8 @@ public:
     singVertices=_singVertices;
     singIndices=_singIndices;
   }
-      
+  
+
 };
 
 }

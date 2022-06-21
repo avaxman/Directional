@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <directional/FaceField.h>
 
 
 namespace directional
@@ -29,8 +30,7 @@ namespace directional
 	//   Whether or not the file was written successfully
   bool IGL_INLINE read_singularities(const std::string &fileName,
                                      int& N,
-                                     Eigen::VectorXi &singVertices,
-                                     Eigen::VectorXi& singIndices)
+                                     directional::FaceField& field)
 	{
 		try
 		{
@@ -39,13 +39,14 @@ namespace directional
 			f >> N;
 			f >> numSings;
 
-			singVertices = Eigen::VectorXi::Zero(numSings);
-      singIndices = Eigen::VectorXi::Zero(numSings);
+      Eigen::VectorXi singVertices = Eigen::VectorXi::Zero(numSings);
+      Eigen::VectorXi singIndices = Eigen::VectorXi::Zero(numSings);
       
       for (int i=0;i<numSings;i++)
         f >> singVertices.coeffRef(i)>> singIndices.coeffRef(i);
       
 			f.close();
+      field.set_singularities(singVertices, singIndices);
 			return f.fail();
 		}
 		catch (std::exception e)
