@@ -1,35 +1,20 @@
-#include <igl/readOFF.h>
-#include <igl/edge_topology.h>
-#include <igl/triangle_triangle_adjacency.h>
+#include <directional/readOBJ.h>
 #include <igl/euler_characteristic.h>
 #include <igl/readDMAT.h>
 #include <igl/writeDMAT.h>
-#include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/index_prescription.h>
-#include <directional/rotation_to_representative.h>
-#include <directional/representative_to_raw.h>
-#include <directional/power_to_representative.h>
 #include <directional/power_field.h>
 #include <directional/directional_viewer.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 
-Eigen::MatrixXd V;
-Eigen::MatrixXi F;
+directional::TriMesh mesh;
+directional::FaceField rawField;
 Eigen::VectorXi singVertices,singIndices;
-Eigen::VectorXi prinSingVertices, prinSingIndices;
-
-Eigen::SparseMatrix<double> basisCycles;
-Eigen::MatrixXi EV, FE, EF;
-Eigen::MatrixXd barycenters, faceNormals;
-Eigen::VectorXi matching;
-Eigen::MatrixXd rawField;
-Eigen::VectorXd effort;
 Eigen::VectorXi b;
 Eigen::MatrixXd bc;
-Eigen::VectorXd cycleCurvature;
-Eigen::VectorXi vertex2cycle;
-Eigen::VectorXi innerEdges;
 
 int N=2;
 double globalRotation=0.0;
@@ -46,35 +31,30 @@ void update_directional_field()
   using namespace Eigen;
   using namespace std;
   VectorXd rotationAngles;
-  prinSingIndices=VectorXi::Zero(basisCycles.rows());
+  Eigen::VectorXi prinSingVertices, prinSingIndices;
+  prinSingIndices=VectorXi::Zero(rawField.dualCycles.rows());
   for (int i=0;i<singVertices.size();i++)
     prinSingIndices(singVertices[i])=singIndices[i];
   
   double IPError;
   Eigen::VectorXi currIndices;
-  directional::index_prescription(V,F,innerEdges, basisCycles,cycleCurvature,prinSingIndices,N,rotationAngles, IPError);
+  directional::index_prescription(prinSingIndices,N,rawField, rotationAngles, IPError);
   
-  Eigen::MatrixXd representative;
-  directional::rotation_to_representative(V, F,EV,EF,rotationAngles,N,globalRotation, representative);
-  directional::representative_to_raw(V,F,representative,N, rawField);
+
   
-  if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING){
-    Eigen::VectorXd effort;
-    directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort,prinSingVertices, prinSingIndices);
-  }
+  if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING)
+    directional::principal_matching(rawField);
   
   if (viewingMode==IMPLICIT_FIELD){
     bc.conservativeResize(b.rows(),3);
     for (int i=0;i<b.size();i++)
-      bc.row(i)<<rawField.block(b(i),0,1,3).normalized();
+      bc.row(i)<<rawField.extField.block(b(i),0,1,3).normalized();
     
     Eigen::VectorXd effort;
-    Eigen::MatrixXcd powerField;
-    directional::power_field(V, F, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N, powerField);
-    directional::power_to_representative(V,F, powerField,N,representative);
-    representative.rowwise().normalize();
-    directional::representative_to_raw(V,F,representative,N, rawField);
-    directional::principal_matching(V, F,EV,EF,FE,rawField, matching, effort,prinSingVertices, prinSingIndices);
+    directional::FaceField powerField;
+    directional::power_field(mesh, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N, powerField);
+    directional::power_to_raw(powerField, field,true);
+    directional::principal_matching(field);
   }
   
   viewer.set_field(rawField);
@@ -133,13 +113,8 @@ int main()
   "6        Change global rotation" << std::endl;
   using namespace Eigen;
   using namespace std;
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", V, F);
-  igl::edge_topology(V, F, EV,FE,EF);
-  igl::barycenter(V,F,barycenters);
-  igl::per_face_normals(V,F,faceNormals);
-  
-  directional::dual_cycles(V, F,EV, EF, basisCycles, cycleCurvature, vertex2cycle, innerEdges);
-  
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj",mesh);
+
   igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",b);
   
   singVertices.resize(2);
@@ -150,7 +125,7 @@ int main()
   singIndices(1)=N;
   
   //viewing mesh
-  viewer.set_mesh(V, F);
+  viewer.set_mesh(mesh);
   viewer.set_selected_faces(b);
   update_directional_field();
   

@@ -12,11 +12,8 @@
 #include <vector>
 #include <cmath>
 #include <igl/igl_inline.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/local_basis.h>
-#include <igl/parallel_transport_angles.h>
-#include <igl/edge_topology.h>
-#include <igl/boundary_loop.h>
+#include <directional/CartesianField.h>
+#include <directional/rotation_to_raw.h>
 
 
 namespace directional
@@ -36,15 +33,11 @@ namespace directional
   // Output:
   //  rotationAngles: #iE rotation angles (difference from parallel transport) per inner dual edge
   //  linfError: l_infinity error of the computation. If this is not approximately 0, the prescribed indices are likely inconsistent (don't add up to the correct sum).
-  IGL_INLINE void index_prescription(const Eigen::MatrixXd& V,
-                                     const Eigen::MatrixXi& F,
-                                     const Eigen::MatrixXi& EV,
-                                     const Eigen::VectorXi& innerEdges,
-                                     const Eigen::SparseMatrix<double>& basisCycles,
-                                     const Eigen::VectorXd& cycleCurvature,
+  IGL_INLINE void index_prescription(directional::CartesianField& field,
                                      const Eigen::VectorXi& cycleIndices,
                                      Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
                                      const int N,
+                                     const double globalRotation,
                                      Eigen::VectorXd& rotationAngles,
                                      double &linfError)
   {
@@ -56,41 +49,34 @@ namespace directional
     //Initialize solver if never before
     if (!ldltSolver.rows())
     {
-      SparseMatrix<double> AAt = basisCycles*basisCycles.transpose();
+      SparseMatrix<double> AAt = field.dualCycles*field.dualCycles.transpose();
       ldltSolver.compute(AAt);
     }
     
-    VectorXd innerRotationAngles = basisCycles.transpose()*ldltSolver.solve(-cycleCurvature + cycleNewCurvature);
-    rotationAngles.conservativeResize(EV.rows());
+    VectorXd innerRotationAngles = field.dualCycles.transpose()*ldltSolver.solve(-field.cycleCurvatures + cycleNewCurvature);
+    rotationAngles.conservativeResize(field.adjSpaces.rows());
     rotationAngles.setZero();
-    for (int i=0;i<innerEdges.rows();i++)
-      rotationAngles(innerEdges(i))=innerRotationAngles(i);
+    for (int i=0;i<field.innerAdjacencies.rows();i++)
+      rotationAngles(field.innerAdjacencies(i))=innerRotationAngles(i);
     
-    linfError = (basisCycles*innerRotationAngles - (-cycleCurvature + cycleNewCurvature)).lpNorm<Infinity>();
+    linfError = (field.dualCycles*innerRotationAngles - (-field.cycleCurvatures + cycleNewCurvature)).template lpNorm<Infinity>();
+    
+    Eigen::MatrixXd representative;
+    directional::rotation_to_raw(rotationAngles,N,globalRotation, field);
   }
   
   //Minimal version: no provided solver
-  IGL_INLINE void index_prescription(const Eigen::MatrixXd& V,
-                                     const Eigen::MatrixXi& F,
-                                     const Eigen::VectorXi& innerEdges,
-                                     const Eigen::SparseMatrix<double>& basisCycles,
-                                     const Eigen::VectorXd& cycleCurvature,
+  IGL_INLINE void index_prescription(directional::CartesianField& field,
                                      const Eigen::VectorXi& cycleIndices,
                                      const int N,
+                                     const double globalRotation,
                                      Eigen::VectorXd& rotationAngles,
                                      double &error)
   {
-    Eigen::MatrixXi EV, x, EF;
-    igl::edge_topology(V, F, EV, x, EF);
-    Eigen::MatrixXd B1, B2, B3;
-    igl::local_basis(V, F, B1, B2, B3);
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
-    index_prescription(V, F,EV, innerEdges, basisCycles,cycleCurvature, cycleIndices, ldltSolver, N, rotationAngles, error);
+    index_prescription(field, ldltSolver, N, rotationAngles, error);
   }
 }
-
-//TODO: version that doesn't expose any cycles.
-
 
 
 
