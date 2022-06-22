@@ -7,10 +7,9 @@
 #ifndef DIRECTIONAL_ROTATION_TO_RAW_H
 #define DIRECTIONAL_ROTATION_TO_RAW_H
 
-#include <igl/edge_topology.h>
-#include <igl/per_face_normals.h>
 #include <directional/rotation_to_representative.h>
 #include <directional/representative_to_raw.h>
+#include <directional/CartesianField.h>
 
 namespace directional
 {
@@ -26,34 +25,51 @@ namespace directional
   //  globalRotation: The angle between the vector on the first face and its basis in radians.
   // Outputs:
   //  raw: #F by 3*N matrix with all N explicit vectors of each directional.
-  IGL_INLINE void adjustment_to_raw(const Eigen::MatrixXd& V,
-                                    const Eigen::MatrixXi& F,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::MatrixXd& normals,
-                                    const Eigen::MatrixXd& rotationAngles,
-                                    int N,
-                                    double globalRotation,
-                                    Eigen::MatrixXd& raw)
+  IGL_INLINE void rotation_to_raw(const Eigen::VectorXd& rotationAngles,
+                                  const int N,
+                                  const double globalRotation,
+                                  directional::CartesianField& field)
   {
-    Eigen::MatrixXd representative;
-    rotation_to_representative(V, F, EV, EF, rotationAngles, N, globalRotation, representative);
-    representative_to_raw(normals, representative, N, raw);
-  }
-  
-  //version with only (V,F)
-  IGL_INLINE void rotation_to_raw(const Eigen::MatrixXd& V,
-                                  const Eigen::MatrixXi& F,
-                                  const Eigen::MatrixXd& rotationAngles,
-                                  int N,
-                                  double globalRotation,
-                                  Eigen::MatrixXd& raw)
-  {
-    Eigen::MatrixXi EV, x, EF;
-    igl::edge_topology(V, F, EV, x, EF);
-    Eigen::MatrixXd normals;
-    igl::per_face_normals(V, F, normals);
-    rotation_to_raw(V, F, EV, EF, norm, rotationAngles, N, globalRotation, raw);
+    typedef std::complex<double> Complex;
+    using namespace Eigen;
+    using namespace std;
+    
+    Complex globalRot = exp(Complex(0, globalRotation));
+    
+    SparseMatrix<Complex> aP1Full(field.adjSpaces.rows(), field.intField.rows());
+    SparseMatrix<Complex> aP1(field.adjSpaces.rows(), field.intField.rows() - 1);
+    vector<Triplet<Complex> > aP1Triplets, aP1FullTriplets;
+    for (int i = 0; i<field.adjSpaces.rows(); i++) {
+      if (field.adjSpaces(i, 0) == -1 || field.adjSpaces(i, 1) == -1)
+        continue;
+      
+      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0), field.connection(i)*exp(Complex(0, (double)N*rotationAngles(i)))));
+      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 1), -1.0));
+      /*if (EF(i, 0) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, EF(i, 0) - 1, conj(edgeRep(i, 0))*exp(Complex(0, (double)N*rotationAngles(i)))));
+      if (EF(i, 1) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, EF(i, 1) - 1, -conj(edgeRep(i, 1))));*/
+    }
+    aP1Full.setFromTriplets(aP1FullTriplets.begin(), aP1FullTriplets.end());
+    aP1.setFromTriplets(aP1Triplets.begin(), aP1Triplets.end());
+    VectorXcd torhs = VectorXcd::Zero(field.intField.rows()); torhs(0) = globalRot;  //global rotation
+    VectorXcd rhs = -aP1Full*torhs;
+    
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<Complex> > solver;
+    solver.compute(aP1.adjoint()*aP1);
+    VectorXcd complexPowerField(field.intField.rows());
+    complexPowerField(0) = globalRot;
+    complexPowerField.tail(field.intField.rows() - 1) = solver.solve(aP1.adjoint()*rhs);
+    
+    VectorXcd complexField = pow(complexPowerField.array(), 1.0 / (double)N);
+    
+    MatrixXd intField(complexField.rows(),2*N);
+    for (int j=0;j<N;j++){
+      VectorXcd currComplexField = complexField*Complex(0,2*j*igl::PI/N);
+      intField.block(0,2*j,intField.rows(),2)<<currComplexField.array().real(),currComplexField.array().imag();
+    }
+    //constructing raw intField
+    field.set_intrinsic_field(intField);
   }
 }
 

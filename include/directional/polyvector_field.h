@@ -19,7 +19,7 @@
 #include <iostream>
 #include <directional/circumcircle.h>
 #include <directional/complex_eigs.h>
-#include <directional/TriMesh.h>
+#include <directional/CartesianField.h>
 
 namespace directional
 {
@@ -385,7 +385,7 @@ namespace directional
     polyvector_field(pvData, polyVectorField);
   }
 
-IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
+IGL_INLINE void polyvector_field(const directional::CartesianField& mesh,
                                  const Eigen::VectorXi& constFaces,
                                  const Eigen::MatrixXd& constVectors,
                                  const int N,

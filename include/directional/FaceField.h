@@ -25,16 +25,19 @@ public:
   FaceField(const TriMesh& _mesh):CartesianField(_mesh){}
   ~FaceField(){}
   
-  void IGL_INLINE set_mesh(const TriMesh& _mesh){
+  void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType){
     
     typedef std::complex<double> Complex;
     mesh = &_mesh;
+    fieldType = _fieldType;
     
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EF;
+    intField.conservativeResize(mesh->F.rows(),2);
+    extField.conservativeResize(mesh->F.rows(),3);
     
     //connection is the ratio of the complex representation of edges
-    connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
+    connection.resize(mesh->EF.rows(),(fieldType==1 ? 1 : N));  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
     Eigen::MatrixXd edgeVectors(mesh->EF.rows(), 3);
     for (int i = 0; i < mesh->EF.rows(); i++) {
       if (mesh->EF(i, 0) == -1 || mesh->EF(i, 1) == -1)
@@ -42,7 +45,11 @@ public:
       edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
       Complex ef(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 0))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 0))));
       Complex eg(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 1))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 1))));
-      connection(i) = eg / ef;
+      if (fieldType==1)
+        connection(i) = eg / ef;
+      else
+        for (int j=0;j<N;j++)
+          connection(i,j) = pow(eg / ef,N-j);
     }
     
     //TODO: cycles, cycleCurvature
@@ -59,7 +66,6 @@ public:
     face = _face;
     N = extField.cols()/3;
    
-
     if (face.rows()==0){
       intField.resize(extField.rows(),2*N);
       for (int i=0;i<N;i++)
@@ -70,10 +76,17 @@ public:
         for (int j=0;j<face.rows();j++)
           intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->Bx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->By.row(face(j)).array()).sum();
     }
-    
-
   }
   
+  void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+    intField = _intField;
+    
+    //computing extrinsic field
+    for (int i=0;i<intField.rows();i++)
+      for (int j=0;j<N;j++)
+        extField.block(i,3*j,1,3)=mesh->Bx.row(i)*intField(i,2*j)+mesh->By.row(i)*intField(i,2*j+1);
+  }
+    
   void IGL_INLINE set_singularities(const Eigen::VectorXi& _singVertices,
                                     const Eigen::VectorXi& _singIndices){
     

@@ -11,10 +11,8 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <Eigen/SparseCholesky>
-#include <Eigen/Eigenvalues>
 #include <directional/polyvector_field.h>
-#include <directional/TriMesh.h>
+#include <directional/CartesianField.h>
 
 
 namespace directional
@@ -31,16 +29,15 @@ namespace directional
   //  N: The degree of the field.
   // Outputs:
   //  powerField: #F by 2 The output interpolated field, in complex numbers.
-  IGL_INLINE void power_field(const directional::TriMesh& mesh,
+  IGL_INLINE void power_field(directional::CartesianField& field,
                               const Eigen::VectorXi& constFaces,
                               const Eigen::MatrixXd& constVectors,
                               const Eigen::VectorXd& alignWeights,
-                              const int N,
-                              Eigen::MatrixXcd& powerField)
+                              const int N)
   {
     Eigen::MatrixXcd pvField;
-    polyvector_field(mesh,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
-    powerField=-pvField.col(0);  //powerfield is represented positively
+    polyvector_field(field,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
+    //powerField=-pvField.col(0);  //powerfield is represented positively
   }
 }
 

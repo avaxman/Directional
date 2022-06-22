@@ -15,12 +15,16 @@
 
 namespace directional{
 
+#define RAW_FIELD 0
+#define POLYVECTOR_FIELD 1
+
 class CartesianField{
 public:
   
   const TriMesh* mesh;
   
   int N;  //degree of field (how many vectors are in each point);
+  int fieldType;       //What the field actually represents  (for instance, either a raw field or a power/polyvector field)
   
   Eigen::MatrixXd source;  //as barycentric coordinates in each face.
   Eigen::VectorXi face;
@@ -67,6 +71,11 @@ public:
         for (int j=0;j<face.size();j++)
           intField.block(0,3*i,1,3)=extField.block(0,3*face(i),1,3);
     }
+  }
+  void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+    intField = _intField;
+    
+    extField = intField;
   }
   
   void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singCycles,

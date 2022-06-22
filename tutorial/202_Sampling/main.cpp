@@ -38,9 +38,7 @@ void update_directional_field()
   
   double IPError;
   Eigen::VectorXi currIndices;
-  directional::index_prescription(prinSingIndices,N,rawField, rotationAngles, IPError);
-  
-
+  directional::index_prescription(prinSingIndices,N,globalRotation, rawField, rotationAngles, IPError);
   
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING)
     directional::principal_matching(rawField);

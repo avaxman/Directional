@@ -33,11 +33,11 @@ namespace directional
   // Output:
   //  rotationAngles: #iE rotation angles (difference from parallel transport) per inner dual edge
   //  linfError: l_infinity error of the computation. If this is not approximately 0, the prescribed indices are likely inconsistent (don't add up to the correct sum).
-  IGL_INLINE void index_prescription(directional::CartesianField& field,
-                                     const Eigen::VectorXi& cycleIndices,
-                                     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
+  IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      const double globalRotation,
+                                     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
+                                     directional::CartesianField& field,
                                      Eigen::VectorXd& rotationAngles,
                                      double &linfError)
   {
@@ -62,19 +62,19 @@ namespace directional
     linfError = (field.dualCycles*innerRotationAngles - (-field.cycleCurvatures + cycleNewCurvature)).template lpNorm<Infinity>();
     
     Eigen::MatrixXd representative;
-    directional::rotation_to_raw(rotationAngles,N,globalRotation, field);
+    directional::rotation_to_raw(rotationAngles,N,globalRotation,field);
   }
   
   //Minimal version: no provided solver
-  IGL_INLINE void index_prescription(directional::CartesianField& field,
-                                     const Eigen::VectorXi& cycleIndices,
+  IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      const double globalRotation,
+                                     directional::CartesianField& field,
                                      Eigen::VectorXd& rotationAngles,
                                      double &error)
   {
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
-    index_prescription(field, ldltSolver, N, rotationAngles, error);
+    index_prescription(cycleIndices, N, globalRotation,ldltSolver,  field, rotationAngles, error);
   }
 }
 
