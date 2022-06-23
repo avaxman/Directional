@@ -32,11 +32,11 @@ namespace directional
   public:
     
     //User parameters
-    Eigen::VectorXi constFaces;   //list of faces where there are (partial) constraints. The faces can repeat to constrain more vectors
-    Eigen::MatrixXd constVectors; //corresponding to constFaces.
+    Eigen::VectorXi constSpaces;   //list of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
+    Eigen::MatrixXd constVectors; //corresponding to constSpaces.
     
     int N;                        //Degree of field
-    int sizeF;                    //#faces
+    int sizeT;                    //#tangent spaces
     bool signSymmetry;            //Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
     bool perfectRoSy;             //Whether the field must be perfect rotationally-symmetric (but not unit).
     double wSmooth;               //Weight of smoothness
@@ -56,7 +56,7 @@ namespace directional
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
     double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
-    PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS), wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constFaces.resize(0); constVectors.resize(0,3);}
+    PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS), wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
   };
   
@@ -71,7 +71,7 @@ namespace directional
   //  PolyVectorData (must fill non-default values in advance)
   // Outputs:
   //  PolyVectorData:       Updated structure with all operators
-  IGL_INLINE void polyvector_precompute(const directional::TriMesh& mesh,
+  IGL_INLINE void polyvector_precompute(const directional::CartesianField& pvField,
                                         const int N,
                                         PolyVectorData& pvData)
   {
@@ -79,140 +79,121 @@ namespace directional
     using namespace std;
     using namespace Eigen;
     
+    assert(pvField.connection.cols()==N && "The PolyVector field should be initialized to be of order N");
     
     //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
     std::vector< Triplet<complex<double> > > dTriplets, WTriplets;
     pvData.N = N;
-    pvData.sizeF = mesh.F.rows();
+    pvData.sizeT = pvField.intField.rows();
     if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
     
-    /************Smoothness matrices****************/
-    VectorXd stiffnessWeights=VectorXd::Zero(mesh.EF.rows());
+   
     
-    if (pvData.lapType==UNIFORM_WEIGHTS){
-      stiffnessWeights.setOnes();
-    } else {
-      MatrixXd faceCenter;
-      VectorXd radius;  //stub
-      if (pvData.lapType==BARYCENTRIC_WEIGHTS)
-        faceCenter = mesh.barycenters;
-      if (pvData.lapType==INV_COT_WEIGHTS)
-        circumcircle(mesh.V,mesh.F,faceCenter,radius);
-      for (int i=0;i<mesh.EF.rows();i++){
-        if ((mesh.EF(i,0)==-1)||(mesh.EF(i,1)==-1))
-          continue;  //boundary edge
-        
-        RowVector3d midEdge = (mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1)))/2.0;
-        double dualLength = (faceCenter.row(mesh.EF(i,0))-midEdge).norm()+(faceCenter.row(mesh.EF(i,1))-midEdge).norm();   //TODO: that's only an approximation of barycentric height...
-        double primalLength = (mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).norm();
-        if (dualLength>10e-9)  //smaller than 10e-9 might happen for inv cot weights
-          stiffnessWeights(i)=primalLength/dualLength;
-      }
-    }
-    
-    pvData.totalSmoothWeight = stiffnessWeights.sum();
+    pvData.totalSmoothWeight = pvField.stiffnessWeights.sum();
     
     vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
-    VectorXd doubleAreas;
-    igl::doublearea(mesh.V,mesh.F,doubleAreas);
+    //VectorXd doubleAreas;
+    //igl::doublearea(mesh.V,mesh.F,doubleAreas);
     for (int n = 0; n < pvData.N; n++)
     {
-      for (int i=0;i<mesh.EF.rows();i++)
+      for (int i=0;i<pvField.adjSpaces.rows();i++)
       {
-        if ((mesh.EF(i,0)==-1)||(mesh.EF(i,1)==-1))
+        if ((pvField.adjSpaces(i,0)==-1)||(pvField.adjSpaces(i,1)==-1))
           continue;  //boundary edge
         
         // Compute the complex representation of the common edge
-        RowVector3d e = mesh.V.row(mesh.EV(i,1)) - mesh.V.row(mesh.EV(i,0));
+        /*RowVector3d e = mesh.V.row(mesh.EV(i,1)) - mesh.V.row(mesh.EV(i,0));
         RowVector2d vef = Vector2d(e.dot(mesh.Bx.row(mesh.EF(i,0))), e.dot(mesh.By.row(mesh.EF(i,0)))).normalized();
         complex<double> ef(vef(0), vef(1));
         Vector2d veg = Vector2d(e.dot(mesh.Bx.row(mesh.EF(i,1))), e.dot(mesh.By.row(mesh.EF(i,1)))).normalized();
-        complex<double> eg(veg(0), veg(1));
+        complex<double> eg(veg(0), veg(1));*/
         
-        // Add the term conj(f)^n*ui - conj(g)^n*uj to the differential matrix
-        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*mesh.F.rows()+mesh.EF(i,0), pow(conj(ef), pvData.N-n)));
-        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*mesh.F.rows()+mesh.EF(i,1), -1.*pow(conj(eg), pvData.N-n)));
+        // differential matrix between two tangent spaces
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,0), pvField.connection(i,n)));
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,1), -1.0));
         
         //stiffness weights
-        WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, stiffnessWeights(i)));
+        WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.stiffnessWeights(i)));
         rowCounter++;
       }
       
-      for (int i=0;i<mesh.F.rows();i++)
-        MTriplets.push_back(Triplet<complex<double>>(n*mesh.F.rows()+i, n*mesh.F.rows()+i, doubleAreas(i)/2.0));
+      for (int i=0;i<pvField.intField.rows();i++)
+        MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.massWeights(i)));
     }
     
-    pvData.smoothMat.resize(rowCounter, pvData.N*mesh.F.rows());
+    pvData.smoothMat.resize(rowCounter, pvData.N*pvField.intField.rows());
     pvData.smoothMat.setFromTriplets(dTriplets.begin(), dTriplets.end());
     
     pvData.WSmooth.resize(rowCounter, rowCounter);
     pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
     
-    pvData.M.resize(pvData.N*mesh.F.rows(), pvData.N*mesh.F.rows());
+    pvData.M.resize(pvData.N*pvField.intField.rows(), pvData.N*pvField.intField.rows());
     pvData.M.setFromTriplets(MTriplets.begin(), MTriplets.end());
     
     //creating reduction transformation
-    VectorXi numFaceConstraints = Eigen::VectorXi::Zero(mesh.F.rows());
+    VectorXi numSpaceConstraints = Eigen::VectorXi::Zero(pvField.intField.rows());
     int realN = (pvData.signSymmetry ? N/2 : N);
     realN = (pvData.wRoSy < 0.0 ? 1 : realN);
     //MatrixXcd faceConstraints(F.rows(),realN);
-    std::vector<MatrixXcd> localFaceReducMats; localFaceReducMats.resize(mesh.F.rows());
-    std::vector<VectorXcd> localFaceReducRhs;  localFaceReducRhs.resize(mesh.F.rows());
+    std::vector<MatrixXcd> localFaceReducMats; localFaceReducMats.resize(pvField.intField.rows());
+    std::vector<VectorXcd> localSpaceReducRhs;  localSpaceReducRhs.resize(pvField.intField.rows());
     
-    for (int i=0;i<mesh.F.rows();i++){
+    for (int i=0;i<pvField.intField.rows();i++){
       localFaceReducMats[i]=MatrixXcd::Identity(realN,realN);
-      localFaceReducRhs[i]=VectorXcd::Zero(realN);
+      localSpaceReducRhs[i]=VectorXcd::Zero(realN);
     }
     
     /*************Hard-constraint reduction matrices******************/
-    for (int i=0;i<pvData.constFaces.size();i++){
+    VectorXcd constVectorsIntrinsic=pvField.project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
+    for (int i=0;i<pvData.constSpaces.size();i++){
       if (pvData.wAlignment(i)>=0.0)
         continue;  //here we only handle the reduction caused by a fixed dof
-      if (numFaceConstraints(pvData.constFaces(i))==realN)
+      if (numSpaceConstraints(pvData.constSpaces(i))==realN)
         continue; //overconstrained; we ignore any further constraints on that face
       
-      int currFaceNumDof = numFaceConstraints(pvData.constFaces(i));
+      int currSpaceNumDof = numSpaceConstraints(pvData.constSpaces(i));
       
-      complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constFaces(i))));
-      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexSingle*constVectorComplexSingle : constVectorComplexSingle);
-      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexSingle, N) : constVectorComplex);
       
-      MatrixXcd singleReducMat=MatrixXcd::Zero(realN-currFaceNumDof,realN-currFaceNumDof-1);
-      VectorXcd singleReducRhs=VectorXcd::Zero(realN-currFaceNumDof);
-      for (int j=0;j<realN-currFaceNumDof-1;j++){
+      //std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constSpaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constSpaces(i))));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorsIntrinsic(i)*constVectorsIntrinsic(i) : constVectorsIntrinsic(i));
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorsIntrinsic(i), N) : constVectorsIntrinsic(i));
+      
+      MatrixXcd singleReducMat=MatrixXcd::Zero(realN-currSpaceNumDof,realN-currSpaceNumDof-1);
+      VectorXcd singleReducRhs=VectorXcd::Zero(realN-currSpaceNumDof);
+      for (int j=0;j<realN-currSpaceNumDof-1;j++){
         singleReducMat(j,j)=-constVectorComplex;
         singleReducMat(j+1,j)=complex<double>(1.0,0.0);
       }
-      singleReducRhs(realN-currFaceNumDof-1) = -constVectorComplex;
+      singleReducRhs(realN-currSpaceNumDof-1) = -constVectorComplex;
       
-      localFaceReducRhs[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducRhs + localFaceReducRhs[pvData.constFaces(i)];
-      localFaceReducMats[pvData.constFaces(i)] = localFaceReducMats[pvData.constFaces(i)]*singleReducMat;
+      localSpaceReducRhs[pvData.constSpaces(i)] = localFaceReducMats[pvData.constSpaces(i)]*singleReducRhs + localSpaceReducRhs[pvData.constSpaces(i)];
+      localFaceReducMats[pvData.constSpaces(i)] = localFaceReducMats[pvData.constSpaces(i)]*singleReducMat;
       
-      numFaceConstraints(pvData.constFaces(i))++;
+      numSpaceConstraints(pvData.constSpaces(i))++;
     
-      //faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
+      //faceConstraints(pvData.constSpaces(i), numSpaceConstraints(pvData.constSpaces(i))++) = constVectorComplex;
     }
     
     //creating the global reduction matrices
     double colCounter=0;
-    pvData.reducRhs=VectorXcd::Zero(pvData.N*mesh.F.rows());
+    pvData.reducRhs=VectorXcd::Zero(pvData.N*pvField.intField.rows());
     vector<Triplet<complex<double>>> reducMatTriplets;
     int jump = (pvData.signSymmetry ? 2 : 1);
     jump = (pvData.wRoSy < 0.0 ? pvData.N : jump);
-    for (int i=0;i<mesh.F.rows();i++){
+    for (int i=0;i<pvField.intField.rows();i++){
       //std::cout<<"localFaceReducMats[i]: "<<localFaceReducMats[i]<<std::endl;
       for (int j=0;j<pvData.N;j+=jump){
         for (int k=0;k<localFaceReducMats[i].cols();k++)
-          reducMatTriplets.push_back(Triplet<complex<double>>(j*mesh.F.rows()+i, colCounter+k, localFaceReducMats[i](j/jump,k)));
+          reducMatTriplets.push_back(Triplet<complex<double>>(j*pvField.intField.rows()+i, colCounter+k, localFaceReducMats[i](j/jump,k)));
         
-        pvData.reducRhs(j*mesh.F.rows()+i) = localFaceReducRhs[i](j/jump);
+        pvData.reducRhs(j*pvField.intField.rows()+i) = localSpaceReducRhs[i](j/jump);
       }
      
       colCounter+=localFaceReducMats[i].cols();
     }
     
-    pvData.reducMat.resize(pvData.N*mesh.F.rows(), colCounter);
+    pvData.reducMat.resize(pvData.N*pvField.intField.rows(), colCounter);
     pvData.reducMat.setFromTriplets(reducMatTriplets.begin(), reducMatTriplets.end());
   
     
@@ -220,21 +201,21 @@ namespace directional
     
     if (pvData.wRoSy >= 0.0){ //this is anyhow enforced, this matrix is unnecessary)
       vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
-      for (int i=mesh.F.rows();i<pvData.N*mesh.F.rows();i++){
+      for (int i=pvField.intField.rows();i<pvData.N*pvField.intField.rows();i++){
         roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-        WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,doubleAreas(i%mesh.F.rows())/2.0));
+        WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.massWeights(i%pvField.intField.rows())));
       }
       
-      pvData.roSyMat.resize(N*mesh.F.rows(), N*mesh.F.rows());
+      pvData.roSyMat.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
       pvData.roSyMat.setFromTriplets(roSyTriplets.begin(), roSyTriplets.end());
       
-      pvData.WRoSy.resize(N*mesh.F.rows(), N*mesh.F.rows());
+      pvData.WRoSy.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
       pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
       
-      pvData.totalRoSyWeight=((double)pvData.N)*doubleAreas.sum()/2.0;
+      pvData.totalRoSyWeight=((double)pvData.N)*pvField.massWeights.sum();
     } else {
-      pvData.roSyMat.resize(0, N*mesh.F.rows());
-      pvData.WRoSy.resize(0,0);  //Eeven necessary?
+      pvData.roSyMat.resize(0, N*pvField.intField.rows());
+      pvData.WRoSy.resize(0,0);  //Even necessary?
       pvData.totalRoSyWeight=1.0;
     }
     
@@ -245,17 +226,17 @@ namespace directional
     vector<Triplet<complex<double>>> WAlignTriplets;
     pvData.totalConstrainedWeight=0.0;
     bool noSoftAlignment = true;
-    for (int i=0;i<pvData.constFaces.size();i++){
+    for (int i=0;i<pvData.constSpaces.size();i++){
       if (pvData.wAlignment(i)<0.0)
         continue;  //here we only handle soft alignments
       
       noSoftAlignment=false;
       
-      complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constFaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constFaces(i))));
-      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexSingle*constVectorComplexSingle : constVectorComplexSingle);
-      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexSingle, N) : constVectorComplex);
-      numFaceConstraints(pvData.constFaces(i))++;
-      //faceConstraints(pvData.constFaces(i), numFaceConstraints(pvData.constFaces(i))++) = constVectorComplex;
+      //complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constSpaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constSpaces(i))));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorsIntrinsic(i)*constVectorsIntrinsic(i) : constVectorsIntrinsic(i));
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorsIntrinsic(i), N) : constVectorsIntrinsic(i));
+      numSpaceConstraints(pvData.constSpaces(i))++;
+      //faceConstraints(pvData.constSpaces(i), numSpaceConstraints(pvData.constSpaces(i))++) = constVectorComplex;
       
       MatrixXcd singleReducMat=MatrixXcd::Zero(realN,realN-1);
       VectorXcd singleReducRhs=VectorXcd::Zero(realN);
@@ -273,12 +254,12 @@ namespace directional
       singleReducRhs = IAiA*singleReducRhs;
       for (int j=0;j<IAiA.rows();j++)
         for (int k=0;k<IAiA.cols();k++)
-          alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*jump*mesh.F.rows()+pvData.constFaces(i), IAiA(j,k)));
+          alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*jump*pvField.intField.rows()+pvData.constSpaces(i), IAiA(j,k)));
       
       alignRhsList.push_back(singleReducRhs);
       for (int j=0;j<singleReducRhs.size();j++){
-        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*doubleAreas(pvData.constFaces(i))/2.0));
-        pvData.totalConstrainedWeight+=doubleAreas(pvData.constFaces(i))/2.0;
+        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.massWeights(pvData.constSpaces(i))));
+        pvData.totalConstrainedWeight+=pvField.massWeights(pvData.constSpaces(i));
       }
       rowCounter+=realN;
     }
@@ -290,7 +271,7 @@ namespace directional
     for (int i=0;i<alignRhsList.size();i++)
       pvData.alignRhs.segment(i*realN,realN)=alignRhsList[i];
     
-    pvData.alignMat.resize(rowCounter, N*mesh.F.rows());
+    pvData.alignMat.resize(rowCounter, N*pvField.intField.rows());
     pvData.alignMat.setFromTriplets(alignTriplets.begin(), alignTriplets.end());
     
     pvData.WAlign.resize(rowCounter,rowCounter);
@@ -304,7 +285,7 @@ namespace directional
   // Outputs:
   //  polyVectorField: #F by N The output interpolated field, in polyvector (complex polynomial) format.
   IGL_INLINE void polyvector_field(const PolyVectorData& pvData,
-                                   Eigen::MatrixXcd& polyVectorField)
+                                   directional::CartesianField& pvField)
   {
     using namespace std;
     using namespace Eigen;
@@ -315,26 +296,25 @@ namespace directional
         
     SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
     VectorXcd totalRhs = pvData.reducMat.adjoint()*(totalUnreducedRhs - totalUnreducedLhs*pvData.reducRhs);
-    polyVectorField=MatrixXcd::Zero(pvData.sizeF, pvData.N);
-    if (pvData.constFaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
+    if (pvData.constSpaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
     {
-     //using a matrix with only the first sizeF x sizeF block
+     //using a matrix with only the first sizeT x sizeT block
       vector<Triplet<complex<double>>> X0LhsTriplets, X0MTriplets;
       SparseMatrix<complex<double>> X0Lhs, X0M;
       for (int k=0; k<totalUnreducedLhs.outerSize(); ++k)
         for (SparseMatrix<std::complex<double>>::InnerIterator it(totalUnreducedLhs,k); it; ++it)
-          if ((it.row()<pvData.sizeF)&&(it.col()<pvData.sizeF))
+          if ((it.row()<pvData.sizeT)&&(it.col()<pvData.sizeT))
             X0LhsTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()*pvData.totalSmoothWeight));  //to bypass the early convergence of igl eigenvalues...
       
-      X0Lhs.resize(pvData.sizeF, pvData.sizeF);
+      X0Lhs.resize(pvData.sizeT, pvData.sizeT);
       X0Lhs.setFromTriplets(X0LhsTriplets.begin(), X0LhsTriplets.end());
       
       for (int k=0; k<pvData.M.outerSize(); ++k)
         for (SparseMatrix<std::complex<double>>::InnerIterator it(pvData.M,k); it; ++it)
-          if ((it.row()<pvData.sizeF)&&(it.col()<pvData.sizeF))
+          if ((it.row()<pvData.sizeT)&&(it.col()<pvData.sizeT))
             X0MTriplets.push_back(Triplet<complex<double>>(it.row(), it.col(), it.value()*pvData.totalSmoothWeight));
       
-      X0M.resize(pvData.sizeF, pvData.sizeF);
+      X0M.resize(pvData.sizeT, pvData.sizeT);
       X0M.setFromTriplets(X0MTriplets.begin(), X0MTriplets.end());
           
       //Extracting first eigenvector
@@ -343,7 +323,7 @@ namespace directional
       complex_eigs(X0Lhs, X0M, 10, U, S);
       int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);
       
-      polyVectorField.col(0) = U.col(smallestIndex);
+      pvField.set_intrinsic_field(U.col(smallestIndex));
     } else { //just solving the system
       SimplicialLDLT<SparseMatrix<complex<double>>> solver;
       //solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
@@ -351,8 +331,11 @@ namespace directional
       VectorXcd reducedDofs = solver.solve(totalRhs);
       assert(solver.info() == Success);
       VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
+      MatrixXcd intField;
       for (int i=0;i<pvData.N;i++)
-        polyVectorField.col(i) = fullDofs.segment(i*pvData.sizeF,pvData.sizeF);
+        intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
+      
+      pvField.set_intrinsic_field(intField);
       
       //std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;
       //std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
@@ -366,40 +349,38 @@ namespace directional
 
   
   // minimal version without auxiliary data
-  IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
-                                   const Eigen::VectorXi& constFaces,
+  IGL_INLINE void polyvector_field(directional::CartesianField& pvField,
+                                   const Eigen::VectorXi& constSpaces,
                                    const Eigen::MatrixXd& constVectors,
                                    const double smoothWeight,
                                    const double roSyWeight,
                                    const Eigen::VectorXd& alignWeights,
-                                   const int N,
-                                   Eigen::MatrixXcd& polyVectorField)
+                                   const int N)
   {
     PolyVectorData pvData;
-    pvData.constFaces=constFaces;
+    pvData.constSpaces=constSpaces;
     pvData.constVectors=constVectors;
     pvData.wAlignment = alignWeights;
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
-    polyvector_precompute(mesh, N, pvData);
-    polyvector_field(pvData, polyVectorField);
+    polyvector_precompute(pvField, N, pvData);
+    polyvector_field(pvData, pvField);
   }
 
-IGL_INLINE void polyvector_field(const directional::CartesianField& mesh,
-                                 const Eigen::VectorXi& constFaces,
+IGL_INLINE void polyvector_field(directional::CartesianField& pvField,
+                                 const Eigen::VectorXi& constSpaces,
                                  const Eigen::MatrixXd& constVectors,
-                                 const int N,
-                                 Eigen::MatrixXcd& polyVectorField)
+                                 const int N)
 {
   
   PolyVectorData pvData;
-  pvData.constFaces=constFaces;
+  pvData.constSpaces=constSpaces;
   pvData.constVectors=constVectors;
-  pvData.wAlignment = Eigen::VectorXd::Constant(constFaces.size(),-1.0);
+  pvData.wAlignment = Eigen::VectorXd::Constant(constSpaces.size(),-1.0);
   pvData.wSmooth = 1.0;
   pvData.wRoSy = 0.0;
-  polyvector_precompute(mesh, N, pvData);
-  polyvector_field(pvData, polyVectorField);
+  polyvector_precompute(pvField, N, pvData);
+  polyvector_field(pvData, pvField);
 }
 }
 

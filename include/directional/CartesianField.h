@@ -32,9 +32,14 @@ public:
   Eigen::MatrixXd intField;  //the field in intrinsic representation (depending on the local basis of the face).
   Eigen::MatrixXd extField;  //the field in ambient coordinates.
   
+  
   Eigen::MatrixXi adjSpaces;  //the adjacent tangent spaces
+  
+  //tangent space geometry
   //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
   Eigen::MatrixXcd connection;
+  Eigen::VectorXd stiffnessWeights;
+  Eigen::VectorXd massWeights;
   
   Eigen::SparseMatrix<double> dualCycles;  //the adjaceny matrix of dual cycles
   Eigen::VectorXd cycleCurvatures;  //The Gaussian curvature of dual cycles.
@@ -49,7 +54,7 @@ public:
   CartesianField(const TriMesh& _mesh):mesh(&_mesh){}
   ~CartesianField(){}
   
-  void virtual IGL_INLINE set_mesh(const TriMesh& _mesh){
+  void virtual IGL_INLINE init_field(const TriMesh& _mesh){
     mesh = &_mesh;
   };
   
@@ -78,8 +83,13 @@ public:
     extField = intField;
   }
   
+  Eigen::MatrixXd virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const {
+    return extDirectionals;
+  }
+  
   void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singCycles,
                                             const Eigen::VectorXi& _singIndices){}
+  
 
 };
 

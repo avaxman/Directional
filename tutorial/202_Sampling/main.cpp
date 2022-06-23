@@ -50,9 +50,9 @@ void update_directional_field()
     
     Eigen::VectorXd effort;
     directional::FaceField powerField;
-    directional::power_field(mesh, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N, powerField);
-    directional::power_to_raw(powerField, field,true);
-    directional::principal_matching(field);
+    directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N);
+    directional::power_to_raw(powerField, rawField,true);
+    directional::principal_matching(rawField);
   }
   
   viewer.set_field(rawField);

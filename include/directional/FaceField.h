@@ -12,6 +12,7 @@
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <igl/boundary_loop.h>
+#include <igl/doublearea.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
@@ -55,6 +56,23 @@ public:
     //TODO: cycles, cycleCurvature
     directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, dualCycles, cycleCurvatures, element2Cycle, innerAdjacencies);
     
+    //drawing from mesh geometry
+    
+    /************Smoothness matrices****************/
+    stiffnessWeights=Eigen::VectorXd::Zero(mesh->F.rows());
+   
+    //mass are face areas
+    igl::doublearea(mesh->V,mesh->F,massWeights);
+    massWeights.array()/=2.0;
+
+    //The "harmonic" weights from [Brandt et al. 2020].
+    for (int i=0;i<mesh->EF.rows();i++){
+      if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
+        continue;  //boundary edge
+      
+      double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
+      stiffnessWeights(i)=3*primalLengthSquared/(massWeights(mesh->EF(i,0))+massWeights(mesh->EF(i,0)));
+    }
   }
   
   void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
@@ -85,6 +103,17 @@ public:
     for (int i=0;i<intField.rows();i++)
       for (int j=0;j<N;j++)
         extField.block(i,3*j,1,3)=mesh->Bx.row(i)*intField(i,2*j)+mesh->By.row(i)*intField(i,2*j+1);
+  }
+  
+  Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
+    assert(tangentSpaces.rows()==extDirectionals.rows());
+    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2*N);
+    
+    for (int i=0;i<N;i++)
+      for (int j=0;j<tangentSpaces.rows();j++)
+        intDirectionals.block(0,2*i,1,2)<<(extDirectionals.block(0,3*i,1,3).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.block(0,3*i,1,3).array()*mesh->By.row(tangentSpaces(j)).array()).sum();
+    
+    
   }
     
   void IGL_INLINE set_singularities(const Eigen::VectorXi& _singVertices,

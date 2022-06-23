@@ -35,8 +35,7 @@ namespace directional
                               const Eigen::VectorXd& alignWeights,
                               const int N)
   {
-    Eigen::MatrixXcd pvField;
-    polyvector_field(field,constFaces,constVectors,1.0, -1.0, alignWeights, N, pvField);
+    polyvector_field(field,constFaces,constVectors,1.0, -1.0, alignWeights, N);
     //powerField=-pvField.col(0);  //powerfield is represented positively
   }
 }
