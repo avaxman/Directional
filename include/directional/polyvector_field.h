@@ -145,7 +145,8 @@ namespace directional
     }
     
     /*************Hard-constraint reduction matrices******************/
-    VectorXcd constVectorsIntrinsic=pvField.project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
+    MatrixXd constVectorsIntrinsic=pvField.project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
+    cout<<"constVectorsIntrinsic: "<<constVectorsIntrinsic<<endl;
     for (int i=0;i<pvData.constSpaces.size();i++){
       if (pvData.wAlignment(i)>=0.0)
         continue;  //here we only handle the reduction caused by a fixed dof
@@ -154,10 +155,10 @@ namespace directional
       
       int currSpaceNumDof = numSpaceConstraints(pvData.constSpaces(i));
       
-      
+      complex<double> constVectorComplexRaw = complex<double>(constVectorsIntrinsic(i,0),constVectorsIntrinsic(i,1));
       //std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constSpaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constSpaces(i))));
-      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorsIntrinsic(i)*constVectorsIntrinsic(i) : constVectorsIntrinsic(i));
-      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorsIntrinsic(i), N) : constVectorsIntrinsic(i));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexRaw*constVectorComplexRaw : constVectorComplexRaw);
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexRaw, N) :constVectorComplex);
       
       MatrixXcd singleReducMat=MatrixXcd::Zero(realN-currSpaceNumDof,realN-currSpaceNumDof-1);
       VectorXcd singleReducRhs=VectorXcd::Zero(realN-currSpaceNumDof);
@@ -233,8 +234,9 @@ namespace directional
       noSoftAlignment=false;
       
       //complex<double> constVectorComplexSingle=std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constSpaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constSpaces(i))));
-      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorsIntrinsic(i)*constVectorsIntrinsic(i) : constVectorsIntrinsic(i));
-      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorsIntrinsic(i), N) : constVectorsIntrinsic(i));
+      complex<double> constVectorComplexRaw = complex<double>(constVectorsIntrinsic(i,0),constVectorsIntrinsic(i,1));
+      complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexRaw*constVectorComplexRaw : constVectorComplexRaw);
+      constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexRaw, N) : constVectorComplex);
       numSpaceConstraints(pvData.constSpaces(i))++;
       //faceConstraints(pvData.constSpaces(i), numSpaceConstraints(pvData.constSpaces(i))++) = constVectorComplex;
       
@@ -334,7 +336,7 @@ namespace directional
       VectorXcd reducedDofs = solver.solve(totalRhs);
       assert(solver.info() == Success);
       VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
-      MatrixXcd intField;
+      MatrixXcd intField(pvData.sizeT, pvData.N);
       for (int i=0;i<pvData.N;i++)
         intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
       

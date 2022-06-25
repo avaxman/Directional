@@ -32,14 +32,14 @@ void update_directional_field()
   using namespace Eigen;
   using namespace std;
   VectorXd rotationAngles;
-  Eigen::VectorXi prinSingVertices, prinSingIndices;
-  prinSingIndices=VectorXi::Zero(rawField.dualCycles.rows());
+  Eigen::VectorXi presSingIndices;
+  presSingIndices=VectorXi::Zero(rawField.dualCycles.rows());
   for (int i=0;i<singVertices.size();i++)
-    prinSingIndices(singVertices[i])=singIndices[i];
+    presSingIndices(singVertices[i])=singIndices[i];
   
   double IPError;
   Eigen::VectorXi currIndices;
-  directional::index_prescription(prinSingIndices,N,globalRotation, rawField, rotationAngles, IPError);
+  directional::index_prescription(presSingIndices,N,globalRotation, rawField, rotationAngles, IPError);
 
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING)
     directional::principal_matching(rawField);
@@ -51,6 +51,7 @@ void update_directional_field()
     
     Eigen::VectorXd effort;
     directional::FaceField powerField;
+    powerField.init_field(*(rawField.mesh), POWER_FIELD, N);
     directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N);
     directional::power_to_raw(powerField, N, rawField,true);
     directional::principal_matching(rawField);
@@ -62,7 +63,7 @@ void update_directional_field()
     viewer.set_singularities(singVertices, singIndices);
    
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    viewer.set_singularities(prinSingVertices, prinSingIndices);
+    viewer.set_singularities(rawField.singCycles, rawField.singIndices);
   
 }
 

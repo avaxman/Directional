@@ -112,26 +112,28 @@ public:
     assert ((_intField.cols()==N) || !(fieldType==POLYVECTOR_FIELD || fieldType==RAW_FIELD));
     
     intField.resize(_intField.rows(),_intField.cols()*2);
-    for (int i=0;i<intField.cols();i++){
+    for (int i=0;i<_intField.cols();i++){
       intField.col(2*i)=_intField.col(i).real();
       intField.col(2*i+1)=_intField.col(i).imag();
     }
     //computing extrinsic field
-    extField.conservativeResize(intField.rows(),intField.cols()*3);
-    for (int i=0;i<intField.rows();i++)
-      for (int j=0;j<intField.cols();j++)
+    extField.conservativeResize(_intField.rows(),_intField.cols()*3);
+    for (int i=0;i<_intField.rows();i++)
+      for (int j=0;j<_intField.cols();j++)
         extField.block(i,3*j,1,3)=mesh->Bx.row(i)*_intField(i,j).real()+mesh->By.row(i)*_intField(i,j).imag();
   }
   
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
     assert(tangentSpaces.rows()==extDirectionals.rows());
-    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2*N);
+    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2);
     
-    for (int i=0;i<N;i++)
-      for (int j=0;j<tangentSpaces.rows();j++)
-        intDirectionals.block(0,2*i,1,2)<<(extDirectionals.block(0,3*i,1,3).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.block(0,3*i,1,3).array()*mesh->By.row(tangentSpaces(j)).array()).sum();
-    
-    
+    //std::cout<<"tangentSpaces: "<<tangentSpaces<<std::endl;
+    for (int j=0;j<tangentSpaces.rows();j++){
+      /*std::cout<<"j: "<<j<<std::endl;
+      std::cout<<"(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum():"<<(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum()<<","<<(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum()<<std::endl;*/
+      intDirectionals.row(j)<<(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum();
+    }
+    return intDirectionals;
   }
     
   void IGL_INLINE set_singularities(const Eigen::VectorXi& _singVertices,
