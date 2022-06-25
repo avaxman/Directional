@@ -79,7 +79,7 @@ namespace directional
     using namespace std;
     using namespace Eigen;
     
-    assert(pvField.connection.cols()==N && "The PolyVector field should be initialized to be of order N");
+    //assert(pvField.connection.cols()==N && "The PolyVector field should be initialized to be of order N");
     
     //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
@@ -110,7 +110,7 @@ namespace directional
         complex<double> eg(veg(0), veg(1));*/
         
         // differential matrix between two tangent spaces
-        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,0), pvField.connection(i,n)));
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,0), pow(pvField.connection(i),pvData.N-n)));
         dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,1), -1.0));
         
         //stiffness weights
@@ -323,7 +323,10 @@ namespace directional
       complex_eigs(X0Lhs, X0M, 10, U, S);
       int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);
       
-      pvField.set_intrinsic_field(U.col(smallestIndex));
+      pvField.fieldType = POLYVECTOR_FIELD;
+      MatrixXcd intField(U.col(0).rows(),pvData.N);
+      intField.col(0)=U.col(smallestIndex);
+      pvField.set_intrinsic_field(intField);
     } else { //just solving the system
       SimplicialLDLT<SparseMatrix<complex<double>>> solver;
       //solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
@@ -335,6 +338,7 @@ namespace directional
       for (int i=0;i<pvData.N;i++)
         intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
       
+      pvField.fieldType = POLYVECTOR_FIELD;
       pvField.set_intrinsic_field(intField);
       
       //std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;

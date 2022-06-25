@@ -16,7 +16,8 @@
 namespace directional{
 
 #define RAW_FIELD 0
-#define POLYVECTOR_FIELD 1
+#define POWER_FIELD 1
+#define POLYVECTOR_FIELD 2
 
 class CartesianField{
 public:
@@ -29,6 +30,7 @@ public:
   Eigen::MatrixXd source;  //as barycentric coordinates in each face.
   Eigen::VectorXi face;
   
+  //TODO intField being a single vector in case of power field
   Eigen::MatrixXd intField;  //the field in intrinsic representation (depending on the local basis of the face).
   Eigen::MatrixXd extField;  //the field in ambient coordinates.
   
@@ -37,7 +39,7 @@ public:
   
   //tangent space geometry
   //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
-  Eigen::MatrixXcd connection;
+  Eigen::VectorXcd connection;
   Eigen::VectorXd stiffnessWeights;
   Eigen::VectorXd massWeights;
   
@@ -54,8 +56,10 @@ public:
   CartesianField(const TriMesh& _mesh):mesh(&_mesh){}
   ~CartesianField(){}
   
-  void virtual IGL_INLINE init_field(const TriMesh& _mesh){
+  void virtual IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     mesh = &_mesh;
+    fieldType = _fieldType;
+    N=_N;
   };
   
   void virtual IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
@@ -79,7 +83,15 @@ public:
   }
   void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
     intField = _intField;
-    
+    extField = intField;
+  }
+  
+  void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){
+    intField.resize(_intField.rows(),_intField.cols()*2);
+    for (int i=0;i<N;i++){
+      intField.col(2*i)=_intField.col(i).real();
+      intField.col(2*i+1)=_intField.col(i).imag();
+    }
     extField = intField;
   }
   

@@ -26,11 +26,12 @@ public:
   FaceField(const TriMesh& _mesh):CartesianField(_mesh){}
   ~FaceField(){}
   
-  void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType){
+  void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     
     typedef std::complex<double> Complex;
     mesh = &_mesh;
     fieldType = _fieldType;
+    N = _N;
     
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EF;
@@ -38,7 +39,7 @@ public:
     extField.conservativeResize(mesh->F.rows(),3);
     
     //connection is the ratio of the complex representation of edges
-    connection.resize(mesh->EF.rows(),(fieldType==1 ? 1 : N));  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
+    connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
     Eigen::MatrixXd edgeVectors(mesh->EF.rows(), 3);
     for (int i = 0; i < mesh->EF.rows(); i++) {
       if (mesh->EF(i, 0) == -1 || mesh->EF(i, 1) == -1)
@@ -46,11 +47,7 @@ public:
       edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
       Complex ef(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 0))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 0))));
       Complex eg(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 1))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 1))));
-      if (fieldType==1)
-        connection(i) = eg / ef;
-      else
-        for (int j=0;j<N;j++)
-          connection(i,j) = pow(eg / ef,N-j);
+      connection(i) = eg / ef;
     }
     
     //TODO: cycles, cycleCurvature
@@ -59,7 +56,7 @@ public:
     //drawing from mesh geometry
     
     /************Smoothness matrices****************/
-    stiffnessWeights=Eigen::VectorXd::Zero(mesh->F.rows());
+    stiffnessWeights=Eigen::VectorXd::Zero(mesh->EF.rows());
    
     //mass are face areas
     igl::doublearea(mesh->V,mesh->F,massWeights);
@@ -79,10 +76,12 @@ public:
                                       const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
                                       const Eigen::VectorXi& _face=Eigen::VectorXi()){
   
+    assert(_extField.cols()==3*N);
+    
     extField=_extField;
     source = _source;
     face = _face;
-    N = extField.cols()/3;
+    
    
     if (face.rows()==0){
       intField.resize(extField.rows(),2*N);
@@ -97,12 +96,31 @@ public:
   }
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+    assert (!(fieldType==POWER_FIELD) || (_intField.cols()==2));
+    assert ((_intField.cols()==2*N) || !(fieldType==POLYVECTOR_FIELD || fieldType==RAW_FIELD));
     intField = _intField;
     
     //computing extrinsic field
+    extField.conservativeResize(intField.rows(),intField.cols()/2*3);
     for (int i=0;i<intField.rows();i++)
-      for (int j=0;j<N;j++)
-        extField.block(i,3*j,1,3)=mesh->Bx.row(i)*intField(i,2*j)+mesh->By.row(i)*intField(i,2*j+1);
+      for (int j=0;j<intField.cols();j+=2)
+        extField.block(i,3*j/2,1,3)=mesh->Bx.row(i)*intField(i,j)+mesh->By.row(i)*intField(i,j+1);
+  }
+  
+  void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){
+    assert (!(fieldType==POWER_FIELD) || (_intField.cols()==1));
+    assert ((_intField.cols()==N) || !(fieldType==POLYVECTOR_FIELD || fieldType==RAW_FIELD));
+    
+    intField.resize(_intField.rows(),_intField.cols()*2);
+    for (int i=0;i<intField.cols();i++){
+      intField.col(2*i)=_intField.col(i).real();
+      intField.col(2*i+1)=_intField.col(i).imag();
+    }
+    //computing extrinsic field
+    extField.conservativeResize(intField.rows(),intField.cols()*3);
+    for (int i=0;i<intField.rows();i++)
+      for (int j=0;j<intField.cols();j++)
+        extField.block(i,3*j,1,3)=mesh->Bx.row(i)*_intField(i,j).real()+mesh->By.row(i)*_intField(i,j).imag();
   }
   
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
@@ -151,4 +169,4 @@ public:
 
 
 
-#endif /* DIRECTIONAL_TRIMESH_H */
+#endif

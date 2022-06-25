@@ -8,6 +8,7 @@
 #include <directional/directional_viewer.h>
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
+#include <directional/power_to_raw.h>
 
 
 directional::TriMesh mesh;
@@ -39,7 +40,7 @@ void update_directional_field()
   double IPError;
   Eigen::VectorXi currIndices;
   directional::index_prescription(prinSingIndices,N,globalRotation, rawField, rotationAngles, IPError);
-  
+
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING)
     directional::principal_matching(rawField);
   
@@ -51,7 +52,7 @@ void update_directional_field()
     Eigen::VectorXd effort;
     directional::FaceField powerField;
     directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N);
-    directional::power_to_raw(powerField, rawField,true);
+    directional::power_to_raw(powerField, N, rawField,true);
     directional::principal_matching(rawField);
   }
   
@@ -122,8 +123,11 @@ int main()
   singIndices(0)=N;
   singIndices(1)=N;
   
+  rawField.init_field(mesh, RAW_FIELD, N);
+  
   //viewing mesh
   viewer.set_mesh(mesh);
+  viewer.set_field(rawField);
   viewer.set_selected_faces(b);
   update_directional_field();
   

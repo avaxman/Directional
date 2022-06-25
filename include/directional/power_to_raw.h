@@ -8,12 +8,9 @@
 #ifndef DIRECTIONAL_POWER_TO_RAW_H
 #define DIRECTIONAL_POWER_TO_RAW_H
 
-#include <igl/local_basis.h>
-#include <directional/rotation_to_representative.h>
-#include <directional/representative_to_raw.h>
-#include <directional/power_to_representative.h>
+#include <igl/igl_inline.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 
 namespace directional
 {
@@ -25,18 +22,29 @@ namespace directional
   // normalize: whether to produce a normalized result (length = 1)
   // Output:
   //  rawField: #F by 3*N matrix with all N explicit vectors of each directional in the order X,Y,Z,X,Y,Z, ...
-  IGL_INLINE void power_to_raw(const directional::TriMesh& mesh,
-                               const Eigen::MatrixXcd& powerField,
+  IGL_INLINE void power_to_raw(const directional::CartesianField& powerField,
                                int N,
-                               directional::FaceField& field,
+                               directional::CartesianField& rawField,
                                bool normalize=false)
   {
-    Eigen::MatrixXd representative,rawField;
-    power_to_representative(mesh.Bx, mesh.By, powerField, N, representative);
+    assert(powerField.fieldType==POLYVECTOR_FIELD && "The input field should be a power/PolyVector field");
+    rawField.init_field(*(powerField.mesh), RAW_FIELD,N);
+    
+    Eigen::MatrixXcd intFieldComplex(powerField.intField.rows(),N);
+    intFieldComplex.col(0)=pow(powerField.intField.array(),1.0/(double)N);
+    for (int i=1;i<N;i++)
+      intFieldComplex.col(i)=intFieldComplex.col(0)*exp(std::complex<double>(0,2*igl::PI*(double)i)/(double)N);
+   
     if (normalize)
-      representative.rowwise().normalize();
-    representative_to_raw(mesh.faceNormals, representative, N, rawField);
-    field.set_extrinsic_field(rawField);
+      intFieldComplex.array()/=intFieldComplex.array().abs();
+    
+    Eigen::MatrixXd intField(intFieldComplex.rows(),2*N);
+    for (int i=0;i<N;i++){
+      intField.col(2*i)=intFieldComplex.col(i).real();
+      intField.col(2*i+1)=intFieldComplex.col(i).imag();
+    }
+    
+    rawField.set_intrinsic_field(intField);
   }
   
 }

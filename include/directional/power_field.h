@@ -35,7 +35,12 @@ namespace directional
                               const Eigen::VectorXd& alignWeights,
                               const int N)
   {
+    //TODO: have the field be initialized here
     polyvector_field(field,constFaces,constVectors,1.0, -1.0, alignWeights, N);
+    field.fieldType = POWER_FIELD;
+    //getting rid of the redundant zeros, in case they were allocated.
+    field.intField.conservativeResize(field.intField.rows(),1);
+    field.extField.conservativeResize(field.extField.rows(),3);
     //powerField=-pvField.col(0);  //powerfield is represented positively
   }
 }

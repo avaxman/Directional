@@ -43,12 +43,12 @@ namespace directional
       if (field.adjSpaces(i, 0) == -1 || field.adjSpaces(i, 1) == -1)
         continue;
       
-      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0), field.connection(i)*exp(Complex(0, (double)N*rotationAngles(i)))));
+      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0), pow(field.connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
       aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 1), -1.0));
-      /*if (EF(i, 0) != 0)
-        aP1Triplets.push_back(Triplet<Complex>(i, EF(i, 0) - 1, conj(edgeRep(i, 0))*exp(Complex(0, (double)N*rotationAngles(i)))));
-      if (EF(i, 1) != 0)
-        aP1Triplets.push_back(Triplet<Complex>(i, EF(i, 1) - 1, -conj(edgeRep(i, 1))));*/
+      if (field.adjSpaces(i, 0) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0)-1, pow(field.connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
+      if (field.adjSpaces(i, 1) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 1)-1, -1.0));
     }
     aP1Full.setFromTriplets(aP1FullTriplets.begin(), aP1FullTriplets.end());
     aP1.setFromTriplets(aP1Triplets.begin(), aP1Triplets.end());
@@ -57,18 +57,21 @@ namespace directional
     
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<Complex> > solver;
     solver.compute(aP1.adjoint()*aP1);
+    assert(solver.info() == Success);
     VectorXcd complexPowerField(field.intField.rows());
     complexPowerField(0) = globalRot;
     complexPowerField.tail(field.intField.rows() - 1) = solver.solve(aP1.adjoint()*rhs);
+    assert(solver.info() == Success);
     
     VectorXcd complexField = pow(complexPowerField.array(), 1.0 / (double)N);
     
     MatrixXd intField(complexField.rows(),2*N);
     for (int j=0;j<N;j++){
-      VectorXcd currComplexField = complexField*Complex(0,2*j*igl::PI/N);
+      VectorXcd currComplexField = complexField.array()*exp(Complex(0,2*j*igl::PI/N));
       intField.block(0,2*j,intField.rows(),2)<<currComplexField.array().real(),currComplexField.array().imag();
     }
     //constructing raw intField
+    field.fieldType = RAW_FIELD;
     field.set_intrinsic_field(intField);
   }
 }
