@@ -1,25 +1,20 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
-#include <igl/barycenter.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/edge_topology.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/power_field.h>
-#include <directional/power_to_representative.h>
 #include <directional/power_to_raw.h>
-#include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
 
 
-Eigen::VectorXi constFaces, matching, singVertices, singIndices;
-Eigen::VectorXd effort;
-Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V;
+directional::TriMesh mesh;
+directional::FaceField rawField,powerFieldHard, powerFieldSoft;
+Eigen::VectorXi constFaces;
 Eigen::MatrixXd CMesh, CField, CSings;
-Eigen::MatrixXd rawField,representative, constVectors, barycenters;
-Eigen::MatrixXcd powerFieldHard, powerFieldSoft;
+Eigen::MatrixXd constVectors;
 directional::DirectionalViewer viewer;
 Eigen::VectorXd alignWeights;
 
@@ -29,28 +24,27 @@ bool zeroPressed = false;
 bool viewFieldHard = true;
 
 void recompute_field(){
-  directional::power_field(V, F, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFieldHard);
-  directional::power_field(V, F, constFaces, constVectors, alignWeights, N, powerFieldSoft);
+  directional::power_field(powerFieldHard, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N);
+  directional::power_field(powerFieldSoft, constFaces, constVectors, alignWeights, N);
 }
 
 void update_visualization()
 {
-  directional::power_to_representative(V, F, (viewFieldHard ? powerFieldHard : powerFieldSoft), N, representative);
-  if (normalized)
-    representative.rowwise().normalize();
-
-  directional::representative_to_raw(V,F,representative, N, rawField);
-  directional::principal_matching(V, F, EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
-  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0, 0.3);
-  viewer.set_singularities(singVertices, singIndices,0);
-
-  //Ghost mesh just showing field, to compare against constraints
-  Eigen::VectorXcd constraintField = Eigen::VectorXcd::Zero(powerFieldHard.rows());
-  Eigen::MatrixXd constraintRawField;
-  for (int i=0;i<constFaces.size();i++)
-    constraintField(constFaces(i))=powerFieldHard(constFaces(i));
+  directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField,normalized);
   
-  directional::power_to_raw(V, F,constraintField, N, constraintRawField);
+  directional::principal_matching(rawField);
+  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0, 0.3);
+  
+  //Ghost mesh just showing field, to compare against constraints
+  Eigen::MatrixXd constraintIntField = Eigen::MatrixXd::Zero(powerFieldHard.intField.rows(),2);
+  for (int i=0;i<constFaces.size();i++)
+    constraintIntField.row(constFaces(i))=powerFieldHard.intField.row(constFaces(i));
+  
+  directional::FaceField constraintRawField, constraintPowerField;
+  constraintPowerField.init_field(*(rawField.mesh),N,RAW_FIELD);
+  constraintPowerField.set_intrinsic_field(constraintIntField);
+  
+  directional::power_to_raw(constraintPowerField, N, constraintRawField);
   viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 0.1);
   viewer.toggle_mesh(false,0);
   viewer.toggle_field(true,0);
@@ -139,7 +133,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   double x = viewer.current_mouse_x;
   double y = viewer.core().viewport(3) - viewer.current_mouse_y;
   if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, V, F, fid, baryInFace))
+                               viewer.core().proj, viewer.core().viewport, mesh.V, mesh.F, fid, baryInFace))
   {
 
     int i;
@@ -159,9 +153,9 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
     }
 
     // Compute direction from the center of the face to the mouse
-    constVectors.row(i) =(V.row(F(fid, 0)) * baryInFace(0) +
-                          V.row(F(fid, 1)) * baryInFace(1) +
-                          V.row(F(fid, 2)) * baryInFace(2) - barycenters.row(fid)).normalized();
+    constVectors.row(i) =(mesh.V.row(mesh.F(fid, 0)) * baryInFace(0) +
+                          mesh.V.row(mesh.F(fid, 1)) * baryInFace(1) +
+                          mesh.V.row(mesh.F(fid, 2)) * baryInFace(2) - mesh.barycenters.row(fid)).normalized();
     recompute_field();
     update_visualization();
     return true;
@@ -181,17 +175,15 @@ int main()
   "  0+L-bttn Place constraint pointing from the center of face to the cursor" << std::endl;
 
   // Load mesh
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", V, F);
-  igl::edge_topology(V, F, EV,FE,EF);
-  igl::barycenter(V, F, barycenters);
-
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", mesh);
+  
   constFaces.resize(0);
   constVectors.resize(0, 3);
 
-  viewer.set_mesh(V,F,0);
+  viewer.set_mesh(mesh,0);
 
   //ghost mesh only for constraints
-  viewer.set_mesh(V,F, 1);
+  viewer.set_mesh(mesh, 1);
   recompute_field();
   update_visualization();
 
