@@ -35,7 +35,8 @@ public:
   Eigen::MatrixXd extField;  //the field in ambient coordinates.
   
   
-  Eigen::MatrixXi adjSpaces;  //the adjacent tangent spaces
+  Eigen::MatrixXi adjSpaces;  //the adjacent tangent spaces (tangent bundle edges)
+  Eigen::MatrixXi oneRing;    //the tangent spaces adjacent around each tangent space
   
   //tangent space geometry
   //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))

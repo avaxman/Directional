@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <directional/TriMesh.h>
 #include <directional/FaceField.h>
 
 
@@ -27,6 +28,7 @@ namespace directional
   // Return:
   //   Whether or not the file was read successfully
   bool IGL_INLINE read_raw_field(const std::string &fileName,
+                                 const directional::TriMesh& mesh,
                                  int& N,
                                  directional::FaceField& field)
   {
@@ -48,6 +50,7 @@ namespace directional
           f>>extField(i,j);
       
       f.close();
+      field.init_field(mesh, RAW_FIELD, N);
       field.set_extrinsic_field(extField);
       return f.good();
     }

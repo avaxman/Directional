@@ -35,8 +35,9 @@ public:
     
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EF;
-    intField.conservativeResize(mesh->F.rows(),2);
-    extField.conservativeResize(mesh->F.rows(),3);
+    oneRing = mesh->FE;
+    intField.conservativeResize(mesh->F.rows(),2*N);
+    extField.conservativeResize(mesh->F.rows(),3*N);
     
     //connection is the ratio of the complex representation of edges
     connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
@@ -101,7 +102,7 @@ public:
     intField = _intField;
     
     //computing extrinsic field
-    extField.conservativeResize(intField.rows(),intField.cols()/2*3);
+    extField.conservativeResize(intField.rows(),intField.cols()*3/2);
     for (int i=0;i<intField.rows();i++)
       for (int j=0;j<intField.cols();j+=2)
         extField.block(i,3*j/2,1,3)=mesh->Bx.row(i)*intField(i,j)+mesh->By.row(i)*intField(i,j+1);
