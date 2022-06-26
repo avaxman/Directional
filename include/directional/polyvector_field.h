@@ -146,7 +146,7 @@ namespace directional
     
     /*************Hard-constraint reduction matrices******************/
     MatrixXd constVectorsIntrinsic=pvField.project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
-    cout<<"constVectorsIntrinsic: "<<constVectorsIntrinsic<<endl;
+    //cout<<"constVectorsIntrinsic: "<<constVectorsIntrinsic<<endl;
     for (int i=0;i<pvData.constSpaces.size();i++){
       if (pvData.wAlignment(i)>=0.0)
         continue;  //here we only handle the reduction caused by a fixed dof
@@ -341,6 +341,7 @@ namespace directional
         intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
       
       pvField.fieldType = POLYVECTOR_FIELD;
+      //cout<<"intField: "<<intField<<endl;
       pvField.set_intrinsic_field(intField);
       
       //std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;

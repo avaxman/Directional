@@ -29,20 +29,29 @@ namespace directional
   {
     assert(powerField.fieldType==POWER_FIELD && "The input field should be a power/PolyVector field");
     rawField.init_field(*(powerField.mesh), RAW_FIELD,N);
-    
+    //std::cout<<"powerField.intField: "<<powerField.intField<<std::endl;
     Eigen::MatrixXcd intFieldComplex(powerField.intField.rows(),N);
-    intFieldComplex.col(0)=pow(powerField.intField.array(),1.0/(double)N);
+    Eigen::VectorXcd complexPowerField(powerField.intField.rows());
+    //power fields are represented as -u^N since they are a special case of PVs.
+    complexPowerField.array().real()=-powerField.intField.col(0);
+    complexPowerField.array().imag()=-powerField.intField.col(1);
+    intFieldComplex.col(0)=pow(complexPowerField.array(),1.0/(double)N);
     for (int i=1;i<N;i++)
-      intFieldComplex.col(i)=intFieldComplex.col(0)*exp(std::complex<double>(0,2*igl::PI*(double)i)/(double)N);
+      intFieldComplex.col(i)=intFieldComplex.col(0)*exp(std::complex<double>(0,2*igl::PI*(double)i/(double)N));
+    
+    //std::cout<<"intFieldComplex: "<<intFieldComplex<<std::endl;
    
     if (normalize)
       intFieldComplex.array()/=intFieldComplex.array().abs();
+    
+    //std::cout<<"intFieldComplex: "<<intFieldComplex<<std::endl;
     
     Eigen::MatrixXd intField(intFieldComplex.rows(),2*N);
     for (int i=0;i<N;i++){
       intField.col(2*i)=intFieldComplex.col(i).real();
       intField.col(2*i+1)=intFieldComplex.col(i).imag();
     }
+    //std::cout<<"intField: "<<intField<<std::endl;
     
     rawField.set_intrinsic_field(intField);
   }
