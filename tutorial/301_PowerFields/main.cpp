@@ -2,6 +2,7 @@
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
+#include <directional/readOBJ.h>
 #include <directional/FaceField.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -176,7 +177,8 @@ int main()
 
   // Load mesh
   directional::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", mesh);
-  
+  powerFieldHard.init_field(mesh, POWER_FIELD, N);
+  powerFieldSoft.init_field(mesh, POWER_FIELD, N);
   constFaces.resize(0);
   constVectors.resize(0, 3);
 

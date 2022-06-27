@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <directional/CartesianField.h>
 
 namespace directional
 {
@@ -24,7 +25,7 @@ namespace directional
   //   and the output is written in the scientific format
   // Returns:
   //   Whether or not the file was written successfully
-  bool IGL_INLINE write_raw_field(const std::string fileName, Eigen::MatrixXd& rawField, bool high_precision = false)
+  bool IGL_INLINE write_raw_field(const std::string fileName, const directional::CartesianField& rawField, bool high_precision = false)
   {
       std::ofstream f(fileName);
       if (high_precision)
@@ -33,13 +34,11 @@ namespace directional
           f.precision(std::numeric_limits<double>::digits10 + 1);
       }
       
-      int N = rawField.cols() / 3;
-      assert(3 * N == rawField.cols());
-      f << N << " " << rawField.rows() << std::endl;
-      for (int i=0;i<rawField.rows();i++)
+      f << rawField.N << " " << rawField.extField.rows() << std::endl;
+      for (int i=0;i<rawField.extField.rows();i++)
       {
-        for (int j=0;j<rawField.cols();j++)
-          f << rawField(i,j) << " ";
+        for (int j=0;j<rawField.extField.cols();j++)
+          f << rawField.extField(i,j) << " ";
         f << std::endl;
       }
       f.close();
