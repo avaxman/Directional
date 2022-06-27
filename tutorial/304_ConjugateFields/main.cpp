@@ -1,10 +1,11 @@
 #include <vector>
 #include <cstdlib>
-#include <igl/avg_edge_length.h>
-#include <igl/barycenter.h>
+//#include <igl/avg_edge_length.h>
 #include <igl/jet.h>
 #include <igl/readDMAT.h>
-#include <igl/readOBJ.h>
+#include <directional/readOBJ.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/polyvector_field.h>
 #include <directional/read_raw_field.h>
@@ -14,19 +15,11 @@
 #include <directional/directional_viewer.h>
 #include "tutorial_shared_path.h"
 
-
-Eigen::VectorXi matching, indices;
-Eigen::VectorXd effort;
-Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V, CMesh, B1, B2, normals;
-Eigen::MatrixXd rawField,representative, barycenters;
-Eigen::MatrixXcd pvField;
+directional::TriMesh mesh;
+directional::FaceField rawFieldOrig, rawFieldConjugate;
+Eigen::MatrixXd CMesh;
 directional::DirectionalViewer viewer;
-
-Eigen::MatrixXd rawFieldOrig, rawFieldConjugate;
 Eigen::VectorXd conjugacyOrig, conjugacyConjugate;
-Eigen::VectorXi singVerticesOrig, singVerticesConj;
-Eigen::VectorXi singIndicesOrig, singIndicesConj;
 
 int N=4;
 double conjMaxOrig;
@@ -60,11 +53,12 @@ void update_raw_field_mesh()
     viewer.toggle_singularities(false);
     viewer.toggle_seams(false);
   } else {
+    viewer.set_field(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate, directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? rawFieldOrig.extField : rawFieldConjugate.extField));
     viewer.toggle_field(true);
     viewer.toggle_singularities(true);
     viewer.toggle_seams(true);
-    viewer.set_field(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate, directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? rawFieldOrig : rawFieldConjugate));
-    viewer.set_singularities(viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj, viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj);
+
+    //viewer.set_singularities(viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj, viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj);
   }
   
 }
@@ -93,34 +87,42 @@ int main(int argc, char *argv[])
   "  4      Conjugacy of optimized field." << std::endl;
   
   // Load a mesh in OBJ format
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", V, F);
-  igl::edge_topology(V, F, EV, FE, EF);
-  igl::local_basis(V,F,B1,B2,normals);
-  
-  // Compute face barycenters
-  igl::barycenter(V, F, barycenters);
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", mesh);
   
   // Load constraints
-  igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_b.dmat",b);
-  igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_bc.dmat",bc);
+  Eigen::VectorXi bFull;
+  igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_b.dmat",bFull);
+  Eigen::MatrixXd bcFull;
+  igl::readDMAT(TUTORIAL_SHARED_PATH "/inspired_mesh_bc.dmat",bcFull);
   
-  bc.conservativeResize(bc.rows(), 2*bc.cols());
-  bc.block(0,6,bc.rows(),6) = -bc.block(0,0,bc.rows(),6);
+  bcFull.conservativeResize(bcFull.rows(), 3*N);
+  bcFull.block(0,6,bcFull.rows(),6) = -bcFull.block(0,0,bcFull.rows(),6);
+  
+  //putting the constraints in single-vector matrices
+  bc.resize(N*bcFull.rows(),3);
+  b.resize(N*bFull.rows());
+  for (int i=0;i<bFull.rows();i++){
+    for (int j=0;j<N;j++){
+      b(i*N+j)=bFull(i);
+      bc.row(i*N+j)=bcFull.block(i,3*j,1,3);
+    }
+  }
   
   //initial solution
-  Eigen::MatrixXcd pvField;
-  directional::polyvector_field(V, F, b, bc, N, pvField);
-  directional::polyvector_to_raw(B1, B2, pvField, N, rawFieldOrig);
+  directional::FaceField pvField;
+  pvField.init_field(mesh, POLYVECTOR_FIELD, N);
+  directional::polyvector_field(pvField, b, bc, N);
+  directional::polyvector_to_raw(pvField, rawFieldOrig);
   
-  Eigen::VectorXi prinIndices;
-  directional::principal_matching(V, F,EV, EF, FE, rawFieldOrig, matching, effort,singVerticesOrig, singIndicesOrig);
+  directional::principal_matching(rawFieldOrig);
   
   // Initialize conjugate field with smooth field
-  directional::ConjugateFFSolverData csdata(V,F);
+  directional::ConjugateFFSolverData csdata(mesh);
   
   directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
   
-  directional::principal_matching(V, F,EV, EF, FE, rawFieldConjugate, matching, effort,singVerticesConj, singIndicesConj);
+  directional::principal_matching(rawFieldConjugate);
+  cout<<"rawFieldConjugate.singCycles: "<<rawFieldConjugate.singCycles<<endl;
   
   csdata.evaluateConjugacy(rawFieldOrig, conjugacyOrig);
   conjMaxOrig = conjugacyOrig.lpNorm<Infinity>();
@@ -128,7 +130,8 @@ int main(int argc, char *argv[])
   csdata.evaluateConjugacy(rawFieldConjugate, conjugacyConjugate);
   
   //triangle mesh setup
-  viewer.set_mesh(V, F);
+  viewer.set_mesh(mesh);
+  viewer.set_field(rawFieldOrig);
   update_triangle_mesh();
   update_raw_field_mesh();
 

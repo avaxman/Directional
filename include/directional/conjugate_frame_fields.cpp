@@ -384,74 +384,74 @@ IGL_INLINE double directional::ConjugateFFSolver::solve(const Eigen::VectorXi &i
 
 
 
-IGL_INLINE void directional::conjugate_frame_fields(const Eigen::MatrixXd &V,
-                                                    const Eigen::MatrixXi &F,
+IGL_INLINE void directional::conjugate_frame_fields(const directional::TriMesh& mesh,
                                                     const Eigen::VectorXi &b,
-                                                    const Eigen::MatrixXd &initialSolution,
-                                                    Eigen::MatrixXd &output,
+                                                    const directional::FaceField &initialSolution,
+                                                    directional::FaceField &output,
                                                     int maxIter,
                                                     const double lambdaOrtho,
                                                     const double lambdaInit,
                                                     const double lambdaMultFactor,
                                                     bool doHardConstraints)
 {
-  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.rows(),0);
+  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.extField.rows(),0);
   for (unsigned i=0; i<b.size(); ++i)
     isConstrained(b(i)) = 1;
-  Eigen::MatrixXd twoFieldMat =initialSolution.block(0,0,initialSolution.rows(),6);
-  directional::ConjugateFFSolverData csdata(V, F);
+  Eigen::MatrixXd twoFieldMat =initialSolution.extField.block(0,0,initialSolution.extField.rows(),6);
+  directional::ConjugateFFSolverData csdata(mesh);
   directional::ConjugateFFSolver cs(csdata, maxIter, lambdaOrtho, lambdaInit, lambdaMultFactor, doHardConstraints);
-  cs.solve(isConstrained, twoFieldMat, output);
-  output.conservativeResize(output.rows(), 2*output.cols());
-  output.block(0,6,output.rows(),6) = -output.block(0,0,output.rows(),6);
+  Eigen::MatrixXd outputExtField;
+  cs.solve(isConstrained, twoFieldMat, outputExtField);
+  outputExtField.conservativeResize(outputExtField.rows(), 2*outputExtField.cols());
+  outputExtField.block(0,6,outputExtField.rows(),6) = -outputExtField.block(0,0,outputExtField.rows(),6);
   
   //reorienting field hack
-  Eigen::MatrixXd newOutput,B1,B2,normals;
-  igl::local_basis(V,F,B1,B2,normals);
-  directional::ccw_reorient_field(csdata.B1,csdata.B2,output, newOutput);
-  output=newOutput;
+  Eigen::MatrixXd newOutput;//,B1,B2,normals;
+  //igl::local_basis(V,F,B1,B2,normals);
+  directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
+  output.init_field(*(initialSolution.mesh),RAW_FIELD,initialSolution.N);
+  output.set_extrinsic_field(newOutput);
 }
 
 
 IGL_INLINE double directional::conjugate_frame_fields(const directional::ConjugateFFSolverData &csdata,
                                                       const Eigen::VectorXi &b,
-                                                      const Eigen::MatrixXd &initialSolution,
-                                                      Eigen::MatrixXd &output,
+                                                      const directional::FaceField &initialSolution,
+                                                      directional::FaceField &output,
                                                       int maxIter,
                                                       const double lambdaOrtho,
                                                       const double lambdaInit,
                                                       const double lambdaMultFactor,
                                                       bool doHardConstraints)
 {
-  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.rows(),0);
+  Eigen::VectorXi isConstrained = Eigen::VectorXi::Constant(initialSolution.extField.rows(),0);
   for (unsigned i=0; i<b.size(); ++i)
     isConstrained(b(i)) = 1;
-  Eigen::MatrixXd twoFieldMat =initialSolution.block(0,0,initialSolution.rows(),6);
+  Eigen::MatrixXd twoFieldMat =initialSolution.extField.block(0,0,initialSolution.extField.rows(),6);
   directional::ConjugateFFSolver cs(csdata, maxIter, lambdaOrtho, lambdaInit, lambdaMultFactor, doHardConstraints);
-  double lambdaOut = cs.solve(isConstrained, twoFieldMat, output);
+  Eigen::MatrixXd outputExtField;
+  double lambdaOut = cs.solve(isConstrained, twoFieldMat, outputExtField);
   
   //hack - CCW order might have been lost: reorienting
-  Eigen::MatrixXd U =output.block(0,0,output.rows(),3);
-  Eigen::MatrixXd V =output.block(0,3,output.rows(),3);
+  Eigen::MatrixXd U =outputExtField.block(0,0,outputExtField.rows(),3);
+  Eigen::MatrixXd V =outputExtField.block(0,3,outputExtField.rows(),3);
   
   for (int i=0;i<csdata.FN.rows();i++){
     Eigen::RowVector3d vec1=U.row(i);
     Eigen::RowVector3d vec2=csdata.FN.row(i);
     double orientation =(((vec1.cross(vec2))* (V.row(i).transpose())).sum() > 0 ? 1.0 : -1.0);
-    output.block(i,3,1,3) = output.block(i,3,1,3).array()*orientation;
+    outputExtField.block(i,3,1,3) = outputExtField.block(i,3,1,3).array()*orientation;
     
   }
   
-  output.conservativeResize(output.rows(), 2*output.cols());
-  output.block(0,6,output.rows(),6) = -output.block(0,0,output.rows(),6);
+  outputExtField.conservativeResize(outputExtField.rows(), 2*outputExtField.cols());
+  outputExtField.block(0,6,outputExtField.rows(),6) = -outputExtField.block(0,0,outputExtField.rows(),6);
   
   //reorienting field hack
-  Eigen::MatrixXd newOutput,B1,B2,normals;
-  directional::ccw_reorient_field(csdata.B1,csdata.B2,output, newOutput);
-  output=newOutput;
-  
-  
-  
+  Eigen::MatrixXd newOutput;//,B1,B2,normals;
+  directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
+  output.init_field(*(initialSolution.mesh),RAW_FIELD,initialSolution.N);
+  output.set_extrinsic_field(newOutput);
   
   return lambdaOut;
 }

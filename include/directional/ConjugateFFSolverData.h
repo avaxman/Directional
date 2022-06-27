@@ -67,9 +67,8 @@ namespace directional
     IGL_INLINE void precomputeInteriorEdges();
     
   public:
-    IGL_INLINE ConjugateFFSolverData(const Eigen::Matrix<double, Eigen::Dynamic, 3> &_V,
-                                     const Eigen::MatrixXi &_F);
-    IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 12> rawField,
+    IGL_INLINE ConjugateFFSolverData(const directional::TriMesh& mesh);
+    IGL_INLINE void evaluateConjugacy(const directional::FaceField& rawField,
                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const ;
     
     IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
@@ -87,19 +86,24 @@ namespace directional
 
 
 IGL_INLINE directional::ConjugateFFSolverData::
-ConjugateFFSolverData(const Eigen::Matrix<double, Eigen::Dynamic, 3> &_V,
-                      const Eigen::MatrixXi &_F):
-V(_V),
-numV(_V.rows()),
-F(_F),
-numF(_F.rows())
+ConjugateFFSolverData(const directional::TriMesh& mesh):
+V(mesh.V),
+numV(mesh.V.rows()),
+F(mesh.F),
+numF(mesh.F.rows())
 {
-  igl::edge_topology(V,F,EV,F2E,E2F);
+  EV = mesh.EV;
+  F2E = mesh.FE;
+  E2F = mesh.EF;
+  //igl::edge_topology(V,F,EV,F2E,E2F);
   numE = EV.rows();
   
   precomputeInteriorEdges();
   
-  igl::local_basis(V,F,B1,B2,FN);
+  //igl::local_basis(V,F,B1,B2,FN);
+  B1 = mesh.Bx;
+  B2 = mesh.By;
+  FN = mesh.faceNormals;
   
   computek();
   
@@ -358,11 +362,11 @@ computek()
   
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 12> rawField,
+IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const directional::FaceField& rawField,
                                                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const
 {
-  const Eigen::MatrixXd &Us = rawField.block(0,0,rawField.rows(),3);
-  const Eigen::MatrixXd &Vs = rawField.block(0,3,rawField.rows(),3);
+  const Eigen::MatrixXd &Us = rawField.extField.block(0,0,rawField.extField.rows(),3);
+  const Eigen::MatrixXd &Vs = rawField.extField.block(0,3,rawField.extField.rows(),3);
   Eigen::MatrixXd pvU(Us.rows(),2); pvU << igl::dot_row(Us,B1), igl::dot_row(Us,B2);
   Eigen::MatrixXd pvV(Us.rows(),2);  pvV << igl::dot_row(Vs,B1), igl::dot_row(Vs,B2);
   conjValues.resize(numF,1);

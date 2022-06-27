@@ -20,11 +20,10 @@ namespace directional {
   // TODO: isConstrained should become a list of indices for consistency with
   //       n_polyvector
   
-  IGL_INLINE void conjugate_frame_fields(const Eigen::MatrixXd &V,
-                                         const Eigen::MatrixXi &F,
+  IGL_INLINE void conjugate_frame_fields(const directional::TriMesh& mesh,
                                          const Eigen::VectorXi &isConstrained,
-                                         const Eigen::MatrixXd &initialSolution,
-                                         Eigen::MatrixXd &output,
+                                         const directional::FaceField &initialSolution,
+                                         directional::FaceField &output,
                                          int _maxIter = 50,
                                          const double _lambdaOrtho = .1,
                                          const double _lambdaInit = 10,
@@ -33,8 +32,8 @@ namespace directional {
   
   IGL_INLINE double conjugate_frame_fields(const ConjugateFFSolverData &csdata,
                                            const Eigen::VectorXi &isConstrained,
-                                           const Eigen::MatrixXd &initialSolution,
-                                           Eigen::MatrixXd &output,
+                                           const directional::FaceField &initialSolution,
+                                           directional::FaceField &output,
                                            int _maxIter = 50,
                                            const double _lambdaOrtho = .1,
                                            const double _lambdaInit = 10,
