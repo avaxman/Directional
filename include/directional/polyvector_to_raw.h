@@ -9,13 +9,14 @@
 #define DIRECTIONAL_POLYVECTOR_TO_RAW_H
 
 #include <iostream>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/PI.h>
-#include <igl/local_basis.h>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
+#include <igl/PI.h>
+#include <directional/TriMesh.h>
+#include <directional/CartesianField.h>
+
 
 
 
@@ -97,28 +98,31 @@ namespace directional
   // Outputs:
   //  raw:              #F by 3*N matrix with all N explicit vectors of each directional in raw format xyzxyz
   //    returns true if succeeded
-  IGL_INLINE bool polyvector_to_raw(const Eigen::MatrixXd& B1,
-                                    const Eigen::MatrixXd& B2,
-                                    const Eigen::MatrixXcd& pvField,
-                                    const int N,
-                                    Eigen::MatrixXd& rawField,
+  IGL_INLINE bool polyvector_to_raw(const directional::CartesianField& pvField,
+                                    directional::CartesianField& rawField,
                                     bool signSymmetry=true,
                                     const double rootTolerance=1e-8)
   {
     using namespace std;
     using namespace Eigen;
-    rawField.resize(B1.rows(), 3 * N);
-    if (N%2!=0) signSymmetry=false;  //by definition
+    rawField.init_field(*(pvField.mesh), RAW_FIELD, pvField.N);
+    if (pvField.N%2!=0) signSymmetry=false;  //by definition
     MatrixXcd actualPVField;
     int actualN;
     if (signSymmetry){
-      actualPVField.resize(pvField.rows(),N/2);
-      for (int i=0;i<N;i+=2)
-        actualPVField.col(i/2)=pvField.col(i);
-      actualN=N/2;
+      actualPVField.resize(pvField.intField.rows(),pvField.N/2);
+      for (int i=0;i<pvField.N;i+=2){
+        actualPVField.col(i/2).real()=pvField.intField.col(2*i);
+        actualPVField.col(i/2).imag()=pvField.intField.col(2*i+1);
+      }
+      actualN=pvField.N/2;
     } else{
-      actualPVField=pvField;
-      actualN=N;
+      actualPVField.resize(pvField.intField.rows(),pvField.N);
+      for (int i=0;i<pvField.N;i++){
+        actualPVField.col(i).real()=pvField.intField.col(2*i);
+        actualPVField.col(i).imag()=pvField.intField.col(2*i+1);
+      }
+      actualN=pvField.N;
     }
     
     MatrixXcd roots(actualPVField.rows(),actualN);
@@ -161,12 +165,14 @@ namespace directional
       actualRoots<<roots, -roots;
       roots=actualRoots;
     }
+    
+    rawField.set_intrinsic_field(roots);
    
-    for (int i = 0; i < N; i++)
+    /*for (int i = 0; i < N; i++)
       for (int f=0;f<pvField.rows();f++){
         std::complex<double> root = roots(f,i);
         rawField.block<1, 3>(f, 3 * i) = B1.row(f) * root.real() + B2.row(f) * root.imag();
-      }
+      }*/
       
     return true;
   }

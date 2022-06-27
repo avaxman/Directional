@@ -1,26 +1,19 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
-#include <igl/local_basis.h>
-#include <igl/sharp_edges.h>
-#include <igl/edge_topology.h>
+#include <directional/readOFF.h>
 #include <directional/polyvector_to_raw.h>
-#include <directional/polyvector_to_raw_companion.h>
+//#include <directional/polyvector_to_raw_companion.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
-#include <directional/effort_to_indices.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
 
-Eigen::VectorXi constFaces, matching, singVertices, singIndices;
-Eigen::VectorXd effort;
-Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V, B1, B2;
-Eigen::MatrixXd normals,constVectors;
-Eigen::MatrixXd rawFieldConstraints, rawFieldHard, rawFieldSoft;
+Eigen::VectorXi constFaces;
+directional::TriMesh mesh;
+directional::FaceField pvFieldHard, pvFieldSoft, rawFieldHard, rawFieldSoft,constraintsField;
+Eigen::MatrixXd constVectors;
 Eigen::VectorXd alignWeights;
-Eigen::MatrixXcd pvFieldHard, pvFieldSoft;
+
 double smoothWeight, roSyWeight;
 
 directional::DirectionalViewer viewer;
@@ -34,14 +27,13 @@ bool alterRoSyWeight=false;
 
 void recompute_field()
 {
-  directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
-
-  directional::polyvector_field(V, F, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
+  directional::polyvector_field(pvFieldHard, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N);
+  directional::polyvector_field(pvFieldSoft, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N);
 }
 
 void update_visualization()
 {
-  viewer.set_field(rawFieldConstraints,Eigen::MatrixXd(), 1,0.9,0,0.2);
+  viewer.set_field(constraintsField,Eigen::MatrixXd(), 1,0.9,0,0.2);
   viewer.set_selected_faces(constFaces,1);
   viewer.toggle_field(true,1);
   viewer.toggle_mesh(false,0);
@@ -49,18 +41,18 @@ void update_visualization()
     viewer.toggle_field(false,0);
     
   if (viewingMode==HARD_PRESCRIPTION){
-    directional::polyvector_to_raw(B1,B2, pvFieldHard, N, rawFieldHard, N%2==0);
-    directional::principal_matching(V, F, EV, EF, FE, rawFieldHard, matching, effort, singVertices, singIndices);
+    directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
+    directional::principal_matching(rawFieldHard);
     viewer.set_field(rawFieldHard,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    viewer.set_singularities(singVertices, singIndices,0);
+    //viewer.set_singularities(singVertices, singIndices,0);
     viewer.toggle_field(true,0);
   }
   
   if (viewingMode==SOFT_PRESCRIPTION){
-    directional::polyvector_to_raw(B1, B2, pvFieldSoft, N, rawFieldSoft);
-    directional::principal_matching(V, F, EV, EF, FE, rawFieldSoft, matching, effort, singVertices, singIndices);
+    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
+    directional::principal_matching(rawFieldSoft);
     viewer.set_field(rawFieldSoft,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    viewer.set_singularities(singVertices, singIndices,0);
+    //viewer.set_singularities(singVertices, singIndices,0);
     viewer.toggle_field(true,0);
   }
 }
@@ -141,19 +133,19 @@ int main()
   "  W    Save field"<< std::endl;
   
   // Load mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", V, F);
-  igl::edge_topology(V, F, EV, FE, EF);
-  igl::local_basis(V, F, B1, B2, normals);
+  directional::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", mesh);
+  pvFieldHard.init_field(mesh, POLYVECTOR_FIELD,N);
+  pvFieldSoft.init_field(mesh, POLYVECTOR_FIELD,N);
   
   //discovering and constraining sharp edges
   std::vector<int> constFaceslist;
   std::vector<Eigen::Vector3d> constVectorslist;
-  for (int i=0;i<EF.rows();i++){
-    if (normals.row(EF(i,0)).dot(normals.row(EF(i,1)))<0.5){
-      constFaceslist.push_back(EF(i,0));
-      constFaceslist.push_back(EF(i,1));
-      constVectorslist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
-      constVectorslist.push_back((V.row(EV(i,0))-V.row(EV(i,1))).normalized());
+  for (int i=0;i<mesh.EF.rows();i++){
+    if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.5){
+      constFaceslist.push_back(mesh.EF(i,0));
+      constFaceslist.push_back(mesh.EF(i,1));
+      constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+      constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
     }
   }
   
@@ -165,8 +157,8 @@ int main()
   }
                                 
   //generating the viewing fields
-  rawFieldConstraints=Eigen::MatrixXd::Zero(F.rows(),N*3);
-  Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(F.rows());
+  Eigen::MatrixXd rawFieldConstraints=Eigen::MatrixXd::Zero(mesh.F.rows(),N*3);
+  Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(mesh.F.rows());
   for (int i=0;i<constFaces.size();i++){
     rawFieldConstraints.block(constFaces(i),3*posInFace(constFaces(i)), 1,3)=constVectors.row(i);
     posInFace(constFaces(i))++;
@@ -174,18 +166,21 @@ int main()
   
   //Just to show the other direction if N is even, since we are by default cosntraining it
   if (N%2==0){
-    rawFieldConstraints.conservativeResize(rawFieldConstraints.rows(), 2*rawFieldConstraints.cols());
+   // rawFieldConstraints.conservativeResize(rawFieldConstraints.rows(), 2*rawFieldConstraints.cols());
     rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
   }
+  
+  constraintsField.init_field(mesh, RAW_FIELD, N);
+  constraintsField.set_extrinsic_field(rawFieldConstraints);
   
   smoothWeight = 1.0;
   roSyWeight = 1.0;
   alignWeights = Eigen::VectorXd::Constant(constFaces.size(),1.0);
   
   //triangle mesh setup
-  viewer.set_mesh(V, F,0);
+  viewer.set_mesh(mesh,0);
   //ghost mesh only for constraints
-  viewer.set_mesh(V,F, 1);
+  viewer.set_mesh(mesh, 1);
   recompute_field();
   update_visualization();
   
