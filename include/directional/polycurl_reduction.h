@@ -12,6 +12,8 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <igl/igl_inline.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 
 namespace directional {
   // Compute a curl-free frame field from user constraints, optionally starting
@@ -40,12 +42,11 @@ namespace directional {
   // Returns:
   //   data              an PolyCurlReductionSolverData object that holds all intermediate
   //                     data needed by the solve routine, with correctly initialized values.
-  IGL_INLINE void polycurl_reduction_precompute(const Eigen::MatrixXd& V,
-                                                const Eigen::MatrixXi& F,
+  IGL_INLINE void polycurl_reduction_precompute(const directional::TriMesh& mesh,
                                                 const Eigen::VectorXi& b,
                                                 const Eigen::MatrixXd& bc,
                                                 const Eigen::VectorXi& constraintLevel,
-                                                const Eigen::MatrixXd& originalField,
+                                                const directional::FaceField& originalField,
                                                 directional::PolyCurlReductionSolverData &data);
 
 
@@ -65,7 +66,7 @@ namespace directional {
   //   current_field                updated estimate for the integrable field
   IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData &cffsoldata,
                                            polycurl_reduction_parameters &params,
-                                           Eigen::MatrixXd& currentField,
+                                           directional::FaceField& currentField,
                                            bool fieldNotCCW);
 
 
@@ -210,11 +211,10 @@ public:
   IGL_INLINE PolyCurlReductionSolverData();
 
   IGL_INLINE PolyCurlReductionSolverData(
-                                     const Eigen::MatrixXd &_V,
-                                     const Eigen::MatrixXi &_F,
+                                         const directional::TriMesh &_mesh,
                                      const Eigen::VectorXi& b,
                                      const Eigen::VectorXi& constraintLevel,
-                                     const Eigen::MatrixXd& originalField);
+                                     const directional::FaceField& originalField);
 
 };
 

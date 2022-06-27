@@ -1,17 +1,15 @@
 #include <iostream>
 #include <fstream>
-#include <igl/readOFF.h>
-#include <igl/readOBJ.h>
-#include <igl/local_basis.h>
+#include <directional/readOFF.h>
+#include <directional/readOBJ.h>
 #include <igl/avg_edge_length.h>
 #include <igl/is_border_vertex.h>
 #include <igl/adjacency_list.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/edge_topology.h>
 #include <igl/jet.h>
 #include <igl/barycenter.h>
 #include <igl/false_barycentric_subdivision.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
@@ -22,19 +20,12 @@
 
 using namespace std;
 
-Eigen::VectorXi matchingOrig, matchingCF, combedMatchingOrig, combedMatchingCF;
-Eigen::VectorXd effortOrig, effortCF, combedEffortOrig, combedEffortCF;
-Eigen::MatrixXi F, EV, EF, FE;
-Eigen::MatrixXd V, barycenters;
+directional::TriMesh mesh;
 Eigen::MatrixXd CMesh;
-Eigen::MatrixXd rawFieldOrig, rawFieldCF;
-Eigen::MatrixXd combedFieldOrig, combedFieldCF;
+directional::FaceField rawFieldOrig, rawFieldCF;
+directional::FaceField combedFieldOrig, combedFieldCF;
 Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
 directional::DirectionalViewer viewer;
-
-Eigen::VectorXi singVerticesOrig, singVerticesCF;
-Eigen::VectorXi singIndicesOrig, singIndicesCF;
-
 
 double curlMax, curlMaxOrig;
 int N;
@@ -58,7 +49,6 @@ void update_triangle_mesh()
 
 }
 
-
 void update_raw_field_mesh()
 {
   using namespace std;
@@ -76,9 +66,9 @@ void update_raw_field_mesh()
     viewer.toggle_field(true);
     viewer.toggle_mesh(true);
     viewer.toggle_edge_data(false);
-    viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF));
-    viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesCF), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
-    viewer.set_seams((viewingMode==ORIGINAL_FIELD ? combedMatchingOrig : combedMatchingCF));
+    viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig.extField : combedFieldCF.extField));
+    //viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? rawFieldOrig.singCycles : rawFieldCF.singVertices), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
+    viewer.set_seams((viewingMode==ORIGINAL_FIELD ? combedFieldOrig.matching : combedFieldCF.matching));
   }
   
 }
@@ -104,9 +94,9 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
     }
     
     Eigen::VectorXi prinIndices;
-    directional::curl_matching(V, F,EV, EF, FE, rawFieldCF, matchingCF, effortCF, curlCF,singVerticesCF, singIndicesCF);
-    directional::combing(V,F, EV, EF, FE, rawFieldCF, matchingCF, combedFieldCF);
-    directional::curl_matching(V, F,EV, EF, FE, combedFieldCF, combedMatchingCF, combedEffortCF, curlCF,singVerticesCF, singIndicesCF);
+    directional::curl_matching(rawFieldCF, curlCF);
+    directional::combing(rawFieldCF, combedFieldCF);
+    directional::curl_matching(combedFieldCF,curlCF);
     curlMax= curlCF.maxCoeff();
     std:: cout<<"curlMax optimized: "<<curlMax<<std::endl;
   }
@@ -134,40 +124,32 @@ int main(int argc, char *argv[])
   "  4      Curl of curl-reduced field." << std::endl;
   
   // Load a mesh
-  igl::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", V, F);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", N, rawFieldOrig);
-  igl::edge_topology(V, F, EV, FE, EF);
+  directional::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", mesh);
+  rawFieldOrig.init_field(mesh, RAW_FIELD, N);
+  rawFieldCF.init_field(mesh, RAW_FIELD, N);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", mesh, N, rawFieldOrig);
   
-  igl::barycenter(V, F, barycenters);
-  
-  Eigen::VectorXi prinIndices;
-  directional::curl_matching(V, F,EV, EF, FE, rawFieldOrig, matchingOrig, effortOrig, curlOrig, singVerticesOrig, singIndicesOrig);
+  //Eigen::VectorXi prinIndices;
+  directional::curl_matching(rawFieldOrig,curlOrig);
   curlMaxOrig= curlOrig.maxCoeff();
   curlMax = curlMaxOrig;
   std:: cout<<"curlMax original: "<<curlMax<<std::endl;
   
-  directional::combing(V,F, EV, EF, FE,rawFieldOrig, matchingOrig,combedFieldOrig);
-  directional::curl_matching(V, F,EV, EF, FE, combedFieldOrig, combedMatchingOrig, combedEffortOrig, curlOrig, singVerticesOrig, singIndicesOrig);
+  directional::combing(rawFieldOrig, combedFieldOrig);
+  directional::curl_matching(combedFieldOrig, curlOrig);
   
   //trivial constraints
   Eigen::VectorXi b; b.resize(1); b<<0;
-  Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.row(0).head(6);
+  Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.extField.row(0).head(6);
   Eigen::VectorXi blevel; blevel.resize(1); b<<1;
-  directional::polycurl_reduction_precompute(V, F, b, bc, blevel, rawFieldOrig , pcrdata);
+  directional::polycurl_reduction_precompute(mesh, b, bc, blevel, rawFieldOrig , pcrdata);
   
   rawFieldCF = rawFieldOrig;
-  matchingCF = matchingOrig;
-  effortCF = effortOrig;
-  combedFieldCF =combedFieldOrig;
-  combedMatchingCF =combedMatchingOrig;
-  combedEffortCF =combedEffortOrig;
+  combedFieldCF = combedFieldOrig;
   curlCF = curlOrig;
-  singVerticesCF = singVerticesOrig;
-  singIndicesCF = singIndicesOrig;
   
- 
   //triangle mesh setup
-  viewer.set_mesh(V, F);
+  viewer.set_mesh(mesh);
   update_triangle_mesh();
   update_raw_field_mesh();
   

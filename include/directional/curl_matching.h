@@ -13,10 +13,8 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/local_basis.h>
-#include <igl/edge_topology.h>
-#include <directional/representative_to_raw.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/effort_to_indices.h>
 
 namespace directional
@@ -35,56 +33,39 @@ namespace directional
   // curlNorm: the L2-norm of the curl vector
   //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
   //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N).
-  IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
-                                const Eigen::MatrixXi& F,
-                                const Eigen::MatrixXi& EV,
-                                const Eigen::MatrixXi& EF,
-                                const Eigen::MatrixXi& FE,
-                                const Eigen::MatrixXd& rawField,
-                                Eigen::VectorXi& matching,
-                                Eigen::VectorXd& effort,
-                                Eigen::VectorXd& curlNorm,
-                                Eigen::VectorXi& singVertices,
-                                Eigen::VectorXi& singIndices)
+  IGL_INLINE void curl_matching(directional::FaceField& rawField,
+                                Eigen::VectorXd& curlNorm)
   {
     
     typedef std::complex<double> Complex;
     using namespace Eigen;
     using namespace std;
     
-    MatrixXd B1, B2, B3;
-    igl::local_basis(V, F, B1, B2, B3);
+    rawField.matching.conservativeResize(rawField.mesh->EF.rows());
+    rawField.matching.setConstant(-1);
+    curlNorm.conservativeResize(rawField.mesh->EF.rows());
     
-    int N = rawField.cols() / 3;
-    
-    matching.conservativeResize(EF.rows());
-    matching.setConstant(-1);
-    curlNorm.conservativeResize(EF.rows());
-    
-    VectorXcd edgeTransport(EF.rows());  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
-    MatrixXd edgeVectors(EF.rows(), 3);
-    for (int i = 0; i < EF.rows(); i++) {
-      if (EF(i, 0) == -1 || EF(i, 1) == -1)
+    MatrixXd edgeVectors(rawField.mesh->EF.rows(), 3);
+    for (int i = 0; i < rawField.mesh->EF.rows(); i++) {
+      if (rawField.mesh->EF(i, 0) == -1 || rawField.mesh->EF(i, 1) == -1)
         continue;
-      edgeVectors.row(i) = (V.row(EV(i, 1)) - V.row(EV(i, 0))).normalized();
-      Complex ef(edgeVectors.row(i).dot(B1.row(EF(i, 0))), edgeVectors.row(i).dot(B2.row(EF(i, 0))));
-      Complex eg(edgeVectors.row(i).dot(B1.row(EF(i, 1))), edgeVectors.row(i).dot(B2.row(EF(i, 1))));
-      edgeTransport(i) = eg / ef;
+      edgeVectors.row(i) = (rawField.mesh->V.row(rawField.mesh->EV(i, 1)) - rawField.mesh->V.row(rawField.mesh->EV(i, 0))).normalized();
+
     }
     
-    effort = VectorXd::Zero(EF.rows());
-    for (int i = 0; i < EF.rows(); i++) {
-      if (EF(i, 0) == -1 || EF(i, 1) == -1)
+    //effort = VectorXd::Zero(rawField.mesh->EF.rows());
+    for (int i = 0; i < rawField.mesh->EF.rows(); i++) {
+      if (rawField.mesh->EF(i, 0) == -1 || rawField.mesh->EF(i, 1) == -1)
         continue;
       //computing free coefficient effort (a.k.a. [Diamanti et al. 2014])
       //Complex freeCoeffEffort(1.0, 0.0);
       int indexMinFromZero=0;
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
       double minCurl = 32767000.0;
-      for (int j = 0; j < N; j++) {
+      for (int j = 0; j < rawField.N; j++) {
         double currCurl = 0;
-        for (int k=0;k<N;k++){
-          RowVector3d vecDiff =rawField.block(EF(i, 1), 3 * ((j+k)%N), 1, 3)-rawField.block(EF(i, 0), 3*k, 1, 3);
+        for (int k=0;k<rawField.N;k++){
+          RowVector3d vecDiff =rawField.extField.block(rawField.mesh->EF(i, 1), 3 * ((j+k)%rawField.N), 1, 3)-rawField.extField.block(rawField.mesh->EF(i, 0), 3*k, 1, 3);
           currCurl +=pow(edgeVectors.row(i).dot(vecDiff),2.0);
         }
         
@@ -94,12 +75,12 @@ namespace directional
         }
       }
       
-      matching(i) =indexMinFromZero;
+      rawField.matching(i) =indexMinFromZero;
       curlNorm(i)= sqrt(minCurl);
       
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
-      double currEffort=0;
-      for (int j = 0; j < N; j++) {
+      /*double currEffort=0;
+      for (int j = 0; j < rawField.N; j++) {
         RowVector3d vecjf = rawField.block(EF(i, 0), 3*j, 1, 3);
         Complex vecjfc = Complex(vecjf.dot(B1.row(EF(i, 0))), vecjf.dot(B2.row(EF(i, 0))));
         RowVector3d vecjg = rawField.block(EF(i, 1), 3 * ((matching(i)+j+N)%N), 1, 3);
@@ -111,15 +92,15 @@ namespace directional
       }
       
       effort(i) = currEffort;
-      
+      */
     }
     
     //Getting final singularities and their indices
-    effort_to_indices(V,F,EV, EF, effort,matching,N,singVertices,singIndices);
+    effort_to_indices(rawField);
   }
   
   //version with representative vector (for N-RoSy) as input.
-  IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
+  /*IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
                                 const Eigen::MatrixXi& F,
                                 const Eigen::MatrixXi& EV,
                                 const Eigen::MatrixXi& EF,
@@ -135,7 +116,7 @@ namespace directional
     Eigen::MatrixXd rawField;
     representative_to_raw(V, F, representativeField, N, rawField);
     curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm,singVertices, singIndices);
-  }
+  }*/
   }
 
 

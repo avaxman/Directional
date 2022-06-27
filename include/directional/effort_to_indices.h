@@ -48,6 +48,7 @@ namespace directional
   // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
   IGL_INLINE void effort_to_indices(directional::CartesianField& field)
   {
+    field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
     Eigen::VectorXd effortInner(field.innerAdjacencies.size());
     for (int i=0;i<field.innerAdjacencies.size();i++)
       effortInner(i)=field.effort(field.innerAdjacencies(i));

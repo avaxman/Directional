@@ -18,6 +18,7 @@
 #include <igl/sort_vectors_ccw.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/field_local_global_conversions.h>
+#include <directional/FaceField.h>
 
 
 IGL_INLINE directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
@@ -1110,22 +1111,21 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::M
 }
 
 
-IGL_INLINE void directional::polycurl_reduction_precompute(const Eigen::MatrixXd& V,
-                                                           const Eigen::MatrixXi& F,
+IGL_INLINE void directional::polycurl_reduction_precompute(const directional::TriMesh& mesh,
                                                            const Eigen::VectorXi& b,
                                                            const Eigen::MatrixXd& bc,
                                                            const Eigen::VectorXi& constraintLevel,
-                                                           const Eigen::MatrixXd& original_field,
+                                                           const directional::FaceField& original_field,
                                                            directional::PolyCurlReductionSolverData &data)
 {
-  data.precomputeMesh(V,F);
+  data.precomputeMesh(mesh.V,mesh.F);
 
   data.computeJacobianPattern();
   data.computeHessianPattern();
   data.solver.analyzePattern(data.Hess);
 
   data.initializeConstraints(b,bc,constraintLevel);
-  Eigen::MatrixXd twoVectorMat=original_field.block(0,0,original_field.rows(),6);
+  Eigen::MatrixXd twoVectorMat=original_field.extField.block(0,0,original_field.extField.rows(),6);
   data.initializeOriginalVariable(twoVectorMat);
 };
 
@@ -1133,14 +1133,16 @@ IGL_INLINE void directional::polycurl_reduction_precompute(const Eigen::MatrixXd
 
 IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData &cffsoldata,
                                                       directional::polycurl_reduction_parameters &params,
-                                                      Eigen::MatrixXd& currentField,
+                                                      directional::FaceField& currentField,
                                                       bool fieldNotCCW)
 {
-  Eigen::MatrixXd twoFieldMat=currentField.block(0,0,currentField.rows(),6);
+  Eigen::MatrixXd twoFieldMat=currentField.extField.block(0,0,currentField.extField.rows(),6);
   directional::PolyCurlReductionSolver cffs(cffsoldata);
   cffs.solve(params, twoFieldMat, fieldNotCCW);
   
-  currentField.block(0,0,currentField.rows(),6)=twoFieldMat;
-  currentField.block(0,6,currentField.rows(),6)=-twoFieldMat;
+  Eigen::MatrixXd newExtField(currentField.extField.rows(), currentField.extField.cols());
+  newExtField.block(0,0,currentField.extField.rows(),6)=twoFieldMat;
+  newExtField.block(0,6,currentField.extField.rows(),6)=-twoFieldMat;
+  currentField.set_extrinsic_field(newExtField);
 };
 
