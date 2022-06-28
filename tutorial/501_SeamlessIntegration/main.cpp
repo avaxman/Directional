@@ -71,8 +71,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '3': viewingMode = FULL_INTEGRATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
-      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, FMeshCut);
-      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, FMeshCut);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, meshCut.F);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, meshCut.F);
       break;
   }
   update_viewer();

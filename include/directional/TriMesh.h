@@ -82,7 +82,7 @@ public:
       }
     }
     
-    $sign of edge within face
+    //sign of edge within face
     FEs = Eigen::MatrixXd::Zero(FE.rows(), FE.cols());
     
     for(int i = 0; i < EF.rows(); i++)

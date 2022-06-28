@@ -38,7 +38,7 @@ namespace directional
     using namespace Eigen;
     combedField.init_field(*(rawField.mesh), RAW_FIELD, rawField.N);
     Eigen::MatrixXi faceIsCut(rawField.intField.rows(),3);
-    if (_faceisCut.rows()==0)
+    if (_faceIsCut.rows()==0)
       faceIsCut.setZero();
     else
       faceIsCut=_faceIsCut;
