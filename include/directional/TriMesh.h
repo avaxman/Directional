@@ -30,7 +30,8 @@ public:
   Eigen::MatrixXi F;
   
   //Topological quantities
-  Eigen::MatrixXi EF, FE, EV,TT;
+  Eigen::MatrixXi EF, FE, EV,TT, EFi;
+  Eigen::MatrixXd FEs;
   Eigen::VectorXi innerEdges, boundEdges;
   
   //Geometric quantities
@@ -64,6 +65,33 @@ public:
         boundEdgesList.push_back(i);
       else
         innerEdgesList.push_back(i);
+    
+    
+    //computing extra topological information
+    //Relative location of edges within faces
+    EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
+    for(int i = 0; i < EF.rows(); i++)
+    {
+      for (int k = 0; k < 2; k++)
+      {
+        if (EF(i, k) == -1)
+          continue;
+        for (int j = 0; j < 3; j++)
+          if (FE(EF(i, k), j) == i)
+            EFi(i, k) = j;
+      }
+    }
+    
+    $sign of edge within face
+    FEs = Eigen::MatrixXd::Zero(FE.rows(), FE.cols());
+    
+    for(int i = 0; i < EF.rows(); i++)
+    {
+      if(EFi(i, 0) != -1)
+        FEs(EF(i, 0), EFi(i, 0)) = 1.0;
+      if(EFi(i,1) != -1)
+        FEs(EF(i, 1), EFi(i, 1)) = -1.0;
+    }
     
     innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
     boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());

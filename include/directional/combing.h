@@ -32,10 +32,16 @@ namespace directional
   // Output:
   //  combedField: #F by 3*N reindexed field
   IGL_INLINE void combing(const directional::CartesianField& rawField,
-                          directional::CartesianField& combedField)
+                          directional::CartesianField& combedField,
+                          const Eigen::MatrixXi& _faceIsCut=Eigen::MatrixXi())
   {
     using namespace Eigen;
     combedField.init_field(*(rawField.mesh), RAW_FIELD, rawField.N);
+    Eigen::MatrixXi faceIsCut(rawField.intField.rows(),3);
+    if (_faceisCut.rows()==0)
+      faceIsCut.setZero();
+    else
+      faceIsCut=_faceIsCut;
     //flood-filling through the matching to comb field
     //combedField.extField.conservativeResize(rawField.rows(), rawField.cols());
     //int N=rawField.cols()/3;
@@ -60,7 +66,7 @@ namespace directional
         int nextFace=(rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),1) : rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0));
         nextMatching*=(rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? 1.0 : -1.0);
         nextMatching=(nextMatching+currSpaceMatching.second+10*rawField.N)%rawField.N;  //killing negatives
-        if ((nextFace!=-1)&&(!visitedSpaces(nextFace)))
+        if ((nextFace!=-1)&&(!visitedSpaces(nextFace))&&(!faceIsCut(currSpaceMatching.first,i)))
           spaceMatchingQueue.push(std::pair<int,int>(nextFace, nextMatching));
         
       }
@@ -89,16 +95,9 @@ namespace directional
   }*/
   
   //version with prescribed cuts from faces
-  IGL_INLINE void combing(const Eigen::MatrixXd& V,
-                          const Eigen::MatrixXi& F,
-                          const Eigen::MatrixXi& EV,
-                          const Eigen::MatrixXi& EF,
-                          const Eigen::MatrixXi& FE,
+  /*IGL_INLINE void combing(const directional::CartesianField& rawField,
                           const Eigen::MatrixXi& faceIsCut,
-                          const Eigen::MatrixXd& rawField,
-                          const Eigen::VectorXi& matching,
-                          Eigen::MatrixXd& combedField,
-                          Eigen::VectorXi& combedMatching)
+                          directional::CartesianField& combedField)
   {
     using namespace Eigen;
     //flood-filling through the matching to comb field
@@ -142,7 +141,7 @@ namespace directional
       else
         combedMatching(i)=(faceTurns(EF(i,0))-faceTurns(EF(i,1))+matching(i)+1000000*N)%N;
     }
-  }
+  }*/
   
 }
 

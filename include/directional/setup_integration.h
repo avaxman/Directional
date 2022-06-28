@@ -13,12 +13,10 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/local_basis.h>
-#include <igl/triangle_triangle_adjacency.h>
 #include <igl/edge_topology.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/tree.h>
-#include <directional/representative_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/dcel.h>
 #include <directional/cut_mesh_with_singularities.h>
@@ -126,98 +124,46 @@ namespace directional
   //  combedField:  The raw field combed into N different fields on the cut mesh (every column is a single-vf).
   //  combedMatching: the new matching of the combed field when given on the whole mesh (mostly zero except on cuts).
   
-  IGL_INLINE void setup_integration(const Eigen::MatrixXd& wholeV,
-                                    const Eigen::MatrixXi& wholeF,
-                                    const Eigen::MatrixXi& EV,
-                                    const Eigen::MatrixXi& EF,
-                                    const Eigen::MatrixXi& FE,
-                                    const Eigen::MatrixXd& rawField,
-                                    const Eigen::VectorXi& matching,
-                                    const Eigen::VectorXi& singVertices,
+  IGL_INLINE void setup_integration(const directional::TriMesh& meshWhole,
+                                    const directional::FaceField& field,
                                     IntegrationData& intData,
-                                    Eigen::MatrixXd& cutV,
-                                    Eigen::MatrixXi& cutF,
-                                    Eigen::MatrixXd& combedField,
-                                    Eigen::VectorXi& combedMatching)
+                                    directional::TriMesh& meshCut,
+                                    directional::FaceField& combedField)
   {
     
     using namespace Eigen;
     using namespace std;
     
     //cutting mesh and combing field.
-    cut_mesh_with_singularities(wholeV, wholeF, singVertices, intData.face2cut);
-    combing(wholeV,wholeF, EV, EF, FE, intData.face2cut, rawField, matching, combedField, combedMatching);
+    cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singCycles, intData.face2cut);
+    combing(field, combedField, intData.face2cut);
     
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
     
     // it stores number of edges per face, for now only tirangular
-    VectorXi D = VectorXi::Constant(wholeF.rows(), 3);
+    VectorXi D = VectorXi::Constant(meshWhole.F.rows(), 3);
     
     // mark vertices as being a singularity vertex of the vector field
-    VectorXi isSingular = VectorXi::Zero(wholeV.rows());
-    for (int i = 0; i < singVertices.size(); i++)
-      isSingular(singVertices(i)) = 1;
+    VectorXi isSingular = VectorXi::Zero(meshWhole.V.rows());
+    for (int i = 0; i < field.singCycles.size(); i++)
+      isSingular(field.singCycles(i)) = 1;
     
     //cout<<"singVertices: "<<singVertices<<endl;
     
-    intData.constrainedVertices = VectorXi::Zero(wholeV.rows());
-    
-    //computing extra topological information
-    std::vector<int> innerEdgesVec; // collects ids of inner edges
-    EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
-    
-    /* used later for internal edges there is 1 or  -1 ie if two faces are adjacent then for a given edge we
-     * will have 1 in the frst face and -1 in the second
-     */
-    FEs = Eigen::MatrixXd::Zero(FE.rows(), FE.cols());
-    
-    /*
-     * here we collect information about position of an edge inside each face containing it. Each triangular face
-     * has three edges of ids 0, 1, 2. So EFi(i, k) = j means that the edge i is inside the face k \in [0,1]
-     * at the position j.
-     */
-    for(int i = 0; i < EF.rows(); i++)
-    {
-      for (int k = 0; k < 2; k++)
-      {
-        if (EF(i, k) == -1)
-          continue;
-        for (int j = 0; j < D(EF(i, k)); j++)
-          if (FE(EF(i, k), j) == i)
-            EFi(i, k) = j;
-      }
-    }
-    
-    // collect information about inner edges
-    for(int i = 0; i < EF.rows(); i++)
-    {
-      if(EFi(i, 0) != -1)
-        FEs(EF(i, 0), EFi(i, 0)) = 1.0;
-      if(EFi(i,1) != -1)
-        FEs(EF(i, 1), EFi(i, 1)) = -1.0;
-      if ((EF(i, 0) !=-1) && (EF(i,1)!=-1))
-        innerEdgesVec.push_back(i);
-    }
-    
-    // copy the information into  Eigen vector
-    innerEdges.resize(innerEdgesVec.size());
-    for (int i = 0; i < innerEdgesVec.size(); i++)
-      innerEdges(i) = innerEdgesVec[i];
+    intData.constrainedVertices = VectorXi::Zero(meshWhole.V.rows());
     
     // compute the half-edge representation
-    hedra::dcel(D, wholeF, EV, EF, EFi, innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
+    hedra::dcel(D, meshWhole.F, meshWhole.EV, meshWhole.EF, meshWhole.EFi, meshWhole.innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
     
     // find boundary vertices and mark them
-    VectorXi isBoundary = VectorXi::Zero(wholeV.rows());
+    VectorXi isBoundary = VectorXi::Zero(meshWhole.V.rows());
     for (int i = 0; i < HV.rows(); i++)
       if (twinH(i) == -1){
         isBoundary(HV(i)) = 1;
         isSingular(HV(i)) = 0; //boundary vertices cannot be singular
       }
-    
-    
     
     /*for (int i=0;i<wholeV.rows();i++){
      if (isSingular(i))
@@ -236,17 +182,17 @@ namespace directional
       constParmMatrices[i] = unitPermMatrix * constParmMatrices[i - 1];
     
     // each edge which is on the cut seam is marked by 1 and 0 otherwise
-    VectorXi isSeam = VectorXi::Zero(EV.rows());
-    for(int i = 0; i < FE.rows(); i++)
+    VectorXi isSeam = VectorXi::Zero(meshWhole.EV.rows());
+    for(int i = 0; i < meshWhole.FE.rows(); i++)
     {
       for (int j = 0; j < 3; j++)
         if (intData.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
-          isSeam(FE(i, j)) = 1;
+          isSeam(meshWhole.FE(i, j)) = 1;
     }
     
     // do the same for the half-edges, mark edges which correspond to the cut seam
     VectorXi isHEcut = VectorXi::Zero(HE.rows());
-    for(int i = 0; i < wholeF.rows(); i++)
+    for(int i = 0; i < meshWhole.F.rows(); i++)
     {
       for (int j = 0; j < 3; j++)
         if (intData.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
@@ -254,13 +200,13 @@ namespace directional
     }
     
     // calculate valency of the vertices which lay on the seam
-    VectorXi cutValence = VectorXi::Zero(wholeV.rows());
-    for(int i = 0; i < EV.rows(); i++)
+    VectorXi cutValence = VectorXi::Zero(meshWhole.V.rows());
+    for(int i = 0; i < meshWhole.EV.rows(); i++)
     {
       if (isSeam(i))
       {
-        cutValence(EV(i, 0))++;
-        cutValence(EV(i, 1))++;
+        cutValence(meshWhole.EV(i, 0))++;
+        cutValence(meshWhole.EV(i, 1))++;
       }
     }
     
@@ -275,7 +221,7 @@ namespace directional
     {
       // HE is a map between half-edges to edges, but it does not carry the direction
       // EH edge to half-edge mapping
-      Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -combedMatching(HE(i)) : combedMatching(HE(i)));
+      Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -combedField.matching(HE(i)) : combedField.matching(HE(i)));
       if(Halfedge2Matching(i) < 0)
         Halfedge2Matching(i) = (intData.N + (Halfedge2Matching(i) % intData.N)) % intData.N;
     }
@@ -289,7 +235,9 @@ namespace directional
     //cutting the mesh
     vector<int> cut2whole;
     vector<RowVector3d> cutVlist;
-    cutF.resize(wholeF.rows(),3);
+    MatrixXi cutF;
+    MatrixXd cutV;
+    cutF.resize(meshWhole.F.rows(),3);
     for (int i = 0; i < VH.rows(); i++)
     {
       //creating corners whereever we have non-trivial matching
@@ -323,11 +271,11 @@ namespace directional
         if ((isHEcut(currH) != 0) || (beginH == currH))
         {
           cut2whole.push_back(i);
-          cutVlist.push_back(wholeV.row(i));
+          cutVlist.push_back(meshWhole.V.row(i));
         }
         
         for (int j = 0; j < 3; j++)
-          if (wholeF(HF(currH), j) == i)
+          if (meshWhole.F(HF(currH), j) == i)
             cutF(HF(currH), j) = cut2whole.size() - 1;
         currH = twinH(prevH(currH));
       } while((beginH != currH) && (currH != -1));
@@ -338,7 +286,7 @@ namespace directional
       cutV.row(i) = cutVlist[i];
     
     //starting from each cut-graph node, we trace cut curves
-    for(int i = 0;  i < wholeV.rows(); i++)
+    for(int i = 0;  i < meshWhole.V.rows(); i++)
     {
       if (((cutValence(i) == 2) && (!isSingular(i))) || (cutValence(i) == 0))
         continue;  //either mid-cut curve or non at all
@@ -453,7 +401,7 @@ namespace directional
         //find position of the vertex i in the face of the initial mesh
         for (int j = 0; j < 3; j++)
         {
-          if (wholeF(currFace, j) == i)
+          if (meshWhole.F(currFace, j) == i)
             newCutVertex = cutF(currFace, j);
         }
         
@@ -500,14 +448,14 @@ namespace directional
           
           //and identity on the fresh transition
           permMatrices.push_back(MatrixXi::Identity(intData.N, intData.N));
-          permIndices.push_back(wholeV.rows() + nextTransition - 1);
+          permIndices.push_back(meshWhole.V.rows() + nextTransition - 1);
         }
         // (Pe*(f-Je))  matrix is already inverse since halfedge matching is minused
         else
         {
           //reverse order
           permMatrices.push_back(-MatrixXi::Identity(intData.N, intData.N));
-          permIndices.push_back(wholeV.rows() - nextTransition - 1);
+          permIndices.push_back(meshWhole.V.rows() - nextTransition - 1);
           
           for(int j = 0; j < permMatrices.size(); j++)
             permMatrices[j] = nextPermMatrix * permMatrices[j];
@@ -554,8 +502,8 @@ namespace directional
     vector< Triplet< double > > cleanTriplets;
     vector< Triplet< int > > cleanTripletsInteger;
     
-    intData.vertexTrans2CutMat.resize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
-    intData.vertexTrans2CutMatInteger.resize(intData.N * cutV.rows(), intData.N * (wholeV.rows() + numTransitions));
+    intData.vertexTrans2CutMat.resize(intData.N * cutV.rows(), intData.N * (meshWhole.V.rows() + numTransitions));
+    intData.vertexTrans2CutMatInteger.resize(intData.N * cutV.rows(), intData.N * (meshWhole.V.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < vertexTrans2CutTriplets.size(); i++){
@@ -570,8 +518,8 @@ namespace directional
     
     //
     
-    intData.constraintMat.resize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
-    intData.constraintMatInteger.resize(intData.N * currConst, intData.N * (wholeV.rows() + numTransitions));
+    intData.constraintMat.resize(intData.N * currConst, intData.N * (meshWhole.V.rows() + numTransitions));
+    intData.constraintMatInteger.resize(intData.N * currConst, intData.N * (meshWhole.V.rows() + numTransitions));
     cleanTriplets.clear();
     cleanTripletsInteger.clear();
     for(int i = 0; i < constTriplets.size(); i++){
@@ -584,20 +532,20 @@ namespace directional
     intData.constraintMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
     //doing the integer spanning matrix
-    intData.intSpanMat.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.intSpanMatInteger.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.intSpanMat.resize(intData.n * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
+    intData.intSpanMatInteger.resize(intData.n * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
     vector<Triplet<double> > intSpanMatTriplets;
     vector<Triplet<int> > intSpanMatTripletsInteger;
     for (int i=0;i<intData.n*numTransitions;i+=intData.n){
       for(int k = 0; k < intData.n; k++)
         for(int l = 0; l < intData.n; l++){
           if (intData.periodMat(k,l)!=0){
-            intSpanMatTriplets.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, (double)intData.periodMat(k,l));
-            intSpanMatTripletsInteger.emplace_back(intData.n * wholeV.rows()+i+k, intData.n * wholeV.rows()+i+l, intData.periodMat(k,l));
+            intSpanMatTriplets.emplace_back(intData.n * meshWhole.V.rows()+i+k, intData.n * meshWhole.V.rows()+i+l, (double)intData.periodMat(k,l));
+            intSpanMatTripletsInteger.emplace_back(intData.n * meshWhole.V.rows()+i+k, intData.n * meshWhole.V.rows()+i+l, intData.periodMat(k,l));
           }
         }
     }
-    for (int i=0;i<intData.n * wholeV.rows();i++){
+    for (int i=0;i<intData.n * meshWhole.V.rows();i++){
       intSpanMatTriplets.emplace_back(i,i,1.0);
       intSpanMatTripletsInteger.emplace_back(i,i,1);
     }
@@ -607,11 +555,11 @@ namespace directional
     
     //filtering out barycentric symmetry, including sign symmetry. The parameterization should always only include n dof for the surface
     //TODO: this assumes n divides N!
-    intData.linRedMat.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.linRedMatInteger.resize(intData.N * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.linRedMat.resize(intData.N * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
+    intData.linRedMatInteger.resize(intData.N * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
     vector<Triplet<double> > linRedMatTriplets;
     vector<Triplet<int> > linRedMatTripletsInteger;
-    for(int i = 0; i < intData.N*(wholeV.rows() + numTransitions); i +=intData.N)
+    for(int i = 0; i < intData.N*(meshWhole.V.rows() + numTransitions); i +=intData.N)
       for(int k = 0; k < intData.N; k++)
         for(int l = 0; l < intData.n; l++){
           if (intData.linRed(k,l)!=0){
@@ -627,7 +575,7 @@ namespace directional
     intData.integerVars.resize(numTransitions);
     intData.integerVars.setZero();
     for(int i = 0; i < numTransitions; i++)
-      intData.integerVars(i) = wholeV.rows() + i;
+      intData.integerVars(i) = meshWhole.V.rows() + i;
     
     //fixed values
     intData.fixedIndices.resize(intData.n);
@@ -654,8 +602,8 @@ namespace directional
     }
     
     //doing the integer spanning matrix
-    intData.singIntSpanMat.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
-    intData.singIntSpanMatInteger.resize(intData.n * (wholeV.rows() + numTransitions), intData.n * (wholeV.rows() + numTransitions));
+    intData.singIntSpanMat.resize(intData.n * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
+    intData.singIntSpanMatInteger.resize(intData.n * (meshWhole.V.rows() + numTransitions), intData.n * (meshWhole.V.rows() + numTransitions));
     vector<Triplet<double> > singIntSpanMatTriplets;
     vector<Triplet<int> > singIntSpanMatTripletsInteger;
     for (int i=0;i<isSingular.size();i++){
@@ -675,7 +623,7 @@ namespace directional
       }
     }
     
-    for (int i=intData.n * wholeV.rows() ; i<intData.n*(wholeV.rows()+numTransitions);i++){
+    for (int i=intData.n * meshWhole.V.rows() ; i<intData.n*(meshWhole.V.rows()+numTransitions);i++){
       singIntSpanMatTriplets.emplace_back(i,i,1.0);
       singIntSpanMatTripletsInteger.emplace_back(i,i,1);
     }
@@ -686,6 +634,8 @@ namespace directional
     intData.singularIndices=singularIndices;
     intData.fixedValues.resize(intData.n);
     intData.fixedValues.setConstant(0);
+    
+    meshCut.set_mesh(cutV, cutF);
     
   }
 }

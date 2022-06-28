@@ -1,14 +1,14 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/edge_topology.h>
 #include <igl/cut_mesh.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
+#include <directional/readOFF.h>
+#include <directional/writeOBJ.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/curl_matching.h>
-#include <directional/effort_to_indices.h>
 #include <directional/combing.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
@@ -17,13 +17,10 @@
 
 
 int N;
-Eigen::MatrixXi FMeshWhole, FMeshCut;
-Eigen::MatrixXd VMeshWhole, VMeshCut;
-Eigen::MatrixXd rawField, combedField;
-Eigen::VectorXd effort, combedEffort;
-Eigen::VectorXi matching, combedMatching;
-Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi singIndices, singVertices;
+directional::TriMesh meshWhole, meshCut;
+//Eigen::MatrixXi FMeshWhole, FMeshCut;
+//Eigen::MatrixXd VMeshWhole, VMeshCut;
+directional::FaceField rawField, combedField;
 Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV;
 directional::DirectionalViewer viewer;
 
@@ -74,8 +71,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '3': viewingMode = FULL_INTEGRATION; break;
     case 'W':
       Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVRot, FMeshCut);
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", VMeshCut, FMeshCut, emptyMat, emptyMat, cutUVFull, FMeshCut);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, FMeshCut);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, FMeshCut);
       break;
   }
   update_viewer();
@@ -92,40 +89,38 @@ int main()
   "  W  Save parameterized OBJ file "<< std::endl;
   
   setup_line_texture();
-  igl::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", N, rawField);
-  igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
-
+  directional::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", meshWhole, N, rawField);
+  
   //combing and cutting
   Eigen::VectorXd curlNorm;
-  directional::curl_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort, curlNorm,singVertices, singIndices);
+  directional::curl_matching(rawField, curlNorm);
   std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  directional::setup_integration(meshWhole, rawField, intData, meshCut, combedField);
   
   intData.verbose=true;
   intData.integralSeamless=false;
   
   std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, cutUVRot ,cornerWholeUV);
+  directional::integrate(meshWhole, combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
   //Extracting the UV from [U,V,-U, -V];
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   intData.integralSeamless = true;  //do not do translational seamless.
   std::cout<<"Solving for integrally-seamless integration"<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, cutUVFull,cornerWholeUV);
+  directional::integrate(meshWhole, combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   //viewer cut (texture) and whole (field) meshes
-  viewer.set_mesh(VMeshWhole, FMeshWhole,0);
-  viewer.set_mesh(VMeshCut, FMeshCut,1);
+  viewer.set_mesh(meshWhole,0);
+  viewer.set_mesh(meshCut,1);
   viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(combedMatching);
+  viewer.set_seams(combedField.matching);
   viewer.set_texture(texture_R,texture_G,texture_B,1);
   
   viewer.toggle_texture(false,0);
