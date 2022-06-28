@@ -1,28 +1,20 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/opengl/glfw/Viewer.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/edge_topology.h>
-#include <igl/cut_mesh.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
+#include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
-#include <directional/cut_mesh_with_singularities.h>
 #include <directional/branched_isolines.h>
 #include <directional/directional_viewer.h>
 
 int N;
-Eigen::MatrixXi FMeshWhole, FMeshCut;
-Eigen::MatrixXd VMeshWhole, VMeshCut;
-Eigen::MatrixXd rawField, combedField;
-Eigen::VectorXd effort, combedEffort;
-Eigen::VectorXi matching, combedMatching;
-Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi singIndices, singVertices;
+directional::TriMesh meshWhole, meshCut;
+directional::FaceField rawField, combedField;
 Eigen::MatrixXd NFunctionSign, NFunctionTri, NCornerFunc;
 directional::DirectionalViewer viewer;
 
@@ -48,9 +40,9 @@ void update_viewer()
   }
   
   if (viewingMode==SIGN_SYMMETRY)
-    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSign);
+    viewer.set_isolines(meshCut, NFunctionSign);
   if (viewingMode==TRI_SYMMETRY)
-    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionTri);
+    viewer.set_isolines(meshCut, NFunctionTri);
 }
 
 // Handle keyboard input
@@ -75,35 +67,33 @@ int main()
   "  2  Show only sign-symmetric integrated functions" << std::endl <<
   "  3  Show triangular-symmetric integrated functions" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/dome.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", N, rawField);
-  igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
-
+  directional::readOFF(TUTORIAL_SHARED_PATH "/dome.off", meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", meshWhole, N, rawField);
+  
   //combing and cutting
-  directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort,singVertices, singIndices);
+  directional::principal_matching(rawField);
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  directional::setup_integration(meshWhole, rawField, intData,meshCut, combedField);
   
   intData.verbose=false;
   intData.integralSeamless=true;
 
   std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut, NFunctionSign, NCornerFunc);
+  directional::integrate(meshWhole, combedField, intData, meshCut, NFunctionSign, NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   
   std::cout<<"Solving triangular-constrained integration..."<<std::endl;
   intData.set_triangular_symmetry(N);
-  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut,  NFunctionTri, NCornerFunc);
+  directional::setup_integration(meshWhole, rawField,intData, meshCut, combedField);
+  directional::integrate(meshWhole, combedField,  intData, meshCut, NFunctionTri, NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
-  viewer.set_mesh(VMeshWhole, FMeshWhole, 0);
+  viewer.set_mesh(meshWhole, 0);
   viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(combedMatching);
+  viewer.set_seams(combedField.matching);
   
   update_viewer();
  
