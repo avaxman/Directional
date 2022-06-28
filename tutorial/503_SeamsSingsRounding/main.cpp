@@ -1,29 +1,22 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/read_triangle_mesh.h>
-#include <igl/per_face_normals.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/edge_topology.h>
-#include <igl/cut_mesh.h>
+#include <directional/readOFF.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
-#include <directional/cut_mesh_with_singularities.h>
 #include <directional/branched_isolines.h>
 #include <directional/directional_viewer.h>
 
 
 int N;
-Eigen::MatrixXi FMeshWhole, FMeshCut;
-Eigen::MatrixXd VMeshWhole, VMeshCut;
-Eigen::MatrixXd rawField, combedField;
-Eigen::VectorXd effort, combedEffort;
-Eigen::VectorXi matching, combedMatching;
-Eigen::MatrixXi EV, FE, EF;
-Eigen::VectorXi singIndices, singVertices;
+directional::TriMesh meshWhole, meshCut;
+directional::FaceField rawField, combedField;
 Eigen::MatrixXd NFunctionSeams, NFunctionSings, NCornerFunc;
 
 Eigen::MatrixXd P1Seams, P2Seams, P1Sings, P2Sings;
@@ -49,9 +42,9 @@ void update_viewer()
   }
   
   if (viewingMode==SEAMS_ROUNDING)
-    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSeams);
+    viewer.set_isolines(meshCut, NFunctionSeams);
   if (viewingMode==SINGS_ROUNDING)
-    viewer.set_isolines(VMeshCut, FMeshCut, NFunctionSings);
+    viewer.set_isolines(meshCut, NFunctionSings);
 }
 
 
@@ -76,35 +69,33 @@ int main()
   "  2  Show integral-seams function" << std::endl <<
   "  3  Show integral-singularity function" << std::endl;
   
-  igl::readOFF(TUTORIAL_SHARED_PATH "/train-station.off", VMeshWhole, FMeshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/train-station-5.rawfield", N, rawField);
-  igl::edge_topology(VMeshWhole, FMeshWhole, EV, FE, EF);
-
+  directional::readOFF(TUTORIAL_SHARED_PATH "/train-station.off", meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/train-station-5.rawfield", meshWhole, N, rawField);
+  
   //combing and cutting
-  directional::principal_matching(VMeshWhole, FMeshWhole,EV, EF, FE, rawField, matching, effort,singVertices, singIndices);
+  directional::principal_matching(rawField);
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  directional::setup_integration(meshWhole, rawField, intData, meshCut, combedField);
   
   intData.verbose=false;
   intData.integralSeamless=true;
   intData.roundSeams=true;
     
   std::cout<<"Seams-rounding Integrating..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField, intData, VMeshCut, FMeshCut,  NFunctionSeams,NCornerFunc);
+  directional::integrate(meshWhole, combedField, intData, meshCut,  NFunctionSeams,NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   intData.roundSeams=false;
-  directional::setup_integration(VMeshWhole, FMeshWhole,  EV, EF, FE, rawField, matching, singVertices, intData, VMeshCut, FMeshCut, combedField, combedMatching);
+  directional::setup_integration(meshWhole, rawField, intData, meshCut,combedField);
   std::cout<<"Singularity-rounding integration..."<<std::endl;
-  directional::integrate(VMeshWhole, FMeshWhole, FE, combedField,  intData, VMeshCut, FMeshCut, NFunctionSings,NCornerFunc);
+  directional::integrate(meshWhole, combedField,  intData, meshCut, NFunctionSings,NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
-  viewer.set_mesh(VMeshWhole, FMeshWhole,0);
+  viewer.set_mesh(meshWhole,0);
   viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
-  viewer.set_seams(combedMatching);
+  viewer.set_seams(combedField.matching);
 
   viewer.callback_key_down = &key_down;
   viewer.launch();
