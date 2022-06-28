@@ -18,6 +18,44 @@
 namespace directional
 {
 
+// Reads a list of singularities from a file
+// Inputs:
+//   fileName: The to be loaded file.
+// Outputs:
+//   singularities: The vector containing the singularities
+//   N:             The degree of the field
+//   singVertices:  The singular vertices.
+//   singIndices:   Rhe index of the singularities, where the actual fractional index is singIndices/N.
+// Return:
+//   Whether or not the file was written successfully
+bool IGL_INLINE read_singularities(const std::string &fileName,
+                                   int& N,
+                                   Eigen::VectorXi& singVertices,
+                                   Eigen::VectorXi& singIndices)
+{
+  try
+  {
+    std::ifstream f(fileName);
+    int numSings;
+    f >> N;
+    f >> numSings;
+
+    singVertices = Eigen::VectorXi::Zero(numSings);
+    singIndices = Eigen::VectorXi::Zero(numSings);
+    
+    for (int i=0;i<numSings;i++)
+      f >> singVertices.coeffRef(i)>> singIndices.coeffRef(i);
+    
+    f.close();
+    return f.fail();
+  }
+  catch (std::exception e)
+  {
+    return false;
+  }
+}
+
+
 	// Reads a list of singularities from a file
 	// Inputs:
 	//   fileName: The to be loaded file.

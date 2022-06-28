@@ -17,6 +17,7 @@
 #include <igl/local_basis.h>
 #include <igl/per_face_normals.h>
 #include <igl/edge_topology.h>
+#include <igl/boundary_loop.h>
 #include <igl/triangle_triangle_adjacency.h>
 
 namespace directional{
@@ -30,11 +31,16 @@ public:
   
   //Topological quantities
   Eigen::MatrixXi EF, FE, EV,TT;
+  Eigen::VectorXi innerEdges, boundEdges;
   
   //Geometric quantities
   Eigen::MatrixXd faceNormals;
   Eigen::MatrixXd Bx,By;  //local basis vectors per face
   Eigen::MatrixXd barycenters;
+  int eulerChar;
+  int numGenerators;
+  
+  std::vector<std::vector<int>> boundaryLoops;
   
   TriMesh(){}
   ~TriMesh(){}
@@ -52,9 +58,21 @@ public:
     } else{
       EV=_EV; FE=_FE; EF=_EF;
     }
+    std::vector<int> innerEdgesList, boundEdgesList;
+    for (int i=0;i<EF.rows();i++)
+      if ((EF(i,1)==-1)||(EF(i,0)==-1))
+        boundEdgesList.push_back(i);
+      else
+        innerEdgesList.push_back(i);
+    
+    innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
+    boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());
     igl::barycenter(V, F, barycenters);
     igl::local_basis(V, F, Bx, By, faceNormals);
     igl::triangle_triangle_adjacency(F, TT);
+    igl::boundary_loop(F, boundaryLoops);
+    eulerChar = V.rows() - EV.rows() + F.rows();
+    numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
   }
 
 };
