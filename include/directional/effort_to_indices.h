@@ -38,6 +38,7 @@ namespace directional
     using namespace std;
     Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
         
+    //cout<<"dIndices: "<<dIndices<<endl;
     indices.conservativeResize(dIndices.size());
     for (int i=0;i<indices.size();i++)
       indices(i)=std::round(dIndices(i));
@@ -48,7 +49,7 @@ namespace directional
   // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
   IGL_INLINE void effort_to_indices(directional::CartesianField& field)
   {
-    field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
+    //field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
     Eigen::VectorXd effortInner(field.innerAdjacencies.size());
     for (int i=0;i<field.innerAdjacencies.size();i++)
       effortInner(i)=field.effort(field.innerAdjacencies(i));

@@ -50,13 +50,14 @@ void setup_line_texture()
 void update_viewer()
 {
   if (viewingMode==FIELD){
-  
     viewer.set_active(true,0);
     viewer.set_active(false,1);
+    viewer.toggle_texture(false,1);
   } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
     viewer.set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull,1);
     viewer.set_active(true,1);
     viewer.set_active(false,0);
+    viewer.toggle_texture(true,1);
   }
 }
 
@@ -119,7 +120,7 @@ int main()
   //viewer cut (texture) and whole (field) meshes
   viewer.set_mesh(meshWhole,0);
   viewer.set_mesh(meshCut,1);
-  viewer.set_field(rawField);
+  viewer.set_field(combedField,directional::DirectionalViewer::indexed_glyph_colors(combedField.extField, false));
   viewer.set_seams(combedField.matching);
   viewer.set_texture(texture_R,texture_G,texture_B,1);
   

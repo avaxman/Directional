@@ -138,6 +138,7 @@ namespace directional
     cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singCycles, intData.face2cut);
     combing(field, combedField, intData.face2cut);
     
+    
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;

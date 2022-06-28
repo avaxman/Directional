@@ -21,7 +21,7 @@ namespace directional
   bool writeOBJ(const std::string& fileName,
                 const directional::TriMesh& mesh,
                 const Eigen::MatrixXd& TC,
-                const Eigen::MatrixXd& FTC)
+                const Eigen::MatrixXi& FTC)
   {
     Eigen::MatrixXd emptyMat;
     return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);

@@ -79,24 +79,28 @@ namespace directional
       curlNorm(i)= sqrt(minCurl);
       
       //computing the full effort for 0->indexMinFromZero, and readjusting the matching to fit principal effort
-      /*double currEffort=0;
+      Complex freeCoeff(1,0);
+      rawField.effort.resize(rawField.matching.size());
       for (int j = 0; j < rawField.N; j++) {
-        RowVector3d vecjf = rawField.block(EF(i, 0), 3*j, 1, 3);
-        Complex vecjfc = Complex(vecjf.dot(B1.row(EF(i, 0))), vecjf.dot(B2.row(EF(i, 0))));
-        RowVector3d vecjg = rawField.block(EF(i, 1), 3 * ((matching(i)+j+N)%N), 1, 3);
-        Complex vecjgc = Complex(vecjg.dot(B1.row(EF(i, 1))), vecjg.dot(B2.row(EF(i, 1))));
-        Complex transvecjfc = vecjfc*edgeTransport(i);
+        //RowVector3d vecjf = rawField.extField.block(rawField.adjSpaces(i, 0), 3*j, 1, 3);
+        RowVector2d vecjf = rawField.intField.block(rawField.adjSpaces(i, 0), 2 * j, 1, 2);
+        Complex vecjfc = Complex(vecjf(0),vecjf(1));
+        RowVector2d vecjg = rawField.intField.block(rawField.adjSpaces(i, 1), 2 * (rawField.matching(i)+j+rawField.N)%rawField.N, 1, 2);
+        Complex vecjgc = Complex(vecjg(0),vecjg(1));
+        Complex transvecjfc = vecjfc*rawField.connection(i);
+        freeCoeff *= (vecjgc / transvecjfc);
         //cout<<"transvecjfc, vecjgc: "<<transvecjfc<<","<<vecjgc<<endl;
-        currEffort+= arg(vecjgc / transvecjfc);
+        //currEffort+= arg(vecjgc / transvecjfc);
         //cout<<"arg(vecjgc / transvecjfc): "<<arg(vecjgc / transvecjfc)<<endl;
       }
       
-      effort(i) = currEffort;
-      */
+      rawField.effort(i) = arg(freeCoeff);
+      
     }
     
     //Getting final singularities and their indices
     effort_to_indices(rawField);
+    //cout<<"rawField.singCycles: "<<rawField.singCycles<<endl;
   }
   
   //version with representative vector (for N-RoSy) as input.

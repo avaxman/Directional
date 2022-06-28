@@ -15,19 +15,16 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/local_basis.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/edge_topology.h>
 #include <igl/min_quad_with_fixed.h>
 #include <igl/bounding_box_diagonal.h>
 #include <directional/tree.h>
-#include <directional/representative_to_raw.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
 #include <directional/branched_gradient.h>
 #include <directional/iterative_rounding.h>
-#include <igl/per_face_normals.h>
+
 
 namespace directional
 {
@@ -44,13 +41,10 @@ namespace directional
   // Output:
   //  NFunction:    #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
   // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
-  IGL_INLINE bool integrate(const Eigen::MatrixXd& wholeV,
-                            const Eigen::MatrixXi& wholeF,
-                            const Eigen::MatrixXi& FE,
-                            const Eigen::MatrixXd rawField,
+  IGL_INLINE bool integrate(const directional::TriMesh& meshWhole,
+                            const directional::FaceField& field,
                             IntegrationData& intData,
-                            const Eigen::MatrixXd& cutV,
-                            const Eigen::MatrixXi& cutF,
+                            const directional::TriMesh& meshCut,
                             Eigen::MatrixXd& NFunction,
                             Eigen::MatrixXd& NCornerFunctions)
   
@@ -59,44 +53,44 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    VectorXd edgeWeights = VectorXd::Constant(FE.maxCoeff() + 1, 1.0);
+    VectorXd edgeWeights = VectorXd::Constant(meshWhole.FE.maxCoeff() + 1, 1.0);
     //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
     
     int numVars = intData.linRedMat.cols();
     //constructing face differentials
     vector<Triplet<double> >  d0Triplets;
     vector<Triplet<double> > M1Triplets;
-    VectorXd gamma(3 * intData.N * wholeF.rows());
-    for(int i = 0; i < cutF.rows(); i++)
+    VectorXd gamma(3 * intData.N * meshWhole.F.rows());
+    for(int i = 0; i < meshCut.F.rows(); i++)
     {
       for(int j = 0; j < 3; j++)
       {
         for(int k = 0; k < intData.N; k++)
         {
-          d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * cutF(i, j) + k, -1.0);
-          d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * cutF(i, (j + 1) % 3) + k, 1.0);
-          Vector3d edgeVector = (cutV.row(cutF(i, (j + 1) % 3)) - cutV.row(cutF(i, j))).transpose();
-          gamma(3 * intData.N * i + intData.N * j + k) = (rawField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0);
-          M1Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, 3 * intData.N * i + intData.N * j + k, edgeWeights(FE(i, j)));
+          d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, j) + k, -1.0);
+          d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, (j + 1) % 3) + k, 1.0);
+          Vector3d edgeVector = (meshCut.V.row(meshCut.F(i, (j + 1) % 3)) - meshCut.V.row(meshCut.F(i, j))).transpose();
+          gamma(3 * intData.N * i + intData.N * j + k) = (field.extField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0);
+          M1Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, 3 * intData.N * i + intData.N * j + k, edgeWeights(meshWhole.FE(i, j)));
         }
       }
     }
-    SparseMatrix<double> d0(3 * intData.N * wholeF.rows(), intData.N * cutV.rows());
+    SparseMatrix<double> d0(3 * intData.N * meshWhole.F.rows(), intData.N * meshCut.V.rows());
     d0.setFromTriplets(d0Triplets.begin(), d0Triplets.end());
-    SparseMatrix<double> M1(3 * intData.N * wholeF.rows(), 3 * intData.N * wholeF.rows());
+    SparseMatrix<double> M1(3 * intData.N * meshWhole.F.rows(), 3 * intData.N *  meshWhole.F.rows());
     M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
     SparseMatrix<double> d0T = d0.transpose();
     
     //creating face vector mass matrix
     std::vector<Triplet<double>> MxTri;
     VectorXd darea;
-    igl::doublearea(cutV,cutF,darea);
-    for (int i=0;i<cutF.rows();i++)
+    igl::doublearea(meshCut.V,meshCut.F,darea);
+    for (int i=0;i<meshCut.F.rows();i++)
       for (int j=0;j<intData.N;j++)
         for (int k=0;k<3;k++)
           MxTri.push_back(Triplet<double>(i*3*intData.N+3*j+k,3*i*intData.N+3*j+k,darea(i)/2.0));
     
-    SparseMatrix<double> Mx(3*intData.N*cutF.rows(), 3*intData.N*cutF.rows());
+    SparseMatrix<double> Mx(3*intData.N*meshCut.F.rows(), 3*intData.N*meshCut.F.rows());
     Mx.setFromTriplets(MxTri.begin(), MxTri.end());
     
     //The variables that should be fixed in the end
@@ -284,22 +278,22 @@ namespace directional
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     VectorXd NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    NFunction.resize(cutV.rows(), intData.N);
+    NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
       NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
     //nFunction = fullx;
     
     //allocating per corner
-    NCornerFunctions.resize(wholeF.rows(), intData.N*3);
-    for (int i=0;i<wholeF.rows();i++)
+    NCornerFunctions.resize(meshWhole.F.rows(), intData.N*3);
+    for (int i=0;i<meshWhole.F.rows();i++)
       for (int j=0;j<3;j++)
-        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(cutF(i,j));
+        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(meshCut.F(i,j));
     
     SparseMatrix<double> G;
-    MatrixXd FN;
-    igl::per_face_normals(cutV, cutF, FN);
-    branched_gradient(cutV,cutF, intData.N, G);
+    //MatrixXd FN;
+    //igl::per_face_normals(cutV, meshCut, FN);
+    branched_gradient(meshCut.V,meshCut.F, intData.N, G);
     //cout<<"cutF.rows(): "<<cutF.rows()<<endl;
     SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
@@ -310,7 +304,7 @@ namespace directional
         integerIndices(intData.n * i+j) = intData.n * intData.integerVars(i)+j;
     
     
-    bool success=directional::iterative_rounding(Efull, rawField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, FN, intData.N, intData.n, cutV, cutF, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
+    bool success=directional::iterative_rounding(Efull, field.extField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, meshCut.faceNormals, intData.N, intData.n, meshCut.V, meshCut.F, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
     
     
     if ((!success)&&(intData.verbose))
@@ -318,7 +312,7 @@ namespace directional
   
     //the results are packets of N functions for each vertex, and need to be allocated for corners
     NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
-    NFunction.resize(cutV.rows(), intData.N);
+    NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
       NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
@@ -329,10 +323,10 @@ namespace directional
     //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
     
     //allocating per corner
-    NCornerFunctions.resize(wholeF.rows(), intData.N*3);
-    for (int i=0;i<wholeF.rows();i++)
+    NCornerFunctions.resize(meshWhole.F.rows(), intData.N*3);
+    for (int i=0;i<meshWhole.F.rows();i++)
       for (int j=0;j<3;j++)
-        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(cutF(i,j)).array();
+        NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(meshCut.F(i,j)).array();
     
     return success;
     

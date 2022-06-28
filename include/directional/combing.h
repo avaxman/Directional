@@ -42,6 +42,9 @@ namespace directional
       faceIsCut.setZero();
     else
       faceIsCut=_faceIsCut;
+    
+    VectorXi spaceTurns(rawField.intField.rows());
+    
     //flood-filling through the matching to comb field
     //combedField.extField.conservativeResize(rawField.rows(), rawField.cols());
     //int N=rawField.cols()/3;
@@ -61,6 +64,8 @@ namespace directional
       combedIntField.block(currSpaceMatching.first, 0, 1, 2*(rawField.N-currSpaceMatching.second))=rawField.intField.block(currSpaceMatching.first, 2*currSpaceMatching.second, 1, 2*(rawField.N-currSpaceMatching.second));
       combedIntField.block(currSpaceMatching.first, 2*(rawField.N-currSpaceMatching.second), 1, 2*currSpaceMatching.second)=rawField.intField.block(currSpaceMatching.first, 0, 1, 2*currSpaceMatching.second);
       
+      spaceTurns(currSpaceMatching.first)=currSpaceMatching.second;
+      
       for (int i=0;i<3;i++){
         int nextMatching=(rawField.matching(rawField.oneRing(currSpaceMatching.first,i)));
         int nextFace=(rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),1) : rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0));
@@ -74,6 +79,14 @@ namespace directional
     }while (!spaceMatchingQueue.empty());
     
     combedField.set_intrinsic_field(combedIntField);
+    combedField.matching.resize(rawField.adjSpaces.rows());
+    //giving combed matching
+    for (int i=0;i<rawField.adjSpaces.rows();i++){
+      if ((rawField.adjSpaces(i,0)==-1)||(rawField.adjSpaces(i,1)==-1))
+        combedField.matching(i)=-1;
+      else
+        combedField.matching(i)=(spaceTurns(rawField.adjSpaces(i,0))-spaceTurns(rawField.adjSpaces(i,1))+rawField.matching(i)+1000*rawField.N)%rawField.N;
+    }
   }
 
 
