@@ -355,8 +355,7 @@ namespace directional
       
     }
     
-    void IGL_INLINE set_isolines(const Eigen::MatrixXd& cutV,
-                                 const Eigen::MatrixXi& cutF,
+    void IGL_INLINE set_isolines(const directional::TriMesh& cutMesh,
                                  const Eigen::MatrixXd& vertexFunction,
                                  const int meshNum=0,
                                  const double sizeRatio=0.1)
@@ -367,9 +366,9 @@ namespace directional
       Eigen::MatrixXi isoE, isoOrigE;
       Eigen::VectorXi funcNum;
       
-      directional::branched_isolines(cutV, cutF, vertexFunction, isoV, isoE, isoOrigE, isoN, funcNum);
+      directional::branched_isolines(cutMesh.V, cutMesh.F, vertexFunction, isoV, isoE, isoOrigE, isoN, funcNum);
       
-      double l = sizeRatio*igl::avg_edge_length(cutV, cutF);
+      double l = sizeRatio*igl::avg_edge_length(cutMesh.V, cutMesh.F);
       
       Eigen::MatrixXd VIso, CIso;
       Eigen::MatrixXi FIso;
@@ -380,7 +379,7 @@ namespace directional
       for (int i=0;i<funcNum.size();i++)
         CFunc.row(i)=funcColors.row(funcNum(i));
       
-      directional::bar_chains(cutV, cutF, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
+      directional::bar_chains(cutMesh.V, cutMesh.F, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
 
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);
