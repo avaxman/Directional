@@ -44,7 +44,7 @@ public:
     tangentStartAngles.resize(oneRing.rows(), oneRing.cols());
     for (int i=0;i<mesh->V.rows();i++){
       //TODO: boundaries
-      double angleSum = 2*igl::PI - mesh->GaussianCurvature;
+      double angleSum = 2*igl::PI - mesh->GaussianCurvature(i);
       tangentStartAngles.col(0).setZero();  //the first angle
       RowVector3d prevEdgeVector = mesh.EV(mesh.VE(i,0),1)-mesh.EV(mesh.VE(i,0),0);
       prevEdgeVector = (mesh.EV(mesh.VE(i,0),0) == i ? prevEdgeVector : -prevEdgeVector);
@@ -122,15 +122,40 @@ public:
    
     if (face.rows()==0){
       intField.resize(extField.rows(),2*N);
-      for (int i=0;i<N;i++)
-        intField.block(0,2*i,intField.rows(),2)<<(extField.block(0,3*i,extField.rows(),3).array()*mesh->Bx.array()).rowwise().sum(),(extField.block(0,3*i,extField.rows(),3).array()*mesh->By.array()).rowwise().sum();
+      for (int i=0;i<V.rows();i++){
+        for (int j=0;j<N;j++){
+          RowVector3d extVector = extField.block(i,3*j,1,3);
+          //projecting on all face tangents and choosing the closest
+          int closestVector=-1;
+          int maxCosDist = -3276700.0;
+          RowVector3d finalIntVector;
+          //TODO: handle boundaries
+          for (int k=0;k<mesh.valence(i);k++){
+            RowVector3d intVector = extVector-extVector.dot(mesh.faceNormals(mesh.VF(i,k)));
+            double cosDist=intVector.dot(extVector);
+            if (cosDist>maxCostDist){
+              maxCostDist = cosDist;
+              closestVector=k;
+              finalIntVector=intVector;
+            }
+          }
+          
+          //projecting to intrinsic coordinates in face
+          RowVector3d closestEdgeVector = mesh.EV(mesh.VE(closestVector,0),1)-mesh.EV(mesh.VE(closestVector,0),0);
+          closestEdgeVector = (mesh.EV(mesh.VE(closestVector,0),0) == closestVector ? closestEdgeVector : -closestEdgeVector);
+          double angleDiff = std::acos(closestEdgeVector.dot(finalIntVector)./closestEdgeVector.norm()/finalIntVector.norm());
+          std::complex<double> complexIntVector=finalIntVector.norm()*complex(exp(0,tangentStartAngles(closestVector+angleDiff)));
+          intField.block(i,2*j,1,2)=complexIntVector;
+        }
+      }
+        
+        
     } /*else {
       intField.resize(face.rows(),2*N);
       for (int i=0;i<N;i++)
         for (int j=0;j<face.rows();j++)
           intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->Bx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->By.row(face(j)).array()).sum();*/
-    
-    //TODO: project extrinsic vector on intrinsic face
+        
     }
   }
   
@@ -140,10 +165,21 @@ public:
     intField = _intField;
     
     //computing extrinsic field
+    //TODO: do the extFIeld properly and the angle scaling also.
     extField.conservativeResize(intField.rows(),intField.cols()*3/2);
     for (int i=0;i<intField.rows();i++)
-      for (int j=0;j<intField.cols();j+=2)
-        extField.block(i,3*j/2,1,3)=mesh->Bx.row(i)*intField(i,j)+mesh->By.row(i)*intField(i,j+1);
+      for (int j=0;j<intField.cols();j+=2){
+        vecAngle = log(std::complex<double>(intField(i,j),intField(i,j+1))).imag();
+        while (vecAngle<0.0) vecAngle+=2*igl::PI;
+        while (vecAngle>2*igl::PI) vecAngle-=2*igl::PI;
+        
+        //finding face
+        for (int k=0;k<mesh->valences(i)-1;k++)
+          if ((vecAngle>=tangentStartAngles(i,k))&&(vecAngle<=tangentStartAngles(i,k+1))
+              extField.block(i,3*j/2,1,3)=mesh->Bx.row(i)*intField(i,j)+mesh->By.row(i)*intField(i,j+1);
+            
+      }
+        
   }
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){

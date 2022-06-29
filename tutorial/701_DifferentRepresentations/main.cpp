@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
   directional::power_to_raw(powerFaceField, N, rawFaceField,true);
   directional::power_to_raw(powerVertexField, N, rawVertexField,true);
   
-  directional::principal_matching(rawFaceField);
-  directional::principal_matching(rawVertexField);
+  //directional::principal_matching(rawFaceField);
+  //directional::principal_matching(rawVertexField);
  
   viewer.set_mesh(mesh,0);
   viewer.set_mesh(mesh,1);
