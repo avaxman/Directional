@@ -13,6 +13,7 @@ option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
 option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
 option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
 option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
+option(TUTORIALS_CHAPTER7 "Compile chapter 7" ON)
 
 
 ### libIGL options:
@@ -90,5 +91,11 @@ endif()
 if(TUTORIALS_CHAPTER6)
   add_subdirectory("601_SubdivisionFields")
 endif()
+
+# Chapter 7
+if(TUTORIALS_CHAPTER7)
+  add_subdirectory("701_DifferentRepresentations")
+endif()
+
 
 

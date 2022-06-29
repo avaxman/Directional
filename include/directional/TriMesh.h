@@ -19,6 +19,7 @@
 #include <igl/edge_topology.h>
 #include <igl/boundary_loop.h>
 #include <igl/triangle_triangle_adjacency.h>
+#include <igl/gaussian_curvature.h>
 
 namespace directional{
 
@@ -38,6 +39,7 @@ public:
   Eigen::MatrixXd faceNormals;
   Eigen::MatrixXd Bx,By;  //local basis vectors per face
   Eigen::MatrixXd barycenters;
+  Eigen::MatrixXd GaussianCurvature;
   int eulerChar;
   int numGenerators;
   
@@ -99,6 +101,7 @@ public:
     igl::local_basis(V, F, Bx, By, faceNormals);
     igl::triangle_triangle_adjacency(F, TT);
     igl::boundary_loop(F, boundaryLoops);
+    igl::gaussian_curvature(V,F,GaussianCurvature);
     eulerChar = V.rows() - EV.rows() + F.rows();
     numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
   }
