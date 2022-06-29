@@ -1,20 +1,13 @@
 #include <iostream>
 #include <fstream>
-#include <igl/readOFF.h>
+#include <unordered_set>
 #include <igl/readOBJ.h>
-#include <igl/local_basis.h>
-#include <igl/avg_edge_length.h>
-#include <igl/is_border_vertex.h>
-#include <igl/adjacency_list.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/edge_topology.h>
-#include <igl/jet.h>
-#include <igl/barycenter.h>
-#include <igl/false_barycentric_subdivision.h>
+#include <directional/readOBJ.h>
+#include <directional/writeOBJ.h>
+#include <directional/TriMesh.h>
+#include <directional/FaceField.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
-#include <igl/edge_flaps.h>
 #include <directional/combing.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/write_raw_field.h>
@@ -24,38 +17,21 @@
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/directional_viewer.h>
-#include "tutorial_shared_path.h"
 #include <directional/cut_mesh_with_singularities.h>
-#include <unordered_set>
+#include "tutorial_shared_path.h"
+
 
 
 using namespace std;
 
-Eigen::VectorXi matchingCoarse, matchingFine, combedMatchingCoarse, combedMatchingFine, singVerticesCoarse, singVerticesFine, singIndicesCoarse, singIndicesFine;
-Eigen::VectorXd effortCoarse, effortFine, combedEffortCoarse, combedEffortFine;
-Eigen::MatrixXi FCoarse, FFine, FCutCoarse, FCutFine;
-Eigen::MatrixXi EVCoarse, EFCoarse, FECoarse,EVFine, EFFine, FEFine;
-
-Eigen::MatrixXd VCoarse, VCutCoarse, VFine, VCutFine;
-Eigen::MatrixXd CMeshCoarse, CFieldCoarse, CSingsCoarse, CSeamsCoarse, CMeshFine, CFieldFine, CSingsFine, CSeamsFine;
-Eigen::MatrixXd rawFieldCoarse, rawFieldFine;
-Eigen::MatrixXd combedFieldCoarse, combedFieldFine;
+directional::TriMesh meshCoarse, meshCutCoarse, meshFine, meshCutFine;
+directional::FaceField  rawFieldCoarse, rawFieldFine, combedFieldCoarse, combedFieldFine, powerField;
 Eigen::VectorXd curlCoarse, curlFine; // norm of curl per edge
-
 Eigen::MatrixXd cutReducedUVCoarse, cutFullUVCoarse, cornerWholeUVCoarse;
 Eigen::MatrixXd cutReducedUVFine, cutFullUVFine, cornerWholeUVFine;
 
-Eigen::MatrixXcd powerField;
-
-
 // The igl viewer
 directional::DirectionalViewer viewer;
-
-Eigen::VectorXi singVerticesOrig, singVerticesCF;
-Eigen::VectorXi singIndicesOrig, singIndicesCF;
-
-//for averaging curl to faces, for visualization
-Eigen::SparseMatrix<double> AE2FCoarse, AE2FFine;
 
 int N = 4;
 int targetLevel = 2;
@@ -98,9 +74,8 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
     case '5': viewingMode = FINE_CURL; break;
     case '6': viewingMode = FINE_PARAMETERIZATION; break;
     case 'W':
-      Eigen::MatrixXd emptyMat;
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/knight-coarse-param.obj", VCutCoarse, FCutCoarse, emptyMat, emptyMat, cutReducedUVCoarse, FCutCoarse);
-      igl::writeOBJ(TUTORIAL_SHARED_PATH "/knight-fine-param.obj", VCutFine, FCutFine, emptyMat, emptyMat, cutReducedUVFine, FCutFine);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/knight-coarse-param.obj", meshCutCoarse,  cutReducedUVCoarse, meshCutCoarse.F);
+      directional::writeOBJ(TUTORIAL_SHARED_PATH "/knight-fine-param.obj", meshCutFine,cutReducedUVFine, meshCutFine.F);
       break;
   }
   update_viewer();
@@ -108,20 +83,12 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 }
 
 // Parameterize a mesh from a field
-void parameterize_mesh(const Eigen::MatrixXd& VWhole,
-                       const Eigen::MatrixXi& FWhole,
-                       const Eigen::MatrixXi& EV,
-                       const Eigen::MatrixXi& EF,
-                       const Eigen::MatrixXi& FE,
-                       const Eigen::VectorXi& singVertices,
-                       const Eigen::MatrixXd& rawField,
-                       const Eigen::VectorXi& matching,
-                       Eigen::MatrixXd& VCut,
-                       Eigen::MatrixXi& FCut,
+void parameterize_mesh(const directional::TriMesh& wholeMesh,
+                       const directional::FaceField& rawField,
+                       directional::TriMesh& cutMesh,
                        Eigen::MatrixXd& cutFullUV)
 {
-  Eigen::MatrixXd combedField;
-  Eigen::VectorXi combedMatching;
+  directional::FaceField combedField;
 
   directional::IntegrationData intData(N);
   std::cout << "Setting up Integration" << std::endl;
@@ -130,11 +97,11 @@ void parameterize_mesh(const Eigen::MatrixXd& VWhole,
   intData.integralSeamless = false;
   intData.lengthRatio = 0.03;
 
-  directional::setup_integration(VWhole, FWhole, EV, EF, FE, rawField, matching, singVertices, intData, VCut, FCut, combedField, combedMatching);
+  directional::setup_integration(wholeMesh, rawField,intData, cutMesh, combedField);
 
   std::cout << "Integrating" << std::endl;
   Eigen::MatrixXd cornerWholeUV;
-  directional::integrate(VWhole, FWhole, FE, combedField, intData, VCut, FCut, cutFullUV, cornerWholeUV);
+  directional::integrate(wholeMesh, combedField, intData, cutMesh, cutFullUV, cornerWholeUV);
   std::cout << "Done!" << std::endl;
 
   cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2).eval();
@@ -155,10 +122,8 @@ int main(int argc, char *argv[])
   keyAction("5", "Show curl of fine field.");
   keyAction("6", "Show fine parameterization.");
   
-  igl::readOBJ(TUTORIAL_SHARED_PATH "/bunny1k.obj", VCoarse, FCoarse);
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/bunny1k.obj", meshCoarse);
  
-  igl::edge_topology(VCoarse, FCoarse, EVCoarse, FECoarse, EFCoarse);
-
   //Reducing curl from coarse mesh
   Eigen::VectorXi b;
   Eigen::MatrixXd bc;
@@ -166,15 +131,15 @@ int main(int argc, char *argv[])
   bc.resize(0, 3);
 
   cout<<"Computing initial field"<<endl;
-  directional::power_field(VCoarse, FCoarse, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N, powerField);
-  powerField.array()/=powerField.cwiseAbs().array();
-  directional::power_to_raw(VCoarse,FCoarse,powerField, N, rawFieldCoarse);
+  powerField.init_field(meshCoarse, POWER_FIELD, N);
+  directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N);
+  directional::power_to_raw(powerField, N, rawFieldCoarse, true);
    
   // Precompute polycurl reduction data.
   b.resize(1); b << 0;
-  bc.resize(1, 6); bc << rawFieldCoarse.row(0).head(6);
+  bc.resize(1, 6); bc << rawFieldCoarse.extField.row(0).head(6);
   Eigen::VectorXi blevel; blevel.resize(1); b << 1;
-  directional::polycurl_reduction_precompute(VCoarse, FCoarse, b, bc, blevel, rawFieldCoarse, pcrdata);
+  directional::polycurl_reduction_precompute(meshCoarse, b, bc, blevel, rawFieldCoarse, pcrdata);
   
   printf("--Improving Curl--\n");
   //Performing 60 Batches of curl reduction
@@ -189,52 +154,49 @@ int main(int argc, char *argv[])
     params.wSmooth *= params.redFactor_wsmooth;
   }
   
-  directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, rawFieldCoarse, matchingCoarse, effortCoarse, curlCoarse, singVerticesCoarse, singIndicesCoarse);
-  directional::combing(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, rawFieldCoarse, matchingCoarse, combedFieldCoarse);
-  directional::curl_matching(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, combedFieldCoarse, combedMatchingCoarse, combedEffortCoarse, curlCoarse, singVerticesCoarse, singIndicesCoarse);
+  directional::curl_matching(rawFieldCoarse,  curlCoarse);
+  directional::combing(rawFieldCoarse,combedFieldCoarse);
+  directional::curl_matching(combedFieldCoarse, curlCoarse);
   double curlMax = curlCoarse.maxCoeff();
   std::cout << "Coarse optimized absolute curl: " << curlMax << std::endl;
   
   cout<<"Doing coarse parameterization"<<endl;
-  parameterize_mesh(VCoarse, FCoarse, EVCoarse, EFCoarse, FECoarse, singVerticesCoarse, rawFieldCoarse, matchingCoarse, VCutCoarse, FCutCoarse, cutFullUVCoarse);
+  parameterize_mesh(meshCoarse, rawFieldCoarse,meshCutCoarse, cutFullUVCoarse);
   
   cout<<"Doing field subdivision"<<endl;
   //Subdividing field and mesh. Curl precision should result in very low curl on the fine mesh as well
-  directional::subdivide_field(VCoarse, FCoarse, rawFieldCoarse, targetLevel,  VFine, FFine, rawFieldFine);
+  directional::subdivide_field(rawFieldCoarse, targetLevel,  meshFine, rawFieldFine);
   
-  igl::edge_topology(VFine, FFine, EVFine, FEFine, EFFine);
-  directional::curl_matching(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, effortFine, curlFine, singVerticesFine, singIndicesFine);
-  directional::combing(VFine, FFine, EVFine, EFFine, FEFine, rawFieldFine, matchingFine, combedFieldFine);
-  directional::curl_matching(VFine, FFine, EVFine, EFFine, FEFine, combedFieldFine, combedMatchingFine, combedEffortFine, curlFine, singVerticesCoarse, singIndicesCoarse);
+  directional::curl_matching(rawFieldFine, curlFine);
+  directional::combing(rawFieldFine,combedFieldFine);
+  directional::curl_matching(combedFieldFine, curlFine);
   curlMax = curlFine.maxCoeff();
   std::cout << "Fine subdivided absolute curl: " << curlMax << std::endl;
   
   cout<<"Doing fine parameterization"<<endl;
-  parameterize_mesh(VFine, FFine, EVFine, EFFine, FEFine, singVerticesFine, rawFieldFine, matchingFine, VCutFine, FCutFine, cutFullUVFine);
+  parameterize_mesh(meshFine, rawFieldFine, meshCutFine, cutFullUVFine);
   
   cout<<"Done!"<<endl;
   
   //coarse mesh
-  viewer.set_mesh(VCoarse, FCoarse, 0);
+  viewer.set_mesh(meshCoarse, 0);
   viewer.set_field(combedFieldCoarse,Eigen::MatrixXd(),0);
-  viewer.set_singularities(singVerticesCoarse,singIndicesCoarse,0);
-  viewer.set_seams(combedMatchingCoarse,0);
+  viewer.set_seams(combedFieldCoarse.matching,0);
   viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(),0);
   
   //fine mesh
-  viewer.set_mesh(VFine, FFine, 1);
+  viewer.set_mesh(meshFine, 1);
   viewer.set_field(combedFieldFine,Eigen::MatrixXd(),1);
-  viewer.set_singularities(singVerticesFine,singIndicesFine,1);
-  viewer.set_seams(combedMatchingFine,1);
+  viewer.set_seams(combedFieldFine.matching,1);
   viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), 1);
   
   //coarse texture mesh
-  viewer.set_mesh(VCutCoarse, FCutCoarse,2);
+  viewer.set_mesh(meshCutCoarse,2);
   viewer.set_uv(cutFullUVCoarse,2);
   viewer.toggle_texture(true,2);
   
   //coarse texture mesh
-  viewer.set_mesh(VCutFine, FCutCoarse, 3);
+  viewer.set_mesh(meshCutFine, 3);
   viewer.set_uv(cutFullUVFine,3);
   viewer.toggle_texture(true,3);
   

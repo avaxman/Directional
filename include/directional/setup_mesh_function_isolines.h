@@ -17,6 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <Eigen/Sparse>
+#include <directional/TriMesh.h>
 #include <directional/polygonal_edge_topology.h>
 #include <directional/setup_integration.h>
 
@@ -47,13 +48,12 @@ struct MeshFunctionIsolinesData{
 //  intData: IntegrationData object from the integrator
 // Output:
 //  mfiData: MeshFunctionIsolinesData object suitable to pass to the mesher
-void setup_mesh_function_isolines(const Eigen::MatrixXd& cutV,
-                                  const Eigen::MatrixXi& cutF,
+void setup_mesh_function_isolines(const directional::TriMesh& meshCut,
                                   const IntegrationData& intData,
                                   MeshFunctionIsolinesData& mfiData){
   
-  mfiData.cutV=cutV;
-  mfiData.cutF=cutF;
+  mfiData.cutV=meshCut.V;
+  mfiData.cutF=meshCut.F;
   mfiData.vertexNFunction = intData.nVertexFunction;
   bool signSymmetry=(intData.N%2==0);
   Eigen::SparseMatrix<double> orig2CutMatFull=intData.vertexTrans2CutMat*intData.linRedMat*intData.singIntSpanMat*intData.intSpanMat;

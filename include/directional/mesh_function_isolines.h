@@ -17,6 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <Eigen/Sparse>
+#include <directional/TriMesh.h>
 #include <directional/polygonal_edge_topology.h>
 #include <directional/FunctionMesh.h>
 #include <directional/setup_mesh_function_isolines.h>
@@ -35,11 +36,7 @@ namespace directional{
 //  VOutput:      all vertex coordinates of the output polygonal mesh
 //  DOutput:     |FOutput| vector of face valences
 //  FOutput:      |FOutput| x |max(DOutput)| vertex indices of the face polygons, indexed into VOutput.
-bool mesh_function_isolines(const Eigen::MatrixXd& origV,
-                            const Eigen::MatrixXi& origF,
-                            const Eigen::MatrixXi& EV,
-                            const Eigen::MatrixXi& EF,
-                            const Eigen::MatrixXi& FE,
+bool mesh_function_isolines(const directional::TriMesh& origMesh,
                             const MeshFunctionIsolinesData& mfiData,
                             const bool verbose,
                             Eigen::MatrixXd& VOutput,
@@ -52,10 +49,10 @@ bool mesh_function_isolines(const Eigen::MatrixXd& origV,
   Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
   Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
   Eigen::MatrixXd FEsPoly;
-  hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origF.rows(),3), origF,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
-  hedra::dcel(Eigen::VectorXi::Constant(origF.rows(),3),origF,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
+  hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
+  hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
   
-  TMesh.fromHedraDCEL(Eigen::VectorXi::Constant(origF.rows(),3),origV, origF, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
+  TMesh.fromHedraDCEL(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.V, origMesh.F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
   
   if (verbose){
     std::cout<<"Generating mesh"<<std::endl;
