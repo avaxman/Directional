@@ -140,11 +140,18 @@ public:
     vertexNormals=Eigen::MatrixXd::Zero(V.rows(),3);
     for (int i=0;i<F.rows();i++)
       for (int j=0;j<3;j++)
-        vertexNormals.row(F(i,j)).array()+=faceNormals.row(i)*faceAreas(i);
+        vertexNormals.row(F(i,j)).array()+=faceNormals.row(i).array()*faceAreas(i);
     
     vertexNormals.rowwise().normalize();
     
     //computing local basis that aligns with the first projected edge of each triangle
+    VBx.resize(V.rows(),3);
+    VBy.resize(V.rows(),3);
+    for (int i=0;i<V.rows();i++){
+      Eigen::RowVector3d firstEdge = V.row(HV(nextH(VH(i))))-V.row(i);
+      VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals))*vertexNormals;
+      VBy.row(i)=vertexNormals.row(i).cross(VBx.row(i));
+    }
     
   }
 

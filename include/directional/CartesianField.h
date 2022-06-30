@@ -19,6 +19,8 @@ namespace directional{
 #define POWER_FIELD 1
 #define POLYVECTOR_FIELD 2
 
+enum class discTangTypeEnum {BASE_CLASS, FACE_SPACES, VERTEX_SPACES};
+
 class CartesianField{
 public:
   
@@ -27,7 +29,11 @@ public:
   int N;  //degree of field (how many vectors are in each point);
   int fieldType;       //What the field actually represents  (for instance, either a raw field or a power/polyvector field)
   
-  Eigen::MatrixXd source;  //as barycentric coordinates in each face.
+  //In case some methods are only defined for several classes
+  virtual static discTangTypeEnum discTangType(){return BASE_CLASS;}
+  
+  Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
+  Eigen::MatrixXd normals;  //the normals to the tangent spaces
   Eigen::VectorXi face;
   
   //TODO intField being a single vector in case of power field
@@ -48,7 +54,7 @@ public:
   Eigen::VectorXd cycleCurvatures;  //The Gaussian curvature of dual cycles.
   Eigen::VectorXi matching;
   Eigen::VectorXd effort;
-  Eigen::VectorXi singCycles;
+  Eigen::VectorXi singElements;
   Eigen::VectorXi singIndices;
   Eigen::VectorXi innerAdjacencies;
   Eigen::VectorXi element2Cycle;
@@ -63,12 +69,8 @@ public:
     N=_N;
   };
   
-  void virtual IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
-                                              const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
-                                              const Eigen::VectorXi& _face=Eigen::VectorXi()){
+  void virtual IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
     extField=_extField;
-    source = _source;
-    face = _face;
     intField = extField;  //the basic version
     N = extField.cols()/3;
     
@@ -100,7 +102,7 @@ public:
     return extDirectionals;
   }
   
-  void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singCycles,
+  void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singElements,
                                             const Eigen::VectorXi& _singIndices){}
   
 

@@ -17,7 +17,7 @@
 
 using namespace std;
 
-directional::TriMesh mesh
+directional::TriMesh mesh;
 directional::FaceField rawFaceField, powerFaceField;
 directional::VertexField rawVertexField, powerVertexField;
 
@@ -92,7 +92,6 @@ int main(int argc, char *argv[])
   
   viewer.set_field(rawFaceField,Eigen::MatrixXd(),0, 0.9, 0, 0.3);
   viewer.set_field(rawVertexField,Eigen::MatrixXd(),1, 0.9, 0, 0.3);
-  
   
   // Update view
   update_viewer();

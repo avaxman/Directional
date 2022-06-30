@@ -21,10 +21,14 @@ namespace directional{
 
 class VertexField: public CartesianField{
 public:
+  
+  Eigen::MatrixXd tangentStartAngles;  //where each edge begins on the intrinsic space
     
   VertexField(){}
   VertexField(const TriMesh& _mesh):CartesianField(_mesh){}
   ~VertexField(){}
+  
+  virtual static discTangTypeEnum discTangType(){return VERTEX_SPACES;}
   
   void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     
@@ -36,7 +40,9 @@ public:
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EV;
     oneRing = mesh->VE;
-    valence = mesh->vertexValence;
+    Eigen::VectorXi valence = mesh->vertexValence;
+    sources = mesh->V;
+    normals = mesh->vertexNormals;
     intField.conservativeResize(mesh->V.rows(),2*N);
     extField.conservativeResize(mesh->V.rows(),3*N);
     
@@ -46,12 +52,12 @@ public:
       //TODO: boundaries
       double angleSum = 2*igl::PI - mesh->GaussianCurvature(i);
       tangentStartAngles.col(0).setZero();  //the first angle
-      RowVector3d prevEdgeVector = mesh.EV(mesh.VE(i,0),1)-mesh.EV(mesh.VE(i,0),0);
-      prevEdgeVector = (mesh.EV(mesh.VE(i,0),0) == i ? prevEdgeVector : -prevEdgeVector);
+      Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->EV(mesh->VE(i,0),1))-mesh->V.row(mesh->EV(mesh->VE(i,0),0));
+      prevEdgeVector = (mesh->EV(mesh->VE(i,0),0) == i ? prevEdgeVector : -prevEdgeVector);
       for (int j=1;j<valence(i);j++){
-        RowVector3d currEdgeVector = mesh.EV(mesh.VE(i,j),1)-mesh.EV(mesh.VE(i,j),0);
-        currEdgeVector = (mesh.EV(mesh.VE(i,j),0) == i ? currEdgeVector : -currEdgeVector);
-        angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector));
+        Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->EV(mesh->VE(i,j),1))-mesh->V.row(mesh->EV(mesh->VE(i,j),0));
+        currEdgeVector = (mesh->EV(mesh->VE(i,j),0) == i ? currEdgeVector : -currEdgeVector);
+        double angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector));
         tangentStartAngles(i,j)=tangentStartAngles(i,j-1)+2*igl::PI*angleDiff/angleSum;
       }
     }
@@ -84,40 +90,37 @@ public:
     stiffnessWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
     
     //cotangent weights
-    Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh.F.rows(),3);
-    for (int i=0;i<mesh.F.rows();i++){
+    Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh->F.rows(),3);
+    for (int i=0;i<mesh->F.rows();i++){
       for (int j=0;j<3;j++){
-        RowVector3d vec12 = mesh.V(mesh.F(i,(j+1)%3))-mesh.V(mesh.F(i,j));
-        RowVector3d vec13 = mesh.V(mesh.F(i,(j+2)%3))-mesh.V(mesh.F(i,j));
-        cosAngle = vec12.dot(vec13);
-        sinAngle = sqrt(vec12.squaredNorm()*vec13*squaredNorm()-cosAngle);
-        if (std::abs(sinAngle))>10e-7) //otherwise defaulting to zero
+        Eigen::RowVector3d vec12 = mesh->V.row(mesh->F(i,(j+1)%3))-mesh->V.row(mesh->F(i,j));
+        Eigen::RowVector3d vec13 = mesh->V.row(mesh->F(i,(j+2)%3))-mesh->V.row(mesh->F(i,j));
+        double cosAngle = vec12.dot(vec13);
+        double sinAngle = sqrt(vec12.squaredNorm()*vec13.squaredNorm()-cosAngle);
+        if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
           faceCotWeights(i,j) = cosAngle/sinAngle;
         
-        stiffnessWeights(FE(i,j))+=0.5*faceCotWeights(i,j);
+        stiffnessWeights(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
       }
     }
     
     //masses are vertex voronoi areas
-    Eigen::MatrixXd dAreas
+    Eigen::MatrixXd dAreas;
     igl::doublearea(mesh->V,mesh->F,dAreas);
-    massWeights = Eigen::VertexXd::Zero(mesh.V.rows());
-    for (int i=0;i<mesh.F.rows();i++)
-      for (int j=0;j<mesh.V.rows();j++)
-        massWeights(F(i,j)) = dAreas(i)/6.0;
+    massWeights = Eigen::VectorXd::Zero(mesh->V.rows());
+    for (int i=0;i<mesh->F.rows();i++)
+      for (int j=0;j<mesh->V.rows();j++)
+        massWeights(mesh->F(i,j)) = dAreas(i)/6.0;
     
     
   }
   
-  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
-                                      const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
-                                      const Eigen::VectorXi& _face=Eigen::VectorXi()){
+  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
   
     assert(_extField.cols()==3*N);
     
     extField=_extField;
-    source = _source;
-    face = _face;
+    
     
     extField.conservativeResize(intField.rows(),intField.cols()*3/2);
     for (int i=0;i<intField.rows();i++)
@@ -157,17 +160,11 @@ public:
           double angleDiff = std::acos(closestEdgeVector.dot(finalIntVector)./closestEdgeVector.norm()/finalIntVector.norm());
           std::complex<double> complexIntVector=finalIntVector.norm()*complex(exp(0,tangentStartAngles(closestVector+angleDiff)));
           intField.block(i,2*j,1,2)=complexIntVector;
-        }*/
+        }
       }
         
         
-    } /*else {
-      intField.resize(face.rows(),2*N);
-      for (int i=0;i<N;i++)
-        for (int j=0;j<face.rows();j++)
-          intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->Bx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->By.row(face(j)).array()).sum();*/
-        
-    }
+    }*/
   }
   
 void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
@@ -228,12 +225,12 @@ Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& 
         vertexIndices(L[j][k])=0;
       }*/
     
-    singCycles.resize(singCounter);
+    singElements.resize(singCounter);
     singIndices.resize(singCounter);
     singCounter=0;
     for (int i=0;i<mesh->F.rows();i++){
       if (faceIndices(i)){
-        singCycles(singCounter)=i;
+        singElements(singCounter)=i;
         singIndices(singCounter++)=faceIndices(i);
       }
     }

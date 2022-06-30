@@ -21,7 +21,7 @@
 #include <directional/vertex_highlights.h>
 #include <directional/streamlines.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 #include <igl/edge_topology.h>
 
 
@@ -41,7 +41,7 @@ namespace directional
   private:
     std::vector<const TriMesh*> meshList;  //meshes that are being viewed
 
-    std::vector<const FaceField*> fieldList;
+    std::vector<const CartesianField*> fieldList;
     std::vector<Eigen::MatrixXd> fieldColors;
     std::vector<directional::StreamlineData> slData;
     std::vector<directional::StreamlineState> slState;
@@ -176,7 +176,7 @@ namespace directional
       set_field_colors(glyphColors, meshNum);
     }
     
-    void IGL_INLINE set_field(const FaceField& _field,
+    void IGL_INLINE set_field(const CartesianField& _field,
                               const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                               const int meshNum=0,
                               const double sizeRatio = 0.9,
@@ -195,13 +195,26 @@ namespace directional
       
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      directional::glyph_lines_mesh(meshList[meshNum]->V, meshList[meshNum]->F, meshList[meshNum]->EF, fieldList[meshNum]->extField, fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity, offsetRatio);
+      /*const Eigen::MatrixXd& sources,
+       const Eigen::MatrixXi& normals,
+       const Eigen::MatrixXi& adjSpaces,
+       const Eigen::MatrixXd& extField,
+       const Eigen::MatrixXd &glyphColors,
+       const double sizeRatio,
+       const double avgScale,
+       Eigen::MatrixXd &fieldV,
+       Eigen::MatrixXi &fieldF,
+       Eigen::MatrixXd &fieldC,
+       
+       const int sparsity=0,
+       const double offsetRatio = 0.2)*/
+      directional::glyph_lines_mesh(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity, offsetRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
       
-      set_singularities(fieldList[meshNum]->singCycles,
+      set_singularities(fieldList[meshNum]->singElements,
                         fieldList[meshNum]->singIndices,
                         meshNum);
     }
@@ -224,7 +237,7 @@ namespace directional
       //TODO: something more efficient than feeding the entire field again
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      directional::glyph_lines_mesh(meshList[meshNum]->V, meshList[meshNum]->F, meshList[meshNum]->EF, fieldList[meshNum]->extField, fieldColors[meshNum], VField, FField, CField,sizeRatio, sparsity);
+      directional::glyph_lines_mesh(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity);
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -232,14 +245,14 @@ namespace directional
     }
     
     
-    void IGL_INLINE set_singularities(const Eigen::VectorXi& singVertices,
+    void IGL_INLINE set_singularities(const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
                                       const int meshNum=0,
                                       const double radiusRatio=1.25)
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(meshList[meshNum]->V, meshList[meshNum]->F, fieldList[meshNum]->N, singVertices, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
+      directional::singularity_spheres(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
@@ -318,7 +331,8 @@ namespace directional
         slData.resize(meshNum+1);
         slState.resize(meshNum+1);
       }
-      directional::streamlines_init(*(fieldList[meshNum]), seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      assert(fieldList[meshNum]->discTangType()==discTangTypeEnum::FACE_SPACES);
+      directional::streamlines_init(*((directional::FaceField*)fieldList[meshNum]), seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }
     

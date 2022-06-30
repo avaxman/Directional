@@ -19,8 +19,12 @@
 
 namespace directional{
 
+
+
 class FaceField: public CartesianField{
 public:
+  
+  virtual static discTangTypeEnum discTangType(){return FACE_SPACES;}
     
   FaceField(){}
   FaceField(const TriMesh& _mesh):CartesianField(_mesh){}
@@ -36,6 +40,8 @@ public:
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EF;
     oneRing = mesh->FE;
+    sources = mesh->barycenters;
+    normals = mesh->faceNormals;
     intField.conservativeResize(mesh->F.rows(),2*N);
     extField.conservativeResize(mesh->F.rows(),3*N);
     
@@ -46,8 +52,8 @@ public:
       if (mesh->EF(i, 0) == -1 || mesh->EF(i, 1) == -1)
         continue;
       edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
-      Complex ef(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 0))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 0))));
-      Complex eg(edgeVectors.row(i).dot(mesh->Bx.row(mesh->EF(i, 1))), edgeVectors.row(i).dot(mesh->By.row(mesh->EF(i, 1))));
+      Complex ef(edgeVectors.row(i).dot(mesh->FBx.row(mesh->EF(i, 0))), edgeVectors.row(i).dot(mesh->FBy.row(mesh->EF(i, 0))));
+      Complex eg(edgeVectors.row(i).dot(mesh->FBx.row(mesh->EF(i, 1))), edgeVectors.row(i).dot(mesh->FBy.row(mesh->EF(i, 1))));
       connection(i) = eg / ef;
     }
     
@@ -73,26 +79,21 @@ public:
     }
   }
   
-  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField,
-                                      const Eigen::MatrixXd& _source=Eigen::MatrixXd(),
-                                      const Eigen::VectorXi& _face=Eigen::VectorXi()){
+  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
   
     assert(_extField.cols()==3*N);
     
     extField=_extField;
-    source = _source;
-    face = _face;
     
-   
     if (face.rows()==0){
       intField.resize(extField.rows(),2*N);
       for (int i=0;i<N;i++)
-        intField.block(0,2*i,intField.rows(),2)<<(extField.block(0,3*i,extField.rows(),3).array()*mesh->Bx.array()).rowwise().sum(),(extField.block(0,3*i,extField.rows(),3).array()*mesh->By.array()).rowwise().sum();
+        intField.block(0,2*i,intField.rows(),2)<<(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBx.array()).rowwise().sum(),(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBy.array()).rowwise().sum();
     } else {
       intField.resize(face.rows(),2*N);
       for (int i=0;i<N;i++)
         for (int j=0;j<face.rows();j++)
-          intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->Bx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->By.row(face(j)).array()).sum();
+          intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->FBx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->FBy.row(face(j)).array()).sum();
     }
   }
   
@@ -105,7 +106,7 @@ public:
     extField.conservativeResize(intField.rows(),intField.cols()*3/2);
     for (int i=0;i<intField.rows();i++)
       for (int j=0;j<intField.cols();j+=2)
-        extField.block(i,3*j/2,1,3)=mesh->Bx.row(i)*intField(i,j)+mesh->By.row(i)*intField(i,j+1);
+        extField.block(i,3*j/2,1,3)=mesh->FBx.row(i)*intField(i,j)+mesh->FBy.row(i)*intField(i,j+1);
   }
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){
@@ -121,7 +122,7 @@ public:
     extField.conservativeResize(_intField.rows(),_intField.cols()*3);
     for (int i=0;i<_intField.rows();i++)
       for (int j=0;j<_intField.cols();j++)
-        extField.block(i,3*j,1,3)=mesh->Bx.row(i)*_intField(i,j).real()+mesh->By.row(i)*_intField(i,j).imag();
+        extField.block(i,3*j,1,3)=mesh->FBx.row(i)*_intField(i,j).real()+mesh->FBy.row(i)*_intField(i,j).imag();
   }
   
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
@@ -132,7 +133,7 @@ public:
     for (int j=0;j<tangentSpaces.rows();j++){
       /*std::cout<<"j: "<<j<<std::endl;
       std::cout<<"(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum():"<<(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum()<<","<<(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum()<<std::endl;*/
-      intDirectionals.row(j)<<(extDirectionals.row(j).array()*mesh->Bx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->By.row(tangentSpaces(j)).array()).sum();
+      intDirectionals.row(j)<<(extDirectionals.row(j).array()*mesh->FBx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->FBy.row(tangentSpaces(j)).array()).sum();
     }
     return intDirectionals;
   }
@@ -154,12 +155,12 @@ public:
         vertexIndices(L[j][k])=0;
       }
     
-    singCycles.resize(singCounter);
+    singElements.resize(singCounter);
     singIndices.resize(singCounter);
     singCounter=0;
     for (int i=0;i<mesh->V.rows();i++){
       if (vertexIndices(i)){
-        singCycles(singCounter)=i;
+        singElements(singCounter)=i;
         singIndices(singCounter++)=vertexIndices(i);
       }
     }

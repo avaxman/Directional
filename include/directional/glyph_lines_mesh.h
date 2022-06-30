@@ -9,12 +9,8 @@
 #define DIRECTIONAL_GLYPH_LINES_MESH_H
 
 #include <igl/igl_inline.h>
-#include <igl/barycenter.h>
-#include <igl/per_face_normals.h>
-#include <igl/avg_edge_length.h>
 #include <igl/colon.h>
 #include <igl/speye.h>
-#include <directional/representative_to_raw.h>
 #include <directional/angled_arrows.h>
 #include <Eigen/Core>
 
@@ -38,11 +34,11 @@ namespace directional
   //  fieldF: The faces of the field mesh
   //  fieldC: The colors of the field mesh
   
-  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &V,
-                                   const Eigen::MatrixXi &F,
-                                   const Eigen::MatrixXi& EF,
-                                   const Eigen::MatrixXd &rawField,
-                                   const Eigen::MatrixXd &glyphColor,
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd& sources,
+                                   const Eigen::MatrixXd& normals,
+                                   const Eigen::MatrixXi& adjSpaces,
+                                   const Eigen::MatrixXd& extField,
+                                   const Eigen::MatrixXd& glyphColor,
                                    const double length,
                                    const double width,
                                    const double height,
@@ -53,29 +49,27 @@ namespace directional
   {
     using namespace Eigen;
     using namespace std;
-    MatrixXd normals;
-    igl::per_face_normals(V, F, normals);
-    int N=rawField.cols()/3;
+    
+    int N=extField.cols()/3;
     
     double angle = 2*igl::PI/(double)(N);
     if (N==1) angle=igl::PI;
-    Eigen::MatrixXd barycenters, vectorColors, P1, P2;
-    igl::barycenter(V, F, barycenters);
+    Eigen::MatrixXd vectorColors, P1, P2;
     
-    VectorXi sampledFaces;
+    VectorXi sampledSpaces;
     if (sparsity!=0){
       //creating adjacency matrix
       vector<Triplet<int>> adjTris;
-      for (int i=0;i<EF.rows();i++)
-        if ((EF(i,0)!=-1)&&(EF(i,1)!=-1)){
-          adjTris.push_back(Triplet<int>(EF(i,0), EF(i,1),1));
-          adjTris.push_back(Triplet<int>(EF(i,1), EF(i,0),1));
+      for (int i=0;i<adjSpaces.rows();i++)
+        if ((adjSpaces(i,0)!=-1)&&(adjSpaces(i,1)!=-1)){
+          adjTris.push_back(Triplet<int>(adjSpaces(i,0), adjSpaces(i,1),1));
+          adjTris.push_back(Triplet<int>(adjSpaces(i,1), adjSpaces(i,0),1));
         }
       
-      SparseMatrix<int> adjMat(F.rows(),F.rows());
+      SparseMatrix<int> adjMat(extField.rows(),extField.rows());
       adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
-      SparseMatrix<int> newAdjMat(F.rows(),F.rows()),matMult;
-      igl::speye(F.rows(), F.rows(), matMult);
+      SparseMatrix<int> newAdjMat(extField.rows(),extField.rows()),matMult;
+      igl::speye(extField.rows(), extField.rows(), matMult);
       for (int i=0;i<sparsity;i++){
         matMult=matMult*adjMat;
         newAdjMat+=matMult;
@@ -85,7 +79,7 @@ namespace directional
       
       adjMat=newAdjMat;
       
-      vector<set<int>> ringAdjacencies(F.rows());
+      vector<set<int>> ringAdjacencies(extField.rows());
       for (int k=0; k<adjMat.outerSize(); ++k){
         for (SparseMatrix<int>::InnerIterator it(adjMat,k); it; ++it){
           ringAdjacencies[it.row()].insert(it.col());
@@ -93,8 +87,8 @@ namespace directional
         }
       }
       
-      VectorXi sampleMask=VectorXi::Zero(F.rows());
-      for (int i=0;i<F.rows();i++){
+      VectorXi sampleMask=VectorXi::Zero(extField.rows());
+      for (int i=0;i<extField.rows();i++){
         if (sampleMask(i)!=0) //occupied face
           continue;
         
@@ -112,21 +106,21 @@ namespace directional
         if (sampleMask(i)==2)
           samplesList.push_back(i);
       
-      sampledFaces = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(samplesList.data(), samplesList.size());
+      sampledSpaces = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(samplesList.data(), samplesList.size());
       
-    } else igl::colon(0,1,F.rows()-1,sampledFaces);
+    } else igl::colon(0,1,extField.rows()-1,sampledSpaces);
     
-    MatrixXd vectNormals(sampledFaces.rows()*N,3);
-    P1.resize(sampledFaces.rows() * N, 3);
-    P2.resize(sampledFaces.rows() * N, 3);
-    vectorColors.resize(sampledFaces.rows() * N, 3);
+    MatrixXd vectNormals(sampledSpaces.rows()*N,3);
+    P1.resize(sampledSpaces.rows() * N, 3);
+    P2.resize(sampledSpaces.rows() * N, 3);
+    vectorColors.resize(sampledSpaces.rows() * N, 3);
     
-    normals.array() *= width;
-    for (int i=0;i<sampledFaces.size();i++)
+    //normals.array() *= width;
+    for (int i=0;i<sampledSpaces.size();i++)
       for (int j=0;j<N;j++){
-        P1.row(j*sampledFaces.size()+i) = barycenters.row(sampledFaces(i));
-        P2.row(j*sampledFaces.size()+i) = rawField.block(sampledFaces(i),j*3,1,3);
-        vectNormals.row(j*sampledFaces.size()+i) = normals.row(sampledFaces(i));
+        P1.row(j*sampledSpaces.size()+i) = sources.row(sampledSpaces(i));
+        P2.row(j*sampledSpaces.size()+i) = extField.block(sampledSpaces(i),j*3,1,3);
+        vectNormals.row(j*sampledSpaces.size()+i) = normals.row(sampledSpaces(i)).array()*width;
       }
     
     /*P1 = barycenters.replicate(N, 1);
@@ -137,19 +131,18 @@ namespace directional
     P2.array() *= length;
     P2 += P1;
     
-    
     // Duplicate colors so each glyph gets the proper color
     if (glyphColor.rows() == 1)
       vectorColors = glyphColor.replicate(P1.rows(), 1);
-    else if ((glyphColor.rows() == F.rows())&&(glyphColor.cols()==3)){
-      MatrixXd sampledColors(sampledFaces.size(),3);
-      for (int i=0;i<sampledFaces.size();i++)
-        sampledColors.row(i)=glyphColor.row(sampledFaces(i));
+    else if ((glyphColor.rows() == extField.rows())&&(glyphColor.cols()==3)){
+      MatrixXd sampledColors(sampledSpaces.size(),3);
+      for (int i=0;i<sampledSpaces.size();i++)
+        sampledColors.row(i)=glyphColor.row(sampledSpaces(i));
       vectorColors = sampledColors.replicate(N, 1);
     }
     else{
       for (int i=0;i<N;i++)
-        vectorColors.block(i*sampledFaces.rows(),0,sampledFaces.rows(),3)=glyphColor.block(0,3*i,sampledFaces.rows(),3);
+        vectorColors.block(i*sampledSpaces.rows(),0,sampledSpaces.rows(),3)=glyphColor.block(0,3*i,sampledSpaces.rows(),3);
     }
     
     Eigen::MatrixXd Vc, Cc, Vs, Cs;
@@ -158,22 +151,25 @@ namespace directional
     
     
   }
+
   
   //A version without specification of glyph dimensions
-  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd &V,
-                                   const Eigen::MatrixXi &F,
-                                   const Eigen::MatrixXi &EF,
-                                   const Eigen::MatrixXd &rawField,
+  void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd& sources,
+                                   const Eigen::MatrixXi& normals,
+                                   const Eigen::MatrixXi& adjSpaces,
+                                   const Eigen::MatrixXd& extField,
                                    const Eigen::MatrixXd &glyphColors,
+                                   const double sizeRatio,
+                                   const double avgScale,
                                    Eigen::MatrixXd &fieldV,
                                    Eigen::MatrixXi &fieldF,
                                    Eigen::MatrixXd &fieldC,
-                                   const double sizeRatio,
+                                   
                                    const int sparsity=0,
                                    const double offsetRatio = 0.2)
   {
-    double l = igl::avg_edge_length(V, F);
-    glyph_lines_mesh(V, F, EF, rawField, glyphColors, sizeRatio*l/3.0, sizeRatio*l/15.0,  l*offsetRatio, sparsity, fieldV, fieldF, fieldC);
+    //double l = igl::avg_edge_length(V, F);
+    glyph_lines_mesh(sources, normals, adjSpaces, extField, glyphColors, sizeRatio*avgScale/3.0, sizeRatio*avgScale/15.0,  avgScale*offsetRatio, sparsity, fieldV, fieldF, fieldC);
   }
   
 }
