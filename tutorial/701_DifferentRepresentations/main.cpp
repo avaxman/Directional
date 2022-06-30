@@ -17,15 +17,12 @@
 
 using namespace std;
 
+int N = 2;
 directional::TriMesh mesh;
 directional::FaceField rawFaceField, powerFaceField;
 directional::VertexField rawVertexField, powerVertexField;
-
 directional::DirectionalViewer viewer;
 
-int N = 2;
-int targetLevel = 2;
-int iter = 0;
 
 typedef enum {FACE_FIELD, VERTEX_FIELD} ViewingModes;
 ViewingModes viewingMode=FACE_FIELD;
@@ -35,6 +32,8 @@ void update_viewer()
 {
   viewer.toggle_mesh(viewingMode==FACE_FIELD, 0);
   viewer.toggle_mesh(viewingMode==VERTEX_FIELD, 1);
+  viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
+  viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
   viewer.toggle_field(viewingMode==FACE_FIELD,0);
   viewer.toggle_field(viewingMode==VERTEX_FIELD,1);
 }
@@ -86,8 +85,8 @@ int main(int argc, char *argv[])
   directional::power_to_raw(powerFaceField, N, rawFaceField,true);
   directional::power_to_raw(powerVertexField, N, rawVertexField,true);
   
-  //directional::principal_matching(rawFaceField);
-  //directional::principal_matching(rawVertexField);
+  directional::principal_matching(rawFaceField);
+  directional::principal_matching(rawVertexField);
  
   viewer.set_mesh(mesh,0);
   viewer.set_mesh(mesh,1);

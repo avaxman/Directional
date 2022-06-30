@@ -34,6 +34,8 @@ public:
   
   Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
   Eigen::MatrixXd normals;  //the normals to the tangent spaces
+  Eigen::MatrixXd dualSources;  //source point of dual cycles
+  Eigen::MatrixXd dualNormals;  //normals to dual cycles
   Eigen::VectorXi face;
   
   //TODO intField being a single vector in case of power field

@@ -42,6 +42,8 @@ public:
     oneRing = mesh->FE;
     sources = mesh->barycenters;
     normals = mesh->faceNormals;
+    dualSources = mesh->V;
+    dualNormals = mesh->vertexNormals;
     singElements = Eigen::VectorXi(0);
     singIndices = Eigen::VectorXi(0);
     intField.conservativeResize(mesh->F.rows(),2*N);

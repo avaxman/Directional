@@ -252,7 +252,7 @@ namespace directional
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
+      directional::singularity_spheres(fieldList[meshNum]->dualSources, fieldList[meshNum]->dualNormals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);

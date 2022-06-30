@@ -45,6 +45,8 @@ public:
     Eigen::VectorXi valence = mesh->vertexValence;
     sources = mesh->V;
     normals = mesh->vertexNormals;
+    dualSources = mesh->barycenters;
+    dualNormals = mesh->faceNormals;
     intField.conservativeResize(mesh->V.rows(),2*N);
     extField.conservativeResize(mesh->V.rows(),3*N);
     
@@ -100,6 +102,29 @@ public:
     }
     
     //TODO: cycles, cycleCurvature
+    element2Cycle.resize(mesh->F.rows());
+    cycleCurvatures=Eigen::VectorXd::Zero(mesh->F.rows());
+    dualCycles.resize(mesh->F.rows(), mesh->EV.rows());  //TODO: higher genus and boundaries
+    innerAdjacencies.resize(mesh->EV.rows());
+    std::vector<Eigen::Triplet<double>> dualCyclesTriplets;
+    for (int i=0;i<mesh->F.rows();i++){
+      element2Cycle(i)=i;
+      std::complex<double> complexHolonomy(1.0,0.0);
+      for (int j=0;j<3;j++){
+        dualCyclesTriplets.push_back(Eigen::Triplet<double>(i,mesh->FE(i,j),mesh->FEs(i,j)));
+        if (mesh->FEs(i,j)>0)
+          complexHolonomy*=connection(mesh->FE(i,j));
+        else
+          complexHolonomy/=connection(mesh->FE(i,j));
+      }
+      cycleCurvatures(i)=arg(complexHolonomy);
+    }
+    dualCycles.setFromTriplets(dualCyclesTriplets.begin(), dualCyclesTriplets.end());
+    
+    //std::cout<<"cycleCurvatures: "<<cycleCurvatures<<std::endl;
+    //std::cout<<"cycleCurvatures.sum(): "<<cycleCurvatures.sum()<<std::endl;
+    for (int i=0;i<mesh->EV.rows();i++) //TODO: boundaries
+      innerAdjacencies(i)=i;
     //directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, dualCycles, cycleCurvatures, element2Cycle, innerAdjacencies);
     
     //drawing from mesh geometry
