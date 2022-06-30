@@ -36,6 +36,9 @@ public:
   Eigen::MatrixXi EF, FE, EV,TT, EFi, VE, VF;
   Eigen::MatrixXd FEs;
   Eigen::VectorXi innerEdges, boundEdges, vertexValence;
+  //DCEL quantities
+  Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
+  Eigen::MatrixXi EH,FH;
   
   //Geometric quantities
   Eigen::MatrixXd faceNormals;
@@ -111,11 +114,8 @@ public:
     faceAreas.array()/=2.0;
     eulerChar = V.rows() - EV.rows() + F.rows();
     numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
-    
-    //generating VE and VF
-    Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
-    Eigen::MatrixXi EH,FH;
-    hedra::dcel(Eigen::VectorXi::Constant(F.rows()),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
+  
+    hedra::dcel(Eigen::VectorXi::Constant(F.rows(),3),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
     vertexValence=Eigen::VectorXi::Zero(V.rows());
     for (int i=0;i<EV.rows();i++){
       vertexValence(EV(i,0))++;
@@ -123,7 +123,7 @@ public:
     }
     
     //TODO: adapt to boundaries
-    VE.resize(V.rows(),vertexValence.maxCoeff());
+    /*VE.resize(V.rows(),vertexValence.maxCoeff());
     VF.resize(V.rows(),vertexValence.maxCoeff());
     for (int i=0;i<V.rows();i++){
       int counter=0;
@@ -134,7 +134,7 @@ public:
         VF(i,counter++)=HF(heiterate);
         heiterate = twinH(prevH(heiterate));
       }while(hebegin!=heiterate);
-    }
+    }*/
     
     //computing vertex normals by area-weighted aveage of face normals
     vertexNormals=Eigen::MatrixXd::Zero(V.rows(),3);
@@ -149,8 +149,12 @@ public:
     VBy.resize(V.rows(),3);
     for (int i=0;i<V.rows();i++){
       Eigen::RowVector3d firstEdge = V.row(HV(nextH(VH(i))))-V.row(i);
-      VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals))*vertexNormals;
-      VBy.row(i)=vertexNormals.row(i).cross(VBx.row(i));
+      VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals.row(i)))*vertexNormals.row(i);
+      VBx.row(i).normalize();
+      Eigen::RowVector3d currx=VBx.row(i);
+      Eigen::RowVector3d currn=vertexNormals.row(i);
+      VBy.row(i)=currn.cross(currx);
+      VBy.row(i).normalize();
     }
     
   }

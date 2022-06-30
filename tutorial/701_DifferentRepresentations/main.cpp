@@ -23,7 +23,7 @@ directional::VertexField rawVertexField, powerVertexField;
 
 directional::DirectionalViewer viewer;
 
-int N = 3;
+int N = 2;
 int targetLevel = 2;
 int iter = 0;
 
@@ -64,11 +64,13 @@ int main(int argc, char *argv[])
   keyAction("1", "Show face-based field.");
   keyAction("2", "Show vertex-based field.");
 
-  directional::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", mesh);
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
   powerFaceField.init_field(mesh, POWER_FIELD, N);
   powerVertexField.init_field(mesh, POWER_FIELD, N);
+  //cout<<"powerVertexField.stiffnessWeights:"<<powerVertexField.stiffnessWeights<<endl;
+  //cout<<"powerVertexField.connection:"<<powerVertexField.connection<<endl;
   
-  Eigen::MatrixXi constFaces, constVertices;
+  Eigen::VectorXi constFaces, constVertices;
   Eigen::MatrixXd constVectors;
   constFaces.resize(1);
   constFaces<<0;
@@ -79,7 +81,7 @@ int main(int argc, char *argv[])
   
   directional::power_field(powerFaceField, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N);
   directional::power_field(powerVertexField, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N);
-  
+
   //computing power fields
   directional::power_to_raw(powerFaceField, N, rawFaceField,true);
   directional::power_to_raw(powerVertexField, N, rawVertexField,true);
@@ -90,8 +92,8 @@ int main(int argc, char *argv[])
   viewer.set_mesh(mesh,0);
   viewer.set_mesh(mesh,1);
   
-  viewer.set_field(rawFaceField,Eigen::MatrixXd(),0, 0.9, 0, 0.3);
-  viewer.set_field(rawVertexField,Eigen::MatrixXd(),1, 0.9, 0, 0.3);
+  viewer.set_field(rawFaceField,Eigen::MatrixXd(),0, 1.5, 0, 0.3);
+  viewer.set_field(rawVertexField,Eigen::MatrixXd(),1, 1.5, 0, 0.4);
   
   // Update view
   update_viewer();

@@ -24,7 +24,7 @@ namespace directional{
 class FaceField: public CartesianField{
 public:
   
-  virtual static discTangTypeEnum discTangType(){return FACE_SPACES;}
+  static discTangTypeEnum discTangType(){return discTangTypeEnum::FACE_SPACES;}
     
   FaceField(){}
   FaceField(const TriMesh& _mesh):CartesianField(_mesh){}
@@ -42,6 +42,8 @@ public:
     oneRing = mesh->FE;
     sources = mesh->barycenters;
     normals = mesh->faceNormals;
+    singElements = Eigen::VectorXi(0);
+    singIndices = Eigen::VectorXi(0);
     intField.conservativeResize(mesh->F.rows(),2*N);
     extField.conservativeResize(mesh->F.rows(),3*N);
     

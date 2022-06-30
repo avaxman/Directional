@@ -28,7 +28,7 @@ public:
   VertexField(const TriMesh& _mesh):CartesianField(_mesh){}
   ~VertexField(){}
   
-  virtual static discTangTypeEnum discTangType(){return VERTEX_SPACES;}
+  static discTangTypeEnum discTangType(){return discTangTypeEnum::VERTEX_SPACES;}
   
   void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     
@@ -40,6 +40,8 @@ public:
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EV;
     oneRing = mesh->VE;
+    singElements = Eigen::VectorXi(0);
+    singIndices = Eigen::VectorXi(0);
     Eigen::VectorXi valence = mesh->vertexValence;
     sources = mesh->V;
     normals = mesh->vertexNormals;
@@ -47,36 +49,52 @@ public:
     extField.conservativeResize(mesh->V.rows(),3*N);
     
     //creating vertex tangent lookup table
-    tangentStartAngles.resize(oneRing.rows(), oneRing.cols());
+    tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff());
     for (int i=0;i<mesh->V.rows();i++){
       //TODO: boundaries
       double angleSum = 2*igl::PI - mesh->GaussianCurvature(i);
       tangentStartAngles.col(0).setZero();  //the first angle
-      Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->EV(mesh->VE(i,0),1))-mesh->V.row(mesh->EV(mesh->VE(i,0),0));
-      prevEdgeVector = (mesh->EV(mesh->VE(i,0),0) == i ? prevEdgeVector : -prevEdgeVector);
-      for (int j=1;j<valence(i);j++){
-        Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->EV(mesh->VE(i,j),1))-mesh->V.row(mesh->EV(mesh->VE(i,j),0));
-        currEdgeVector = (mesh->EV(mesh->VE(i,j),0) == i ? currEdgeVector : -currEdgeVector);
-        double angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector));
+      Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
+      int hebegin = mesh->VH(i);
+      int heiterate = mesh->twinH(mesh->prevH(hebegin));
+      int j=1;
+      do{
+        Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(heiterate)))-mesh->V.row(i);
+        double angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector)/(prevEdgeVector.norm()*currEdgeVector.norm()));
         tangentStartAngles(i,j)=tangentStartAngles(i,j-1)+2*igl::PI*angleDiff/angleSum;
-      }
+        heiterate = mesh->twinH(mesh->prevH(heiterate));
+        j++;
+        prevEdgeVector=currEdgeVector;
+      }while (heiterate!=hebegin);
     }
     
-    //connection is the ratio of the complex representation of edges
+    //connection is the ratio of the complex representation of mutual edges
     connection.resize(mesh->EV.rows(),1);  //the difference in the angle representation of edge i from EV(i,0) to EV(i,1)
     Eigen::MatrixXd edgeVectors(mesh->EV.rows(), 3);
     for (int i = 0; i < mesh->EV.rows(); i++) {
-      edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
+      //edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
       
       //looking up edge in each tangent space
       Complex ef,eg;
-      for (int j=0;j<valence(mesh->EV(i, 0));j++)
-        if (oneRing(mesh->EV(i, 0),j)==i)
-          ef = exp(Complex(0,tangentStartAngles(i,j)));
+      int hebegin = mesh->VH(mesh->EV(i,0));
+      int heiterate = hebegin;
+      int j=0;
+      do{
+        if (mesh->HE(heiterate)==i)
+          ef = exp(Complex(0,tangentStartAngles(mesh->EV(i, 0),j)));
+        heiterate = mesh->twinH(mesh->prevH(heiterate));
+        j++;
+      }while (heiterate!=hebegin);
       
-      for (int j=0;j<valence(mesh->EV(i, 1));j++)
-        if (oneRing(mesh->EV(i, 1),j)==i)
-          ef = exp(Complex(0,tangentStartAngles(i,j)));
+      hebegin = mesh->VH(mesh->EV(i,1));
+      heiterate = hebegin;
+      j=0;
+      do{
+        if (mesh->HE(heiterate)==i)
+          eg = exp(Complex(0,tangentStartAngles(mesh->EV(i, 1),j)));
+        heiterate = mesh->twinH(mesh->prevH(heiterate));
+        j++;
+      }while (heiterate!=hebegin);
       
       connection(i) = -eg / ef;
     }
@@ -96,7 +114,7 @@ public:
         Eigen::RowVector3d vec12 = mesh->V.row(mesh->F(i,(j+1)%3))-mesh->V.row(mesh->F(i,j));
         Eigen::RowVector3d vec13 = mesh->V.row(mesh->F(i,(j+2)%3))-mesh->V.row(mesh->F(i,j));
         double cosAngle = vec12.dot(vec13);
-        double sinAngle = sqrt(vec12.squaredNorm()*vec13.squaredNorm()-cosAngle);
+        double sinAngle = (vec12.cross(vec13)).norm();
         if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
           faceCotWeights(i,j) = cosAngle/sinAngle;
         
@@ -109,8 +127,8 @@ public:
     igl::doublearea(mesh->V,mesh->F,dAreas);
     massWeights = Eigen::VectorXd::Zero(mesh->V.rows());
     for (int i=0;i<mesh->F.rows();i++)
-      for (int j=0;j<mesh->V.rows();j++)
-        massWeights(mesh->F(i,j)) = dAreas(i)/6.0;
+      for (int j=0;j<3;j++)
+        massWeights(mesh->F(i,j)) += dAreas(i)/6.0;
     
     
   }

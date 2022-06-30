@@ -30,7 +30,7 @@ public:
   int fieldType;       //What the field actually represents  (for instance, either a raw field or a power/polyvector field)
   
   //In case some methods are only defined for several classes
-  virtual static discTangTypeEnum discTangType(){return BASE_CLASS;}
+  static discTangTypeEnum discTangType(){return discTangTypeEnum::BASE_CLASS;}
   
   Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
   Eigen::MatrixXd normals;  //the normals to the tangent spaces

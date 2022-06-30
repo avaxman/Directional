@@ -155,7 +155,7 @@ namespace directional
   
   //A version without specification of glyph dimensions
   void IGL_INLINE glyph_lines_mesh(const Eigen::MatrixXd& sources,
-                                   const Eigen::MatrixXi& normals,
+                                   const Eigen::MatrixXd& normals,
                                    const Eigen::MatrixXi& adjSpaces,
                                    const Eigen::MatrixXd& extField,
                                    const Eigen::MatrixXd &glyphColors,
