@@ -30,9 +30,8 @@ int main()
   std::cout <<"2    Show/hide Singularities" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off",mesh);
-  field.set_mesh(mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, field);
-  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, field);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", mesh, N, field);
+  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", field);
   directional::DirectionalViewer viewer;
   
   viewer.set_mesh(mesh);

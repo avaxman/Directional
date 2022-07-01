@@ -18,25 +18,24 @@
 namespace directional
 {
   // Computes a power field on the entire mesh from given values at the prescribed indices.
-  // powerfield_precompute must be called in advance, and "b" must be on the given "bc"
   // If no constraints are given the lowest-eigenvalue (of smoothness energy) field will be returned.
   // Inputs:
-  //  V: #V by 3 vertex coordinates.
-  //  F: #F by 3 face vertex indices.
+  //  mesh: a triangle mesh object.
   //  constFaces: the faces on which the polyvector is prescribed. If a face is repeated and the alignment is hard then all but the first vector in the face will be ignored.
-  //  constVectors: #F by 3 in representative form of the N-RoSy's on the faces indicated by bc.
+  //  constVectors: #F by 3 in representative form of the N-RoSy's on the tangent spaces.
   //  alignWeights: #constFaces x 1 soft weights for alignment (negative values = fixed faces).
   //  N: The degree of the field.
   // Outputs:
-  //  powerField: #F by 2 The output interpolated field, in complex numbers.
-  IGL_INLINE void power_field(directional::CartesianField& field,
+  //  powerField: a cartesian power field object.
+  IGL_INLINE void power_field(const directional::TriMesh& mesh,
                               const Eigen::VectorXi& constFaces,
                               const Eigen::MatrixXd& constVectors,
                               const Eigen::VectorXd& alignWeights,
-                              const int N)
+                              const int N,
+                              directional::CartesianField& field)
   {
     //TODO: have the field be initialized here
-    polyvector_field(field,constFaces,constVectors,1.0, -1.0, alignWeights, N);
+    polyvector_field(mesh,constFaces,constVectors,1.0, -1.0, alignWeights, N,field);
     field.fieldType = POWER_FIELD;
     //getting rid of the redundant zeros, in case they were allocated.
     field.intField.conservativeResize(field.intField.rows(),2);

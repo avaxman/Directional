@@ -15,13 +15,13 @@
 #include <igl/readOFF.h>
 #include <directional/TriMesh.h>
 
-
 namespace directional
 {
-  bool IGL_INLINE readOFF(const std::string obj_file_name, directional::TriMesh& mesh){
+  //wraps around libigl readOFF to return a mesh object.
+  bool IGL_INLINE readOFF(const std::string off_file_name, directional::TriMesh& mesh){
     Eigen::MatrixXd V;
     Eigen::MatrixXi F;
-    igl::readOFF(obj_file_name,V,F);
+    igl::readOFF(off_file_name,V,F);
     mesh.set_mesh(V,F);
   }
 }

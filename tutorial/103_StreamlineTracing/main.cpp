@@ -16,7 +16,6 @@ int N=3;         // degree of the vector field
 int anim_t = 0;
 int anim_t_dir = 1;
 
-
 bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
 {
   igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
@@ -59,8 +58,7 @@ int main(int argc, char *argv[])
   directional::power_field(mesh, constFaces, constVectors, alignWeights ,N, powerField);
   
   // Convert it to raw field
-  field.set_mesh(mesh);
-  directional::power_to_raw(mesh,powerField,N,field, true);
+  directional::power_to_raw(powerField,N,field, true);
   
   //triangle mesh
   viewer.set_mesh(mesh);

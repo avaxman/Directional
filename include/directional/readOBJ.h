@@ -19,14 +19,7 @@
 namespace directional
 {
   
-  // Reads a raw field from a file
-  // Inputs:
-  //   fileName: The to be loaded file.
-  // Outputs:
-  //   N: The degree of the field
-  //   rawField: the read field in raw #F by 3*N xyzxyz format
-  // Return:
-  //   Whether or not the file was read successfully
+  //A wrapper around libigl readOBJ that uses the mesh class
   bool IGL_INLINE readOBJ(const std::string obj_file_name, directional::TriMesh& mesh){
     Eigen::MatrixXd V;
     Eigen::MatrixXi F;

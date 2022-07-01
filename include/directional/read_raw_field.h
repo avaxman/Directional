@@ -22,9 +22,10 @@ namespace directional
   // Reads a raw field from a file
   // Inputs:
   //   fileName: The to be loaded file.
+  //    mesh: the underlying mesh to the read field
   // Outputs:
   //   N: The degree of the field
-  //   rawField: the read field in raw #F by 3*N xyzxyz format
+  //   rawField: the read RAW_FIELD field.
   // Return:
   //   Whether or not the file was read successfully
   bool IGL_INLINE read_raw_field(const std::string &fileName,

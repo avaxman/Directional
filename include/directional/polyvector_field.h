@@ -341,13 +341,7 @@ namespace directional
         intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
       
       pvField.fieldType = POLYVECTOR_FIELD;
-      //cout<<"intField: "<<intField<<endl;
       pvField.set_intrinsic_field(intField);
-      
-      //std::cout<<"Smoothness energy: "<<pvData.wSmooth * (fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs)/pvData.totalSmoothWeight<<std::endl;
-      //std::cout<<"RoSy Energy: "<<fullDofs.adjoint()* ((pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight)*fullDofs<<std::endl;
-      //TODO: measure energy in the correct way
-      /*std::cout<<"Alignment energy: "<< fullDofs.adjoint()*((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat*fullDofs - pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight)<<std::endl;*/
       
     }
     
@@ -356,13 +350,14 @@ namespace directional
 
   
   // minimal version without auxiliary data
-  IGL_INLINE void polyvector_field(directional::CartesianField& pvField,
+  IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
                                    const Eigen::VectorXi& constSpaces,
                                    const Eigen::MatrixXd& constVectors,
                                    const double smoothWeight,
                                    const double roSyWeight,
                                    const Eigen::VectorXd& alignWeights,
-                                   const int N)
+                                   const int N,
+                                   directional::CartesianField& pvField)
   {
     PolyVectorData pvData;
     pvData.constSpaces=constSpaces;
@@ -370,14 +365,18 @@ namespace directional
     pvData.wAlignment = alignWeights;
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
+    pvField.init_field(mesh,POLYVECTOR_FIELD,N);
     polyvector_precompute(pvField, N, pvData);
     polyvector_field(pvData, pvField);
   }
 
-IGL_INLINE void polyvector_field(directional::CartesianField& pvField,
+
+//A version with default parameters (in which alignment is hard by default).
+IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
                                  const Eigen::VectorXi& constSpaces,
                                  const Eigen::MatrixXd& constVectors,
-                                 const int N)
+                                 const int N,
+                                 directional::CartesianField& pvField)
 {
   
   PolyVectorData pvData;
@@ -386,9 +385,11 @@ IGL_INLINE void polyvector_field(directional::CartesianField& pvField,
   pvData.wAlignment = Eigen::VectorXd::Constant(constSpaces.size(),-1.0);
   pvData.wSmooth = 1.0;
   pvData.wRoSy = 0.0;
+  pvField.init_field(mesh, POLYVECTOR_FIELD, N);
   polyvector_precompute(pvField, N, pvData);
   polyvector_field(pvData, pvField);
 }
+
 }
 
 #endif

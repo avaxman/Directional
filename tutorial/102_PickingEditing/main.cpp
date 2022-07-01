@@ -89,8 +89,7 @@ int main()
 {
 
   directional::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", mesh);
-  field.set_mesh(mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", N, field);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", mesh, N, field);
 
   std::cout <<
   "  1                Choose vector in current face." << std::endl <<

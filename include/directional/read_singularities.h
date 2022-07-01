@@ -12,25 +12,24 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 
 
 namespace directional
 {
 
-// Reads a list of singularities from a file
+// Reads a list of element singularities from a file. The identity of the singularities (face or vertex) depend on the file type given.
 // Inputs:
 //   fileName: The to be loaded file.
 // Outputs:
-//   singularities: The vector containing the singularities
-//   N:             The degree of the field
-//   singVertices:  The singular vertices.
-//   singIndices:   Rhe index of the singularities, where the actual fractional index is singIndices/N.
+//   N:             The degree of the singularities (so true fractional index is singIndices/N).
+//   singElements:  The singular elements.
+//   singIndices:   The numerator of the index of the singularities.
 // Return:
 //   Whether or not the file was written successfully
 bool IGL_INLINE read_singularities(const std::string &fileName,
                                    int& N,
-                                   Eigen::VectorXi& singVertices,
+                                   Eigen::VectorXi& singElements,
                                    Eigen::VectorXi& singIndices)
 {
   try
@@ -40,11 +39,11 @@ bool IGL_INLINE read_singularities(const std::string &fileName,
     f >> N;
     f >> numSings;
 
-    singVertices = Eigen::VectorXi::Zero(numSings);
+    singElements = Eigen::VectorXi::Zero(numSings);
     singIndices = Eigen::VectorXi::Zero(numSings);
     
     for (int i=0;i<numSings;i++)
-      f >> singVertices.coeffRef(i)>> singIndices.coeffRef(i);
+      f >> singElements.coeffRef(i)>> singIndices.coeffRef(i);
     
     f.close();
     return f.fail();
@@ -56,35 +55,26 @@ bool IGL_INLINE read_singularities(const std::string &fileName,
 }
 
 
-	// Reads a list of singularities from a file
-	// Inputs:
-	//   fileName: The to be loaded file.
-	// Outputs:
-	//   singularities: The vector containing the singularities
-	//   N:             The degree of the field
-  //   singVertices:  The singular vertices.
-  //   singIndices:   Rhe index of the singularities, where the actual fractional index is singIndices/N.
-	// Return:
-	//   Whether or not the file was written successfully
+	//This version reads directly into a field object.
   bool IGL_INLINE read_singularities(const std::string &fileName,
-                                     int& N,
-                                     directional::FaceField& field)
+                                     directional::CartesianField& field)
 	{
 		try
 		{
 			std::ifstream f(fileName);
-			int numSings;
+      int numSings,N;
 			f >> N;
+      assert(N==field.N && "Read singularities should be of the same degree as the field");
 			f >> numSings;
 
-      Eigen::VectorXi singVertices = Eigen::VectorXi::Zero(numSings);
+      Eigen::VectorXi singElements = Eigen::VectorXi::Zero(numSings);
       Eigen::VectorXi singIndices = Eigen::VectorXi::Zero(numSings);
       
       for (int i=0;i<numSings;i++)
-        f >> singVertices.coeffRef(i)>> singIndices.coeffRef(i);
+        f >> singElements.coeffRef(i)>> singIndices.coeffRef(i);
       
 			f.close();
-      field.set_singularities(singVertices, singIndices);
+      field.set_singularities(singElements, singIndices);
 			return f.fail();
 		}
 		catch (std::exception e)
