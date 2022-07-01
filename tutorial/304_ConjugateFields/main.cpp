@@ -1,7 +1,5 @@
 #include <vector>
 #include <cstdlib>
-//#include <igl/avg_edge_length.h>
-#include <igl/jet.h>
 #include <igl/readDMAT.h>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
@@ -17,7 +15,6 @@
 
 directional::TriMesh mesh;
 directional::FaceField rawFieldOrig, rawFieldConjugate;
-Eigen::MatrixXd CMesh;
 directional::DirectionalViewer viewer;
 Eigen::VectorXd conjugacyOrig, conjugacyConjugate;
 
@@ -57,8 +54,6 @@ void update_raw_field_mesh()
     viewer.toggle_field(true);
     viewer.toggle_singularities(true);
     viewer.toggle_seams(true);
-
-    //viewer.set_singularities(viewingMode==ORIGINAL_FIELD ? singVerticesOrig : singVerticesConj, viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesConj);
   }
   
 }
@@ -110,8 +105,7 @@ int main(int argc, char *argv[])
   
   //initial solution
   directional::FaceField pvField;
-  pvField.init_field(mesh, POLYVECTOR_FIELD, N);
-  directional::polyvector_field(pvField, b, bc, N);
+  directional::polyvector_field(mesh, b, bc, N, pvField);
   directional::polyvector_to_raw(pvField, rawFieldOrig);
   
   directional::principal_matching(rawFieldOrig);
@@ -122,7 +116,6 @@ int main(int argc, char *argv[])
   directional::conjugate_frame_fields(csdata, b, rawFieldOrig, rawFieldConjugate);
   
   directional::principal_matching(rawFieldConjugate);
-  cout<<"rawFieldConjugate.singCycles: "<<rawFieldConjugate.singCycles<<endl;
   
   csdata.evaluateConjugacy(rawFieldOrig, conjugacyOrig);
   conjMaxOrig = conjugacyOrig.lpNorm<Infinity>();

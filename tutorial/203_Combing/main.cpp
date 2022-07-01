@@ -13,7 +13,7 @@ int currF=0, N;
 directional::TriMesh mesh;
 directional::FaceField rawField, combedField;
 directional::DirectionalViewer viewer;
-Eigen::VectorXi singIndices, singVertices;
+
 bool showCombed=false;
 bool showSingularities=true;
 
@@ -51,14 +51,13 @@ int main()
   //computing
   directional::principal_matching(rawField);
   directional::combing(rawField, combedField);
+  
   //to get the (mostly trivial) matching of the combed field
   directional::principal_matching(combedField);
   
-  //Mesh setup
   viewer.set_mesh(mesh);
   viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();
-  //viewer.set_singularities(combedField.singCycles, combedField.singIndices);
   viewer.set_seams(combedField.matching);
   
   viewer.callback_key_down = &key_down;

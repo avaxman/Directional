@@ -51,8 +51,8 @@ void update_directional_field()
     
     Eigen::VectorXd effort;
     directional::FaceField powerField;
-    powerField.init_field(*(rawField.mesh), POWER_FIELD, N);
-    directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N);
+    powerField.init_field(mesh, POWER_FIELD, N);
+    directional::power_field(mesh, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N,powerField);
     directional::power_to_raw(powerField, N, rawField,true);
     directional::principal_matching(rawField);
   }
@@ -63,7 +63,7 @@ void update_directional_field()
     viewer.set_singularities(singVertices, singIndices);
    
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    viewer.set_singularities(rawField.singCycles, rawField.singIndices);
+    viewer.set_singularities(rawField.singElements, rawField.singIndices);
   
 }
 

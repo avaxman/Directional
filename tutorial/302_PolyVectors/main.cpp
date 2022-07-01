@@ -2,7 +2,6 @@
 #include <Eigen/Core>
 #include <directional/readOFF.h>
 #include <directional/polyvector_to_raw.h>
-//#include <directional/polyvector_to_raw_companion.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
@@ -27,8 +26,8 @@ bool alterRoSyWeight=false;
 
 void recompute_field()
 {
-  directional::polyvector_field(pvFieldHard, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N);
-  directional::polyvector_field(pvFieldSoft, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N);
+  directional::polyvector_field(mesh, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
+  directional::polyvector_field(mesh, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
 }
 
 void update_visualization()
@@ -44,7 +43,6 @@ void update_visualization()
     directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
     directional::principal_matching(rawFieldHard);
     viewer.set_field(rawFieldHard,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    //viewer.set_singularities(singVertices, singIndices,0);
     viewer.toggle_field(true,0);
   }
   
@@ -52,7 +50,6 @@ void update_visualization()
     directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
     directional::principal_matching(rawFieldSoft);
     viewer.set_field(rawFieldSoft,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    //viewer.set_singularities(singVertices, singIndices,0);
     viewer.toggle_field(true,0);
   }
 }
@@ -164,11 +161,10 @@ int main()
     posInFace(constFaces(i))++;
   }
   
-  //Just to show the other direction if N is even, since we are by default cosntraining it
-  if (N%2==0){
-   // rawFieldConstraints.conservativeResize(rawFieldConstraints.rows(), 2*rawFieldConstraints.cols());
+  //Just to show the other direction if N is even, since we are by default constraining it
+  if (N%2==0)
     rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
-  }
+  
   
   constraintsField.init_field(mesh, RAW_FIELD, N);
   constraintsField.set_extrinsic_field(rawFieldConstraints);

@@ -101,8 +101,8 @@ numF(mesh.F.rows())
   precomputeInteriorEdges();
   
   //igl::local_basis(V,F,B1,B2,FN);
-  B1 = mesh.Bx;
-  B2 = mesh.By;
+  B1 = mesh.FBx;
+  B2 = mesh.FBy;
   FN = mesh.faceNormals;
   
   computek();

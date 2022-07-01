@@ -19,20 +19,15 @@
 
 namespace directional
   {
-  // Takes a field in raw form and computes both the curl-matching effort and the consequent curl matching on every edge.
+  // Takes a field in raw form and computes both the curl-matching effort and the consequent curl matching on every tangent-space adjacency.
   // Important: if the Raw field in not CCW ordered, the result is meaningless.
+  // Note: curl is only (future work...) defined for face-based fields.
   // Input:
-  //  V:      #V x 3 vertex coordinates
-  //  F:      #F x 3 face vertex indices
-  //  EV:     #E x 2 edges to vertices indices
-  //  EF:     #E x 2 edges to faces indices
-  //  raw:    The directional field, assumed to be ordered CCW, and in xyzxyzxyz...xyz (3*N cols) form. The degree is inferred by the size.
+  //  rawField:  a RAW_FIELD type *face-based* field.
   // Output:
-  // matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
-  //  effort: #E principal matching efforts.
   // curlNorm: the L2-norm of the curl vector
-  //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
-  //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N).
+  // rawField: the input field matching, effort, and singularities are altered.
+
   IGL_INLINE void curl_matching(directional::FaceField& rawField,
                                 Eigen::VectorXd& curlNorm)
   {
@@ -89,9 +84,6 @@ namespace directional
         Complex vecjgc = Complex(vecjg(0),vecjg(1));
         Complex transvecjfc = vecjfc*rawField.connection(i);
         freeCoeff *= (vecjgc / transvecjfc);
-        //cout<<"transvecjfc, vecjgc: "<<transvecjfc<<","<<vecjgc<<endl;
-        //currEffort+= arg(vecjgc / transvecjfc);
-        //cout<<"arg(vecjgc / transvecjfc): "<<arg(vecjgc / transvecjfc)<<endl;
       }
       
       rawField.effort(i) = arg(freeCoeff);
@@ -100,28 +92,10 @@ namespace directional
     
     //Getting final singularities and their indices
     effort_to_indices(rawField);
-    //cout<<"rawField.singCycles: "<<rawField.singCycles<<endl;
+    
   }
   
-  //version with representative vector (for N-RoSy) as input.
-  /*IGL_INLINE void curl_matching(const Eigen::MatrixXd& V,
-                                const Eigen::MatrixXi& F,
-                                const Eigen::MatrixXi& EV,
-                                const Eigen::MatrixXi& EF,
-                                const Eigen::MatrixXi& FE,
-                                const Eigen::MatrixXd& representativeField,
-                                const int N,
-                                Eigen::VectorXi& matching,
-                                Eigen::VectorXd& effort,
-                                Eigen::VectorXd& curlNorm,
-                                Eigen::VectorXi& singVertices,
-                                Eigen::VectorXi& singIndices)
-  {
-    Eigen::MatrixXd rawField;
-    representative_to_raw(V, F, representativeField, N, rawField);
-    curl_matching(V, F, EV, EF, FE, rawField, matching, effort, curlNorm,singVertices, singIndices);
-  }*/
-  }
+}
 
 
 

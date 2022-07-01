@@ -99,8 +99,7 @@ int main()
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
   directional::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", mesh);
-  field.set_mesh(mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", N, field);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", mesh, N, field);
   
   directional::principal_matching(field);
 

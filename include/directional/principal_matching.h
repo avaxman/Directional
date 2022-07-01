@@ -21,17 +21,7 @@ namespace directional
 {
   // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
   // Important: if the Raw field in not CCW ordered, the result is meaningless.
-  // Input:
-  //  V:      #V x 3 vertex coordinates
-  //  F:      #F x 3 face vertex indices
-  //  EV:     #E x 2 edges to vertices indices
-  //  EF:     #E x 2 edges to faces indices
-  //  raw:    The directional field, assumed to be ordered CCW, and in xyzxyzxyz...xyz (3*N cols) form. The degree is inferred by the size.
-  // Output:
-  //  matching: #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1.
-  //  effort: #E principal matching efforts.
-  //  singVertices: indices (into V) of which vertices are singular; including boundary vertices which carry the singularity of their loop
-  //  singIndices: the index of the singular vertices (corresponding with singIndices), relative to N (the true index is then i/N). This discludes boundary vertices (boundary cycles have their own index along generator cycles)
+  // The input and output are both a RAW_FIELD type cartesian field, in which the matching, effort, and singularities are set.
   IGL_INLINE void principal_matching(directional::CartesianField& field)
   {
     
@@ -93,17 +83,6 @@ namespace directional
     effort_to_indices(field);
     
   }
-  
-  //Version with representative vector (for N-RoSy alone) as input.
-  /*IGL_INLINE void principal_matching(directional::FaceField& field,
-                                     const Eigen::MatrixXd& representativeField,
-                                     const int N)
-  {
-    Eigen::MatrixXd rawField;
-    representative_to_raw(field.mesh->V, field.mesh->F, representativeField, N, rawField);
-    field.set_field(rawField,field.mesh);
-    principal_matching(field);
-  }*/
 }
 
 

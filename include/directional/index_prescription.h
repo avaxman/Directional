@@ -18,20 +18,16 @@
 
 namespace directional
 {    
-  // Computes the dual-edge-based rotation angles that are required to reproduce a prescribed set of indices on the dual cycles of the mesh.
+  // Computes the rotation angles that are required to reproduce a prescribed set of indices on the dual cycles of the mesh.
   // In case the sum of curvature is not consistent with the topology, the system is solved in least squares and unexpected singularities may appear elsewhere. linfError will mostl like be far from zero.
   // Inputs:
-  //  V:          #V by 3 vertex coordinates
-  //  F:          #F by 3 face vertex indices
-  //  EV:         #E by 3 edges
-  //  innerEdges: #iE the subset from EV of inner (non-boundary) edges.
-  //  basisCycles:#c X #E the basis cycles matrix (obtained from directional::dual_cycles
-  //  indices:    #c the prescribed index around each cycle. They should add up to N*Euler_characteristic of the mesh.
-  //  cycleCurvature: #c the original curvature for each basis cycle.
-  //  solver: The Simplicial LDLT solver used to solver the problem. It will only prefactor the matrix once upon the first call to the function; the state of  the solver solely depends on the basisCycles, therefore it only needs to be reset if the basisCycles matrix changed.
-  //  N: the degree of the field.
+  //  cycleIndices:   a prescribed index per cycle (either local, generator, or boundary). This must it the cycles in the type of the field.
+  //  N:              degree of the field
+  //  globalRotation: the orientation of the directional in the first tangent space (mostly arbitrary)
+  //  ldltSolver:     Since index prescription can benefit from prefactoring, this is an option to give the already-factored solver.
+  //  field:          A cartesian field object.
   // Output:
-  //  rotationAngles: #iE rotation angles (difference from parallel transport) per inner dual edge
+  //  rotationAngles: #adjSpaces rotation angles (difference from parallel transport) per inner space adjacency relation
   //  linfError: l_infinity error of the computation. If this is not approximately 0, the prescribed indices are likely inconsistent (don't add up to the correct sum).
   IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
                                      const int N,
@@ -65,7 +61,7 @@ namespace directional
     directional::rotation_to_raw(rotationAngles,N,globalRotation,field);
   }
   
-  //Minimal version: no provided solver
+  //Minimal version: without a provided solver
   IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
                                      const int N,
                                      const double globalRotation,

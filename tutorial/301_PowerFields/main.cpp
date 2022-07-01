@@ -14,10 +14,10 @@
 directional::TriMesh mesh;
 directional::FaceField rawField,powerFieldHard, powerFieldSoft;
 Eigen::VectorXi constFaces;
-Eigen::MatrixXd CMesh, CField, CSings;
 Eigen::MatrixXd constVectors;
-directional::DirectionalViewer viewer;
 Eigen::VectorXd alignWeights;
+
+directional::DirectionalViewer viewer;
 
 int N = 4;
 bool normalized = false;
@@ -25,8 +25,8 @@ bool zeroPressed = false;
 bool viewFieldHard = true;
 
 void recompute_field(){
-  directional::power_field(powerFieldHard, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N);
-  directional::power_field(powerFieldSoft, constFaces, constVectors, alignWeights, N);
+  directional::power_field(mesh, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N,powerFieldHard);
+  directional::power_field(mesh, constFaces, constVectors, alignWeights, N,powerFieldSoft);
 }
 
 void update_visualization()

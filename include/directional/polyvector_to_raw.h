@@ -90,11 +90,12 @@ namespace directional
     polyValues.array()+=z.array();  //the biggest and unit power
   }
   
-  // Converts a field in PolyVector representation to raw represenation.
+  // Converts a field in PolyVector representation to raw represenation. This is done by the fixed-point Durand-Kerner method.
   // Inputs:
-  //  B1, B2:           #F by 3 matrices representing the local base of each face.
-  //  polyVectorField:  #F by N complex PolyVectors
-  //  N:                The degree of the field.
+  //  pvField:    a POLYVECTOR_FIELD type cartesian field object
+  //  signSymmetry: if the field is sign-symmetric (so comprising line-fields). Then all odd PV coefficients are zero.
+  //  rootTolerance:  the numerical tolerance for the root computation.
+  //
   // Outputs:
   //  raw:              #F by 3*N matrix with all N explicit vectors of each directional in raw format xyzxyz
   //    returns true if succeeded
@@ -167,13 +168,6 @@ namespace directional
     }
     
     rawField.set_intrinsic_field(roots);
-   
-    /*for (int i = 0; i < N; i++)
-      for (int f=0;f<pvField.rows();f++){
-        std::complex<double> root = roots(f,i);
-        rawField.block<1, 3>(f, 3 * i) = B1.row(f) * root.real() + B2.row(f) * root.imag();
-      }*/
-      
     return true;
   }
   

@@ -97,13 +97,6 @@ namespace directional
         if ((pvField.adjSpaces(i,0)==-1)||(pvField.adjSpaces(i,1)==-1))
           continue;  //boundary edge
         
-        // Compute the complex representation of the common edge
-        /*RowVector3d e = mesh.V.row(mesh.EV(i,1)) - mesh.V.row(mesh.EV(i,0));
-        RowVector2d vef = Vector2d(e.dot(mesh.Bx.row(mesh.EF(i,0))), e.dot(mesh.By.row(mesh.EF(i,0)))).normalized();
-        complex<double> ef(vef(0), vef(1));
-        Vector2d veg = Vector2d(e.dot(mesh.Bx.row(mesh.EF(i,1))), e.dot(mesh.By.row(mesh.EF(i,1)))).normalized();
-        complex<double> eg(veg(0), veg(1));*/
-        
         // differential matrix between two tangent spaces
         dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,0), pow(pvField.connection(i),pvData.N-n)));
         dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,1), -1.0));
@@ -151,7 +144,6 @@ namespace directional
       int currSpaceNumDof = numSpaceConstraints(pvData.constSpaces(i));
       
       complex<double> constVectorComplexRaw = complex<double>(constVectorsIntrinsic(i,0),constVectorsIntrinsic(i,1));
-      //std::complex<double>(pvData.constVectors.row(i).dot(mesh.Bx.row(pvData.constSpaces(i))), pvData.constVectors.row(i).dot(mesh.By.row(pvData.constSpaces(i))));
       complex<double> constVectorComplex = (pvData.signSymmetry ? constVectorComplexRaw*constVectorComplexRaw : constVectorComplexRaw);
       constVectorComplex = (pvData.wRoSy < 0.0 ? pow(constVectorComplexRaw, N) :constVectorComplex);
       
@@ -178,7 +170,6 @@ namespace directional
     int jump = (pvData.signSymmetry ? 2 : 1);
     jump = (pvData.wRoSy < 0.0 ? pvData.N : jump);
     for (int i=0;i<pvField.intField.rows();i++){
-      //std::cout<<"localSpaceReducMats[i]: "<<localSpaceReducMats[i]<<std::endl;
       for (int j=0;j<pvData.N;j+=jump){
         for (int k=0;k<localSpaceReducMats[i].cols();k++)
           reducMatTriplets.push_back(Triplet<complex<double>>(j*pvField.intField.rows()+i, colCounter+k, localSpaceReducMats[i](j/jump,k)));
@@ -280,7 +271,7 @@ namespace directional
   // Inputs:
   //  PolyVectorData: The data structure which should have been initialized with polyvector_precompute()
   // Outputs:
-  //  polyVectorField: #F by N The output interpolated field, in polyvector (complex polynomial) format.
+  //  pvField: a POLYVECTOR_FIELD type cartesian field object
   IGL_INLINE void polyvector_field(const PolyVectorData& pvData,
                                    directional::CartesianField& pvField)
   {

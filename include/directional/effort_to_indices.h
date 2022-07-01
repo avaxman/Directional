@@ -19,7 +19,7 @@
 
 namespace directional
 {
-  // Computes cycle-based indices from dual-edge-based efforts.
+  // Computes cycle-based indices from adjaced-space efforts of a directional field.
   // Note: input is effort (sum of rotation angles), and not individual rotation angles
   // Input:
   //  basisCycles:    #c by #iE (inner edges of the mesh) the oriented basis cycles around which the indices are measured
@@ -30,7 +30,6 @@ namespace directional
   //  indices:     #c the index of the cycle x N (always an integer).
   IGL_INLINE void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
                                     const Eigen::VectorXd& effort,
-                                    const Eigen::VectorXi& matching,
                                     const Eigen::VectorXd& cycleCurvature,
                                     const int N,
                                     Eigen::VectorXi& indices)
@@ -46,7 +45,7 @@ namespace directional
   }
   
   
-  // minimal version without precomputed cycles or inner edges, returning only inner-vertex singularities
+  // version that accepts a cartesian field object.
   IGL_INLINE void effort_to_indices(directional::CartesianField& field)
   {
     //field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
@@ -54,7 +53,7 @@ namespace directional
     for (int i=0;i<field.innerAdjacencies.size();i++)
       effortInner(i)=field.effort(field.innerAdjacencies(i));
     Eigen::VectorXi fullIndices;
-    directional::effort_to_indices(field.dualCycles, effortInner, field.matching, field.cycleCurvatures, field.N, fullIndices);
+    directional::effort_to_indices(field.dualCycles, effortInner, field.cycleCurvatures, field.N, fullIndices);
    
     Eigen::VectorXi indices(field.element2Cycle.size());
     for (int i=0;i<field.element2Cycle.size();i++)

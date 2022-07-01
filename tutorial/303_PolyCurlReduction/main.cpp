@@ -2,12 +2,6 @@
 #include <fstream>
 #include <directional/readOFF.h>
 #include <directional/readOBJ.h>
-#include <igl/avg_edge_length.h>
-#include <igl/is_border_vertex.h>
-#include <igl/adjacency_list.h>
-#include <igl/jet.h>
-#include <igl/barycenter.h>
-#include <igl/false_barycentric_subdivision.h>
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
 #include <directional/read_raw_field.h>
@@ -21,7 +15,6 @@
 using namespace std;
 
 directional::TriMesh mesh;
-Eigen::MatrixXd CMesh;
 directional::FaceField rawFieldOrig, rawFieldCF;
 directional::FaceField combedFieldOrig, combedFieldCF;
 Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
@@ -67,7 +60,6 @@ void update_raw_field_mesh()
     viewer.toggle_mesh(true);
     viewer.toggle_edge_data(false);
     viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig.extField : combedFieldCF.extField));
-    //viewer.set_singularities((viewingMode==ORIGINAL_FIELD ? rawFieldOrig.singCycles : rawFieldCF.singVertices), (viewingMode==ORIGINAL_FIELD ? singIndicesOrig : singIndicesCF));
     viewer.set_seams((viewingMode==ORIGINAL_FIELD ? combedFieldOrig.matching : combedFieldCF.matching));
   }
   
