@@ -44,7 +44,7 @@ struct MeshFunctionIsolinesData{
 
 //setups the meshing data from the (in-house) integration data.
 // Inputs:
-//  cutV, cutF:     cut mesh
+//  meshCut:     cut mesh
 //  intData: IntegrationData object from the integrator
 // Output:
 //  mfiData: MeshFunctionIsolinesData object suitable to pass to the mesher

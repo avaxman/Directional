@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
   cout<<"Computing initial field"<<endl;
   powerField.init_field(meshCoarse, POWER_FIELD, N);
-  directional::power_field(powerField, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N);
+  directional::power_field(meshCoarse, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N, powerField);
   directional::power_to_raw(powerField, N, rawFieldCoarse, true);
    
   // Precompute polycurl reduction data.

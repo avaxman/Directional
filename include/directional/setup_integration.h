@@ -103,27 +103,15 @@ namespace directional
   };
   
   
-  
-  
-  
-  
+
   // Setting up the seamless integration algorithm
   // Input:
-  //  wholeV:       #V x 3 vertex coordinates
-  //  wholeF:       #F x 3 face vertex indices
-  //  EV:           #E x 2 edges to vertices indices
-  //  EF:           #E x 2 edges to faces indices
-  //  FE:           #F x 3 faces to edges tindices
-  // matching:      #E matching function, where vector k in EF(i,0) matches to vector (k+matching(k))%N in EF(i,1). In case of boundary, there is a -1. Most matching should be zero due to prior combing.
-  // singVertices:  list of singular vertices in wholeV.
-  // intData:       Integration data structure
+  //  meshWhole:    the original mesh object
+  //  field:        a face-based raw field that is to be integrated.
   // Output:
   //  intData:      updated integration data.
-  //  cutV:         the Vertices of the cut mesh.
-  //  cutF:         the Faces of the cut mesh (1-1 correspondence with wholeF, but vertices indexed into cutV).
-  //  combedField:  The raw field combed into N different fields on the cut mesh (every column is a single-vf).
-  //  combedMatching: the new matching of the combed field when given on the whole mesh (mostly zero except on cuts).
-  
+  //  meshCut:      a mesh which is face-corresponding with meshWhole, but is cut so that it has disc-topology.
+  //  combedField:  The raw field combed so that all singularities are on the seams of the cut mesh
   IGL_INLINE void setup_integration(const directional::TriMesh& meshWhole,
                                     const directional::FaceField& field,
                                     IntegrationData& intData,
@@ -135,7 +123,7 @@ namespace directional
     using namespace std;
     
     //cutting mesh and combing field.
-    cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singCycles, intData.face2cut);
+    cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singElements, intData.face2cut);
     combing(field, combedField, intData.face2cut);
     
     
@@ -148,8 +136,8 @@ namespace directional
     
     // mark vertices as being a singularity vertex of the vector field
     VectorXi isSingular = VectorXi::Zero(meshWhole.V.rows());
-    for (int i = 0; i < field.singCycles.size(); i++)
-      isSingular(field.singCycles(i)) = 1;
+    for (int i = 0; i < field.singElements.size(); i++)
+      isSingular(field.singElements(i)) = 1;
     
     //cout<<"singVertices: "<<singVertices<<endl;
     

@@ -1,7 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/cut_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
 #include <directional/readOFF.h>
@@ -18,8 +17,6 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-//Eigen::MatrixXi FMeshWhole, FMeshCut;
-//Eigen::MatrixXd VMeshWhole, VMeshCut;
 directional::FaceField rawField, combedField;
 Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV;
 directional::DirectionalViewer viewer;

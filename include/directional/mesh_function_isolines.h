@@ -27,10 +27,7 @@ namespace directional{
 
 //Generates a mesh in (V,D,F) format from the integer isolines of a seamless N-function (such as the one computed from the Directional integrator). The mesh is polygonal, not necessarily triangular.
 //Inputs:
-//  origV,origF:  the original whole mesh
-//  EV:           |E| x 2 edge vertex indices into origV
-//  EF:           |E| x 2 edge left and right faces indices into origF
-//  FE:           |F| x 3 face->edge map
+//  origMesh:     the original whole mesh
 //  mfiData:      a MeshFunctionIsolinesData object that is pre-filled with the N-function data (can be generated from the integrator with setup_mesh_function_isolines)
 //  verbose:      if to output mesh generation process comments
 //  VOutput:      all vertex coordinates of the output polygonal mesh

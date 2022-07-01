@@ -21,6 +21,7 @@ namespace directional{
 
 enum class discTangTypeEnum {BASE_CLASS, FACE_SPACES, VERTEX_SPACES};
 
+//This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
 class CartesianField{
 public:
   
@@ -64,22 +65,27 @@ public:
   CartesianField(const TriMesh& _mesh):mesh(&_mesh){}
   ~CartesianField(){}
   
+  //Initializing the field with the proper tangent spaces
   void virtual IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     mesh = &_mesh;
     fieldType = _fieldType;
     N=_N;
   };
   
+  //Setting the field by the extrinsic ambient field, which will get projected to the intrinsic tangent spaces.
   void virtual IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
     extField=_extField;
     intField = extField;  //the basic version
     N = extField.cols()/3;
   }
+  
+  //Directly setting the intrinsic tangent spaces
   void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
     intField = _intField;
     extField = intField;
   }
   
+  //The same, just with complex coordinates
   void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){
     intField.resize(_intField.rows(),_intField.cols()*2);
     for (int i=0;i<N;i++){
@@ -89,10 +95,12 @@ public:
     extField = intField;
   }
   
+  //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
   Eigen::MatrixXd virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const {
     return extDirectionals;
   }
   
+  //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
   void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singElements,
                                             const Eigen::VectorXi& _singIndices){}
   

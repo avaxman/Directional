@@ -111,16 +111,14 @@ namespace directional
   
   /**
    * Subdivides a raw N-directional field  on a coarse mesh defined by VCoarse,FCoarse to a fine N-directional field  in subdivision level 'targetLevel', with curl precision, as in "Subdivision Directional Fields" by [Custers and Vaxman 2020].
-   * VFine, FFine are a 4-1 loop subdivision of VCoarse, FCoarse
+   * fineMesh is a 4-1 loop subdivision of coarseMesh
    * Input:
-   * - VCoarse:   #coarse vertices x 3 matrix of vertex coordinates
-   * - FCoarse:  #coarse faces x  3 matrix of face to vertex connectivity, given in CCW order relative to the normal
-   * - rawFieldCoarse:    #coarse faces x (3 * N) matrix containing the N-directional raw field representation
+   * -
+   * - rawFieldCoarse:    the coarse field as a cartesian RAW_FIELD field object
    * - targetLevel The target subdivision level (0 is the coarse level)
    * Output:
-   * - VFine |#fine vertices| x 3 matrix of fine mesh vertex coordinates
-   * - FFfine |#fine faces| x 3 matrix of face to vertex connectivity of fine mesh
-   * - rawFieldFine|#fine faces| x (3 * N) matrix containing the fine level N-directional raw field
+   * - fineMesh: the subdivided mesh
+   * - rawFieldFine: the subdivided field
    */
   inline void subdivide_field(const directional::FaceField& rawFieldCoarse,
                               int targetLevel,

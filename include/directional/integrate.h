@@ -31,16 +31,13 @@ namespace directional
   
   // Integrates an N-directional fields into an N-function by solving the seamless Poisson equation. Respects *valid* linear reductions where the field is reducible to an n-field for n<=M, and consequently the function is reducible to an n-function.
   // Input:
-  //  wholeV:       #V x 3 vertex coordinates of the original mesh.
-  //  wholeF:       #F x 3 face vertex indices of the original mesh.
-  //  FE:           #F x 3 faces to edges indices.
-  //  rawField:     #F by 3*N  The directional field, assumed to be ordered CCW, and in xyzxyz raw format. The degree is inferred by the size.
-  //  intData:      Integration data, which must be obtained from directional::setup_integration.
-  //  cutV:         #cV x 3 vertices of the cut mesh.
-  //  cutF:         #F x 3 faces of the cut mesh.
+  //  meshWhole:    The original mesh object
+  //  field:        the face-based field to be integrated
+  //  intData:      Integration data, which must be obtained from directional::setup_integration(). This is altered by the function.
+  //  meshCut:      The cut mesh (obtained from setup_integration()
   // Output:
   //  NFunction:    #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
-  // wholeCornerParamFuncsN   (3*N) x #F parameterization functions per corner of whole mesh
+  //  NCornerFunctions   (3*N) x #F parameterization functions per corner of whole mesh
   IGL_INLINE bool integrate(const directional::TriMesh& meshWhole,
                             const directional::FaceField& field,
                             IntegrationData& intData,

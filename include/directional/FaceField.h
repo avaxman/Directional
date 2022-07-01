@@ -20,7 +20,7 @@
 namespace directional{
 
 
-
+//This class represents face-based fields, where the vectors are tangent to every face's natural tangent space, and where the dual cycles are around vertices. 
 class FaceField: public CartesianField{
 public:
   

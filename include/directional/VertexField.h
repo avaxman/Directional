@@ -19,6 +19,7 @@
 
 namespace directional{
 
+//This class represents vertex-based fields that line in the intrinsic tangent-space made out of the angle-scaling logarithmic map of the one-ring. The dual cycles are therefore at faces.
 class VertexField: public CartesianField{
 public:
   
