@@ -1,4 +1,3 @@
-#include <igl/edge_topology.h>
 #include <directional/readOFF.h>
 #include <directional/streamlines.h>
 #include <directional/power_field.h>
@@ -7,12 +6,10 @@
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
 
-// Mesh
-Eigen::MatrixXcd powerField;
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::FaceField field, powerField;
 
-int N=3;         // degree of the vector field
+int N = 3;
 int anim_t = 0;
 int anim_t_dir = 1;
 
@@ -51,16 +48,14 @@ int main(int argc, char *argv[])
   directional::DirectionalViewer viewer;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
-  // Create a Vector Field
+  
+  // Create a power field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
   Eigen::MatrixXd constVectors(1, 3); constVectors.row(0) <<(mesh.V.row(mesh.F(0, 1)) - mesh.V.row(mesh.F(0, 0))).normalized();
   Eigen::VectorXd alignWeights(1); alignWeights(0) = -1.0;
   directional::power_field(mesh, constFaces, constVectors, alignWeights ,N, powerField);
-  
-  // Convert it to raw field
   directional::power_to_raw(powerField,N,field, true);
   
-  //triangle mesh
   viewer.set_mesh(mesh);
   viewer.set_field(field);
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);

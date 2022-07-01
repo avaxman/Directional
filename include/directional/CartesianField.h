@@ -30,17 +30,16 @@ public:
   int fieldType;       //What the field actually represents  (for instance, either a raw field or a power/polyvector field)
   
   //In case some methods are only defined for several classes
-  static discTangTypeEnum discTangType(){return discTangTypeEnum::BASE_CLASS;}
+  virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::BASE_CLASS;}
   
   Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
   Eigen::MatrixXd normals;  //the normals to the tangent spaces
   Eigen::MatrixXd dualSources;  //source point of dual cycles
   Eigen::MatrixXd dualNormals;  //normals to dual cycles
-  Eigen::VectorXi face;
   
   //TODO intField being a single vector in case of power field
-  Eigen::MatrixXd intField;  //the field in intrinsic representation (depending on the local basis of the face).
-  Eigen::MatrixXd extField;  //the field in ambient coordinates.
+  Eigen::MatrixXd intField;  //the field in intrinsic representation (depending on the local basis of the face). Size #T x 2N
+  Eigen::MatrixXd extField;  //the field in ambient coordinates. Size Size #T x 3N
   
   
   Eigen::MatrixXi adjSpaces;  //the adjacent tangent spaces (tangent bundle edges)
@@ -49,17 +48,17 @@ public:
   //tangent space geometry
   //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
   Eigen::VectorXcd connection;
-  Eigen::VectorXd stiffnessWeights;
-  Eigen::VectorXd massWeights;
+  Eigen::VectorXd stiffnessWeights;   //the mass matrix of the inner norm between directional fields
+  Eigen::VectorXd massWeights;        //the mass matrix (like "area") of each tangent space itself
   
   Eigen::SparseMatrix<double> dualCycles;  //the adjaceny matrix of dual cycles
   Eigen::VectorXd cycleCurvatures;  //The Gaussian curvature of dual cycles.
-  Eigen::VectorXi matching;
-  Eigen::VectorXd effort;
-  Eigen::VectorXi singElements;
-  Eigen::VectorXi singIndices;
-  Eigen::VectorXi innerAdjacencies;
-  Eigen::VectorXi element2Cycle;
+  Eigen::VectorXi matching;         //matching(i)=j when vector k in adjSpaces(i,0) matches to vector (k+j)%N in adjSpaces(i,1)
+  Eigen::VectorXd effort;           //The effort of the entire matching (sum of deviations from parallel transport)
+  Eigen::VectorXi singElements;     //The singular (dual elements). Only the local cycles! not the generators or boundary cycles
+  Eigen::VectorXi singIndices;      //Corresponding indices (this is the numerator where the true fractional index is singIndices/N);
+  Eigen::VectorXi innerAdjacencies; //the indices into adjSpaces that are not boundary
+  Eigen::VectorXi element2Cycle;    //a map between dual elements and dual cycles
   
   CartesianField(){}
   CartesianField(const TriMesh& _mesh):mesh(&_mesh){}
@@ -75,16 +74,6 @@ public:
     extField=_extField;
     intField = extField;  //the basic version
     N = extField.cols()/3;
-    
-
-    if (face.rows()==0){
-      intField=extField;
-    } else {
-      intField.resize(face.rows(),3*N);
-      for (int i=0;i<N;i++)
-        for (int j=0;j<face.size();j++)
-          intField.block(0,3*i,1,3)=extField.block(0,3*face(i),1,3);
-    }
   }
   void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
     intField = _intField;

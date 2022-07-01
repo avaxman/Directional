@@ -24,7 +24,7 @@ namespace directional{
 class FaceField: public CartesianField{
 public:
   
-  static discTangTypeEnum discTangType(){return discTangTypeEnum::FACE_SPACES;}
+  virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::FACE_SPACES;}
     
   FaceField(){}
   FaceField(const TriMesh& _mesh):CartesianField(_mesh){}
@@ -88,17 +88,10 @@ public:
     assert(_extField.cols()==3*N);
     
     extField=_extField;
-    
-    if (face.rows()==0){
-      intField.resize(extField.rows(),2*N);
-      for (int i=0;i<N;i++)
-        intField.block(0,2*i,intField.rows(),2)<<(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBx.array()).rowwise().sum(),(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBy.array()).rowwise().sum();
-    } else {
-      intField.resize(face.rows(),2*N);
-      for (int i=0;i<N;i++)
-        for (int j=0;j<face.rows();j++)
-          intField.block(0,2*i,1,2)<<(extField.block(0,3*i,1,3).array()*mesh->FBx.row(face(j)).array()).sum(),(extField.block(0,3*i,1,3).array()*mesh->FBy.row(face(j)).array()).sum();
-    }
+    intField.resize(extField.rows(),2*N);
+    for (int i=0;i<N;i++)
+      intField.block(0,2*i,intField.rows(),2)<<(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBx.array()).rowwise().sum(),(extField.block(0,3*i,extField.rows(),3).array()*mesh->FBy.array()).rowwise().sum();
+   
   }
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){

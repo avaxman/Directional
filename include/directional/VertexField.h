@@ -28,7 +28,7 @@ public:
   VertexField(const TriMesh& _mesh):CartesianField(_mesh){}
   ~VertexField(){}
   
-  static discTangTypeEnum discTangType(){return discTangTypeEnum::VERTEX_SPACES;}
+  virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
   
   void IGL_INLINE init_field(const TriMesh& _mesh, const int _fieldType, const int _N){
     

@@ -13,11 +13,9 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/Polynomials>
-#include <igl/doublearea.h>
 #include <igl/speye.h>
 #include <igl/eigs.h>
 #include <iostream>
-#include <directional/circumcircle.h>
 #include <directional/complex_eigs.h>
 #include <directional/CartesianField.h>
 
@@ -61,25 +59,24 @@ namespace directional
   };
   
   
-  // Precalculate the operators according to the user-prescribed parameters. Must be called whenever any of them changes
+  // Precalculate the operators needed for PolyVector computation according to the user-prescribed parameters. Must be called whenever any of them changes
   // Inputs:
-  //  V:      #V by 3 vertex coordinates.
-  //  F:      #F by 3 face vertex indices.
-  //  EV:     #E by 2 matrix of edges (vertex indices)
-  //  EF:     #E by 2 matrix of oriented adjacent faces
-  //  B1, B2: #F by 3 matrices representing the local base of each face.
-  //  PolyVectorData (must fill non-default values in advance)
+  //  mesh:   input mesh object
+  //  N:        degree of the field
+  //
   // Outputs:
+  //  pvField: a POLYVECTOR_FIELD cartesian field initalized with the mesh
   //  PolyVectorData:       Updated structure with all operators
-  IGL_INLINE void polyvector_precompute(const directional::CartesianField& pvField,
+  IGL_INLINE void polyvector_precompute(const directional::TriMesh& mesh,
                                         const int N,
+                                        directional::CartesianField& pvField,
                                         PolyVectorData& pvData)
   {
     
     using namespace std;
     using namespace Eigen;
     
-    //assert(pvField.connection.cols()==N && "The PolyVector field should be initialized to be of order N");
+    pvField.init_field(mesh, POLYVECTOR_FIELD, N);
     
     //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
@@ -93,8 +90,6 @@ namespace directional
     pvData.totalSmoothWeight = pvField.stiffnessWeights.sum();
     
     vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
-    //VectorXd doubleAreas;
-    //igl::doublearea(mesh.V,mesh.F,doubleAreas);
     for (int n = 0; n < pvData.N; n++)
     {
       for (int i=0;i<pvField.adjSpaces.rows();i++)
@@ -136,11 +131,11 @@ namespace directional
     int realN = (pvData.signSymmetry ? N/2 : N);
     realN = (pvData.wRoSy < 0.0 ? 1 : realN);
     //MatrixXcd faceConstraints(F.rows(),realN);
-    std::vector<MatrixXcd> localFaceReducMats; localFaceReducMats.resize(pvField.intField.rows());
+    std::vector<MatrixXcd> localSpaceReducMats; localSpaceReducMats.resize(pvField.intField.rows());
     std::vector<VectorXcd> localSpaceReducRhs;  localSpaceReducRhs.resize(pvField.intField.rows());
     
     for (int i=0;i<pvField.intField.rows();i++){
-      localFaceReducMats[i]=MatrixXcd::Identity(realN,realN);
+      localSpaceReducMats[i]=MatrixXcd::Identity(realN,realN);
       localSpaceReducRhs[i]=VectorXcd::Zero(realN);
     }
     
@@ -168,8 +163,8 @@ namespace directional
       }
       singleReducRhs(realN-currSpaceNumDof-1) = -constVectorComplex;
       
-      localSpaceReducRhs[pvData.constSpaces(i)] = localFaceReducMats[pvData.constSpaces(i)]*singleReducRhs + localSpaceReducRhs[pvData.constSpaces(i)];
-      localFaceReducMats[pvData.constSpaces(i)] = localFaceReducMats[pvData.constSpaces(i)]*singleReducMat;
+      localSpaceReducRhs[pvData.constSpaces(i)] = localSpaceReducMats[pvData.constSpaces(i)]*singleReducRhs + localSpaceReducRhs[pvData.constSpaces(i)];
+      localSpaceReducMats[pvData.constSpaces(i)] = localSpaceReducMats[pvData.constSpaces(i)]*singleReducMat;
       
       numSpaceConstraints(pvData.constSpaces(i))++;
     
@@ -183,15 +178,15 @@ namespace directional
     int jump = (pvData.signSymmetry ? 2 : 1);
     jump = (pvData.wRoSy < 0.0 ? pvData.N : jump);
     for (int i=0;i<pvField.intField.rows();i++){
-      //std::cout<<"localFaceReducMats[i]: "<<localFaceReducMats[i]<<std::endl;
+      //std::cout<<"localSpaceReducMats[i]: "<<localSpaceReducMats[i]<<std::endl;
       for (int j=0;j<pvData.N;j+=jump){
-        for (int k=0;k<localFaceReducMats[i].cols();k++)
-          reducMatTriplets.push_back(Triplet<complex<double>>(j*pvField.intField.rows()+i, colCounter+k, localFaceReducMats[i](j/jump,k)));
+        for (int k=0;k<localSpaceReducMats[i].cols();k++)
+          reducMatTriplets.push_back(Triplet<complex<double>>(j*pvField.intField.rows()+i, colCounter+k, localSpaceReducMats[i](j/jump,k)));
         
         pvData.reducRhs(j*pvField.intField.rows()+i) = localSpaceReducRhs[i](j/jump);
       }
      
-      colCounter+=localFaceReducMats[i].cols();
+      colCounter+=localSpaceReducMats[i].cols();
     }
     
     pvData.reducMat.resize(pvData.N*pvField.intField.rows(), colCounter);
@@ -281,7 +276,7 @@ namespace directional
   }
 
 
-  // Computes a polyvector on the entire mesh
+  // Computes a polyvector field on the entire mesh, where precomputation has taken place.
   // Inputs:
   //  PolyVectorData: The data structure which should have been initialized with polyvector_precompute()
   // Outputs:
@@ -366,7 +361,7 @@ namespace directional
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
     pvField.init_field(mesh,POLYVECTOR_FIELD,N);
-    polyvector_precompute(pvField, N, pvData);
+    polyvector_precompute(mesh,N,pvField,pvData);
     polyvector_field(pvData, pvField);
   }
 
@@ -385,8 +380,7 @@ IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
   pvData.wAlignment = Eigen::VectorXd::Constant(constSpaces.size(),-1.0);
   pvData.wSmooth = 1.0;
   pvData.wRoSy = 0.0;
-  pvField.init_field(mesh, POLYVECTOR_FIELD, N);
-  polyvector_precompute(pvField, N, pvData);
+  polyvector_precompute(mesh, N, pvField,pvData);
   polyvector_field(pvData, pvField);
 }
 

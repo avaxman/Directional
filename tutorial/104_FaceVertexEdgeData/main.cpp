@@ -2,7 +2,6 @@
 #include <directional/readOFF.h>
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
-#include <directional/read_singularities.h>
 #include <directional/principal_matching.h>
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
@@ -32,13 +31,12 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 
 int main()
 {
-  std::cout <<"1  Show Face-based values" << std::endl;
+  std::cout <<"1  Show Face-based values (default)" << std::endl;
   std::cout <<"2  Show Verex-based values" << std::endl;
   std::cout <<"3  Show Edge-based values" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/eight.off", mesh);
-  field.set_mesh(mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", N, field);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", mesh, N, field);
  
   //Face data - the x component of the face normals
   faceData=mesh.faceNormals.col(0);
@@ -53,6 +51,7 @@ int main()
   viewer.set_mesh(mesh);
   viewer.set_field(field, Eigen::RowVector3d::Constant(1.0));
   viewer.toggle_mesh_edges(false);
+  viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff());
   
   viewer.callback_key_down = &key_down;
   viewer.launch();
