@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <directional/readOBJ.h>
 #include <igl/unproject_onto_mesh.h>
+#include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
 #include <directional/FaceField.h>
 #include <directional/index_prescription.h>
@@ -44,20 +44,19 @@ void update_raw_field()
   directional::index_prescription(cycleIndices, N,globalRotation, ldltSolver, field, rotationAngles, linfError);
   std::cout<<"Index prescription linfError: "<<linfError<<std::endl;
   
-  
   viewer.set_field(field);
   viewer.set_selected_faces(cycleFaces[currCycle]);
-  //viewer.set_singularities(singVertices, singIndices);
+
 }
 
 void update_singularities()
 {
-  /*Eigen::VectorXi singVertices, singIndices;
+  Eigen::VectorXi singVertices, singIndices;
   std::vector<int> singVerticesList, singIndicesList;
-  for (int i=0;i<V.rows();i++)
-    if (cycleIndices(vertex2cycle(i))){
+  for (int i=0;i<field.dualCycles.rows();i++)
+    if (cycleIndices(field.element2Cycle(i))){
       singVerticesList.push_back(i);
-      singIndicesList.push_back(cycleIndices(vertex2cycle(i)));
+      singIndicesList.push_back(cycleIndices(field.element2Cycle(i)));
     }
   
   singVertices.resize(singVerticesList.size());
@@ -65,10 +64,9 @@ void update_singularities()
   for (int i=0;i<singVerticesList.size();i++){
     singVertices(i)=singVerticesList[i];
     singIndices(i)=singIndicesList[i];
-  }*/
+  }
   
- 
-  
+  viewer.set_singularities(singVertices, singIndices);
 }
 
 
