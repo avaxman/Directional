@@ -1,4 +1,3 @@
-#include <math.h>
 #include <directional/FaceField.h>
 #include <directional/TriMesh.h>
 #include <directional/directional_viewer.h>
@@ -10,9 +9,8 @@
 #include <directional/readOBJ.h>
 
 int N=2;
-directional::FaceField field;
+directional::FaceField field, powerField;
 directional::TriMesh mesh;
-Eigen::MatrixXcd powerField;
 int sparsity=0;
 
 directional::DirectionalViewer viewer;
@@ -39,11 +37,10 @@ int main()
   std::cout <<"2  Denser field view" << std::endl;
  
   directional::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj",mesh);
-  field.set_mesh(mesh);
   Eigen::VectorXi bc(1); bc(0)=0;
   Eigen::MatrixXd b(1,3); b.row(0)=mesh.V.row(mesh.F(0,1))-mesh.V.row(mesh.F(0,2));
   directional::power_field(mesh, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);
-  directional::power_to_raw(mesh, powerField,N,field, true);
+  directional::power_to_raw(powerField,N,field, true);
   
   viewer.set_mesh(mesh);
   viewer.set_field(field);
