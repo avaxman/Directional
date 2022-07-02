@@ -23,6 +23,7 @@ namespace directional
     Eigen::MatrixXi F;
     igl::readOFF(off_file_name,V,F);
     mesh.set_mesh(V,F);
+    return true;
   }
 }
 

@@ -53,7 +53,7 @@ void update_singularities()
 {
   Eigen::VectorXi singVertices, singIndices;
   std::vector<int> singVerticesList, singIndicesList;
-  for (int i=0;i<field.dualCycles.rows();i++)
+  for (int i=0;i<field.element2Cycle.rows();i++)
     if (cycleIndices(field.element2Cycle(i))){
       singVerticesList.push_back(i);
       singIndicesList.push_back(cycleIndices(field.element2Cycle(i)));
