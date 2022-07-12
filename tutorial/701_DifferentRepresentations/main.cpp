@@ -1,9 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <directional/readOBJ.h>
+#include <directional/definitions.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
-#include <directional/VertexField.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/read_raw_field.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -15,6 +16,8 @@ using namespace std;
 
 int N = 2;
 directional::TriMesh mesh;
+directional::IntrinsicVertexTangentBundle vtb;
+directional::IntrinsicFaceTangentBundle ftb;
 directional::FaceField rawFaceField, powerFaceField;
 directional::VertexField rawVertexField, powerVertexField;
 directional::DirectionalViewer viewer;
@@ -60,8 +63,8 @@ int main(int argc, char *argv[])
   keyAction("2", "Show vertex-based field.");
 
   directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
-  powerFaceField.init_field(mesh, POWER_FIELD, N);
-  powerVertexField.init_field(mesh, POWER_FIELD, N);
+  ftb.init(mesh);
+  vtb.init(mesh);
   
   Eigen::VectorXi constFaces, constVertices;
   Eigen::MatrixXd constVectors;
@@ -72,8 +75,8 @@ int main(int argc, char *argv[])
   constVertices.resize(1);
   constVertices<<mesh.F(0,1);
   
-  directional::power_field(mesh, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
-  directional::power_field(mesh, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
+  directional::power_field(ftb, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
+  directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
 
   //computing power fields
   directional::power_to_raw(powerFaceField, N, rawFaceField,true);

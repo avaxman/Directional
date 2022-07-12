@@ -43,68 +43,18 @@ public:
   ~CartesianField(){}
   
   //Initializing the field with the proper tangent spaces
-  void IGL_INLINE init_field(const _TangentBundle& _tb, const int _fieldType, const int _N){
+  void IGL_INLINE init(const _TangentBundle& _tb, const int _fieldType, const int _N){
     tb = &_tb;
     fieldType = _fieldType;
     N=_N;
   };
   
-  //Setting the field by the extrinsic ambient field, which will get projected to the intrinsic tangent spaces.
-  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
-  
-    assert(_extField.cols()==3*N);
-    
-    extField=_extField;
-    
-    extField.conservativeResize(intField.rows(),intField.cols()*3/2);
-    for (int i=0;i<intField.rows();i++)
-      for (int j=0;j<intField.cols();j+=2)
-        extField.block(i,3*j/2,1,3)=mesh->VBx.row(i)*intField(i,j)+mesh->VBy.row(i)*intField(i,j+1);
-    
-   
-
-    /*if (face.rows()==0){
-      intField.resize(extField.rows(),2*N);
-      for (int i=0;i<V.rows();i++){
-        for (int j=0;j<N;j++){
-          RowVector3d extVector = extField.block(i,3*j,1,3);
-          
-          //projecting on the flat tangent space of the vertex normal
-          
-          
-          
-          //projecting on all face tangents and choosing the closest
-          /*int closestVector=-1;
-          int maxCosDist = -3276700.0;
-          RowVector3d finalIntVector;
-          //TODO: handle boundaries
-          for (int k=0;k<mesh.valence(i);k++){
-            RowVector3d intVector = extVector-extVector.dot(mesh.faceNormals(mesh.VF(i,k)));
-            double cosDist=intVector.dot(extVector);
-            if (cosDist>maxCostDist){
-              maxCostDist = cosDist;
-              closestVector=k;
-              finalIntVector=intVector;
-            }
-          }
-          
-          //projecting to intrinsic coordinates in face
-          RowVector3d closestEdgeVector = mesh.EV(mesh.VE(closestVector,0),1)-mesh.EV(mesh.VE(closestVector,0),0);
-          closestEdgeVector = (mesh.EV(mesh.VE(closestVector,0),0) == closestVector ? closestEdgeVector : -closestEdgeVector);
-          double angleDiff = std::acos(closestEdgeVector.dot(finalIntVector)./closestEdgeVector.norm()/finalIntVector.norm());
-          std::complex<double> complexIntVector=finalIntVector.norm()*complex(exp(0,tangentStartAngles(closestVector+angleDiff)));
-          intField.block(i,2*j,1,2)=complexIntVector;
-        }
-      }
-        
-        
-    }*/
-  }
-  
-  //Directly setting the intrinsic tangent spaces
-  void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+  void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+    assert (!(fieldType==POWER_FIELD) || (_intField.cols()==2));
+    assert ((_intField.cols()==2*N) || !(fieldType==POLYVECTOR_FIELD || fieldType==RAW_FIELD));
     intField = _intField;
-    extField = intField;
+    
+    extField = tb->project_to_extrinsic(Eigen::VectorXi(), intField);
   }
   
   //The same, just with complex coordinates
@@ -114,19 +64,33 @@ public:
       intField.col(2*i)=_intField.col(i).real();
       intField.col(2*i+1)=_intField.col(i).imag();
     }
-    extField = intField;
+    set_intrinsic_field(intField);
   }
   
-  //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
-  Eigen::MatrixXd virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const {
-    return extDirectionals;
+  //Setting the field by the extrinsic ambient field, which will get projected to the intrinsic tangent spaces.
+  void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
+    assert(_extField.cols()==3*N);
+    extField=_extField;
+    extField = tb->project_to_intrinsic(Eigen::VectorXi(), extField);
   }
+  
+  //For custom tangent spaces
+  Eigen::MatrixXd IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
+    assert(tangentSpaces.rows()==extDirectionals.rows());
+    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2);
+    
+    intDirectionals = tb->project_to_intrinsic(tangentSpaces, extField);
+  }
+
   
   //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
-  void virtual IGL_INLINE set_singularities(const Eigen::VectorXi& _singElements,
-                                            const Eigen::VectorXi& _singIndices){}
-  
-
+  void IGL_INLINE set_singularities(const Eigen::VectorXi& _singLocalCycles,
+                                    const Eigen::VectorXi& _singIndices){
+    
+    //TODO: remove boundary elements
+    singLocalCycles = _singLocalCycles;
+    singIndices = _singIndices;
+  }
 };
 
 }
