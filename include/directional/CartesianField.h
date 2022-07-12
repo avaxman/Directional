@@ -74,14 +74,6 @@ public:
     extField = tb->project_to_intrinsic(Eigen::VectorXi(), extField);
   }
   
-  //For custom tangent spaces
-  Eigen::MatrixXd IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
-    assert(tangentSpaces.rows()==extDirectionals.rows());
-    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2);
-    
-    intDirectionals = tb->project_to_intrinsic(tangentSpaces, extField);
-  }
-
   
   //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
   void IGL_INLINE set_singularities(const Eigen::VectorXi& _singLocalCycles,

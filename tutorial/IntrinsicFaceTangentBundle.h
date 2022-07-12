@@ -35,143 +35,90 @@ public:
     
     typedef std::complex<double> Complex;
     mesh = &_mesh;
+    fieldType = _fieldType;
+    N = _N;
     
     //adjacency relation is by dual edges.
-    adjSpaces = mesh->EV;
-    oneRing = mesh->VE;
-    Eigen::VectorXi valence = mesh->vertexValence;
-    sources = mesh->V;
-    normals = mesh->vertexNormals;
-    cycleSources = mesh->barycenters;
-    cycleNormals = mesh->faceNormals;
+    adjSpaces = mesh->EF;
+    oneRing = mesh->FE;
+    sources = mesh->barycenters;
+    normals = mesh->faceNormals;
+    dualSources = mesh->V;
+    dualNormals = mesh->vertexNormals;
     
-    //creating vertex tangent lookup table
-    tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff());
-    for (int i=0;i<mesh->V.rows();i++){
-      //TODO: boundaries
-      double angleSum = 2*igl::PI - mesh->GaussianCurvature(i);
-      tangentStartAngles.col(0).setZero();  //the first angle
-      Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
-      int hebegin = mesh->VH(i);
-      int heiterate = mesh->twinH(mesh->prevH(hebegin));
-      int j=1;
-      do{
-        Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(heiterate)))-mesh->V.row(i);
-        double angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector)/(prevEdgeVector.norm()*currEdgeVector.norm()));
-        tangentStartAngles(i,j)=tangentStartAngles(i,j-1)+2*igl::PI*angleDiff/angleSum;
-        heiterate = mesh->twinH(mesh->prevH(heiterate));
-        j++;
-        prevEdgeVector=currEdgeVector;
-      }while (heiterate!=hebegin);
+    //connection is the ratio of the complex representation of edges
+    connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
+    Eigen::MatrixXd edgeVectors(mesh->EF.rows(), 3);
+    for (int i = 0; i < mesh->EF.rows(); i++) {
+      if (mesh->EF(i, 0) == -1 || mesh->EF(i, 1) == -1)
+        continue;
+      edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
+      Complex ef(edgeVectors.row(i).dot(mesh->FBx.row(mesh->EF(i, 0))), edgeVectors.row(i).dot(mesh->FBy.row(mesh->EF(i, 0))));
+      Complex eg(edgeVectors.row(i).dot(mesh->FBx.row(mesh->EF(i, 1))), edgeVectors.row(i).dot(mesh->FBy.row(mesh->EF(i, 1))));
+      connection(i) = eg / ef;
     }
     
-    //connection is the ratio of the complex representation of mutual edges
-    connection.resize(mesh->EV.rows(),1);  //the difference in the angle representation of edge i from EV(i,0) to EV(i,1)
-    Eigen::MatrixXd edgeVectors(mesh->EV.rows(), 3);
-    for (int i = 0; i < mesh->EV.rows(); i++) {
-      //edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
-      
-      //looking up edge in each tangent space
-      Complex ef,eg;
-      int hebegin = mesh->VH(mesh->EV(i,0));
-      int heiterate = hebegin;
-      int j=0;
-      do{
-        if (mesh->HE(heiterate)==i)
-          ef = exp(Complex(0,tangentStartAngles(mesh->EV(i, 0),j)));
-        heiterate = mesh->twinH(mesh->prevH(heiterate));
-        j++;
-      }while (heiterate!=hebegin);
-      
-      hebegin = mesh->VH(mesh->EV(i,1));
-      heiterate = hebegin;
-      j=0;
-      do{
-        if (mesh->HE(heiterate)==i)
-          eg = exp(Complex(0,tangentStartAngles(mesh->EV(i, 1),j)));
-        heiterate = mesh->twinH(mesh->prevH(heiterate));
-        j++;
-      }while (heiterate!=hebegin);
-      
-      connection(i) = -eg / ef;
-    }
-    
-    local2Cycle.resize(mesh->F.rows());
-    cycleCurvatures=Eigen::VectorXd::Zero(mesh->F.rows());
-    cycles.resize(mesh->F.rows(), mesh->EV.rows());  //TODO: higher genus and boundaries
-    innerAdjacencies.resize(mesh->EV.rows());
-    std::vector<Eigen::Triplet<double>> cyclesTriplets;
-    for (int i=0;i<mesh->F.rows();i++){
-      local2Cycle(i)=i;
-      std::complex<double> complexHolonomy(1.0,0.0);
-      for (int j=0;j<3;j++){
-        dualCyclesTriplets.push_back(Eigen::Triplet<double>(i,mesh->FE(i,j),mesh->FEs(i,j)));
-        if (mesh->FEs(i,j)>0)
-          complexHolonomy*=connection(mesh->FE(i,j));
-        else
-          complexHolonomy/=connection(mesh->FE(i,j));
-      }
-      cycleCurvatures(i)=arg(complexHolonomy);
-    }
-    cycles.setFromTriplets(cyclesTriplets.begin(), cyclesTriplets.end());
-    
-    for (int i=0;i<mesh->EV.rows();i++) //TODO: boundaries
-      innerAdjacencies(i)=i;
-    //directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, dualCycles, cycleCurvatures, element2Cycle, innerAdjacencies);
+    //TODO: cycles, cycleCurvature
+    directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, dualCycles, cycleCurvatures, element2Cycle, innerAdjacencies);
     
     //drawing from mesh geometry
     
     /************Smoothness matrices****************/
-    stiffnessWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
-    
-    //cotangent weights
-    Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh->F.rows(),3);
-    for (int i=0;i<mesh->F.rows();i++){
-      for (int j=0;j<3;j++){
-        Eigen::RowVector3d vec12 = mesh->V.row(mesh->F(i,(j+1)%3))-mesh->V.row(mesh->F(i,j));
-        Eigen::RowVector3d vec13 = mesh->V.row(mesh->F(i,(j+2)%3))-mesh->V.row(mesh->F(i,j));
-        double cosAngle = vec12.dot(vec13);
-        double sinAngle = (vec12.cross(vec13)).norm();
-        if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
-          faceCotWeights(i,j) = cosAngle/sinAngle;
-        
-        stiffnessWeights(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
-      }
+    stiffnessWeights=Eigen::VectorXd::Zero(mesh->EF.rows());
+   
+    //mass are face areas
+    igl::doublearea(mesh->V,mesh->F,massWeights);
+    massWeights.array()/=2.0;
+
+    //The "harmonic" weights from [Brandt et al. 2020].
+    for (int i=0;i<mesh->EF.rows();i++){
+      if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
+        continue;  //boundary edge
+      
+      double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
+      stiffnessWeights(i)=3*primalLengthSquared/(massWeights(mesh->EF(i,0))+massWeights(mesh->EF(i,0)));
     }
-    
-    //masses are vertex voronoi areas
-    Eigen::MatrixXd dAreas;
-    igl::doublearea(mesh->V,mesh->F,dAreas);
-    massWeights = Eigen::VectorXd::Zero(mesh->V.rows());
-    for (int i=0;i<mesh->F.rows();i++)
-      for (int j=0;j<3;j++)
-        massWeights(mesh->F(i,j)) += dAreas(i)/6.0;
   
   }
   
   
   //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
-    assert(tangentSpaces.rows()==extDirectionals.rows());
-    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2);
+    assert(tangentSpaces.rows()==extDirectionals.rows() || tangentSpaces.rows()==0);
     
-    for (int j=0;j<tangentSpaces.rows();j++){
-      intDirectionals.row(j)<<(extDirectionals.row(j).array()*mesh->VBx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->VBy.row(tangentSpaces(j)).array()).sum();
+    if (tangentSpaces.rows()==0)
+      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+    else
+      actualTangentSpaces = tangentSpaces;
+    
+    int N = extDirectionals.cols()/3;
+    Eigen::MatrixXd intDirectionals(actualTangentSpaces.rows(),2*N);
+    
+    for (int i=0;i<actualTangentSpaces.rows();i++){
+      for (int j=0;j<N;j++)
+      intDirectionals.block(i,2*j,1,2)<<(extDirectionals.block(i,3*j,1,3).array()*mesh->FBx.row(actualTangentSpaces(i)).array()).sum(),(extDirectionals.block(i,3*j,1,3).array()*mesh->FBy.row(actualTangentSpaces(i)).array()).sum();
     }
     return intDirectionals;
   }
 
   
-  //projecting extrinsic to intrinsic
+  //projecting intrinsic to extrinsicc
   Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
     
-    assert(tangentSpaces.rows()==intDirectionals.rows());
-    Eigen::MatrixXd extDirectionals(tangentSpaces.rows(),3);
+    assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
+    Eigen::VectorXi actualTangentSpaces;
+    if (tangentSpaces.rows()==0)
+      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+    else
+      actualTangentSpaces = tangentSpaces;
+    
+    int N = intDirectionals.cols()/2;
+    Eigen::MatrixXd extDirectionals(actualTangentSpaces.rows(),3);
     
     extDirectionals.conservativeResize(intDirectionals.rows(),intDirectionals.cols()*3/2);
     for (int i=0;i<intDirectionals.rows();i++)
       for (int j=0;j<intDirectionals.cols();j+=2)
-        extDirectionals.block(i,3*j/2,1,3)=mesh->VBx.row(i)*intDirectionals(i,j)+mesh->VBy.row(i)*intDirectionals(i,j+1);
+        extDirectionals.block(i,3*j/2,1,3)=mesh->FBx.row(actualTangentSpaces(i))*intDirectionals(i,j)+mesh->FBy.row(actualTangentSpaces(i))*intDirectionals(i,j+1);
     }
     return extDirectionals;
   }

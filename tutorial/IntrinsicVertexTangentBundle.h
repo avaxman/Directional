@@ -152,26 +152,41 @@ public:
   
   //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
-    assert(tangentSpaces.rows()==extDirectionals.rows());
-    Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2);
+    assert(tangentSpaces.rows()==extDirectionals.rows() || tangentSpaces.rows()==0);
     
-    for (int j=0;j<tangentSpaces.rows();j++){
-      intDirectionals.row(j)<<(extDirectionals.row(j).array()*mesh->VBx.row(tangentSpaces(j)).array()).sum(),(extDirectionals.row(j).array()*mesh->VBy.row(tangentSpaces(j)).array()).sum();
+    if (tangentSpaces.rows()==0)
+      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+    else
+      actualTangentSpaces = tangentSpaces;
+    
+    int N = extDirectionals.cols()/3;
+    Eigen::MatrixXd intDirectionals(actualTangentSpaces.rows(),2*N);
+    
+    for (int i=0;i<actualTangentSpaces.rows();i++){
+      for (int j=0;j<N;j++)
+      intDirectionals.block(i,2*j,1,2)<<(extDirectionals.block(i,3*j,1,3).array()*mesh->VBx.row(actualTangentSpaces(i)).array()).sum(),(extDirectionals.block(i,3*j,1,3).array()*mesh->VBy.row(actualTangentSpaces(i)).array()).sum();
     }
     return intDirectionals;
   }
 
   
-  //projecting extrinsic to intrinsic
+  //projecting intrinsic to extrinsicc
   Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
     
-    assert(tangentSpaces.rows()==intDirectionals.rows());
-    Eigen::MatrixXd extDirectionals(tangentSpaces.rows(),3);
+    assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
+    Eigen::VectorXi actualTangentSpaces;
+    if (tangentSpaces.rows()==0)
+      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+    else
+      actualTangentSpaces = tangentSpaces;
+    
+    int N = intDirectionals.cols()/2;
+    Eigen::MatrixXd extDirectionals(actualTangentSpaces.rows(),3);
     
     extDirectionals.conservativeResize(intDirectionals.rows(),intDirectionals.cols()*3/2);
     for (int i=0;i<intDirectionals.rows();i++)
       for (int j=0;j<intDirectionals.cols();j+=2)
-        extDirectionals.block(i,3*j/2,1,3)=mesh->VBx.row(i)*intDirectionals(i,j)+mesh->VBy.row(i)*intDirectionals(i,j+1);
+        extDirectionals.block(i,3*j/2,1,3)=mesh->VBx.row(actualTangentSpaces(i))*intDirectionals(i,j)+mesh->VBy.row(actualTangentSpaces(i))*intDirectionals(i,j+1);
     }
     return extDirectionals;
   }
