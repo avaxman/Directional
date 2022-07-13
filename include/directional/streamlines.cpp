@@ -124,7 +124,7 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   
   if (seedLocations.rows()==0){
     assert(ringDistance>=0);
-    Directional::generate_sample_locations(field.mesh->F,field.mesh->EF,ringDistance,data.samples);
+    Directional::generate_sample_locations(field.tb->mesh->F,field.tb->mesh->EF,ringDistance,data.samples);
     nsamples = data.nsample = data.samples.size();
     nsamples = data.nsample;
     /*Eigen::VectorXd r;
@@ -138,7 +138,7 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   }
   
   Eigen::MatrixXd BC_sample;
-  igl::slice(field.mesh->barycenters, data.samples, 1, BC_sample);
+  igl::slice(field.tb->mesh->barycenters, data.samples, 1, BC_sample);
   
   // initialize state for tracing vector field
   
@@ -200,11 +200,11 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
       
       for (int k = 0; k < 3; ++k)
       {
-        f1 = data.field.mesh->TT(f0, k);
+        f1 = data.field.tb->mesh->TT(f0, k);
         
         // edge vertices
-        const Eigen::RowVector3d &q = data.field.mesh->V.row(data.field.mesh->F(f0, k));
-        const Eigen::RowVector3d &qs = data.field.mesh->V.row(data.field.mesh->F(f0, (k + 1) % 3));
+        const Eigen::RowVector3d &q = data.field.tb->mesh->V.row(data.field.tb->mesh->F(f0, k));
+        const Eigen::RowVector3d &qs = data.field.tb->mesh->V.row(data.field.tb->mesh->F(f0, (k + 1) % 3));
         // edge direction
         Eigen::RowVector3d s = qs - q;
         
@@ -217,8 +217,8 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
           state.current_face(j,i) = f1;
           
           // matching direction on next face
-          int e1 = data.field.mesh->FE(f0, k);
-          if (data.field.mesh->EF(e1, 0) == f0)
+          int e1 = data.field.tb->mesh->FE(f0, k);
+          if (data.field.tb->mesh->EF(e1, 0) == f0)
             m1 = (data.field.matching(e1)+m0)%data.field.N; //m1 = data.match_ab(e1, m0);
           else
             m1 = (-data.field.matching(e1)+m0+data.field.N)%data.field.N;  //data.match_ba(e1, m0);
