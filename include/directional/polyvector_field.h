@@ -67,9 +67,10 @@ namespace directional
   // Outputs:
   //  pvField: a POLYVECTOR_FIELD cartesian field initalized with the mesh
   //  PolyVectorData:       Updated structure with all operators
+  template<class _TangentBundle>
   IGL_INLINE void polyvector_precompute(const directional::TriMesh& mesh,
                                         const int N,
-                                        directional::CartesianField& pvField,
+                                        directional::CartesianField<_TangentBundle>& pvField,
                                         PolyVectorData& pvData)
   {
     
@@ -272,8 +273,10 @@ namespace directional
   //  PolyVectorData: The data structure which should have been initialized with polyvector_precompute()
   // Outputs:
   //  pvField: a POLYVECTOR_FIELD type cartesian field object
+
+  template<class _TangentBundle>
   IGL_INLINE void polyvector_field(const PolyVectorData& pvData,
-                                   directional::CartesianField& pvField)
+                                   directional::CartesianField<_TangentBundle>& pvField)
   {
     using namespace std;
     using namespace Eigen;
@@ -336,14 +339,15 @@ namespace directional
 
   
   // minimal version without auxiliary data
-  IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
+  template<class _TangentBundle>
+  IGL_INLINE void polyvector_field(const _TangentBundle& tb,
                                    const Eigen::VectorXi& constSpaces,
                                    const Eigen::MatrixXd& constVectors,
                                    const double smoothWeight,
                                    const double roSyWeight,
                                    const Eigen::VectorXd& alignWeights,
                                    const int N,
-                                   directional::CartesianField& pvField)
+                                   directional::CartesianField<_TangentBundle>& pvField)
   {
     PolyVectorData pvData;
     pvData.constSpaces=constSpaces;
@@ -351,18 +355,19 @@ namespace directional
     pvData.wAlignment = alignWeights;
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
-    pvField.init_field(mesh,POLYVECTOR_FIELD,N);
-    polyvector_precompute(mesh,N,pvField,pvData);
+    pvField.init(tb,POLYVECTOR_FIELD,N);
+    polyvector_precompute(tb,N,pvField,pvData);
     polyvector_field(pvData, pvField);
   }
 
 
 //A version with default parameters (in which alignment is hard by default).
-IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
+template<class _TangentBundle>
+IGL_INLINE void polyvector_field(const _TangentBundle& tb,
                                  const Eigen::VectorXi& constSpaces,
                                  const Eigen::MatrixXd& constVectors,
                                  const int N,
-                                 directional::CartesianField& pvField)
+                                 directional::CartesianField<_TangentBundle>& pvField)
 {
   
   PolyVectorData pvData;
@@ -371,7 +376,7 @@ IGL_INLINE void polyvector_field(const directional::TriMesh& mesh,
   pvData.wAlignment = Eigen::VectorXd::Constant(constSpaces.size(),-1.0);
   pvData.wSmooth = 1.0;
   pvData.wRoSy = 0.0;
-  polyvector_precompute(mesh, N, pvField,pvData);
+  polyvector_precompute(tb, N, pvField,pvData);
   polyvector_field(pvData, pvField);
 }
 

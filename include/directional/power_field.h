@@ -27,12 +27,13 @@ namespace directional
   //  N: The degree of the field.
   // Outputs:
   //  powerField: a cartesian power field object.
-  IGL_INLINE void power_field(const directional::TriMesh& mesh,
+  template<class _TangentBundle>
+  IGL_INLINE void power_field(const _TangentBundle& mesh,
                               const Eigen::VectorXi& constFaces,
                               const Eigen::MatrixXd& constVectors,
                               const Eigen::VectorXd& alignWeights,
                               const int N,
-                              directional::CartesianField& field)
+                              directional::CartesianField<_TangentBundle>& field)
   {
     //TODO: have the field be initialized here
     polyvector_field(mesh,constFaces,constVectors,1.0, -1.0, alignWeights, N,field);

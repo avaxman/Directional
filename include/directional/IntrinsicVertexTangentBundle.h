@@ -20,10 +20,10 @@
 namespace directional{
 
 //This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
-class IntrinsicVertexTangentBundle::public TangentBundle{
+class IntrinsicVertexTangentBundle : public TangentBundle{
 public:
   
-  TriMesh* mesh;
+  const TriMesh* mesh;
   Eigen::MatrixXd tangentStartAngles;  //where each edge begins on the intrinsic space
   
   virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
@@ -105,7 +105,7 @@ public:
       local2Cycle(i)=i;
       std::complex<double> complexHolonomy(1.0,0.0);
       for (int j=0;j<3;j++){
-        dualCyclesTriplets.push_back(Eigen::Triplet<double>(i,mesh->FE(i,j),mesh->FEs(i,j)));
+        cyclesTriplets.push_back(Eigen::Triplet<double>(i,mesh->FE(i,j),mesh->FEs(i,j)));
         if (mesh->FEs(i,j)>0)
           complexHolonomy*=connection(mesh->FE(i,j));
         else
@@ -154,8 +154,9 @@ public:
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
     assert(tangentSpaces.rows()==extDirectionals.rows() || tangentSpaces.rows()==0);
     
+    Eigen::VectorXi actualTangentSpaces;
     if (tangentSpaces.rows()==0)
-      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+      actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
     else
       actualTangentSpaces = tangentSpaces;
     
@@ -176,7 +177,7 @@ public:
     assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
     Eigen::VectorXi actualTangentSpaces;
     if (tangentSpaces.rows()==0)
-      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+      actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
     else
       actualTangentSpaces = tangentSpaces;
     
@@ -187,7 +188,7 @@ public:
     for (int i=0;i<intDirectionals.rows();i++)
       for (int j=0;j<intDirectionals.cols();j+=2)
         extDirectionals.block(i,3*j/2,1,3)=mesh->VBx.row(actualTangentSpaces(i))*intDirectionals(i,j)+mesh->VBy.row(actualTangentSpaces(i))*intDirectionals(i,j+1);
-    }
+    
     return extDirectionals;
   }
   

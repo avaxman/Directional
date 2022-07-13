@@ -14,15 +14,16 @@
 #include <igl/gaussian_curvature.h>
 #include <directional/representative_to_raw.h>
 #include <directional/effort_to_indices.h>
-#include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/TangentBundle.h>
+#include <directional/definitions.h>
 
 namespace directional
 {
   // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
   // Important: if the Raw field in not CCW ordered, the result is meaningless.
   // The input and output are both a RAW_FIELD type cartesian field, in which the matching, effort, and singularities are set.
-  IGL_INLINE void principal_matching(directional::CartesianField& field)
+  template<class _TangentBundle>
+  IGL_INLINE void principal_matching(directional::CartesianField<_TangentBundle>& field)
   {
     
     typedef std::complex<double> Complex;

@@ -20,31 +20,29 @@
 namespace directional{
 
 //This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
-class IntrinsicFaceTangentBundle::public TangentBundle{
+class IntrinsicFaceTangentBundle : public TangentBundle{
 public:
   
-  TriMesh* mesh;
+  const TriMesh* mesh;
   Eigen::MatrixXd tangentStartAngles;  //where each edge begins on the intrinsic space
   
   virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
   
-  IntrinsicVertexTangentBundle(){}
-  ~IntrinsicVertexTangentBundle(){}
+  IntrinsicFaceTangentBundle(){}
+  ~IntrinsicFaceTangentBundle(){}
   
   void IGL_INLINE init(const TriMesh& _mesh){
     
     typedef std::complex<double> Complex;
     mesh = &_mesh;
-    fieldType = _fieldType;
-    N = _N;
     
     //adjacency relation is by dual edges.
     adjSpaces = mesh->EF;
     oneRing = mesh->FE;
     sources = mesh->barycenters;
     normals = mesh->faceNormals;
-    dualSources = mesh->V;
-    dualNormals = mesh->vertexNormals;
+    cycleSources = mesh->V;
+    cycleNormals = mesh->vertexNormals;
     
     //connection is the ratio of the complex representation of edges
     connection.resize(mesh->EF.rows(),1);  //the difference in the angle representation of edge i from EF(i,0) to EF(i,1)
@@ -59,7 +57,7 @@ public:
     }
     
     //TODO: cycles, cycleCurvature
-    directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, dualCycles, cycleCurvatures, element2Cycle, innerAdjacencies);
+    directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, cycles, cycleCurvatures, local2Cycle, innerAdjacencies);
     
     //drawing from mesh geometry
     
@@ -86,18 +84,19 @@ public:
   Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
     assert(tangentSpaces.rows()==extDirectionals.rows() || tangentSpaces.rows()==0);
     
+    Eigen::VectorXi actualTangentSpaces;
     if (tangentSpaces.rows()==0)
-      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+      actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
     else
       actualTangentSpaces = tangentSpaces;
     
     int N = extDirectionals.cols()/3;
     Eigen::MatrixXd intDirectionals(actualTangentSpaces.rows(),2*N);
     
-    for (int i=0;i<actualTangentSpaces.rows();i++){
+    for (int i=0;i<actualTangentSpaces.rows();i++)
       for (int j=0;j<N;j++)
       intDirectionals.block(i,2*j,1,2)<<(extDirectionals.block(i,3*j,1,3).array()*mesh->FBx.row(actualTangentSpaces(i)).array()).sum(),(extDirectionals.block(i,3*j,1,3).array()*mesh->FBy.row(actualTangentSpaces(i)).array()).sum();
-    }
+    
     return intDirectionals;
   }
 
@@ -108,7 +107,7 @@ public:
     assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
     Eigen::VectorXi actualTangentSpaces;
     if (tangentSpaces.rows()==0)
-      actualTangentSpaces = Eigen::LinSpaced(sources.rows(), 0, sources.rows()-1);
+      actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
     else
       actualTangentSpaces = tangentSpaces;
     
@@ -119,7 +118,7 @@ public:
     for (int i=0;i<intDirectionals.rows();i++)
       for (int j=0;j<intDirectionals.cols();j+=2)
         extDirectionals.block(i,3*j/2,1,3)=mesh->FBx.row(actualTangentSpaces(i))*intDirectionals(i,j)+mesh->FBy.row(actualTangentSpaces(i))*intDirectionals(i,j+1);
-    }
+    
     return extDirectionals;
   }
   

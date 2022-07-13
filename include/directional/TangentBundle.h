@@ -58,7 +58,7 @@ public:
   
   //projecting extrinsic to intrinsic
   Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const {
-    return intDirectionals;
+    return extDirectionals;
   }
   
 };

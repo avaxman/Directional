@@ -10,7 +10,7 @@
 #define DIRECTIONAL_STREAMLINES_H
 
 #include <igl/igl_inline.h>
-#include <directional/FaceField.h>
+#include <directional/definitions.h>
 
 #include <Eigen/Core>
 #include <vector>

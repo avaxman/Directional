@@ -12,6 +12,7 @@
 #include <directional/TriMesh.h>
 #include <directional/TangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 
 namespace directional{

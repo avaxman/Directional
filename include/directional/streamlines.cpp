@@ -16,7 +16,7 @@
 #include <igl/speye.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
-#include <directional/FaceField.h>
+#include <directional/definitions.h>
 
 
 namespace Directional {
@@ -98,9 +98,9 @@ IGL_INLINE void directional::streamlines_init(const directional::FaceField& fiel
   Eigen::VectorXi order;
   Eigen::RowVectorXd sorted;
   data.field = field;
-  data.field.extField.setZero(field.mesh->F.rows(), field.N * 3);
-  for (unsigned i = 0; i < field.mesh->F.rows(); ++i){
-    const Eigen::RowVectorXd &n = field.mesh->faceNormals.row(i);
+  data.field.extField.setZero(field.tb->mesh->F.rows(), field.N * 3);
+  for (unsigned i = 0; i < field.tb->mesh->F.rows(); ++i){
+    const Eigen::RowVectorXd &n = field.tb->mesh->faceNormals.row(i);
     Eigen::RowVectorXd temp(1, field.N * 3);
     temp = field.extField.row(i);
     igl::sort_vectors_ccw(temp, n, order, sorted);
