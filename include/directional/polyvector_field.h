@@ -17,6 +17,7 @@
 #include <igl/eigs.h>
 #include <iostream>
 #include <directional/complex_eigs.h>
+#include <directional/TangentBundle.h>
 #include <directional/CartesianField.h>
 
 namespace directional
@@ -67,17 +68,16 @@ namespace directional
   // Outputs:
   //  pvField: a POLYVECTOR_FIELD cartesian field initalized with the mesh
   //  PolyVectorData:       Updated structure with all operators
-  template<class _TangentBundle>
-  IGL_INLINE void polyvector_precompute(const directional::TriMesh& mesh,
+  IGL_INLINE void polyvector_precompute(const directional::TangentBundle& tb,
                                         const int N,
-                                        directional::CartesianField<_TangentBundle>& pvField,
+                                        directional::CartesianField& pvField,
                                         PolyVectorData& pvData)
   {
     
     using namespace std;
     using namespace Eigen;
     
-    pvField.init_field(mesh, POLYVECTOR_FIELD, N);
+    pvField.init(&tb, POLYVECTOR_FIELD, N);
     
     //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
@@ -85,30 +85,28 @@ namespace directional
     pvData.N = N;
     pvData.sizeT = pvField.intField.rows();
     if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
-    
-   
-    
-    pvData.totalSmoothWeight = pvField.stiffnessWeights.sum();
+
+    pvData.totalSmoothWeight = pvField.tb->stiffnessWeights.sum();
     
     vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
     for (int n = 0; n < pvData.N; n++)
     {
-      for (int i=0;i<pvField.adjSpaces.rows();i++)
+      for (int i=0;i<pvField.tb->adjSpaces.rows();i++)
       {
-        if ((pvField.adjSpaces(i,0)==-1)||(pvField.adjSpaces(i,1)==-1))
+        if ((pvField.tb->adjSpaces(i,0)==-1)||(pvField.tb->adjSpaces(i,1)==-1))
           continue;  //boundary edge
         
         // differential matrix between two tangent spaces
-        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,0), pow(pvField.connection(i),pvData.N-n)));
-        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.adjSpaces(i,1), -1.0));
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.tb->adjSpaces(i,0), pow(pvField.tb->connection(i),pvData.N-n)));
+        dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.tb->adjSpaces(i,1), -1.0));
         
         //stiffness weights
-        WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.stiffnessWeights(i)));
+        WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->stiffnessWeights(i)));
         rowCounter++;
       }
       
       for (int i=0;i<pvField.intField.rows();i++)
-        MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.massWeights(i)));
+        MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.tb->massWeights(i)));
     }
     
     pvData.smoothMat.resize(rowCounter, pvData.N*pvField.intField.rows());
@@ -134,7 +132,7 @@ namespace directional
     }
     
     /*************Hard-constraint reduction matrices******************/
-    MatrixXd constVectorsIntrinsic=pvField.project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
+    MatrixXd constVectorsIntrinsic=pvField.tb->project_to_intrinsic(pvData.constSpaces,pvData.constVectors);
     //cout<<"constVectorsIntrinsic: "<<constVectorsIntrinsic<<endl;
     for (int i=0;i<pvData.constSpaces.size();i++){
       if (pvData.wAlignment(i)>=0.0)
@@ -191,7 +189,7 @@ namespace directional
       vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
       for (int i=pvField.intField.rows();i<pvData.N*pvField.intField.rows();i++){
         roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-        WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.massWeights(i%pvField.intField.rows())));
+        WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.tb->massWeights(i%pvField.intField.rows())));
       }
       
       pvData.roSyMat.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
@@ -200,7 +198,7 @@ namespace directional
       pvData.WRoSy.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
       pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
       
-      pvData.totalRoSyWeight=((double)pvData.N)*pvField.massWeights.sum();
+      pvData.totalRoSyWeight=((double)pvData.N)*pvField.tb->massWeights.sum();
     } else {
       pvData.roSyMat.resize(0, N*pvField.intField.rows());
       pvData.WRoSy.resize(0,0);  //Even necessary?
@@ -247,8 +245,8 @@ namespace directional
       
       alignRhsList.push_back(singleReducRhs);
       for (int j=0;j<singleReducRhs.size();j++){
-        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.massWeights(pvData.constSpaces(i))));
-        pvData.totalConstrainedWeight+=pvField.massWeights(pvData.constSpaces(i));
+        WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.tb->massWeights(pvData.constSpaces(i))));
+        pvData.totalConstrainedWeight+=pvField.tb->massWeights(pvData.constSpaces(i));
       }
       rowCounter+=realN;
     }
@@ -274,15 +272,18 @@ namespace directional
   // Outputs:
   //  pvField: a POLYVECTOR_FIELD type cartesian field object
 
-  template<class _TangentBundle>
   IGL_INLINE void polyvector_field(const PolyVectorData& pvData,
-                                   directional::CartesianField<_TangentBundle>& pvField)
+                                   directional::CartesianField& pvField)
   {
     using namespace std;
     using namespace Eigen;
     
     //forming total energy matrix;
-    SparseMatrix<complex<double>> totalUnreducedLhs = pvData.wSmooth * (pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat)/pvData.totalSmoothWeight + (pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight + (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
+    SparseMatrix<complex<double>> totalUnreducedLhs =(pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat) * (pvData.wSmooth / pvData.totalSmoothWeight);
+    if (pvData.roSyMat.rows()!=0)
+        totalUnreducedLhs=totalUnreducedLhs+(pvData.wRoSy*pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)/pvData.totalRoSyWeight;
+    if (pvData.alignMat.rows()!=0)
+        totalUnreducedLhs=totalUnreducedLhs+(pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
     VectorXcd totalUnreducedRhs= (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight;
         
     SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
@@ -339,15 +340,14 @@ namespace directional
 
   
   // minimal version without auxiliary data
-  template<class _TangentBundle>
-  IGL_INLINE void polyvector_field(const _TangentBundle& tb,
+  IGL_INLINE void polyvector_field(const TangentBundle& tb,
                                    const Eigen::VectorXi& constSpaces,
                                    const Eigen::MatrixXd& constVectors,
                                    const double smoothWeight,
                                    const double roSyWeight,
                                    const Eigen::VectorXd& alignWeights,
                                    const int N,
-                                   directional::CartesianField<_TangentBundle>& pvField)
+                                   directional::CartesianField& pvField)
   {
     PolyVectorData pvData;
     pvData.constSpaces=constSpaces;
@@ -355,19 +355,18 @@ namespace directional
     pvData.wAlignment = alignWeights;
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
-    pvField.init(tb,POLYVECTOR_FIELD,N);
+    pvField.init(&tb,POLYVECTOR_FIELD,N);
     polyvector_precompute(tb,N,pvField,pvData);
     polyvector_field(pvData, pvField);
   }
 
 
 //A version with default parameters (in which alignment is hard by default).
-template<class _TangentBundle>
-IGL_INLINE void polyvector_field(const _TangentBundle& tb,
+IGL_INLINE void polyvector_field(const TangentBundle& tb,
                                  const Eigen::VectorXi& constSpaces,
                                  const Eigen::MatrixXd& constVectors,
                                  const int N,
-                                 directional::CartesianField<_TangentBundle>& pvField)
+                                 directional::CartesianField& pvField)
 {
   
   PolyVectorData pvData;

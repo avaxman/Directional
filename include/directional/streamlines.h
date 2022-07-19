@@ -19,7 +19,7 @@ namespace directional
 {
   struct StreamlineData
   {
-    directional::FaceField field;
+    directional::CartesianField field;
     //      (N degrees stacked horizontally for each triangle)
     //Eigen::MatrixXi match_ab;   //  #E by N matrix, describing for each edge the matching a->b, where a
     //      and b are the faces adjacent to the edge (i.e. vector #i of
@@ -55,7 +55,7 @@ namespace directional
   // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_init(const directional::FaceField& field,
+  IGL_INLINE void streamlines_init(const directional::CartesianField& field,
                                    const Eigen::VectorXi& seedLocations,
                                    const int ringDistance,
                                    StreamlineData &data,

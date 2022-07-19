@@ -49,19 +49,19 @@ namespace directional
   IGL_INLINE void effort_to_indices(directional::CartesianField& field)
   {
     //field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
-    Eigen::VectorXd effortInner(field.innerAdjacencies.size());
-    for (int i=0;i<field.innerAdjacencies.size();i++)
-      effortInner(i)=field.effort(field.innerAdjacencies(i));
+    Eigen::VectorXd effortInner(field.tb->innerAdjacencies.size());
+    for (int i=0;i<field.tb->innerAdjacencies.size();i++)
+      effortInner(i)=field.effort(field.tb->innerAdjacencies(i));
     Eigen::VectorXi fullIndices;
-    directional::effort_to_indices(field.dualCycles, effortInner, field.cycleCurvatures, field.N, fullIndices);
+    directional::effort_to_indices(field.tb->cycles, effortInner, field.tb->cycleCurvatures, field.N, fullIndices);
    
-    Eigen::VectorXi indices(field.element2Cycle.size());
-    for (int i=0;i<field.element2Cycle.size();i++)
-      indices(i)=fullIndices(field.element2Cycle(i));
+    Eigen::VectorXi indices(field.tb->local2Cycle.size());
+    for (int i=0;i<field.tb->local2Cycle.size();i++)
+      indices(i)=fullIndices(field.tb->local2Cycle(i));
                         
     std::vector<int> singCyclesList;
     std::vector<int> singIndicesList;
-    for (int i=0;i<field.element2Cycle.size();i++)
+    for (int i=0;i<field.tb->local2Cycle.size();i++)
       if (indices(i)!=0){
         singCyclesList.push_back(i);
         singIndicesList.push_back(indices(i));

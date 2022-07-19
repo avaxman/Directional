@@ -17,9 +17,6 @@
 
 namespace directional{
 
-typedef CartesianField<IntrinsicFaceTangentBundle> FaceField;
-typedef CartesianField<IntrinsicVertexTangentBundle> VertexField;
-
 
 }
 

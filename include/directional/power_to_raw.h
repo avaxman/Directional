@@ -9,7 +9,7 @@
 #define DIRECTIONAL_POWER_TO_RAW_H
 
 #include <igl/igl_inline.h>
-#include <directional/TriMesh.h>
+#include <directional/TangentBundle.h>
 #include <directional/CartesianField.h>
 
 namespace directional
@@ -21,14 +21,13 @@ namespace directional
   //  normalize: whether to produce a normalized result (length = 1)
   // Output:
   //  rawField: a RAW_FIELD object representing the (CCW sorted) roots of the power field.
-  template<class _TangentBundle>
-  IGL_INLINE void power_to_raw(const directional::CartesianField<_TangentBundle>& powerField,
+  IGL_INLINE void power_to_raw(const directional::CartesianField& powerField,
                                int N,
-                               directional::CartesianField<_TangentBundle>& rawField,
+                               directional::CartesianField& rawField,
                                bool normalize=false)
   {
     assert(powerField.fieldType==POWER_FIELD && "The input field should be a power/PolyVector field");
-    rawField.init(*(powerField.tb), RAW_FIELD,N);
+    rawField.init(powerField.tb, RAW_FIELD,N);
     Eigen::MatrixXcd intFieldComplex(powerField.intField.rows(),N);
     Eigen::VectorXcd complexPowerField(powerField.intField.rows());
     

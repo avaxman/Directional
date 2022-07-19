@@ -208,13 +208,13 @@ namespace directional
        
        const int sparsity=0,
        const double offsetRatio = 0.2)*/
-      directional::glyph_lines_mesh(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity, offsetRatio);
+      directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity, offsetRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
       
-      set_singularities(fieldList[meshNum]->singElements,
+      set_singularities(fieldList[meshNum]->singLocalCycles,
                         fieldList[meshNum]->singIndices,
                         meshNum);
     }
@@ -237,7 +237,7 @@ namespace directional
       //TODO: something more efficient than feeding the entire field again
       Eigen::MatrixXd VField, CField;
       Eigen::MatrixXi FField;
-      directional::glyph_lines_mesh(fieldList[meshNum]->sources, fieldList[meshNum]->normals, fieldList[meshNum]->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity);
+      directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity);
       
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
       data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -252,7 +252,7 @@ namespace directional
     {
       Eigen::MatrixXd VSings, CSings;
       Eigen::MatrixXi FSings;
-      directional::singularity_spheres(fieldList[meshNum]->dualSources, fieldList[meshNum]->dualNormals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
+      directional::singularity_spheres(fieldList[meshNum]->tb->cycleSources, fieldList[meshNum]->tb->cycleNormals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
       data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
@@ -331,8 +331,8 @@ namespace directional
         slData.resize(meshNum+1);
         slState.resize(meshNum+1);
       }
-      assert(fieldList[meshNum]->discTangType()==discTangTypeEnum::FACE_SPACES);
-      directional::streamlines_init(*((directional::FaceField*)fieldList[meshNum]), seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+      assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
+      directional::streamlines_init(*fieldList[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }
     

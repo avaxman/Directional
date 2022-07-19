@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/TangentBundle.h>
 #include <directional/definitions.h>
 
 namespace directional
@@ -28,9 +28,9 @@ namespace directional
   // Return:
   //   Whether or not the file was read successfully
   bool IGL_INLINE read_raw_field(const std::string &fileName,
-                                 const directional::IntrinsicFaceTangentBundle& ftb,
+                                 const directional::TangentBundle& tb,
                                  int& N,
-                                 directional::FaceField& field)
+                                 directional::CartesianField& field)
   {
     try
     {
@@ -38,11 +38,11 @@ namespace directional
       if (!f.is_open()) {
           return false;
       }
-      int numF;
+      int numT;
       f>>N;
-      f>>numF;
+      f>>numT;
       Eigen::MatrixXd extField;
-      extField.conservativeResize(numF, 3*N);
+      extField.conservativeResize(numT, 3*N);
       
       //Can we do better than element-wise reading?
       for (int i=0;i<extField.rows();i++)
@@ -50,7 +50,8 @@ namespace directional
           f>>extField(i,j);
       
       f.close();
-      field.init(ftb, RAW_FIELD, N);
+      assert(tb.sources.rows()==extField.rows());
+      field.init(&tb, RAW_FIELD, N);
       field.set_extrinsic_field(extField);
       return f.good();
     }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <directional/readOBJ.h>
-#include <directional/definitions.h>
+#include <directional/CartesianField.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
@@ -18,8 +18,8 @@ int N = 2;
 directional::TriMesh mesh;
 directional::IntrinsicVertexTangentBundle vtb;
 directional::IntrinsicFaceTangentBundle ftb;
-directional::FaceField rawFaceField, powerFaceField;
-directional::VertexField rawVertexField, powerVertexField;
+directional::CartesianField rawFaceField, powerFaceField;
+directional::CartesianField rawVertexField, powerVertexField;
 directional::DirectionalViewer viewer;
 
 
@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
   constVectors<<mesh.V.row(mesh.F(0,2))-mesh.V.row(mesh.F(0,1));
   constVertices.resize(1);
   constVertices<<mesh.F(0,1);
-  
-  directional::power_field(ftb, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
+
   directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
+  directional::power_field(ftb, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
 
   //computing power fields
   directional::power_to_raw(powerFaceField, N, rawFaceField,true);

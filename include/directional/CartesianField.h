@@ -11,7 +11,7 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <directional/TriMesh.h>
+#include <directional/TangentBundle.h>
 
 namespace directional{
 
@@ -21,11 +21,10 @@ namespace directional{
 
 
 //This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
-template<class _TangentBundle>
 class CartesianField{
 public:
   
-  const _TangentBundle* tb;
+  const TangentBundle* tb;
   
   int N;  //degree of field (how many vectors are in each point);
   int fieldType;       //What the field actually represents  (for instance, either a raw field or a power/polyvector field)
@@ -39,14 +38,16 @@ public:
   Eigen::VectorXi singIndices;      //Corresponding indices (this is the numerator where the true fractional index is singIndices/N);
   
   CartesianField(){}
-  CartesianField(const _TangentBundle& _tb):tb(&_tb){}
+  CartesianField(const TangentBundle& _tb):tb(&_tb){}
   ~CartesianField(){}
   
   //Initializing the field with the proper tangent spaces
-  void IGL_INLINE init(const _TangentBundle& _tb, const int _fieldType, const int _N){
-    tb = &_tb;
+  void IGL_INLINE init(const TangentBundle* _tb, const int _fieldType, const int _N){
+    tb = _tb;
     fieldType = _fieldType;
     N=_N;
+    intField.resize(tb->sources.rows(),2);
+    extField.resize(tb->sources.rows(),3);
   };
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){

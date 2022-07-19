@@ -22,20 +22,19 @@ namespace directional
   // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
   // Important: if the Raw field in not CCW ordered, the result is meaningless.
   // The input and output are both a RAW_FIELD type cartesian field, in which the matching, effort, and singularities are set.
-  template<class _TangentBundle>
-  IGL_INLINE void principal_matching(directional::CartesianField<_TangentBundle>& field)
+  IGL_INLINE void principal_matching(directional::CartesianField& field)
   {
     
     typedef std::complex<double> Complex;
     using namespace Eigen;
     using namespace std;
     
-    field.matching.conservativeResize(field.adjSpaces.rows());
+    field.matching.conservativeResize(field.tb->adjSpaces.rows());
     field.matching.setConstant(-1);
     
-    field.effort = VectorXd::Zero(field.adjSpaces.rows());
-    for (int i = 0; i < field.adjSpaces.rows(); i++) {
-      if (field.adjSpaces(i, 0) == -1 || field.adjSpaces(i, 1) == -1)
+    field.effort = VectorXd::Zero(field.tb->adjSpaces.rows());
+    for (int i = 0; i < field.tb->adjSpaces.rows(); i++) {
+      if (field.tb->adjSpaces(i, 0) == -1 || field.tb->adjSpaces(i, 1) == -1)
         continue;
     
       double minRotAngle=10000.0;
@@ -44,15 +43,15 @@ namespace directional
       //computing some effort and the extracting principal one
       Complex freeCoeff(1.0,0.0);
       //finding where the 0 vector in EF(i,0) goes to with smallest rotation angle in EF(i,1), computing the effort, and then adjusting the matching to have principal effort.
-      RowVector2d vec0f = field.intField.block(field.adjSpaces(i, 0), 0, 1, 2);
+      RowVector2d vec0f = field.intField.block(field.tb->adjSpaces(i, 0), 0, 1, 2);
       Complex vec0fc = Complex(vec0f(0), vec0f(1));
-      Complex transvec0fc = vec0fc*field.connection(i);
+      Complex transvec0fc = vec0fc*field.tb->connection(i);
       for (int j = 0; j < field.N; j++) {
-        RowVector2d vecjf = field.intField.block(field.adjSpaces(i, 0), 2 * j, 1, 2);
+        RowVector2d vecjf = field.intField.block(field.tb->adjSpaces(i, 0), 2 * j, 1, 2);
         Complex vecjfc = Complex(vecjf(0),vecjf(1));
-        RowVector2d vecjg = field.intField.block(field.adjSpaces(i, 1), 2 * j, 1, 2);
+        RowVector2d vecjg = field.intField.block(field.tb->adjSpaces(i, 1), 2 * j, 1, 2);
         Complex vecjgc = Complex(vecjg(0),vecjg(1));
-        Complex transvecjfc = vecjfc*field.connection(i);
+        Complex transvecjfc = vecjfc*field.tb->connection(i);
         freeCoeff *= (vecjgc / transvecjfc);
         double currRotAngle =arg(vecjgc / transvec0fc);
         if (abs(currRotAngle)<abs(minRotAngle)){
@@ -69,11 +68,11 @@ namespace directional
       //This is still not perfect
       double currEffort=0;
       for (int j = 0; j < field.N; j++) {
-        RowVector2d vecjf = field.intField.block(field.adjSpaces(i, 0), 2*j, 1, 2);
+        RowVector2d vecjf = field.intField.block(field.tb->adjSpaces(i, 0), 2*j, 1, 2);
         Complex vecjfc = Complex(vecjf(0), vecjf(1));
-        RowVector2d vecjg = field.intField.block(field.adjSpaces(i, 1), 2 *((j+indexMinFromZero+field.N)%field.N), 1, 2);
+        RowVector2d vecjg = field.intField.block(field.tb->adjSpaces(i, 1), 2 *((j+indexMinFromZero+field.N)%field.N), 1, 2);
         Complex vecjgc = Complex(vecjg(0), vecjg(1));
-        Complex transvecjfc = vecjfc*field.connection(i);
+        Complex transvecjfc = vecjfc*field.tb->connection(i);
         currEffort+= arg(vecjgc / transvecjfc);
       }
    
