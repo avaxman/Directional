@@ -72,7 +72,7 @@ public:
   void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
     assert(_extField.cols()==3*N);
     extField=_extField;
-    extField = tb->project_to_intrinsic(Eigen::VectorXi(), extField);
+    intField = tb->project_to_intrinsic(Eigen::VectorXi(), extField);
   }
   
   
@@ -84,6 +84,24 @@ public:
     singLocalCycles = _singLocalCycles;
     singIndices = _singIndices;
   }
+
+    Eigen::MatrixXd IGL_INLINE gradient_operator(const Eigen::VectorXi& matching){
+
+
+        assert(hasCochainSequence()==true);
+        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
+    }
+
+    Eigen::MatrixXd IGL_INLINE curl_operator(const Eigen::VectorXi& matching){
+        assert(hasCochainSequence()==true);
+        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
+    }
+
+    Eigen::MatrixXd IGL_INLINE divergence_operator(const Eigen::VectorXi& matching){
+        assert(hasCochainSequence()==true);
+        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
+    }
+
 };
 
 }

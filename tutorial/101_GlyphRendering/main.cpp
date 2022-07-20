@@ -3,11 +3,13 @@
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 
 int N;
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 directional::DirectionalViewer viewer;
 bool showField=true, showSingularities=true;
 
@@ -30,7 +32,8 @@ int main()
   std::cout <<"2    Show/hide Singularities" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off",mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", mesh, N, field);
+  ftb.init(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", ftb, N, field);
   directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", field);
   directional::DirectionalViewer viewer;
   

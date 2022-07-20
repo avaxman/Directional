@@ -24,9 +24,10 @@ class IntrinsicFaceTangentBundle : public TangentBundle{
 public:
   
   const TriMesh* mesh;
-  Eigen::MatrixXd tangentStartAngles;  //where each edge begins on the intrinsic space
-  
+
   virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
+
+  virtual bool hasCochainSequence() const { return false; }
   
   IntrinsicFaceTangentBundle(){}
   ~IntrinsicFaceTangentBundle(){}
@@ -121,6 +122,8 @@ public:
     
     return extDirectionals;
   }
+
+
   
 };
 
