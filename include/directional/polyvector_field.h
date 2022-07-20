@@ -77,7 +77,7 @@ namespace directional
     using namespace std;
     using namespace Eigen;
     
-    pvField.init(&tb, POLYVECTOR_FIELD, N);
+    pvField.init(tb, POLYVECTOR_FIELD, N);
     
     //Building the smoothness matrices, with an energy term for each inner edge and degree
     int rowCounter=0;
@@ -355,7 +355,7 @@ namespace directional
     pvData.wAlignment = alignWeights;
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
-    pvField.init(&tb,POLYVECTOR_FIELD,N);
+    pvField.init(tb,POLYVECTOR_FIELD,N);
     polyvector_precompute(tb,N,pvField,pvData);
     polyvector_field(pvData, pvField);
   }

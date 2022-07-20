@@ -42,8 +42,8 @@ public:
   ~CartesianField(){}
   
   //Initializing the field with the proper tangent spaces
-  void IGL_INLINE init(const TangentBundle* _tb, const int _fieldType, const int _N){
-    tb = _tb;
+  void IGL_INLINE init(const TangentBundle& _tb, const int _fieldType, const int _N){
+    tb = &_tb;
     fieldType = _fieldType;
     N=_N;
     intField.resize(tb->sources.rows(),2);

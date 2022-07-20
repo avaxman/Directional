@@ -51,7 +51,7 @@ namespace directional
       
       f.close();
       assert(tb.sources.rows()==extField.rows());
-      field.init(&tb, RAW_FIELD, N);
+      field.init(tb, RAW_FIELD, N);
       field.set_extrinsic_field(extField);
       return f.good();
     }

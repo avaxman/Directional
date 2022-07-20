@@ -27,7 +27,7 @@ namespace directional
                                bool normalize=false)
   {
     assert(powerField.fieldType==POWER_FIELD && "The input field should be a power/PolyVector field");
-    rawField.init(powerField.tb, RAW_FIELD,N);
+    rawField.init(*(powerField.tb), RAW_FIELD,N);
     Eigen::MatrixXcd intFieldComplex(powerField.intField.rows(),N);
     Eigen::VectorXcd complexPowerField(powerField.intField.rows());
     
