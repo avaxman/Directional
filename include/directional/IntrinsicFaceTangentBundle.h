@@ -25,9 +25,9 @@ public:
   
   const TriMesh* mesh;
 
-  virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
+  discTangTypeEnum discTangType() const {return discTangTypeEnum::FACE_SPACES;}
 
-  virtual bool hasCochainSequence() const { return false; }
+  bool hasCochainSequence() const { return true; }
   
   IntrinsicFaceTangentBundle(){}
   ~IntrinsicFaceTangentBundle(){}
@@ -102,7 +102,7 @@ public:
   }
 
   
-  //projecting intrinsic to extrinsicc
+  //projecting intrinsic to extrinsic
   Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
     
     assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
@@ -123,8 +123,94 @@ public:
     return extDirectionals;
   }
 
+    void virtual IGL_INLINE interpolate(const Eigen::MatrixXi &elemIndices,
+                                        const Eigen::MatrixXd &baryCoords,
+                                        const Eigen::MatrixXd &intDirectionals,
+                                        Eigen::MatrixXd& interpSources,
+                                        Eigen::MatrixXd& interpNormals,
+                                        Eigen::MatrixXd& interpField) {
 
-  
+      assert(elemIndices.rows()==baryCoords.rows());
+      assert(baryCoords.rows()==intDirectionals.rows());
+
+      interpSources=Eigen::MatrixXd::Zero(elemIndices.rows(),3);
+      interpNormals=Eigen::MatrixXd::Zero(elemIndices.rows(),3);
+      interpField=Eigen::MatrixXd::Zero(elemIndices.rows(),3);
+
+      //in face based fields the only thing that matters is the coordinates
+      for (int i=0;i<elemIndices.rows();i++){
+          int j=0;
+          while (elemIndices(i,j)>0){
+              interpSources.row(i).array()+=mesh->V.row(elemIndices(i)).array()*baryCoords(i,j);
+              interpNormals.row(i).array()+=mesh->V.row(elemIndices(i)).array()*baryCoords(i,j);
+          }
+          interpField.row(i)=intDirectionals(elemIndices(i),0)*mesh->FBx.row(elemIndices(i))+intDirectionals(elemIndices(i),0)*mesh->FBy.row(elemIndices(i));
+      }
+
+    }
+
+    Eigen::SparseMatrix<double> IGL_INLINE gradient_operator(const int N,
+                                                             const boundCondTypeEnum boundCondType){
+      assert(hasCochainSequence()==true);
+      Eigen::SparseMatrix<double> singleGradMatrix(2*mesh->F.size(), mesh->V.size());
+      std::vector<Eigen::Triplet<double>> singleGradMatTriplets;
+      for (int i=0;i<mesh->F.rows();i++)
+          for (int j=0;j<3;j++){
+              Eigen::RowVector3d e = mesh->V.row(mesh->F(i,(j+2)%3))-mesh->V.row(mesh->F(i,(j+1)%3));
+              Eigen::RowVector2d eperp; eperp<<e.dot(-mesh->FBy.row(i)),e.dot(mesh->FBx.row(i));
+              singleGradMatTriplets.push_back(Eigen::Triplet<double>(2*i,j,eperp(0)));
+              singleGradMatTriplets.push_back(Eigen::Triplet<double>(2*i+1,j,eperp(1)));
+          }
+
+      singleGradMatrix.setFromTriplets(singleGradMatTriplets.begin(), singleGradMatTriplets.end());
+
+      if (N==1)
+          return singleGradMatrix;
+
+      //else, kroning matrix.
+      Eigen::SparseMatrix<double> gradMatrixN(2*N*mesh->F.rows(), N*mesh->V.rows());
+      std::vector<Eigen::Triplet<double>> gradMatrixNTris;
+      for (int i=0;i<singleGradMatTriplets.size();i++)
+          for (int j=0;j<N;j++)
+              gradMatrixNTris.push_back(Eigen::Triplet<double>(N*(singleGradMatTriplets[i].row()-singleGradMatTriplets[i].row()%2)+2*j+singleGradMatTriplets[i].row()%2, singleGradMatTriplets[i].col()*N+j, singleGradMatTriplets[i].value()));
+
+      return gradMatrixN;
+      //TODO: boundaries
+    }
+
+    Eigen::SparseMatrix<double> IGL_INLINE curl_operator(const int N,
+                                                         const boundCondTypeEnum boundCondType,
+                                                         const Eigen::VectorXi& matching){
+      assert(hasCochainSequence()==true);
+
+      Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), 2*mesh->F.rows());
+      std::vector<Eigen::Triplet<double>> singleCurlMatTris;
+      for (int i=0;i<mesh->innerEdges.size();i++){
+          Eigen::RowVector3d e = mesh->V.row(mesh->EV(mesh->innerEdges(i),1))-mesh->V.row(mesh->EV(mesh->innerEdges(i),0));
+          //curl is <right_face - left_face , e>
+          Eigen::RowVector2d einLeft; einLeft<<e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i),0))),
+                                               e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i),0)));
+
+          Eigen::RowVector2d einRight; einRight<<e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i),1))),
+                  e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i),1)));
+
+          singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),0),-einLeft(0)));
+          singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),0)+1,-einLeft(1)));
+          singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),1),einRight(0)));
+          singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),1)+1,einRight(1)));
+      }
+
+      singleCurlMatrix.setFromTriplets(singleCurlMatTris.begin(), singleCurlMatTris.end());
+
+      if (N==1)
+          return singleCurlMatrix;
+
+      Eigen::SparseMatrix<double> curlMatrixN(N*mesh->innerEdges.size(), 2*N*mesh->F.rows());
+      std::vector<Eigen::Triplet<double>> curlMatNTris;
+
+      //TODO: entire thing with matching
+    }
+
 };
 
 }

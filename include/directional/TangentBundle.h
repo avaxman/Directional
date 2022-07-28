@@ -19,7 +19,8 @@ namespace directional{
 #define POWER_FIELD 1
 #define POLYVECTOR_FIELD 2
 
-enum class discTangTypeEnum {BASE_CLASS, FACE_SPACES, VERTEX_SPACES};
+    enum class discTangTypeEnum {BASE_CLASS, FACE_SPACES, VERTEX_SPACES};
+    enum class boundCondTypeEnum {DIRICHLET, NEUMANN};
 
 //This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
 class TangentBundle {
@@ -65,8 +66,8 @@ public:
     }
 
     //interpolating field from nodes in palces specified by barycentric coordinates. The interpolator needs to interpret them.
-    void virtual IGL_INLINE interpolate(const Eigen::MatrixXi &indices,
-                                        const Eigen::MatrixXd &baryCooord,
+    void virtual IGL_INLINE interpolate(const Eigen::MatrixXi &elemIndices,
+                                        const Eigen::MatrixXd &baryCoords,
                                         const Eigen::MatrixXd &intDirectionals,
                                         Eigen::MatrixXd& interpSources,
                                         Eigen::MatrixXd& interpNormals,
@@ -76,22 +77,18 @@ public:
         interpField=Eigen::MatrixXd();
     }
 
-    Eigen::MatrixXd IGL_INLINE gradient_operator(const Eigen::VectorXi& matching, const VectorXi& seam){
+    Eigen::SparseMatrix<double> virtual IGL_INLINE gradient_operator(const int N,
+                                                                     const boundCondTypeEnum boundCondType){
         assert(hasCochainSequence()==true);
         return Eigen::MatrixXd();  //actually unreachable since assert would fail.
     }
 
-    Eigen::MatrixXd IGL_INLINE curl_operator(const Eigen::VectorXi& matching){
+    Eigen::SparseMatrix<double> virtual IGL_INLINE curl_operator(const int N,
+                                                                 const boundCondTypeEnum boundCondType,
+                                                                 const Eigen::VectorXi& matching=Eigen::VectorXi()){
         assert(hasCochainSequence()==true);
         return Eigen::MatrixXd();  //actually unreachable since assert would fail.
     }
-
-    Eigen::MatrixXd IGL_INLINE divergence_operator(const Eigen::VectorXi& matching){
-        assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
-    }
-
-
   
 };
 
