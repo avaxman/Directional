@@ -331,7 +331,7 @@ namespace directional
         slData.resize(meshNum+1);
         slState.resize(meshNum+1);
       }
-      assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
+      //assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
       directional::streamlines_init(*fieldList[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
       
     }

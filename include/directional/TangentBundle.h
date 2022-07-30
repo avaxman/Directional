@@ -71,7 +71,7 @@ public:
                                         const Eigen::MatrixXd &intDirectionals,
                                         Eigen::MatrixXd& interpSources,
                                         Eigen::MatrixXd& interpNormals,
-                                        Eigen::MatrixXd& interpField) {
+                                        Eigen::MatrixXd& interpField)  const{
         interpSources=Eigen::MatrixXd();
         interpNormals=Eigen::MatrixXd();
         interpField=Eigen::MatrixXd();
@@ -80,14 +80,14 @@ public:
     Eigen::SparseMatrix<double> virtual IGL_INLINE gradient_operator(const int N,
                                                                      const boundCondTypeEnum boundCondType){
         assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
+        return Eigen::SparseMatrix<double>();  //actually unreachable since assert would fail.
     }
 
     Eigen::SparseMatrix<double> virtual IGL_INLINE curl_operator(const int N,
                                                                  const boundCondTypeEnum boundCondType,
                                                                  const Eigen::VectorXi& matching=Eigen::VectorXi()){
         assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
+        return Eigen::SparseMatrix<double>();  //actually unreachable since assert would fail.
     }
   
 };

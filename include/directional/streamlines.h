@@ -20,6 +20,8 @@ namespace directional
   struct StreamlineData
   {
     directional::CartesianField field;
+    const TriMesh* slMesh;
+    Eigen::MatrixXd slField;  //raw extrinsic field extracted by sampling
     //      (N degrees stacked horizontally for each triangle)
     //Eigen::MatrixXi match_ab;   //  #E by N matrix, describing for each edge the matching a->b, where a
     //      and b are the faces adjacent to the edge (i.e. vector #i of

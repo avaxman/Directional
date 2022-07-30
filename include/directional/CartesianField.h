@@ -84,24 +84,6 @@ public:
     singLocalCycles = _singLocalCycles;
     singIndices = _singIndices;
   }
-
-    Eigen::MatrixXd IGL_INLINE gradient_operator(const Eigen::VectorXi& matching){
-
-
-        assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
-    }
-
-    Eigen::MatrixXd IGL_INLINE curl_operator(const Eigen::VectorXi& matching){
-        assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
-    }
-
-    Eigen::MatrixXd IGL_INLINE divergence_operator(const Eigen::VectorXi& matching){
-        assert(hasCochainSequence()==true);
-        return Eigen::MatrixXd();  //actually unreachable since assert would fail.
-    }
-
 };
 
 }

@@ -17,6 +17,7 @@
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
 #include <directional/definitions.h>
 
 
@@ -98,10 +99,23 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   Eigen::MatrixXd FN;
   Eigen::VectorXi order;
   Eigen::RowVectorXd sorted;
-  assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES);
-  IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)field.tb;
+  assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES || field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
+  //
+  if (field.tb->discTangType()==discTangTypeEnum::FACE_SPACES){
+      IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)field.tb;
+      data.slMesh=ftb->mesh;
+  }
+  if (field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES){
+      IntrinsicVertexTangentBundle* vtb = (IntrinsicVertexTangentBundle*)field.tb;
+      data.slMesh=vtb->mesh;
+  }
+
   data.field = field;
-  data.field.extField.setZero(ftb->mesh->F.rows(), field.N * 3);
+  Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
+  Eigen::MatrixXd interpSources, interpNormals, interpField;
+  data.field.tb->interpolate(Eigen::VectorXi::LinSpaced(data.slMesh->F.rows(),0,data.slMesh->F.rows()),
+    baryCoords,data.field.intField,interpSources,interpNormals,data.slField);
+  /*data.field.extField.setZero(ftb->mesh->F.rows(), field.N * 3);
   for (unsigned i = 0; i < ftb->mesh->F.rows(); ++i){
     const Eigen::RowVectorXd &n = ftb->mesh->faceNormals.row(i);
     Eigen::RowVectorXd temp(1, field.N * 3);
@@ -115,9 +129,8 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
       pd = (pd - (n.dot(pd)) * n).normalized();
       data.field.extField.block(i, j * 3, 1, 3) = pd;
     }
-  }
-  Eigen::VectorXd effort;
-  Eigen::VectorXi singIndices, singVertices;
+  }*/
+
   directional::principal_matching(data.field);
   
   // create seeds for tracing
@@ -127,7 +140,7 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   
   if (seedLocations.rows()==0){
     assert(ringDistance>=0);
-    Directional::generate_sample_locations(ftb->mesh->F,ftb->mesh->EF,ringDistance,data.samples);
+    Directional::generate_sample_locations(data.slMesh->F,data.slMesh->EF,ringDistance,data.samples);
     nsamples = data.nsample = data.samples.size();
     nsamples = data.nsample;
     /*Eigen::VectorXd r;
@@ -141,7 +154,7 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   }
   
   Eigen::MatrixXd BC_sample;
-  igl::slice(ftb->mesh->barycenters, data.samples, 1, BC_sample);
+  igl::slice(data.slMesh->barycenters, data.samples, 1, BC_sample);
   
   // initialize state for tracing vector field
   
@@ -171,7 +184,7 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
   
   int nsample = data.nsample;
 
-  IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)data.field.tb;  //maye not efficient since virtual lookup, or negligible?
+  //IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)data.field.tb;  //maye not efficient since virtual lookup, or negligible?
   state.start_point = state.end_point;
   state.numSteps++;
   
@@ -196,7 +209,7 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
       const Eigen::RowVector3d &p = state.start_point.row(j + nsample * i);
       
       // the direction where we are trying to go
-      const Eigen::RowVector3d &r = data.field.extField.block(f0, 3 * m0, 1, 3);
+      const Eigen::RowVector3d &r = data.slField.block(f0, 3 * m0, 1, 3);
       
       
       // new state,
@@ -204,11 +217,11 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
       
       for (int k = 0; k < 3; ++k)
       {
-        f1 = ftb->mesh->TT(f0, k);
+        f1 = data.slMesh->TT(f0, k);
         
         // edge vertices
-        const Eigen::RowVector3d &q = ftb->mesh->V.row(ftb->mesh->F(f0, k));
-        const Eigen::RowVector3d &qs = ftb->mesh->V.row(ftb->mesh->F(f0, (k + 1) % 3));
+        const Eigen::RowVector3d &q = data.slMesh->V.row(data.slMesh->F(f0, k));
+        const Eigen::RowVector3d &qs = data.slMesh->V.row(data.slMesh->F(f0, (k + 1) % 3));
         // edge direction
         Eigen::RowVector3d s = qs - q;
         
@@ -221,8 +234,8 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
           state.current_face(j,i) = f1;
           
           // matching direction on next face
-          int e1 = ftb->mesh->FE(f0, k);
-          if (ftb->mesh->EF(e1, 0) == f0)
+          int e1 = data.slMesh->FE(f0, k);
+          if (data.slMesh->EF(e1, 0) == f0)
             m1 = (data.field.matching(e1)+m0)%data.field.N; //m1 = data.match_ab(e1, m0);
           else
             m1 = (-data.field.matching(e1)+m0+data.field.N)%data.field.N;  //data.match_ba(e1, m0);
