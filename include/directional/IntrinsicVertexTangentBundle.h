@@ -52,6 +52,7 @@ namespace directional{
                 double angleSum =  totalTangentSum - mesh->GaussianCurvature(i);
                 tangentStartAngles.col(0).setZero();  //the first angle
                 Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
+                std::cout<<"mesh->vertexValence(i): "<<mesh->vertexValence(i)<<std::endl;
                 int hebegin = mesh->VH(i);  //this should be the first boundary edge in case of boundary
                 int heiterate = mesh->twinH(mesh->prevH(hebegin));
                 int j=1;
@@ -70,7 +71,6 @@ namespace directional{
             Eigen::MatrixXd edgeVectors(mesh->EV.rows(), 3);
             for (int i = 0; i < mesh->EV.rows(); i++) {
                 //edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
-
                 //looking up edge in each tangent space
                 Complex ef,eg;
                 int hebegin = mesh->VH(mesh->EV(i,0));
@@ -81,7 +81,7 @@ namespace directional{
                         ef = exp(Complex(0,tangentStartAngles(mesh->EV(i, 0),j)));
                     heiterate = mesh->twinH(mesh->prevH(heiterate));
                     j++;
-                }while (heiterate!=hebegin);
+                }while ((heiterate!=hebegin)&&(heiterate!=-1));
 
                 hebegin = mesh->VH(mesh->EV(i,1));
                 heiterate = hebegin;
@@ -91,7 +91,7 @@ namespace directional{
                         eg = exp(Complex(0,tangentStartAngles(mesh->EV(i, 1),j)));
                     heiterate = mesh->twinH(mesh->prevH(heiterate));
                     j++;
-                }while (heiterate!=hebegin);
+                }while ((heiterate!=hebegin)&&(heiterate!=-1));
 
                 connection(i) = -eg / ef;
             }
@@ -190,6 +190,54 @@ namespace directional{
                     extDirectionals.block(i,3*j/2,1,3)=mesh->VBx.row(actualTangentSpaces(i))*intDirectionals(i,j)+mesh->VBy.row(actualTangentSpaces(i))*intDirectionals(i,j+1);
 
             return extDirectionals;
+        }
+
+
+        //Primitive version that just interpolates inside the triangle - should be changed to a full linear version!
+        void IGL_INLINE interpolate(const Eigen::MatrixXi &faceIndices,
+                                    const Eigen::MatrixXd &baryCoords,
+                                    const Eigen::MatrixXd &intDirectionals,
+                                    Eigen::MatrixXd& interpSources,
+                                    Eigen::MatrixXd& interpNormals,
+                                    Eigen::MatrixXd& interpField) const {
+
+            assert(faceIndices.rows()==baryCoords.rows());
+            assert(baryCoords.rows()==intDirectionals.rows());
+
+            int N = intDirectionals.cols()/2;
+            interpSources=Eigen::MatrixXd::Zero(faceIndices.rows(),3);
+            interpNormals=Eigen::MatrixXd::Zero(faceIndices.rows(),3);
+            interpField=Eigen::MatrixXd::Zero(faceIndices.rows(),3*N);
+
+            //interpolating through the polyvector representation to avoid singular issues
+
+            //projecting extrinsic vectors unto corners (again a bit primitive)
+            //idea: find rotation matrix vertex->face and then just use intrinsic vector projection without going through extrinsic
+            //then interpolate via PV in the center
+            Eigen::MatrixXcd pvDirectionals;
+            raw_to_polyvector(intDirectionals, pvDirectionals);
+            Eigen::MatrixXcd interpPV=Eigen::MatrixXcd::Zero(faceIndices.rows(), pvDirectionals.cols());
+            ///errr this is wrong: the vertex bases are incompatible.... I should make them corner based in the face basis and only then interpolate
+            for (int i=0;i<faceIndices.rows();i++){
+
+                //Converting to corner-basis by simple rotation of all vectors to the corner
+
+
+
+                for (int j=0;j<3;j++) {
+                    interpSources.row(i).array() += mesh->V.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+                    interpPV.row(i).array() +=
+                            pvDirectionals.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+                }
+
+
+                interpNormals.row(i)=mesh->faceNormals.row(faceIndices(i));
+
+                //This is on faces, so using face-based base
+                for (int j=0;j<N;j++)
+                    interpField.block(i,j*3,1,3)=intDirectionals(faceIndices(i),j*2)*mesh->FBx.row(faceIndices(i))+intDirectionals(faceIndices(i),j*2+1)*mesh->FBy.row(faceIndices(i));
+            }
+
         }
 
     };

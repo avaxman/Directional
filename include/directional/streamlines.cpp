@@ -111,6 +111,9 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   }
 
   data.field = field;
+
+  //this is currently quite primitive and only samples in mid-faces and considers the entire triangle to be constant
+  //It's fine for face-based fields but distorts vertex-based fields considerably.
   Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
   Eigen::MatrixXd interpSources, interpNormals, interpField;
   data.field.tb->interpolate(Eigen::VectorXi::LinSpaced(data.slMesh->F.rows(),0,data.slMesh->F.rows()),

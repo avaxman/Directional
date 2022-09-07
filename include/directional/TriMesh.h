@@ -79,8 +79,8 @@ namespace directional{
                 if ((EF(i, 1) == -1) || (EF(i, 0) == -1)) {
                     boundEdgesList.push_back(i);
                     isBoundaryEdge(i)=1;
-                    isBoundaryEdge(EV(i,0))=1;
-                    isBoundaryEdge(EV(i,1))=1;
+                    isBoundaryVertex(EV(i,0))=1;
+                    isBoundaryVertex(EV(i,1))=1;
                 }else
                     innerEdgesList.push_back(i);
 
