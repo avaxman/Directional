@@ -345,7 +345,8 @@ namespace directional
       
       //generating colors according to original elements and their time signature
       Eigen::MatrixXd slColors(slState[meshNum].P1.rows(),3);
-      
+
+      //problem: if the field is vertex-faced, "orig face" is invalid!
       for (int i=0;i<slState[meshNum].origFace.size();i++){
         if (fieldColors[meshNum].rows()==1)
           slColors.row(i)=fieldColors[meshNum];

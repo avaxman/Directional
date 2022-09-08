@@ -15,6 +15,8 @@
 #include <igl/doublearea.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
+#include <directional/raw_to_polyvector.h>
+#include <directional/polyvector_to_raw.h>
 
 
 namespace directional{
@@ -201,8 +203,9 @@ namespace directional{
                                     Eigen::MatrixXd& interpNormals,
                                     Eigen::MatrixXd& interpField) const {
 
+            using namespace Eigen;
             assert(faceIndices.rows()==baryCoords.rows());
-            assert(baryCoords.rows()==intDirectionals.rows());
+            //assert(baryCoords.rows()==intDirectionals.rows());
 
             int N = intDirectionals.cols()/2;
             interpSources=Eigen::MatrixXd::Zero(faceIndices.rows(),3);
@@ -214,34 +217,52 @@ namespace directional{
             //projecting extrinsic vectors unto corners (again a bit primitive)
             //idea: find rotation matrix vertex->face and then just use intrinsic vector projection without going through extrinsic
             //then interpolate via PV in the center
-            Eigen::MatrixXcd pvDirectionals;
-            raw_to_polyvector(intDirectionals, pvDirectionals);
-            Eigen::MatrixXcd interpPV=Eigen::MatrixXcd::Zero(faceIndices.rows(), pvDirectionals.cols());
-            ///errr this is wrong: the vertex bases are incompatible.... I should make them corner based in the face basis and only then interpolate
-            for (int i=0;i<faceIndices.rows();i++){
 
-                //Converting to corner-basis by simple rotation of all vectors to the corner
+            MatrixXd cornerField(3*mesh->F.rows(),3*N);
 
-
-
-                for (int j=0;j<3;j++) {
-                    interpSources.row(i).array() += mesh->V.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
-                    interpPV.row(i).array() +=
-                            pvDirectionals.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+            for (int i=0;i<mesh->F.rows();i++)
+                for (int j=0;j<3;j++){
+                    MatrixXd VBasis(2,3), FBasis(2,3);
+                    VBasis.row(0)=mesh->VBx.row(mesh->F(i,j));
+                    VBasis.row(1)=mesh->VBy.row(mesh->F(i,j));
+                    FBasis.row(0) =mesh->FBx.row(i);
+                    FBasis.row(1)=mesh->FBy.row(i);
+                    Matrix2d basisChange = VBasis*FBasis.transpose();
+                    for (int k=0;k<N;k++)
+                        cornerField.block(3*i+j,2*k,1,2)=intDirectionals.block(mesh->F(i,j),2*k,1,2)*basisChange;
                 }
 
+            Eigen::MatrixXcd pvDirectionals;
+            raw_to_polyvector(cornerField, N, pvDirectionals);
+            Eigen::MatrixXcd interpPV=Eigen::MatrixXd::Zero(faceIndices.rows(), pvDirectionals.cols());
 
-                interpNormals.row(i)=mesh->faceNormals.row(faceIndices(i));
+            //converting to polyvector to blend
+            for (int i=0;i<faceIndices.rows();i++) {
 
-                //This is on faces, so using face-based base
-                for (int j=0;j<N;j++)
-                    interpField.block(i,j*3,1,3)=intDirectionals(faceIndices(i),j*2)*mesh->FBx.row(faceIndices(i))+intDirectionals(faceIndices(i),j*2+1)*mesh->FBy.row(faceIndices(i));
+                for (int j = 0; j < 3; j++) {
+                    interpSources.row(i).array() += mesh->V.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+                    interpPV.row(i).array() += pvDirectionals.row(mesh->F(faceIndices(i), j)).array() * baryCoords(i, j);
+                }
+
+                interpNormals.row(i) = mesh->faceNormals.row(faceIndices(i));
             }
 
+            Eigen::MatrixXcd interpFieldInt;
+            Eigen::MatrixXd interpPVReal(interpPV.rows(), 2*interpPV.cols());
+            for (int j=0;j<interpPV.cols();j++) {
+                interpPVReal.col(2 * j) = interpPV.col(j).real();
+                interpPVReal.col(2 * j+1) = interpPV.col(j).imag();
+            }
+
+            polyvector_to_raw(interpPVReal, N, interpFieldInt);
+
+            for (int i=0;i<faceIndices.rows();i++)
+                //This is on faces, so using face-based base
+                for (int j=0;j<N;j++)
+                    interpField.block(i,j*3,1,3)=interpFieldInt(faceIndices(i),j).real()*mesh->FBx.row(faceIndices(i))+interpFieldInt(faceIndices(i),j).imag()*mesh->FBy.row(faceIndices(i));
+
         }
-
     };
-
 }
 
 

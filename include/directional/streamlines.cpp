@@ -104,20 +104,28 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   if (field.tb->discTangType()==discTangTypeEnum::FACE_SPACES){
       IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)field.tb;
       data.slMesh=ftb->mesh;
+      data.slField=data.field.extField;
+      data.field = field;
   }
   if (field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES){
       IntrinsicVertexTangentBundle* vtb = (IntrinsicVertexTangentBundle*)field.tb;
       data.slMesh=vtb->mesh;
+
+      //converting to a face-based field since streamlines don't handle fully-blown linear interpolation yet.
+      IntrinsicFaceTangentBundle ftb;
+      ftb.init(*(vtb->mesh));
+      data.field.init(ftb, RAW_FIELD, field.N);
+
+      Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
+      Eigen::MatrixXd interpSources, interpNormals, interpField;
+      vtb->interpolate(Eigen::VectorXi::LinSpaced(data.slMesh->F.rows(),0,data.slMesh->F.rows()),
+                                 baryCoords,field.intField,interpSources,interpNormals,data.slField);
+
+      data.field.set_extrinsic_field(data.slField);
   }
-
-  data.field = field;
-
   //this is currently quite primitive and only samples in mid-faces and considers the entire triangle to be constant
   //It's fine for face-based fields but distorts vertex-based fields considerably.
-  Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
-  Eigen::MatrixXd interpSources, interpNormals, interpField;
-  data.field.tb->interpolate(Eigen::VectorXi::LinSpaced(data.slMesh->F.rows(),0,data.slMesh->F.rows()),
-    baryCoords,data.field.intField,interpSources,interpNormals,data.slField);
+
   /*data.field.extField.setZero(ftb->mesh->F.rows(), field.N * 3);
   for (unsigned i = 0; i < ftb->mesh->F.rows(); ++i){
     const Eigen::RowVectorXd &n = ftb->mesh->faceNormals.row(i);
