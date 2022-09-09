@@ -1,17 +1,18 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
+#include <directional/TriMesh.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/readOBJ.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/directional_viewer.h>
 
-
 int currF=0, N;
-
-Eigen::MatrixXd barycenters;
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 directional::DirectionalViewer viewer;
 
 bool zeroPressed=false;
@@ -41,8 +42,6 @@ void update_raw_field_mesh()
   viewer.set_field(field, glyphColors);
   
 }
-
-
 
 bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
@@ -99,7 +98,8 @@ int main()
   std::cout <<
   "  0+Left button    Choose face" << std::endl <<
   directional::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", mesh, N, field);
+  ftb.init(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", ftb, N, field);
   
   directional::principal_matching(field);
 
@@ -108,10 +108,7 @@ int main()
   viewer.set_field(field);
   update_triangle_mesh();
   update_raw_field_mesh();
-  
-  //singularity mesh
-  //viewer.set_singularities(singVertices, singIndices);
-  
+
   viewer.callback_key_down = &key_down;
   viewer.callback_key_up = &key_up;
   viewer.callback_mouse_down = &mouse_down;

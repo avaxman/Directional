@@ -33,7 +33,7 @@ namespace directional
                           const Eigen::MatrixXi& _faceIsCut=Eigen::MatrixXi())
   {
     using namespace Eigen;
-    combedField.init_field(*(rawField.mesh), RAW_FIELD, rawField.N);
+    combedField.init(*(rawField.tb), RAW_FIELD, rawField.N);
     Eigen::MatrixXi faceIsCut(rawField.intField.rows(),3);
     if (_faceIsCut.rows()==0)
       faceIsCut.setZero();
@@ -63,9 +63,9 @@ namespace directional
       spaceTurns(currSpaceMatching.first)=currSpaceMatching.second;
       
       for (int i=0;i<3;i++){
-        int nextMatching=(rawField.matching(rawField.oneRing(currSpaceMatching.first,i)));
-        int nextFace=(rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),1) : rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0));
-        nextMatching*=(rawField.adjSpaces(rawField.oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? 1.0 : -1.0);
+        int nextMatching=(rawField.matching(rawField.tb->oneRing(currSpaceMatching.first,i)));
+        int nextFace=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),1) : rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0));
+        nextMatching*=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? 1.0 : -1.0);
         nextMatching=(nextMatching+currSpaceMatching.second+10*rawField.N)%rawField.N;  //killing negatives
         if ((nextFace!=-1)&&(!visitedSpaces(nextFace))&&(!faceIsCut(currSpaceMatching.first,i)))
           spaceMatchingQueue.push(std::pair<int,int>(nextFace, nextMatching));
@@ -75,13 +75,13 @@ namespace directional
     }while (!spaceMatchingQueue.empty());
     
     combedField.set_intrinsic_field(combedIntField);
-    combedField.matching.resize(rawField.adjSpaces.rows());
+    combedField.matching.resize(rawField.tb->adjSpaces.rows());
     //giving combed matching
-    for (int i=0;i<rawField.adjSpaces.rows();i++){
-      if ((rawField.adjSpaces(i,0)==-1)||(rawField.adjSpaces(i,1)==-1))
+    for (int i=0;i<rawField.tb->adjSpaces.rows();i++){
+      if ((rawField.tb->adjSpaces(i,0)==-1)||(rawField.tb->adjSpaces(i,1)==-1))
         combedField.matching(i)=-1;
       else
-        combedField.matching(i)=(spaceTurns(rawField.adjSpaces(i,0))-spaceTurns(rawField.adjSpaces(i,1))+rawField.matching(i)+1000*rawField.N)%rawField.N;
+        combedField.matching(i)=(spaceTurns(rawField.tb->adjSpaces(i,0))-spaceTurns(rawField.tb->adjSpaces(i,1))+rawField.matching(i)+1000*rawField.N)%rawField.N;
     }
   }
 }

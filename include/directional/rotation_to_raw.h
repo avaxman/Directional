@@ -36,19 +36,19 @@ namespace directional
     
     Complex globalRot = exp(Complex(0, globalRotation));
     
-    SparseMatrix<Complex> aP1Full(field.adjSpaces.rows(), field.intField.rows());
-    SparseMatrix<Complex> aP1(field.adjSpaces.rows(), field.intField.rows() - 1);
+    SparseMatrix<Complex> aP1Full(field.tb->adjSpaces.rows(), field.intField.rows());
+    SparseMatrix<Complex> aP1(field.tb->adjSpaces.rows(), field.intField.rows() - 1);
     vector<Triplet<Complex> > aP1Triplets, aP1FullTriplets;
-    for (int i = 0; i<field.adjSpaces.rows(); i++) {
-      if (field.adjSpaces(i, 0) == -1 || field.adjSpaces(i, 1) == -1)
+    for (int i = 0; i<field.tb->adjSpaces.rows(); i++) {
+      if (field.tb->adjSpaces(i, 0) == -1 || field.tb->adjSpaces(i, 1) == -1)
         continue;
       
-      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0), pow(field.connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
-      aP1FullTriplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 1), -1.0));
-      if (field.adjSpaces(i, 0) != 0)
-        aP1Triplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 0)-1, pow(field.connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
-      if (field.adjSpaces(i, 1) != 0)
-        aP1Triplets.push_back(Triplet<Complex>(i, field.adjSpaces(i, 1)-1, -1.0));
+      aP1FullTriplets.push_back(Triplet<Complex>(i, field.tb->adjSpaces(i, 0), pow(field.tb->connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
+      aP1FullTriplets.push_back(Triplet<Complex>(i, field.tb->adjSpaces(i, 1), -1.0));
+      if (field.tb->adjSpaces(i, 0) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, field.tb->adjSpaces(i, 0)-1, pow(field.tb->connection(i),(double)N)*exp(Complex(0, (double)N*rotationAngles(i)))));
+      if (field.tb->adjSpaces(i, 1) != 0)
+        aP1Triplets.push_back(Triplet<Complex>(i, field.tb->adjSpaces(i, 1)-1, -1.0));
     }
     aP1Full.setFromTriplets(aP1FullTriplets.begin(), aP1FullTriplets.end());
     aP1.setFromTriplets(aP1Triplets.begin(), aP1Triplets.end());

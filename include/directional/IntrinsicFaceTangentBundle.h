@@ -15,6 +15,7 @@
 #include <igl/doublearea.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
+#include <directional/TangentBundle.h>
 
 
 namespace directional{

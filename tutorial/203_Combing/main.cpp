@@ -1,17 +1,19 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
+#include <directional/TriMesh.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/combing.h>
 #include <directional/directional_viewer.h>
-#include <directional/FaceField.h>
-#include <directional/TriMesh.h>
 #include <directional/readOBJ.h>
 
 int currF=0, N;
 directional::TriMesh mesh;
-directional::FaceField rawField, combedField;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawField, combedField;
 directional::DirectionalViewer viewer;
 
 bool showCombed=false;
@@ -45,7 +47,8 @@ int main()
   std::cout <<
   "  1        Toggle raw field/Combed field" << std::endl <<
   directional::readOBJ(TUTORIAL_SHARED_PATH "/lilium.obj", mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", mesh, N, rawField);
+  ftb.init(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", ftb, N, rawField);
   std::cout<<"Showing raw field"<<std::endl;
   
   //computing

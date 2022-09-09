@@ -2,17 +2,18 @@
 #include <igl/euler_characteristic.h>
 #include <igl/readDMAT.h>
 #include <igl/writeDMAT.h>
+#include <directional/TriMesh.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/principal_matching.h>
 #include <directional/index_prescription.h>
 #include <directional/power_field.h>
 #include <directional/directional_viewer.h>
-#include <directional/TriMesh.h>
-#include <directional/FaceField.h>
 #include <directional/power_to_raw.h>
 
-
 directional::TriMesh mesh;
-directional::FaceField rawField;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 Eigen::VectorXi singVertices,singIndices;
 Eigen::VectorXi b;
 Eigen::MatrixXd bc;
@@ -33,37 +34,36 @@ void update_directional_field()
   using namespace std;
   VectorXd rotationAngles;
   Eigen::VectorXi presSingIndices;
-  presSingIndices=VectorXi::Zero(rawField.dualCycles.rows());
+  presSingIndices=VectorXi::Zero(field.tb->cycles.rows());
   for (int i=0;i<singVertices.size();i++)
     presSingIndices(singVertices[i])=singIndices[i];
   
   double IPError;
   Eigen::VectorXi currIndices;
-  directional::index_prescription(presSingIndices,N,globalRotation, rawField, rotationAngles, IPError);
+  directional::index_prescription(presSingIndices,N,globalRotation, field, rotationAngles, IPError);
 
   if (viewingMode==TRIVIAL_PRINCIPAL_MATCHING)
-    directional::principal_matching(rawField);
+    directional::principal_matching(field);
   
   if (viewingMode==IMPLICIT_FIELD){
     bc.conservativeResize(b.rows(),3);
     for (int i=0;i<b.size();i++)
-      bc.row(i)<<rawField.extField.block(b(i),0,1,3).normalized();
+      bc.row(i)<<field.extField.block(b(i),0,1,3).normalized();
     
     Eigen::VectorXd effort;
-    directional::FaceField powerField;
-    powerField.init_field(mesh, POWER_FIELD, N);
-    directional::power_field(mesh, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N,powerField);
-    directional::power_to_raw(powerField, N, rawField,true);
-    directional::principal_matching(rawField);
+    directional::CartesianField powerField;
+    directional::power_field(ftb, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N,powerField);
+    directional::power_to_raw(powerField, N, field,true);
+    directional::principal_matching(field);
   }
   
-  viewer.set_field(rawField);
+  viewer.set_field(field);
   
   if (viewingMode==TRIVIAL_ONE_SING)
     viewer.set_singularities(singVertices, singIndices);
    
   if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-    viewer.set_singularities(rawField.singElements, rawField.singIndices);
+    viewer.set_singularities(field.singLocalCycles, field.singIndices);
   
 }
 
@@ -114,7 +114,7 @@ int main()
   using namespace Eigen;
   using namespace std;
   directional::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj",mesh);
-
+  ftb.init(mesh);
   igl::readDMAT(TUTORIAL_SHARED_PATH "/spheres_constFaces.dmat",b);
   
   singVertices.resize(2);
@@ -124,11 +124,11 @@ int main()
   singIndices(0)=N;
   singIndices(1)=N;
   
-  rawField.init_field(mesh, RAW_FIELD, N);
+  field.init(ftb, RAW_FIELD, N);
   
   //viewing mesh
   viewer.set_mesh(mesh);
-  viewer.set_field(rawField);
+  viewer.set_field(field);
   viewer.set_selected_faces(b);
   update_directional_field();
   

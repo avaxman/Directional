@@ -46,8 +46,8 @@ public:
     tb = &_tb;
     fieldType = _fieldType;
     N=_N;
-    intField.resize(tb->sources.rows(),2);
-    extField.resize(tb->sources.rows(),3);
+    intField.resize(tb->sources.rows(),2*N);
+    extField.resize(tb->sources.rows(),3*N);
   };
   
   void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){

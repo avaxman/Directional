@@ -45,17 +45,17 @@ namespace directional
     //Initialize solver if never before
     if (!ldltSolver.rows())
     {
-      SparseMatrix<double> AAt = field.dualCycles*field.dualCycles.transpose();
+      SparseMatrix<double> AAt = field.tb->cycles*field.tb->cycles.transpose();
       ldltSolver.compute(AAt);
     }
     
-    VectorXd innerRotationAngles = field.dualCycles.transpose()*ldltSolver.solve(-field.cycleCurvatures + cycleNewCurvature);
-    rotationAngles.conservativeResize(field.adjSpaces.rows());
+    VectorXd innerRotationAngles = field.tb->cycles.transpose()*ldltSolver.solve(-field.tb->cycleCurvatures + cycleNewCurvature);
+    rotationAngles.conservativeResize(field.tb->adjSpaces.rows());
     rotationAngles.setZero();
-    for (int i=0;i<field.innerAdjacencies.rows();i++)
-      rotationAngles(field.innerAdjacencies(i))=innerRotationAngles(i);
+    for (int i=0;i<field.tb->innerAdjacencies.rows();i++)
+      rotationAngles(field.tb->innerAdjacencies(i))=innerRotationAngles(i);
     
-    linfError = (field.dualCycles*innerRotationAngles - (-field.cycleCurvatures + cycleNewCurvature)).template lpNorm<Infinity>();
+    linfError = (field.tb->cycles*innerRotationAngles - (-field.tb->cycleCurvatures + cycleNewCurvature)).template lpNorm<Infinity>();
     
     Eigen::MatrixXd representative;
     directional::rotation_to_raw(rotationAngles,N,globalRotation,field);
