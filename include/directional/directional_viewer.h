@@ -167,6 +167,19 @@ namespace directional
       
       set_field_colors(glyphColors,meshNum);
     }
+
+      void IGL_INLINE set_selected_vertices(const Eigen::VectorXi& selectedVertices, const int meshNum=0){
+          Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(meshList[meshNum]->F.rows(),1);
+          std::vector<int> selectedFacesList;
+          for (int i=0;i<selectedVertices.size();i++)
+            for (int j=0;j<meshList[meshNum]->vertexValence(i)-(meshList[meshNum]->isBoundaryVertex(i) ? 1 : 0);j++)
+                selectedFacesList.push_back(meshList[meshNum]->VF(i,j));
+
+          Eigen::VectorXi selectedFaces(selectedFacesList.size());
+          selectedFaces=Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(selectedFacesList.data(), selectedFacesList.size());
+          set_selected_faces(selectedFaces);
+
+      }
     
     void IGL_INLINE set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
     {

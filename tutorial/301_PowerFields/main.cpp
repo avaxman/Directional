@@ -3,17 +3,18 @@
 #include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/readOBJ.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
 
-
 directional::TriMesh mesh;
-directional::FaceField rawField,powerFieldHard, powerFieldSoft;
-Eigen::VectorXi constFaces;
+directional::IntrinsicVertexTangentBundle vtb;
+directional::CartesianField rawField,powerFieldHard, powerFieldSoft;
+Eigen::VectorXi constVertices;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd alignWeights;
 
@@ -25,8 +26,8 @@ bool zeroPressed = false;
 bool viewFieldHard = true;
 
 void recompute_field(){
-  directional::power_field(mesh, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N,powerFieldHard);
-  directional::power_field(mesh, constFaces, constVectors, alignWeights, N,powerFieldSoft);
+  directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard);
+  directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft);
 }
 
 void update_visualization()
@@ -38,11 +39,11 @@ void update_visualization()
   
   //Ghost mesh just showing field, to compare against constraints
   Eigen::MatrixXd constraintIntField = Eigen::MatrixXd::Zero(powerFieldHard.intField.rows(),2);
-  for (int i=0;i<constFaces.size();i++)
-    constraintIntField.row(constFaces(i))=powerFieldHard.intField.row(constFaces(i));
+  for (int i=0;i<constVertices.size();i++)
+    constraintIntField.row(constVertices(i))=powerFieldHard.intField.row(constVertices(i));
   
-  directional::FaceField constraintRawField, constraintPowerField;
-  constraintPowerField.init_field(*(rawField.mesh),N,RAW_FIELD);
+  directional::CartesianField constraintRawField, constraintPowerField;
+  constraintPowerField.init(*(rawField.tb),N,RAW_FIELD);
   constraintPowerField.set_intrinsic_field(constraintIntField);
   
   directional::power_to_raw(constraintPowerField, N, constraintRawField);
@@ -50,7 +51,7 @@ void update_visualization()
   viewer.toggle_mesh(false,0);
   viewer.toggle_field(true,0);
   viewer.toggle_field(true,1);
-  viewer.set_selected_faces(constFaces,1);
+  viewer.set_selected_vertices(constVertices,1);
 
 }
 
@@ -76,7 +77,7 @@ bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
 
       // Reset the constraints
     case 'R':
-      constFaces.resize(0);
+      constVertices.resize(0);
       constVectors.resize(0, 3);
       recompute_field();
       break;
@@ -130,33 +131,38 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
   int fid;
   Eigen::Vector3d baryInFace;
 
-  // Cast a ray in the view direction starting from the mouse position
-  double x = viewer.current_mouse_x;
-  double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, mesh.V, mesh.F, fid, baryInFace))
-  {
 
-    int i;
-    for (i = 0; i < constFaces.rows(); i++)
-      if (constFaces(i) == fid)
-        break;
-    if (i == constFaces.rows())
+    // Cast a ray in the view direction starting from the mouse position
+    double x = viewer.current_mouse_x;
+    double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+    if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
+                                 viewer.core().proj, viewer.core().viewport, mesh.V, mesh.F, fid, baryInFace))
     {
-      constFaces.conservativeResize(constFaces.rows() + 1);
-      constFaces(i) = fid;
-      constVectors.conservativeResize(constVectors.rows() + 1, 3);
-      alignWeights.conservativeResize(alignWeights.size()+1);
-      if (alignWeights.size()==1)
-        alignWeights(0)=1.0;
-      else
-        alignWeights(alignWeights.size()-1)=alignWeights(alignWeights.size()-2);
-    }
+        Eigen::Vector3d::Index maxCol;
+        baryInFace.maxCoeff(&maxCol);
+        int currVertex=mesh.F(fid, maxCol);
+        int i;
+        for (i = 0; i < constVertices.rows(); i++)
+            if (constVertices(i) == fid)
+                break;
+        if (i == constVertices.rows())
+        {
+            constVertices.conservativeResize(constVertices.rows() + 1);
+            constVertices(i) = fid;
+            constVectors.conservativeResize(constVectors.rows() + 1, 3);
+            alignWeights.conservativeResize(alignWeights.size()+1);
+            if (alignWeights.size()==1)
+                alignWeights(0)=1.0;
+            else
+                alignWeights(alignWeights.size()-1)=alignWeights(alignWeights.size()-2);
+        }
 
-    // Compute direction from the center of the face to the mouse
-    constVectors.row(i) =(mesh.V.row(mesh.F(fid, 0)) * baryInFace(0) +
-                          mesh.V.row(mesh.F(fid, 1)) * baryInFace(1) +
-                          mesh.V.row(mesh.F(fid, 2)) * baryInFace(2) - mesh.barycenters.row(fid)).normalized();
+        // Compute direction from the center of the face to the mouse
+        //TODO: change way direction is chosen
+        constVectors.row(i) =(mesh.V.row(mesh.F(fid, 0)) * baryInFace(0) +
+                              mesh.V.row(mesh.F(fid, 1)) * baryInFace(1) +
+                              mesh.V.row(mesh.F(fid, 2)) * baryInFace(2) -
+                              mesh.barycenters.row(fid)).normalized();
     recompute_field();
     update_visualization();
     return true;
@@ -177,9 +183,10 @@ int main()
 
   // Load mesh
   directional::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", mesh);
-  powerFieldHard.init_field(mesh, POWER_FIELD, N);
-  powerFieldSoft.init_field(mesh, POWER_FIELD, N);
-  constFaces.resize(0);
+  vtb.init(mesh);
+  powerFieldHard.init(vtb, POWER_FIELD, N);
+  powerFieldSoft.init(vtb, POWER_FIELD, N);
+  constVertices.resize(0);
   constVectors.resize(0, 3);
 
   viewer.set_mesh(mesh,0);
