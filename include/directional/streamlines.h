@@ -20,6 +20,7 @@ namespace directional
   struct StreamlineData
   {
     directional::CartesianField field;
+    directional::IntrinsicFaceTangentBundle stb;  //the subdivision tangent bundle which is used for the streamlining
     const TriMesh* slMesh;
     Eigen::MatrixXd slField;  //raw extrinsic field extracted by sampling
     //      (N degrees stacked horizontally for each triangle)

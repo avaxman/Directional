@@ -54,7 +54,6 @@ namespace directional{
                 double angleSum =  totalTangentSum - mesh->GaussianCurvature(i);
                 tangentStartAngles.col(0).setZero();  //the first angle
                 Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
-                std::cout<<"mesh->vertexValence(i): "<<mesh->vertexValence(i)<<std::endl;
                 int hebegin = mesh->VH(i);  //this should be the first boundary edge in case of boundary
                 int heiterate = mesh->twinH(mesh->prevH(hebegin));
                 int j=1;
@@ -75,27 +74,17 @@ namespace directional{
                 //edgeVectors.row(i) = (mesh->V.row(mesh->EV(i, 1)) - mesh->V.row(mesh->EV(i, 0))).normalized();
                 //looking up edge in each tangent space
                 Complex ef,eg;
-                int hebegin = mesh->VH(mesh->EV(i,0));
-                int heiterate = hebegin;
-                int j=0;
-                do{
-                    if (mesh->HE(heiterate)==i)
+                for (int j=0;j<mesh->vertexValence(mesh->EV(i,0));j++){
+                    if (mesh->VE(mesh->EV(i,0),j)==i)
                         ef = exp(Complex(0,tangentStartAngles(mesh->EV(i, 0),j)));
-                    heiterate = mesh->twinH(mesh->prevH(heiterate));
-                    j++;
-                }while ((heiterate!=hebegin)&&(heiterate!=-1));
+                }
 
-                hebegin = mesh->VH(mesh->EV(i,1));
-                heiterate = hebegin;
-                j=0;
-                do{
-                    if (mesh->HE(heiterate)==i)
-                        eg = exp(Complex(0,tangentStartAngles(mesh->EV(i, 1),j)));
-                    heiterate = mesh->twinH(mesh->prevH(heiterate));
-                    j++;
-                }while ((heiterate!=hebegin)&&(heiterate!=-1));
+                for (int j=0;j<mesh->vertexValence(mesh->EV(i,1));j++) {
+                  if (mesh->VE(mesh->EV(i, 1), j) == i)
+                      eg = exp(Complex(0, tangentStartAngles(mesh->EV(i, 1), j)));
+              }
 
-                connection(i) = -eg / ef;
+              connection(i) = -eg / ef;
             }
 
             local2Cycle.resize(mesh->F.rows());
@@ -218,7 +207,7 @@ namespace directional{
             //idea: find rotation matrix vertex->face and then just use intrinsic vector projection without going through extrinsic
             //then interpolate via PV in the center
 
-            MatrixXd cornerField(3*mesh->F.rows(),3*N);
+            MatrixXd cornerField(3*mesh->F.rows(),2*N);
 
             for (int i=0;i<mesh->F.rows();i++)
                 for (int j=0;j<3;j++){
@@ -232,8 +221,10 @@ namespace directional{
                         cornerField.block(3*i+j,2*k,1,2)=intDirectionals.block(mesh->F(i,j),2*k,1,2)*basisChange;
                 }
 
+            //std::cout<<"cornerField: "<<cornerField<<std::endl;
             Eigen::MatrixXcd pvDirectionals;
             raw_to_polyvector(cornerField, N, pvDirectionals);
+            //std::cout<<"pvDirectionals: "<<pvDirectionals<<std::endl;
             Eigen::MatrixXcd interpPV=Eigen::MatrixXd::Zero(faceIndices.rows(), pvDirectionals.cols());
 
             //converting to polyvector to blend
@@ -246,6 +237,8 @@ namespace directional{
 
                 interpNormals.row(i) = mesh->faceNormals.row(faceIndices(i));
             }
+
+            //std::cout<<"interpPV: "<<interpPV<<std::endl;
 
             Eigen::MatrixXcd interpFieldInt;
             Eigen::MatrixXd interpPVReal(interpPV.rows(), 2*interpPV.cols());

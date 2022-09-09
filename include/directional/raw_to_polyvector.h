@@ -20,7 +20,7 @@ namespace directional{
                                       const bool signSymmetry=true){
 
 
-        pvField.resize(intField.rows(),intField.cols()/2);
+        pvField=Eigen::MatrixXcd::Zero(intField.rows(),intField.cols()/2);
         Eigen::MatrixXcd actualRoots;
         int actualN;
         if ((signSymmetry)&&(N%2==0)){
@@ -40,10 +40,13 @@ namespace directional{
         }
 
         int jump = ((signSymmetry)&&(N%2==0) ? 2 : 1);
-        Eigen::MatrixXcd actualPVField(pvField.rows(), actualN);
+        Eigen::MatrixXcd actualPVField(pvField.rows(), 1);
         actualPVField.col(0)=actualRoots.col(0);
         for (int i=1;i<actualN;i++)
             multiply_polynomials(actualPVField, actualRoots.col(i));
+
+        for (int i=0;i<N;i+=jump)
+            pvField.col(i)=actualPVField.col(i/jump);
     }
 
 }

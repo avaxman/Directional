@@ -333,7 +333,6 @@ namespace directional
       }
       //assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
       directional::streamlines_init(*fieldList[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
-      
     }
     
     void IGL_INLINE advance_streamlines(const int meshNum=0,
@@ -352,8 +351,11 @@ namespace directional
           slColors.row(i)=fieldColors[meshNum];
         else{
           double blendFactor = pow(colorAttenuation,(double)slState[meshNum].timeSignature(i)-1.0);
-          //std::cout<<"slState[meshNum].origVector(i): "<<slState[meshNum].origVector(i)<<std::endl;
-          slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(i), 3*slState[meshNum].origVector(i), 1,3);
+          //HACK: currently not supporting different colors for vertex-based fields
+          if(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES)
+            slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(i), 3*slState[meshNum].origVector(i), 1,3);
+          else
+              slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(0), 3*slState[meshNum].origVector(i), 1,3);
           slColors.row(i).array()=slColors.row(i).array()*blendFactor+default_mesh_color().array()*(1.0-blendFactor);
         }
       }

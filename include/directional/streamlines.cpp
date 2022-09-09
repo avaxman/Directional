@@ -102,26 +102,28 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
   assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES || field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
   //
   if (field.tb->discTangType()==discTangTypeEnum::FACE_SPACES){
-      IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)field.tb;
-      data.slMesh=ftb->mesh;
-      data.slField=data.field.extField;
+      data.stb = *((IntrinsicFaceTangentBundle*)field.tb);
+      data.slMesh=data.stb.mesh;
       data.field = field;
+      data.slField=data.field.extField;
   }
   if (field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES){
       IntrinsicVertexTangentBundle* vtb = (IntrinsicVertexTangentBundle*)field.tb;
       data.slMesh=vtb->mesh;
 
       //converting to a face-based field since streamlines don't handle fully-blown linear interpolation yet.
-      IntrinsicFaceTangentBundle ftb;
-      ftb.init(*(vtb->mesh));
-      data.field.init(ftb, RAW_FIELD, field.N);
+      data.stb.init(*(vtb->mesh));
+      data.field.init(data.stb, RAW_FIELD, field.N);
 
       Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
       Eigen::MatrixXd interpSources, interpNormals, interpField;
       vtb->interpolate(Eigen::VectorXi::LinSpaced(data.slMesh->F.rows(),0,data.slMesh->F.rows()),
                                  baryCoords,field.intField,interpSources,interpNormals,data.slField);
 
+      //cout<<"data.slField: "<<data.slField<<endl;
+
       data.field.set_extrinsic_field(data.slField);
+      //cout<<"data.field.intField: "<<data.field.intField<<endl;
   }
   //this is currently quite primitive and only samples in mid-faces and considers the entire triangle to be constant
   //It's fine for face-based fields but distorts vertex-based fields considerably.

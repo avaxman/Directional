@@ -8,7 +8,7 @@
 #include <directional/CartesianField.h>
 
 directional::TriMesh mesh;
-directional::IntrinsicVertexTangentBundle vtb;
+directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField field, powerField;
 
 int N = 3;
@@ -50,14 +50,14 @@ int main(int argc, char *argv[])
   directional::DirectionalViewer viewer;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
-  vtb.init(mesh);
+  ftb.init(mesh);
   // Create a power field
-  Eigen::VectorXi constVertices(1); constVertices(0) = 0;
+  Eigen::VectorXi constFaces(1); constFaces(0) = 0;
   Eigen::MatrixXd constVectors(1, 3); constVectors.row(0) <<(mesh.V.row(mesh.F(0, 1)) - mesh.V.row(mesh.F(0, 0))).normalized();
   Eigen::VectorXd alignWeights(1); alignWeights(0) = -1.0;
-  directional::power_field(vtb, constVertices, constVectors, alignWeights ,N, powerField);
+  directional::power_field(ftb, constFaces, constVectors, alignWeights ,N, powerField);
   directional::power_to_raw(powerField,N,field, true);
-  
+
   viewer.set_mesh(mesh);
   viewer.set_field(field);
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);

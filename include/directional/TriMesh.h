@@ -35,7 +35,7 @@ namespace directional{
         //Topological quantities (TODO: proper VE and VF with boundaries)
         Eigen::MatrixXi EF, FE, EV,TT, EFi, VE, VF;
         Eigen::MatrixXd FEs;
-        Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is in edges (if boundary, then #faces+1 = vertexvalence)
+        Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
         //DCEL quantities
         Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
