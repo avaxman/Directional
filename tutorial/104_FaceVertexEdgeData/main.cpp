@@ -4,11 +4,13 @@
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 
 int N;
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 Eigen::VectorXd vertexData, faceData, edgeData;
 
 directional::DirectionalViewer viewer;
@@ -36,7 +38,8 @@ int main()
   std::cout <<"3  Show Edge-based values" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/eight.off", mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", mesh, N, field);
+  ftb.init(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/eight.rawfield", ftb, N, field);
  
   //Face data - the x component of the face normals
   faceData=mesh.faceNormals.col(0);
@@ -46,7 +49,7 @@ int main()
   
   //Edge data - the (squared) effort of the field (under principal matching)
   directional::principal_matching(field);
-  edgeData=field.effort.array()*field.effort.array();
+  edgeData=field.effort.cwiseAbs2();
   
   viewer.set_mesh(mesh);
   viewer.set_field(field, Eigen::RowVector3d::Constant(1.0));
