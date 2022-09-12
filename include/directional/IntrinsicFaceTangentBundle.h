@@ -84,20 +84,20 @@ namespace directional{
 
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
         Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
-            assert(tangentSpaces.rows()==extDirectionals.rows() || tangentSpaces.rows()==0);
+            assert(tangentSpaces.rows()==extDirectionals.rows());
 
-            Eigen::VectorXi actualTangentSpaces;
+            /*Eigen::VectorXi actualTangentSpaces;
             if (tangentSpaces.rows()==0)
                 actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
             else
-                actualTangentSpaces = tangentSpaces;
+                actualTangentSpaces = tangentSpaces;*/
 
             int N = extDirectionals.cols()/3;
-            Eigen::MatrixXd intDirectionals(actualTangentSpaces.rows(),2*N);
+            Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2*N);
 
-            for (int i=0;i<actualTangentSpaces.rows();i++)
+            for (int i=0;i<tangentSpaces.rows();i++)
                 for (int j=0;j<N;j++)
-                    intDirectionals.block(i,2*j,1,2)<<(extDirectionals.block(i,3*j,1,3).array()*mesh->FBx.row(actualTangentSpaces(i)).array()).sum(),(extDirectionals.block(i,3*j,1,3).array()*mesh->FBy.row(actualTangentSpaces(i)).array()).sum();
+                    intDirectionals.block(i,2*j,1,2)<<(extDirectionals.block(i,3*j,1,3).array()*mesh->FBx.row(tangentSpaces(i)).array()).sum(),(extDirectionals.block(i,3*j,1,3).array()*mesh->FBy.row(tangentSpaces(i)).array()).sum();
 
             return intDirectionals;
         }

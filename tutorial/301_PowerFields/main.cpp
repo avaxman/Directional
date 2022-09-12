@@ -35,7 +35,7 @@ void update_visualization()
   directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField,normalized);
   
   directional::principal_matching(rawField);
-  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0, 0.3);
+  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0, 0.5);
   
   //Ghost mesh just showing field, to compare against constraints
   Eigen::MatrixXd constraintIntField = Eigen::MatrixXd::Zero(powerFieldHard.intField.rows(),2);
@@ -43,11 +43,11 @@ void update_visualization()
     constraintIntField.row(constVertices(i))=powerFieldHard.intField.row(constVertices(i));
   
   directional::CartesianField constraintRawField, constraintPowerField;
-  constraintPowerField.init(*(rawField.tb),N,RAW_FIELD);
+  constraintPowerField.init(*(rawField.tb),POWER_FIELD,N);
   constraintPowerField.set_intrinsic_field(constraintIntField);
   
   directional::power_to_raw(constraintPowerField, N, constraintRawField);
-  viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 0.1);
+  viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 0.3);
   viewer.toggle_mesh(false,0);
   viewer.toggle_field(true,0);
   viewer.toggle_field(true,1);
@@ -143,12 +143,12 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
         int currVertex=mesh.F(fid, maxCol);
         int i;
         for (i = 0; i < constVertices.rows(); i++)
-            if (constVertices(i) == fid)
+            if (constVertices(i) == currVertex)
                 break;
         if (i == constVertices.rows())
         {
             constVertices.conservativeResize(constVertices.rows() + 1);
-            constVertices(i) = fid;
+            constVertices(i) = currVertex;
             constVectors.conservativeResize(constVectors.rows() + 1, 3);
             alignWeights.conservativeResize(alignWeights.size()+1);
             if (alignWeights.size()==1)
@@ -162,7 +162,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
         constVectors.row(i) =(mesh.V.row(mesh.F(fid, 0)) * baryInFace(0) +
                               mesh.V.row(mesh.F(fid, 1)) * baryInFace(1) +
                               mesh.V.row(mesh.F(fid, 2)) * baryInFace(2) -
-                              mesh.barycenters.row(fid)).normalized();
+                              mesh.V.row(currVertex)).normalized();
     recompute_field();
     update_visualization();
     return true;

@@ -29,14 +29,14 @@ namespace directional
   // Outputs:
   //  powerField: a cartesian power field object.
   IGL_INLINE void power_field(const TangentBundle& tb,
-                              const Eigen::VectorXi& constFaces,
+                              const Eigen::VectorXi& constSpaces,
                               const Eigen::MatrixXd& constVectors,
                               const Eigen::VectorXd& alignWeights,
                               const int N,
                               directional::CartesianField& field)
   {
     //TODO: have the field be initialized here
-    polyvector_field(tb,constFaces,constVectors,1.0, -1.0, alignWeights, N,field);
+    polyvector_field(tb,constSpaces,constVectors,1.0, -1.0, alignWeights, N,field);
     field.fieldType = POWER_FIELD;
     //getting rid of the redundant zeros, in case they were allocated.
     field.intField.conservativeResize(field.intField.rows(),2);
