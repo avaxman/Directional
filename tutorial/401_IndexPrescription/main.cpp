@@ -3,7 +3,7 @@
 #include <igl/unproject_onto_mesh.h>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 #include <directional/index_prescription.h>
 #include <directional/rotation_to_raw.h>
 #include <directional/write_raw_field.h>
@@ -12,7 +12,8 @@
 
 
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 Eigen::VectorXi cycleIndices, presSingVertices, presSingIndices;
 std::vector<Eigen::VectorXi> cycleFaces;
 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
@@ -53,10 +54,10 @@ void update_singularities()
 {
   Eigen::VectorXi singVertices, singIndices;
   std::vector<int> singVerticesList, singIndicesList;
-  for (int i=0;i<field.element2Cycle.rows();i++)
-    if (cycleIndices(field.element2Cycle(i))){
+  for (int i=0;i<field.tb->local2Cycle.rows();i++)
+    if (cycleIndices(field.tb->local2Cycle(i))){
       singVerticesList.push_back(i);
-      singIndicesList.push_back(cycleIndices(field.element2Cycle(i)));
+      singIndicesList.push_back(cycleIndices(field.tb->local2Cycle(i)));
     }
   
   singVertices.resize(singVerticesList.size());
@@ -104,10 +105,10 @@ bool key_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
       if (mesh.boundaryLoops.size())
       {
         //Loop through the boundary cycles.
-        if (currCycle >= field.dualCycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators && currCycle < field.dualCycles.rows()-mesh.numGenerators-1)
+        if (currCycle >= field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators && currCycle < field.tb->cycles.rows()-mesh.numGenerators-1)
           currCycle++;
         else
-          currCycle = field.dualCycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators;
+          currCycle = field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators;
           viewer.set_selected_faces(cycleFaces[currCycle]);
       }
       break;
@@ -115,10 +116,10 @@ bool key_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
       if (mesh.numGenerators)
       {
         //Loop through the generators cycles.
-        if (currCycle >= field.dualCycles.rows() - mesh.numGenerators && currCycle < field.dualCycles.rows() - 1)
+        if (currCycle >= field.tb->cycles.rows() - mesh.numGenerators && currCycle < field.tb->cycles.rows() - 1)
           currCycle++;
         else
-          currCycle = field.dualCycles.rows() - mesh.numGenerators;
+          currCycle = field.tb->cycles.rows() - mesh.numGenerators;
         viewer.set_selected_faces(cycleFaces[currCycle]);
       }
       break;
@@ -148,7 +149,7 @@ bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
     Eigen::Vector3d::Index maxCol;
     bc.maxCoeff(&maxCol);
     int currVertex=mesh.F(fid, maxCol);
-    currCycle=field.element2Cycle(currVertex);
+    currCycle=field.tb->local2Cycle(currVertex);
     viewer.set_selected_faces(cycleFaces[currCycle]);
     return true;
   }
@@ -170,9 +171,10 @@ int main()
   "  1          rotate field globally" << std::endl;
   
   directional::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj",mesh);
-  field.init_field(mesh, RAW_FIELD, N);
+  ftb.init(mesh);
+  field.init(ftb, RAW_FIELD, N);
 
-  cycleIndices=Eigen::VectorXi::Constant(field.dualCycles.rows(),0);
+  cycleIndices=Eigen::VectorXi::Constant(field.tb->cycles.rows(),0);
   
   //loading singularities
   directional::read_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N,presSingVertices,presSingIndices);
@@ -183,9 +185,9 @@ int main()
   std::cout<<"#boundaries: "<<mesh.boundaryLoops.size()<<std::endl;
   
   //collecting cycle faces for visualization
-  std::vector<std::vector<int> > cycleFaceList(field.dualCycles.rows());
-  for (int k=0; k<field.dualCycles.outerSize(); ++k){
-    for (Eigen::SparseMatrix<double>::InnerIterator it(field.dualCycles,k); it; ++it){
+  std::vector<std::vector<int> > cycleFaceList(field.tb->cycles.rows());
+  for (int k=0; k<field.tb->cycles.outerSize(); ++k){
+    for (Eigen::SparseMatrix<double>::InnerIterator it(field.tb->cycles,k); it; ++it){
       int f1=mesh.EF(mesh.innerEdges(it.col()),0);
       int f2=mesh.EF(mesh.innerEdges(it.col()),1);
       if (f1!=-1)
@@ -196,9 +198,9 @@ int main()
   }
   
   for (int i=0;i<presSingVertices.size();i++)
-    cycleIndices(field.element2Cycle(presSingVertices(i)))=presSingIndices(i);
+    cycleIndices(field.tb->local2Cycle(presSingVertices(i)))=presSingIndices(i);
 
-  cycleFaces.resize(field.dualCycles.rows());
+  cycleFaces.resize(field.tb->cycles.rows());
   for (int i=0;i<cycleFaceList.size();i++)
     cycleFaces[i] = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(cycleFaceList[i].data(), cycleFaceList[i].size());
   
