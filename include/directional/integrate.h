@@ -19,7 +19,7 @@
 #include <igl/bounding_box_diagonal.h>
 #include <directional/tree.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
 #include <directional/branched_gradient.h>
@@ -38,8 +38,7 @@ namespace directional
   // Output:
   //  NFunction:    #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
   //  NCornerFunctions   (3*N) x #F parameterization functions per corner of whole mesh
-  IGL_INLINE bool integrate(const directional::TriMesh& meshWhole,
-                            const directional::FaceField& field,
+  IGL_INLINE bool integrate(const directional::CartesianField& field,
                             IntegrationData& intData,
                             const directional::TriMesh& meshCut,
                             Eigen::MatrixXd& NFunction,
@@ -49,6 +48,9 @@ namespace directional
   {
     using namespace Eigen;
     using namespace std;
+
+    assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES && "Integrate() only works with face-based fields");
+    const directional::TriMesh& meshWhole = *((IntrinsicFaceTangentBundle*)field.tb)->mesh;
     
     VectorXd edgeWeights = VectorXd::Constant(meshWhole.FE.maxCoeff() + 1, 1.0);
     //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;

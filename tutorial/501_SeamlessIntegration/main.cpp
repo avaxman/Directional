@@ -2,7 +2,8 @@
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/writeOBJ.h>
 #include <directional/read_raw_field.h>
@@ -17,7 +18,8 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-directional::FaceField rawField, combedField;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawField, combedField;
 Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV;
 directional::DirectionalViewer viewer;
 
@@ -88,7 +90,8 @@ int main()
   
   setup_line_texture();
   directional::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", meshWhole, N, rawField);
+  ftb.init(meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", ftb, N, rawField);
   
   //combing and cutting
   Eigen::VectorXd curlNorm;
@@ -97,20 +100,20 @@ int main()
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(meshWhole, rawField, intData, meshCut, combedField);
+  directional::setup_integration(rawField, intData, meshCut, combedField);
   
   intData.verbose=true;
   intData.integralSeamless=false;
   
   std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
-  directional::integrate(meshWhole, combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
+  directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
   //Extracting the UV from [U,V,-U, -V];
   cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   intData.integralSeamless = true;  //do not do translational seamless.
   std::cout<<"Solving for integrally-seamless integration"<<std::endl;
-  directional::integrate(meshWhole, combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
+  directional::integrate(combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
   cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   

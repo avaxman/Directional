@@ -15,7 +15,8 @@
 #include <igl/igl_inline.h>
 #include <igl/edge_topology.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/tree.h>
 #include <directional/principal_matching.h>
 #include <directional/dcel.h>
@@ -112,21 +113,22 @@ namespace directional
   //  intData:      updated integration data.
   //  meshCut:      a mesh which is face-corresponding with meshWhole, but is cut so that it has disc-topology.
   //  combedField:  The raw field combed so that all singularities are on the seams of the cut mesh
-  IGL_INLINE void setup_integration(const directional::TriMesh& meshWhole,
-                                    const directional::FaceField& field,
+  IGL_INLINE void setup_integration(const directional::CartesianField& field,
                                     IntegrationData& intData,
                                     directional::TriMesh& meshCut,
-                                    directional::FaceField& combedField)
+                                    directional::CartesianField& combedField)
   {
     
     using namespace Eigen;
     using namespace std;
-    
+
+    assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES && "setup_integration() only works with face-based fields");
+
+    directional::TriMesh& meshWhole = *(*IntrinsicFaceTangentBundle)(field.tb)->mesh;
     //cutting mesh and combing field.
-    cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singElements, intData.face2cut);
+    cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singLocalCycles, intData.face2cut);
     combing(field, combedField, intData.face2cut);
-    
-    
+
     MatrixXi EFi,EH, FH;
     MatrixXd FEs;
     VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
@@ -136,8 +138,8 @@ namespace directional
     
     // mark vertices as being a singularity vertex of the vector field
     VectorXi isSingular = VectorXi::Zero(meshWhole.V.rows());
-    for (int i = 0; i < field.singElements.size(); i++)
-      isSingular(field.singElements(i)) = 1;
+    for (int i = 0; i < field.singLocalCycles.size(); i++)
+      isSingular(field.singLocalCycles(i)) = 1;
     
     //cout<<"singVertices: "<<singVertices<<endl;
     
