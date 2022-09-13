@@ -18,7 +18,7 @@
 #include <igl/sort_vectors_ccw.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/field_local_global_conversions.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 
 
 IGL_INLINE directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
@@ -1115,7 +1115,7 @@ IGL_INLINE void directional::polycurl_reduction_precompute(const directional::Tr
                                                            const Eigen::VectorXi& b,
                                                            const Eigen::MatrixXd& bc,
                                                            const Eigen::VectorXi& constraintLevel,
-                                                           const directional::FaceField& original_field,
+                                                           const directional::CartesianField& original_field,
                                                            directional::PolyCurlReductionSolverData &data)
 {
   data.precomputeMesh(mesh.V,mesh.F);
@@ -1133,7 +1133,7 @@ IGL_INLINE void directional::polycurl_reduction_precompute(const directional::Tr
 
 IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData &cffsoldata,
                                                       directional::polycurl_reduction_parameters &params,
-                                                      directional::FaceField& currentField,
+                                                      directional::CartesianField& currentField,
                                                       bool fieldNotCCW)
 {
   Eigen::MatrixXd twoFieldMat=currentField.extField.block(0,0,currentField.extField.rows(),6);

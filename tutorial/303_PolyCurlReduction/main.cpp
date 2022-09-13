@@ -3,7 +3,8 @@
 #include <directional/readOFF.h>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
@@ -15,8 +16,9 @@
 using namespace std;
 
 directional::TriMesh mesh;
-directional::FaceField rawFieldOrig, rawFieldCF;
-directional::FaceField combedFieldOrig, combedFieldCF;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawFieldOrig, rawFieldCF;
+directional::CartesianField combedFieldOrig, combedFieldCF;
 Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
 directional::DirectionalViewer viewer;
 
@@ -117,9 +119,10 @@ int main(int argc, char *argv[])
   
   // Load a mesh
   directional::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", mesh);
-  rawFieldOrig.init_field(mesh, RAW_FIELD, N);
-  rawFieldCF.init_field(mesh, RAW_FIELD, N);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", mesh, N, rawFieldOrig);
+  ftb.init(mesh);
+  rawFieldOrig.init(ftb, RAW_FIELD, N);
+  rawFieldCF.init(ftb, RAW_FIELD, N);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
   
   //Eigen::VectorXi prinIndices;
   directional::curl_matching(rawFieldOrig,curlOrig);

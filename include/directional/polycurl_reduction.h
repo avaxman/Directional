@@ -13,7 +13,7 @@
 #include <Eigen/Sparse>
 #include <igl/igl_inline.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/CartesianField.h>
 
 namespace directional {
   // Compute a curl-free frame field from user constraints, optionally starting
@@ -46,7 +46,7 @@ namespace directional {
                                                 const Eigen::VectorXi& b,
                                                 const Eigen::MatrixXd& bc,
                                                 const Eigen::VectorXi& constraintLevel,
-                                                const directional::FaceField& originalField,
+                                                const directional::CartesianField& originalField,
                                                 directional::PolyCurlReductionSolverData &data);
 
 
@@ -66,7 +66,7 @@ namespace directional {
   //   current_field                updated estimate for the integrable field
   IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData &cffsoldata,
                                            polycurl_reduction_parameters &params,
-                                           directional::FaceField& currentField,
+                                           directional::CartesianField& currentField,
                                            bool fieldNotCCW);
 
 
@@ -210,11 +210,10 @@ public:
 public:
   IGL_INLINE PolyCurlReductionSolverData();
 
-  IGL_INLINE PolyCurlReductionSolverData(
-                                         const directional::TriMesh &_mesh,
-                                     const Eigen::VectorXi& b,
-                                     const Eigen::VectorXi& constraintLevel,
-                                     const directional::FaceField& originalField);
+  IGL_INLINE PolyCurlReductionSolverData(const directional::TriMesh &_mesh,
+                                         const Eigen::VectorXi& b,
+                                         const Eigen::VectorXi& constraintLevel,
+                                         const directional::CartesianField& originalField);
 
 };
 

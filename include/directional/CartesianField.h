@@ -72,7 +72,7 @@ public:
   void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
     assert(_extField.cols()==3*N);
     extField=_extField;
-    intField = tb->project_to_intrinsic(Eigen::VectorXi(), extField);
+    intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
   }
   
   

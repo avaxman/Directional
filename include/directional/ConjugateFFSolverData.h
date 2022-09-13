@@ -68,7 +68,7 @@ namespace directional
     
   public:
     IGL_INLINE ConjugateFFSolverData(const directional::TriMesh& mesh);
-    IGL_INLINE void evaluateConjugacy(const directional::FaceField& rawField,
+    IGL_INLINE void evaluateConjugacy(const directional::CartesianField& rawField,
                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const ;
     
     IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
@@ -362,7 +362,7 @@ computek()
   
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const directional::FaceField& rawField,
+IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const directional::CartesianField& rawField,
                                                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const
 {
   const Eigen::MatrixXd &Us = rawField.extField.block(0,0,rawField.extField.rows(),3);

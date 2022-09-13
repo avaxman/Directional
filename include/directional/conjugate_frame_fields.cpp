@@ -386,8 +386,8 @@ IGL_INLINE double directional::ConjugateFFSolver::solve(const Eigen::VectorXi &i
 
 IGL_INLINE void directional::conjugate_frame_fields(const directional::TriMesh& mesh,
                                                     const Eigen::VectorXi &b,
-                                                    const directional::FaceField &initialSolution,
-                                                    directional::FaceField &output,
+                                                    const directional::CartesianField &initialSolution,
+                                                    directional::CartesianField &output,
                                                     int maxIter,
                                                     const double lambdaOrtho,
                                                     const double lambdaInit,
@@ -409,15 +409,15 @@ IGL_INLINE void directional::conjugate_frame_fields(const directional::TriMesh& 
   Eigen::MatrixXd newOutput;//,B1,B2,normals;
   //igl::local_basis(V,F,B1,B2,normals);
   directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
-  output.init_field(*(initialSolution.mesh),RAW_FIELD,initialSolution.N);
+  output.init(*(initialSolution.tb),RAW_FIELD,initialSolution.N);
   output.set_extrinsic_field(newOutput);
 }
 
 
 IGL_INLINE double directional::conjugate_frame_fields(const directional::ConjugateFFSolverData &csdata,
                                                       const Eigen::VectorXi &b,
-                                                      const directional::FaceField &initialSolution,
-                                                      directional::FaceField &output,
+                                                      const directional::CartesianField &initialSolution,
+                                                      directional::CartesianField &output,
                                                       int maxIter,
                                                       const double lambdaOrtho,
                                                       const double lambdaInit,
@@ -450,7 +450,7 @@ IGL_INLINE double directional::conjugate_frame_fields(const directional::Conjuga
   //reorienting field hack
   Eigen::MatrixXd newOutput;//,B1,B2,normals;
   directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
-  output.init_field(*(initialSolution.mesh),RAW_FIELD,initialSolution.N);
+  output.init(*(initialSolution.tb),RAW_FIELD,initialSolution.N);
   output.set_extrinsic_field(newOutput);
   
   return lambdaOut;

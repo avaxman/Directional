@@ -6,10 +6,13 @@
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 
 Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
-directional::FaceField pvFieldHard, pvFieldSoft, rawFieldHard, rawFieldSoft,constraintsField;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField pvFieldHard, pvFieldSoft, rawFieldHard, rawFieldSoft,constraintsField;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd alignWeights;
 
@@ -26,8 +29,8 @@ bool alterRoSyWeight=false;
 
 void recompute_field()
 {
-  directional::polyvector_field(mesh, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
-  directional::polyvector_field(mesh, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
+  directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
+  directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
 }
 
 void update_visualization()
@@ -131,8 +134,9 @@ int main()
   
   // Load mesh
   directional::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", mesh);
-  pvFieldHard.init_field(mesh, POLYVECTOR_FIELD,N);
-  pvFieldSoft.init_field(mesh, POLYVECTOR_FIELD,N);
+  ftb.init(mesh);
+  pvFieldHard.init(ftb, POLYVECTOR_FIELD,N);
+  pvFieldSoft.init(ftb, POLYVECTOR_FIELD,N);
   
   //discovering and constraining sharp edges
   std::vector<int> constFaceslist;
@@ -166,7 +170,7 @@ int main()
     rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
   
   
-  constraintsField.init_field(mesh, RAW_FIELD, N);
+  constraintsField.init(ftb, RAW_FIELD, N);
   constraintsField.set_extrinsic_field(rawFieldConstraints);
   
   smoothWeight = 1.0;

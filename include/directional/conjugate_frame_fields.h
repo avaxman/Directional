@@ -22,8 +22,8 @@ namespace directional {
   
   IGL_INLINE void conjugate_frame_fields(const directional::TriMesh& mesh,
                                          const Eigen::VectorXi &isConstrained,
-                                         const directional::FaceField &initialSolution,
-                                         directional::FaceField &output,
+                                         const directional::CartesianField &initialSolution,
+                                         directional::CartesianField &output,
                                          int _maxIter = 50,
                                          const double _lambdaOrtho = .1,
                                          const double _lambdaInit = 10,
@@ -32,8 +32,8 @@ namespace directional {
   
   IGL_INLINE double conjugate_frame_fields(const ConjugateFFSolverData &csdata,
                                            const Eigen::VectorXi &isConstrained,
-                                           const directional::FaceField &initialSolution,
-                                           directional::FaceField &output,
+                                           const directional::CartesianField &initialSolution,
+                                           directional::CartesianField &output,
                                            int _maxIter = 50,
                                            const double _lambdaOrtho = .1,
                                            const double _lambdaInit = 10,

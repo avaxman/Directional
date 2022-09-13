@@ -3,7 +3,8 @@
 #include <igl/readDMAT.h>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/polyvector_field.h>
 #include <directional/read_raw_field.h>
@@ -14,7 +15,8 @@
 #include "tutorial_shared_path.h"
 
 directional::TriMesh mesh;
-directional::FaceField rawFieldOrig, rawFieldConjugate;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawFieldOrig, rawFieldConjugate;
 directional::DirectionalViewer viewer;
 Eigen::VectorXd conjugacyOrig, conjugacyConjugate;
 
@@ -83,6 +85,7 @@ int main(int argc, char *argv[])
   
   // Load a mesh in OBJ format
   directional::readOBJ(TUTORIAL_SHARED_PATH "/inspired_mesh.obj", mesh);
+  ftb.init(mesh);
   
   // Load constraints
   Eigen::VectorXi bFull;
@@ -104,8 +107,8 @@ int main(int argc, char *argv[])
   }
   
   //initial solution
-  directional::FaceField pvField;
-  directional::polyvector_field(mesh, b, bc, N, pvField);
+  directional::CartesianField pvField;
+  directional::polyvector_field(ftb, b, bc, N, pvField);
   directional::polyvector_to_raw(pvField, rawFieldOrig);
   
   directional::principal_matching(rawFieldOrig);
