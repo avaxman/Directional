@@ -176,7 +176,7 @@ namespace directional
             assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
             std::vector<int> selectedFacesList;
             for (int i=0;i<selectedVertices.size();i++)
-                for (int j=0;j<meshList[meshNum]->vertexValence(i)-(meshList[meshNum]->isBoundaryVertex(i) ? 1 : 0);j++)
+                for (int j=0;j<meshList[meshNum]->vertexValence(selectedVertices(i))-(meshList[meshNum]->isBoundaryVertex(selectedVertices(i)) ? 1 : 0);j++)
                     selectedFacesList.push_back(meshList[meshNum]->VF(selectedVertices(i),j));
 
             Eigen::VectorXi selectedFaces(selectedFacesList.size());

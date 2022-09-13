@@ -35,7 +35,7 @@ void update_visualization()
   directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField,normalized);
   
   directional::principal_matching(rawField);
-  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0, 0.5);
+  viewer.set_field(rawField,Eigen::MatrixXd(),0, 0.9, 0,  20.0);
   
   //Ghost mesh just showing field, to compare against constraints
   Eigen::MatrixXd constraintIntField = Eigen::MatrixXd::Zero(powerFieldHard.intField.rows(),2);
@@ -47,7 +47,7 @@ void update_visualization()
   constraintPowerField.set_intrinsic_field(constraintIntField);
   
   directional::power_to_raw(constraintPowerField, N, constraintRawField);
-  viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 0.3);
+  viewer.set_field(constraintRawField,Eigen::MatrixXd(), 1,0.9, 0, 10.0);
   viewer.toggle_mesh(false,0);
   viewer.toggle_field(true,0);
   viewer.toggle_field(true,1);
