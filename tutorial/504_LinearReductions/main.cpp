@@ -2,7 +2,8 @@
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
@@ -14,7 +15,8 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-directional::FaceField rawField, combedField;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawField, combedField;
 Eigen::MatrixXd NFunctionSign, NFunctionTri, NCornerFunc;
 directional::DirectionalViewer viewer;
 
@@ -68,27 +70,28 @@ int main()
   "  3  Show triangular-symmetric integrated functions" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/dome.off", meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", meshWhole, N, rawField);
+  ftb.init(meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", ftb, N, rawField);
   
   //combing and cutting
   directional::principal_matching(rawField);
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(meshWhole, rawField, intData,meshCut, combedField);
+  directional::setup_integration(rawField, intData,meshCut, combedField);
   
   intData.verbose=false;
   intData.integralSeamless=true;
 
   std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
-  directional::integrate(meshWhole, combedField, intData, meshCut, NFunctionSign, NCornerFunc);
+  directional::integrate(combedField, intData, meshCut, NFunctionSign, NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   
   std::cout<<"Solving triangular-constrained integration..."<<std::endl;
   intData.set_triangular_symmetry(N);
-  directional::setup_integration(meshWhole, rawField,intData, meshCut, combedField);
-  directional::integrate(meshWhole, combedField,  intData, meshCut, NFunctionTri, NCornerFunc);
+  directional::setup_integration(rawField,intData, meshCut, combedField);
+  directional::integrate(combedField,  intData, meshCut, NFunctionTri, NCornerFunc);
   std::cout<<"Done!"<<std::endl;
   
   viewer.set_mesh(meshWhole, 0);

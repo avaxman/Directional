@@ -2,7 +2,8 @@
 #include <Eigen/Core>
 #include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
@@ -21,7 +22,8 @@
 int N[NUM_N];
 int currN = 0;
 directional::TriMesh meshWhole, meshCut[NUM_N];
-directional::FaceField rawField[NUM_N], combedField[NUM_N];
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField rawField[NUM_N], combedField[NUM_N];
 Eigen::VectorXi DPolyMesh[NUM_N];
 Eigen::MatrixXi FPolyMesh[NUM_N];
 Eigen::MatrixXd VPolyMesh[NUM_N];
@@ -76,9 +78,10 @@ int main()
   "  3  change between different N" << std::endl;
   
   directional::readOFF(TUTORIAL_SHARED_PATH "/vase.off",meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", meshWhole, N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", meshWhole, N[1], rawField[1]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", meshWhole, N[2], rawField[2]);
+  ftb.init(meshWhole);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
 
   bool verbose=true;
   
@@ -88,14 +91,14 @@ int main()
 
     directional::IntegrationData intData(N[i]);
     std::cout<<"Setting up Integration #"<<i<<std::endl;
-    directional::setup_integration(meshWhole, rawField[i], intData, meshCut[i], combedField[i]);
+    directional::setup_integration(rawField[i], intData, meshCut[i], combedField[i]);
     
     intData.verbose=false;
     intData.integralSeamless=true;
     intData.roundSeams=false;
   
     std::cout<<"Solving integration for N="<<N[i]<<std::endl;
-    directional::integrate(meshWhole, combedField[i],  intData, meshCut[i], NFunction[i],NCornerFunction[i]);
+    directional::integrate(combedField[i],  intData, meshCut[i], NFunction[i],NCornerFunction[i]);
     
     std::cout<<"Done!"<<std::endl;
     
