@@ -5,7 +5,8 @@
 #include <directional/readOBJ.h>
 #include <directional/writeOBJ.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
@@ -25,7 +26,8 @@
 using namespace std;
 
 directional::TriMesh meshCoarse, meshCutCoarse, meshFine, meshCutFine;
-directional::FaceField  rawFieldCoarse, rawFieldFine, combedFieldCoarse, combedFieldFine, powerField;
+directional::IntrinsicFaceTangentBundle ftbCoarse, ftbFine;
+directional::CartesianField rawFieldCoarse, rawFieldFine, combedFieldCoarse, combedFieldFine, powerField;
 Eigen::VectorXd curlCoarse, curlFine; // norm of curl per edge
 Eigen::MatrixXd cutReducedUVCoarse, cutFullUVCoarse, cornerWholeUVCoarse;
 Eigen::MatrixXd cutReducedUVFine, cutFullUVFine, cornerWholeUVFine;
@@ -84,11 +86,11 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 
 // Parameterize a mesh from a field
 void parameterize_mesh(const directional::TriMesh& wholeMesh,
-                       const directional::FaceField& rawField,
+                       const directional::CartesianField& rawField,
                        directional::TriMesh& cutMesh,
                        Eigen::MatrixXd& cutFullUV)
 {
-  directional::FaceField combedField;
+  directional::CartesianField combedField;
 
   directional::IntegrationData intData(N);
   std::cout << "Setting up Integration" << std::endl;
@@ -97,11 +99,11 @@ void parameterize_mesh(const directional::TriMesh& wholeMesh,
   intData.integralSeamless = false;
   intData.lengthRatio = 0.03;
 
-  directional::setup_integration(wholeMesh, rawField,intData, cutMesh, combedField);
+  directional::setup_integration(rawField,intData, cutMesh, combedField);
 
   std::cout << "Integrating" << std::endl;
   Eigen::MatrixXd cornerWholeUV;
-  directional::integrate(wholeMesh, combedField, intData, cutMesh, cutFullUV, cornerWholeUV);
+  directional::integrate(combedField, intData, cutMesh, cutFullUV, cornerWholeUV);
   std::cout << "Done!" << std::endl;
 
   cutFullUV = cutFullUV.block(0, 0, cutFullUV.rows(), 2).eval();
@@ -123,6 +125,7 @@ int main(int argc, char *argv[])
   keyAction("6", "Show fine parameterization.");
   
   directional::readOBJ(TUTORIAL_SHARED_PATH "/bunny1k.obj", meshCoarse);
+  ftbCoarse.init(meshCoarse);
  
   //Reducing curl from coarse mesh
   Eigen::VectorXi b;
@@ -131,8 +134,8 @@ int main(int argc, char *argv[])
   bc.resize(0, 3);
 
   cout<<"Computing initial field"<<endl;
-  powerField.init_field(meshCoarse, POWER_FIELD, N);
-  directional::power_field(meshCoarse, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N, powerField);
+  powerField.init(ftbCoarse, POWER_FIELD, N);
+  directional::power_field(ftbCoarse, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N, powerField);
   directional::power_to_raw(powerField, N, rawFieldCoarse, true);
    
   // Precompute polycurl reduction data.
@@ -165,8 +168,8 @@ int main(int argc, char *argv[])
   
   cout<<"Doing field subdivision"<<endl;
   //Subdividing field and mesh. Curl precision should result in very low curl on the fine mesh as well
-  directional::subdivide_field(rawFieldCoarse, targetLevel,  meshFine, rawFieldFine);
-  
+  directional::subdivide_field(rawFieldCoarse, targetLevel,  meshFine, ftbFine, rawFieldFine);
+
   directional::curl_matching(rawFieldFine, curlFine);
   directional::combing(rawFieldFine,combedFieldFine);
   directional::curl_matching(combedFieldFine, curlFine);
