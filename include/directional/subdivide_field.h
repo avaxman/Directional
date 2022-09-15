@@ -8,7 +8,8 @@
 #define DIRECTIONAL_SUBDIVIDE_FIELD_H
 #include <Eigen/Eigen>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 #include <directional/SubdivisionInternal/build_directional_subdivision_operators.h>
 #include <directional/SubdivisionInternal/shm_edge_topology.h>
 #include <directional/SubdivisionInternal/shm_halfcurl_coefficients.h>
@@ -120,34 +121,41 @@ namespace directional
    * - fineMesh: the subdivided mesh
    * - rawFieldFine: the subdivided field
    */
-  inline void subdivide_field(const directional::FaceField& rawFieldCoarse,
+  inline void subdivide_field(const directional::CartesianField& rawFieldCoarse,
                               int targetLevel,
-                              directional::TriMesh& fineMesh,
-                              directional::FaceField& rawFieldFine)
+                              directional::TriMesh& meshFine,
+                              directional::IntrinsicFaceTangentBundle& ftbFine,
+                              directional::CartesianField& rawFieldFine)
   {
     // Compute internal edge topology
     Eigen::MatrixXi EVCoarse, EFCoarse, EI, SFE, EI_et, FE_et, EI_fine, SFEFine, EVFine, EFFine;
-    shm_edge_topology(rawFieldCoarse.mesh->F, rawFieldCoarse.mesh->V.rows(), EVCoarse, EFCoarse, EI, SFE);
-    shm_edge_topology_to_igledgetopology(rawFieldCoarse.mesh->F, EVCoarse, EFCoarse, SFE, EI_et, FE_et);
-    directional::TriMesh coarseMesh=*(rawFieldCoarse.mesh);
+    const directional::IntrinsicFaceTangentBundle* ftbCoarse = (IntrinsicFaceTangentBundle*)(rawFieldCoarse.tb);
+    shm_edge_topology(ftbCoarse->mesh->F, ftbCoarse->mesh->V.rows(), EVCoarse, EFCoarse, EI, SFE);
+    shm_edge_topology_to_igledgetopology(ftbCoarse->mesh->F, EVCoarse, EFCoarse, SFE, EI_et, FE_et);
+    directional::TriMesh coarseMesh(*(ftbCoarse->mesh));
     coarseMesh.set_mesh(coarseMesh.V,coarseMesh.F,  EVCoarse, FE_et, EFCoarse);
-    directional::FaceField coarseFieldAltered;
-    coarseFieldAltered.init_field(coarseMesh, RAW_FIELD, rawFieldCoarse.N);
+    directional::CartesianField coarseFieldAltered;
+    directional::IntrinsicFaceTangentBundle ftbCoarseAltered;
+      ftbCoarseAltered.init(coarseMesh);
+      coarseFieldAltered.init(ftbCoarseAltered, RAW_FIELD, rawFieldCoarse.N);
     coarseFieldAltered.set_extrinsic_field(rawFieldCoarse.extField);
     // Compute curl matching
     //Eigen::VectorXi matchingCoarse, matchingFine, singVertices, singIndices;
   
     Eigen::VectorXd curlNorm;
     directional::curl_matching(coarseFieldAltered, curlNorm);
-    
+
+
+    std::cout<<"coarseFieldAltered.matching: "<<coarseFieldAltered.matching<<std::endl;
     
     Eigen::MatrixXd VFine, extFieldFine;
     Eigen::MatrixXi FFine;
     Eigen::VectorXi matchingFine;
     
-    subdivide_field(coarseMesh.V, coarseMesh.F, coarseMesh.EV, coarseMesh.EF, rawFieldCoarse.extField, rawFieldCoarse.matching, targetLevel, VFine, FFine, EVFine, EFFine, extFieldFine, matchingFine);
-    fineMesh.set_mesh(VFine, FFine);
-    rawFieldFine.init_field(fineMesh, RAW_FIELD, rawFieldCoarse.N);
+    subdivide_field(coarseMesh.V, coarseMesh.F, coarseMesh.EV, coarseMesh.EF, coarseFieldAltered.extField, coarseFieldAltered.matching, targetLevel, VFine, FFine, EVFine, EFFine, extFieldFine, matchingFine);
+      meshFine.set_mesh(VFine, FFine);
+      ftbFine.init(meshFine);
+    rawFieldFine.init(ftbFine, RAW_FIELD, rawFieldCoarse.N);
     rawFieldFine.set_extrinsic_field(extFieldFine);
   }
 

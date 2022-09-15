@@ -57,6 +57,15 @@ namespace directional{
         TriMesh(){}
         ~TriMesh(){}
 
+        TriMesh(const TriMesh& tm):
+        V(tm.V), F(tm.F), EF(tm.EF), FE(tm.FE), EV(tm.EV), TT(tm.TT), EFi(tm.EFi), VE(tm.VE), VF(tm.VF),
+        FEs(tm.FEs), innerEdges(tm.innerEdges), boundEdges(tm.boundEdges), vertexValence(tm.vertexValence),
+        isBoundaryVertex(tm.isBoundaryVertex), isBoundaryEdge(tm.isBoundaryEdge),
+        VH(tm.VH), HV(tm.HV), HE(tm.HE), HF(tm.HF), nextH(tm.nextH), prevH(tm.prevH), twinH(tm.twinH),
+        faceNormals(tm.faceNormals), faceAreas(tm.faceAreas), vertexNormals(tm.vertexNormals), FBx(tm.FBx), FBy(tm.FBy),
+        VBx(tm.VBx),VBy(tm.VBy), barycenters(tm.barycenters), GaussianCurvature(tm.GaussianCurvature), eulerChar(tm.eulerChar), numGenerators(tm.numGenerators),
+        boundaryLoops(tm.boundaryLoops){}
+
         void IGL_INLINE set_mesh(const Eigen::MatrixXd& _V,
                                  const Eigen::MatrixXi& _F,
                                  const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
