@@ -4,9 +4,19 @@
 
 ## Introduction
 
-Directional is a C++ geometry processing library written on the basis of [libigl](http://libigl.github.io/libigl/), with a specialization in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016], and through it by the relevant papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries.
+Directional is a C++ geometry processing library specializing in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and with many newer papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
 
-The underlying structure extends the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page), and the library avoids complicated and nested structures, relying instead on standalone functions. The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
+Directional has gone through a major paradigm shift in version 3.0: the discretization is abstracted from face-based fields into general discrete tangent bundles that can represent a rich class of directional-field representations. As a result, many of the algorithm of the library can now work seamlessly on several representations without change (as an example, power fields can be computed on either vertex-based or face-based fields with the same function).
+The library comprises two basic elements:
+
+1. Classes representing the basic tangent bundle and field structures. They are built with inheritance so that 
+functions can be written polymorphically and consequently algorithms can be applied to several representations that have the minimal set of required properties.
+2. Standalone functions, implementing directional-field algorithms, that take these classes as parameters.
+
+Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal,
+and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces).
+The structure of these standalone functions follows the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
+The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
 
 The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
 
@@ -28,7 +38,25 @@ To access a single example, say ``202_Sampling``, go to the ``build`` subfolder,
 
 Most examples require a modest amount of user interaction; the instructions of what to do are given in the command-line output upon execution.
 
-### Discretization
+### Discrete Tangent Bundles
+
+In the continuum, directional fields are represented as elements of tangent spaces, where a tangent space is a linear space attached to each point of a manifold. The set of all such tangent spaces is called a *tangent bundle*. 
+
+In the discrete setting, a tangent bundle is a finite set of 
+The central data structure of Directional is the *discrete tangent bundle*, which is a finite and discrete graph $G_{TB} = (V_{TB},E_{TB})$ of tangent spaces, which are independent vector spaces of dimension $d$. This concept is implemented in class ```TangentBundle```. Discrete tangent bundles can supply one of more of the following properties:
+1. **Intrinsic parameterization**: vectors in a single tangent space are represented with coordinates $\left(x_1,\cdots,x_d\right)$ in an arbitrary, but fixed basis of dimension $d$. The basis itself does not need to be specified for many algorithms, it can stay abstract.
+2. **Adjacency**: a tangent bundle is represented as a graph where the tangent spaces are nodes, and the graph edges are adjacency relations, that encode the local environment of any tangent space. This in fact encodes the combinatorial and topological structure of the underlying discrete manifold, akin to the smooth structure in the continuum.
+3. **Connection**: a connection defines the notion of parallelity in two adjacent tangent spaces, which encodes a metric structure on the underlying manifold, and allows to compute derivatives and curvature. Specifically, a connection is a directed-edge-based quantity on the tangent-bundle graph, given as a change of coordinates between the bases of the source tangent space to the target tangent space. This can be represented as an orthogonal matrix.
+4. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ (akin to "faces") that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to curvature modulo $2\pi$.
+5. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot $G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property.
+6. **Inner product**: This allows to compute the $L_2$ product of two vector fields given intrinsically. This is usually implemented as a mass matrix $M$. The combination of an $L_2$ product and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg, and harmonic part $h$ as follows [~boksebeld_2022]:
+
+$$v = Gf + M^{-1}C^Tg + h$$
+
+The exact part if curl-free, the coexact part is divergence free: given the divergence operator $D = G^T M$ we get $G^TC^Tg = 0$, and the harmonic part is both.
+
+
+
 
 **Input:** Directional requires the input to always be an *orientable* triangle mesh in a *single connected-component*. There are no general limitations on the genus or the boundaries. Specific algorithms may have additional requirements or consistency issues (for instance, index prescription requires that the singularity indices add up to the Euler characteristic). If your input comprises several connected components altogether, you  can just run any algorithm on each of them, loaded individually in sequence. 
 
