@@ -3504,7 +3504,10 @@ python/scripts/generated
 python/builddebug
 tutorial/.idea
 python/buildstatic
-tutorial/cmake-build-debug
+tutorial/cmake-build-debug/*
+tutorial/cmake-build-release/*
+tutorial/cmake-build-minisizerel/*
+
 
 site/404.html
 site/RELEASE_HISTORY/index.html
