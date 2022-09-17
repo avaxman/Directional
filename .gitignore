@@ -3506,7 +3506,7 @@ tutorial/.idea
 python/buildstatic
 tutorial/cmake-build-debug/**
 tutorial/cmake-build-release/**
-tutorial/cmake-build-minisizerel/**
+tutorial/cmake-build-minsizerel/**
 tutorial/cmake-build-relwithdebinfo/**
 
 
