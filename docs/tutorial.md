@@ -3,14 +3,15 @@
 
 
 ## Introduction
-
-Directional is a C++ geometry processing library specializing in directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and with many newer papers in the literature. It contains tools to edit, analyze, and visualize directional fields of various degrees and symmetries. 
+ 
+Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and in many newer papers in the literature, cited within context in this tutorial and in the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries. 
 
 Directional has gone through a major paradigm shift in version 3.0: the discretization is abstracted from face-based fields into general discrete tangent bundles that can represent a rich class of directional-field representations. As a result, many of the algorithm of the library can now work seamlessly on several representations without change (as an example, power fields can be computed on either vertex-based or face-based fields with the same function).
 The library comprises two basic elements:
 
 1. Classes representing the basic tangent bundle and field structures. They are built with inheritance so that 
 functions can be written polymorphically and consequently algorithms can be applied to several representations that have the minimal set of required properties.
+
 2. Standalone functions, implementing directional-field algorithms, that take these classes as parameters.
 
 Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal,
@@ -44,23 +45,48 @@ In the continuum, directional fields are represented as elements of tangent spac
 
 In the discrete setting, a tangent bundle is a finite set of 
 The central data structure of Directional is the *discrete tangent bundle*, which is a finite and discrete graph $G_{TB} = (V_{TB},E_{TB})$ of tangent spaces, which are independent vector spaces of dimension $d$. This concept is implemented in class ```TangentBundle```. Discrete tangent bundles can supply one of more of the following properties:
+
 1. **Intrinsic parameterization**: vectors in a single tangent space are represented with coordinates $\left(x_1,\cdots,x_d\right)$ in an arbitrary, but fixed basis of dimension $d$. The basis itself does not need to be specified for many algorithms, it can stay abstract.
+
 2. **Adjacency**: a tangent bundle is represented as a graph where the tangent spaces are nodes, and the graph edges are adjacency relations, that encode the local environment of any tangent space. This in fact encodes the combinatorial and topological structure of the underlying discrete manifold, akin to the smooth structure in the continuum.
+
 3. **Connection**: a connection defines the notion of parallelity in two adjacent tangent spaces, which encodes a metric structure on the underlying manifold, and allows to compute derivatives and curvature. Specifically, a connection is a directed-edge-based quantity on the tangent-bundle graph, given as a change of coordinates between the bases of the source tangent space to the target tangent space. This can be represented as an orthogonal matrix.
-4. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ (akin to "faces") that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to curvature modulo $2\pi$.
-5. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot $G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property.
+
+TALK ABOUT THE WEIGHT OF A CONNECTION
+
+4. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ (akin to "faces") that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to curvature modulo $2\pi$. The *singularities* of fields are defined on the cycles.
+
+5. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. 
+
 6. **Inner product**: This allows to compute the $L_2$ product of two vector fields given intrinsically. This is usually implemented as a mass matrix $M$. The combination of an $L_2$ product and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg, and harmonic part $h$ as follows [~boksebeld_2022]:
 
 $$v = Gf + M^{-1}C^Tg + h$$
 
-The exact part if curl-free, the coexact part is divergence free: given the divergence operator $D = G^T M$ we get $G^TC^Tg = 0$, and the harmonic part is both.
+The inner product also introduces the discrete divergence operator $G^T\cdot M$. Note that the coexact part is divergence free since $G^T\cdot C^T = 0$. The harmonic part $h$ is both.
 
+Oftentimes the above intrinsic quantities are enough for all algorithms; nevertheless, even for reasons of input, output, and visualization, a ```TangentBundle``` will contain the following, embedding-based extrinsic quantities:
 
+7. **Sources and normals**: point locations and their normals (the codimensional directions of the manifold), which define the tangent planes of the manifold in the Euclidean space. Note that this doesn't mean it's a watertight mesh; that could also encode a pointcloud, for instance.
 
+8. **extrinsic to intrinsic and back**: functionality that projects extrinsic vectors into intrinsic space (might lose information), or produces the extrinsic representation of an intrinsic directional.
 
-**Input:** Directional requires the input to always be an *orientable* triangle mesh in a *single connected-component*. There are no general limitations on the genus or the boundaries. Specific algorithms may have additional requirements or consistency issues (for instance, index prescription requires that the singularity indices add up to the Euler characteristic). If your input comprises several connected components altogether, you  can just run any algorithm on each of them, loaded individually in sequence. 
+9. **Cycles sources and normals**. Like (7), but for the cycles themselves, This would be where singularities are ```located'' in space, and might just be a visualization quantity.
 
-There are several ways to represent tangent planes on triangle meshes, although not all of them compatible with the different information that the fields convey. Mainstream discretizations roughly categorize into face-based, edge-based, and vertex-basex discretizations (see [^degoes_2016] for an in-depth analysis). The only discretization currently supported by Directional is that of tangent face-based fields, where the discrete tangent plane is taken to be the supporting plane to each (naturally flat) face. We also use a local basis (provided by `igl::local_basis()`) to parameterize each tangent plane. Notions like connection, parallel transport, and consequently smoothness, are measured on *dual edges* between adjacent faces.
+Two main types are currently implemented in directional: ```IntrinsicFaceTangentBundle``` implements face-based tangent spaces, where the fields are tangent to the natural plane supporting triangles of surface meshes, and ```IntrinsicVertexTangentBundle``` implements vertex-based intrinsic tangent spaces, which parameterize the cone environment of the $1$-ring directly CITE. 
+
+For example, this is how ```IntrinsicFaceTangentBundle``` implements the above quantities:
+
+1. Intrinsic parameterization: a local basis in every face.
+2. Adjacency: dual (inner) edges between any two faces.
+3. Connection: the rotation matrix between the bases of any two adjacent faces.
+4. Cycles: around vertex $1$-rings, where singularities are then defined at vertices.
+5. Cochain complex: the classical FEM face-based gradient and curl.
+6. Inner product: the natural face-based mass matrix (just a diagonal matrix of face areas).
+7. Sources are face barycenters, and normals are just face normals.
+8. The projection to the supporting plane of the face and encoding in local coordinates.
+9. Vertices and vertex normals (area-weighted from adjacent faces).
+
+Some of the choices above can of course be variated to different flavors of face-based fields (for instance, the metric culminating in the mass weights). ```IntrinsicFaceTangentBundle``` wraps around a an *orientable* input triangle mesh in a *single connected-component*. There are no general limitations on the genus or the boundaries. If your input comprises several connected components altogether, you should use several tangent bundles. 
 
 ### Representation
 
