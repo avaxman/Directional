@@ -5,11 +5,13 @@
 #include <directional/directional_viewer.h>
 #include <directional/read_raw_field.h>
 #include <directional/TriMesh.h>
-#include <directional/FaceField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
 
 int currF, currVec, N;
 directional::TriMesh mesh;
-directional::FaceField field;
+directional::IntrinsicFaceTangentBundle ftb;
+directional::CartesianField field;
 directional::DirectionalViewer viewer;
 
 //User input variables
@@ -89,7 +91,8 @@ int main()
 {
 
   directional::readOBJ(TUTORIAL_SHARED_PATH "/torus.obj", mesh);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", mesh, N, field);
+  ftb.init(mesh);
+  directional::read_raw_field(TUTORIAL_SHARED_PATH "/torus.rawfield", ftb, N, field);
 
   std::cout <<
   "  1                Choose vector in current face." << std::endl <<

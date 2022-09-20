@@ -54,7 +54,7 @@ The central data structure of Directional is the *discrete tangent bundle*, whic
 
 TALK ABOUT THE WEIGHT OF A CONNECTION
 
-4. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ (akin to "faces") that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to curvature modulo $2\pi$. The *singularities* of fields are defined on the cycles.
+4. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to the curvature of the cycle modulo $2\pi$. There are two types of cycles, which define the topology of the underlying manifold: *local* cycles (aking to "faces" in $G_{TB}$), which are small closed loops, and *global* cycles, which can be homological generators and boundary loops. The *singularities* of fields are defined on the local cycles.
 
 5. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. 
 
@@ -79,7 +79,7 @@ For example, this is how ```IntrinsicFaceTangentBundle``` implements the above q
 1. Intrinsic parameterization: a local basis in every face.
 2. Adjacency: dual (inner) edges between any two faces.
 3. Connection: the rotation matrix between the bases of any two adjacent faces.
-4. Cycles: around vertex $1$-rings, where singularities are then defined at vertices.
+4. Cycles: the local cycles are around vertex $1$-rings, where singularities are then defined as (dual) vertex values, and global cycles are dual loops of generators and boundaries.
 5. Cochain complex: the classical FEM face-based gradient and curl.
 6. Inner product: the natural face-based mass matrix (just a diagonal matrix of face areas).
 7. Sources are face barycenters, and normals are just face normals.
@@ -128,7 +128,7 @@ The singularities and glyphs (and most other properties) can be toggled by funct
 
 ### 102 Discrete Tangent Bundles
 
-This example shows a Cartesian field computed (with the power field method descsribed in [Example 301])(#301-power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
+This example shows a Cartesian field computed (with the power field method descsribed in [Example 301](#301-power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
 
 ```cpp
 directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
@@ -152,7 +152,7 @@ One can see the stages of computing a field: first reading a mesh (```readOBJ()`
 
 ### 103 Picking and editing
 
-This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code in [Example 102]({{ repo_url }}/tutorial/102_PickingEditing/main.cpp).
+This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code in [Example 103]({{ repo_url }}/tutorial/103_PickingEditing/main.cpp).
 
 ```cpp
 directionalViewer->set_selected_faces(selectedFaces);
@@ -160,14 +160,13 @@ directionalViewer->set_selected_vector(currF, currVec);
     
 ```
 
-
 ![([Example 103]({{ repo_url }}/tutorial/103_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/103_PickingEditing.png)
 
 ### 104 Streamline Tracing
 
-Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `streamlines_next`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp). The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
+Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `DirectionalViewer::streamlines_next()`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 104]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp). The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
 
-![([Example 103]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/104_StreamlineTracing.png)
+![([Example 104]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/104_StreamlineTracing.png)
 
 ### 105 Scalar quantities on meshes
 
@@ -179,7 +178,7 @@ It is possible to set and visualize scalar quantities on meshes at different dis
 
 On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
 
-![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/1055_Sparsity.png)
+![([Example 106]({{ repo_url }}/tutorial/106_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/106_Sparsity.png)
 
 ## Chapter 2: Discretization and Representation
 
@@ -188,29 +187,29 @@ In the following sections, we show some effects of working with different repres
 
 ### 201 Principal Matching
 
-One of the fundamental operations in directional-field processing is *matching*. That is, defining which vectors in face $f_i$ correspond to those in adjacent face $f_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in face $f_i$ is matched to vector $m$ in face $f_j$, then for any $l \in \mathbb{Z}$, vector $k+l$ is matched to vector $m+l$ (modulu $N$) in the respective faces. Suppose that the orientation of the dual edge is $f_i \rightarrow f_j$, then the matching is encoded as $m-k$. Some representations, like rotation angles, already encode the matching explicitly, but others do not. Therefore, it needs to be devised from the field.
+One of the fundamental operations in directional-field processing is *matching*. That is, defining which vectors in tangent space $t_i$ correspond to those in adjacent tangent space $t_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in tangent space $t_i$ is matched to vector $m$ in $t_j$, then for any $l \in \mathbb{Z}$, vector $k+l$ is matched to vector $m+l$ (modulu $N$). Suppose that the orientation of the TB graph edge is $t_i \rightarrow t_j$. Then, the matching is encoded as $m-k$. The matching is sometimes not known in advance (for instance, when the Cartesian field is input or computed), and it needs to be devised from the field.
 
-Given a raw field (in assumed CCW order in every face), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [^diamanti_2014]. Principal matching is defined as the matching with minimal effort, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
+Given a raw field (in assumed CCW order in every tangent space), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [^diamanti_2014]. Principal matching is defined as the matching with minimal effort, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
 
-principal matching is done through the function ```principal_matching()```  (from in [Example 201]({{ repo_url }}/tutorial/201_PrincipalMatching/main.cpp)) as follow:
+principal matching is done through the function ```principal_matching()``` , that accepts a Cartesian field as a parameter, and computes the following:
 
-```cpp
-directional::principal_matching(V, F,EV, EF, FE, rawField, matching, effort, singVertices, singIndices);
-```
-The function also computes the <i>index</i> of each vertex from the effort around it. The index of a vertex is the amount of rotations a directional object undergoes along a cycle around the vertex. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index is unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). ```singVertices``` and ```singIndices``` only enumerate the singular vertices.
+1. The matching on each (directed) TB-graph edge. This is stored in the ```matching``` member of the field class.
+2. The indices of the cycles. The singular local cycles are are stored in the corresponding ```singLocalCycles``` and ```singIndices``` of the field class.
+
+The singularities are computed as the <i>index</i> of each local cycle from the *effort* around it. The index of a cycle is the amount of rotations a directional object undergoes around a cycle. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index can be unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). Note that for face-based field singular cycles are vertices, whereas in vertex-based fields, singular cycles are faces. Further note that Directional computes singularities only around the *local* cycles. That is, ```principal_matching()``` does not update singularities around boundary or generator loops.
 
 ![([Example 201]({{ repo_url }}/tutorial/201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
 
 
 ### 202 Sampling
 
-This is an educational example that demonstrates the loss of information when moving between a polar (in this case, rotation angle) representation to a Cartesian representation, where the matching between vectors in adjacent faces is done with principal matching. In that case, low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
+This is an educational example that demonstrates the loss of information when generating a Cartesian field from rotation angles, and then trying to retrieve them back by principal matching. This causes low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
 
-1. In the polar mode, the user can prescribe the index of a singularity directly. With this, the rotation angles between adjacent faces become arbitrarily large, and appear as noise in the low valence cycles.
+1. In the polar mode, the user can prescribe the index of a singularity directly, and compute the field with index prescription (see [example 401](#401-index-prescription)). With this, the rotation angles between adjacent faces can be arbitrarily large, and appear as noise in the low valence cycles.
 
-2. In the principal matching mode, the rotations are reconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The large rotation between adjacent faces is lost, which gives rise to a "singularity party": many perceived singularities or a lower index.
+2. In the principal-matching mode, the rotations are reconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The large rotation between adjacent faces is lost, which gives rise to a "singularity party": many perceived singularities or a lower index.
 
-3. In the Cartesian mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
+3. In the interpolation mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
 
 ![([Example 202]({{ repo_url }}/tutorial/202_Sampling/main.cpp)) Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.](images/202_Sampling.png)
 
@@ -306,7 +305,7 @@ Finding a conjugate vector field that satisfies given directional constraints is
 
 Polar fields are represented using angles. These angles may encode the rotation from some given basis on a tangent plane (and so it is a "logarithmic" representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent planes (in the sense of deviation from parallel transport). The former usually requires integer variables for directional field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, Directional supports the latter.
 
-### 401 Index Prescription
+### <a id="401-index-prescription"></a>  401 Index Prescription
 
 The notion of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [^crane_2010],[^ray_2008]. The formulation and notation we use in Directional is that of Trivial Connections [^crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i$ and $f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of *basis cycles*, around all of which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as a matrix $H$. Every such cycle (row in the matrix) has an original curvature $K_0$, defined as a discrete angle defect, and the prescribed index defines an alternative curvature. The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
 
