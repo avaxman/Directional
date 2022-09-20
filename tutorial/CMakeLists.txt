@@ -13,8 +13,6 @@ option(TUTORIALS_CHAPTER3 "Compile chapter 3" ON)
 option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
 option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
 option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
-option(TUTORIALS_CHAPTER7 "Compile chapter 7" ON)
-
 
 ### libIGL options:
 option(LIBIGL_EMBREE           "Build target igl::embree"           ON)
@@ -52,10 +50,11 @@ target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 # Chapter 1
 if(TUTORIALS_CHAPTER1)
   add_subdirectory("101_GlyphRendering")
-  add_subdirectory("102_PickingEditing")
-  add_subdirectory("103_StreamlineTracing")
-  add_subdirectory("104_FaceVertexEdgeData")
-  add_subdirectory("105_Sparsity")
+  add_subdirectory("102_DiscreteTangentBundles")
+  add_subdirectory("103_PickingEditing")
+  add_subdirectory("104_StreamlineTracing")
+  add_subdirectory("105_FaceVertexEdgeData")
+  add_subdirectory("106_Sparsity")
 endif()
 
 # Chapter 2
@@ -91,11 +90,5 @@ endif()
 if(TUTORIALS_CHAPTER6)
   add_subdirectory("601_SubdivisionFields")
 endif()
-
-# Chapter 7
-if(TUTORIALS_CHAPTER7)
-  add_subdirectory("701_DifferentRepresentations")
-endif()
-
 
 

@@ -90,15 +90,13 @@ Some of the choices above can of course be variated to different flavors of face
 
 ### Representation
 
-The representation of a directional field is the way it is encoded in each discrete tangent plane, and across adjacent tangent planes. Directional uses several different representations to describe directional fields. We denote the number of faces in the mesh as $|F|$, the set of inner edges (adjacent to two triangles) as $E_I$, and the degree of the field as $N$ (must be fixed for the entire field). The supported  representations are as follows, where the taxonomy is based on that of the directional field course [^vaxman_2016]:
+The representation of a directional field is its encoding in each discrete tangent plane. The most important element is the number of vectors in each tangent plane, which we denote as the *degree* of the field $N$. Currently, Directional supports fields that are represented by explicit (intrinsic) coordinates, which we call a *cartesian field*, and is represented by the class ```CartesianField```. Directional currently supports the following variants of Cartesian fields[^vaxman_2016]:
 
-1. **Raw** - A $|F|\times 3N$ double matrix, representing an $1^N$-vector field (a directional with $N$ independent vectors in each face) in the form $X_1, Y_1, Z_1, X_2, Y_2, Z_2, \cdots X_N, Y_N, Z_N$ per face. Vectors are assumed to be ordered in counterclockwise order in most Directional functions that process raw fields.
-2. **Representative**. A $|F| \times 3$ double matrix that represents a rotationally symmetric $N$-vector field, known as an $N$-RoSy. The single vector is an arbitrary "first" vector in the face, and the rest of the vectors are deduced by rotations of $\frac{2\cdot\pi}{N}$. That means the all functions should also accept $N$ as input to decode the full field.
-3. **Rotation Angles**. A $|E_I|$-sized double vector representing the rotation angle between two directions (without magnitude information) on two adjacent triangles. The rotation represents the deviation from the Levi-Civita parallel transport [^crane_2010],[^ray_2008]. This representation may only encode $N$-direction fields (no magnitude). Note that the *effort* (sum of all rotations) is then $N$ times rotation angles. Since this is a differential quantity, an extra global rotation needs to be given to uniquely decode the full face-based field.
-4. **Power Field** - An $|F|$-sized *complex* vector, encoding an $N$-RoSy object as a single complex number $y=u^N$ encoded in the local basis, where the $N$-RoSy is the set of roots $u \cdot e^{\frac{2\pi i k}{N}}, k \in [0,N-1]$. The magnitude is also encoded this way, though it may be neglected in some applications. The representation depends on a local $2D$ basis, such as one that could be obtained from ```igl::local_basis()```.
-5. **PolyVector** - A $|F| \times N$ complex matrix, representing the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. Every row is encoded as $a_{0},\cdots, a_{N-1}$, where $a_0$ is the free coefficient. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero. ***Note***: A PolyVector that represents a perfect $N$-RoSy would have all $a_i=0,\ \forall i>0$, but $a_0$ would have opposite sign from the power-field representation of the same $N$-RoSy. This is since the power field represents $u^N$ directly, whereas a PolyVector represents the coefficients of $z^N-U^N$ in this case.
+1. **Raw** - a vector of $d\times N$ entries represents an intrinsic $1^N$-vector (a directional with $N$ independent vectors in each tangent plane) a dimension-dominant ordering: $(X_{1,1},\ldots, X_{1,d}),(X_{1,2},\ldots,X_{2,d}),\ldots (X_{N,1},\ldots, X_{N,d})$ per face. Vectors are assumed to be ordered in counterclockwise order in most Directional functions that process raw fields. the memory complexity is then $dN|V_{TB}|$ for the entire directional field. A Cartesian Field indicates being a raw-field by setting ```CartesianField::fieldType``` to ```directional::RAW_FIELD```.
+2. **Power Field** - This is a unique type to $d=2$. It encodes an $N$-rotational-symmetric ($N$-RoSy) object as a single complex number $y=u^N$ relative to the local basis in the tangent space, where the $N$-RoSy is the set of roots $u \cdot e^{\frac{2\pi i k}{N}}, k \in [0,N-1]$. The magnitude is also encoded this way, though it may be neglected in some applications. The memory complexity is then $2|V_{TB}|$.
+3. **PolyVector** - Also unique to $d=2$, this is a generalization of power fields that represents an $N$-directional object in a tangent space as the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero. ***Note***: A PolyVector that represents a perfect $N$-RoSy would have all $a_i=0,\ \forall i>0$, but $a_0$ would have opposite sign from the power-field representation of the same $N$-RoSy. This is since the power field represents $u^N$ directly, whereas a PolyVector represents the coefficients of $z^N-U^N$ in this case. The memory complexity is $2N|V_{TB}|$.
 
-Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```rotation_to_representative()``` and  ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence. However, note that not every conversion is possible; for instance, it is not possible to convert between PolyVectors and rotation angles, as they do not possess the same power of expression (with current state-of-the-art...). For $N$-RoSy fields, for instance, you will most likely work primarily with the power field, representative, or rotation-angle representation. converting into the more explicit raw representation is often needed for I/O and visualization.
+Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence. However, note that not every conversion is possible; for instance, it is not possible to convert from PolyVectors to power fields, as they do not possess the same power of expression. Converting into the more explicit raw representation is often needed for I/O and visualization.
 
 
 ## Chapter 1: I/O and Visualization
@@ -112,24 +110,47 @@ Directional uses a specialized class called ```DirectionalViewer``` which inheri
 The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp), a mesh and a field are read from a file and visualized as follows:
 
 ```cpp
- directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", N, rawField);
-  directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", N, singVertices, singIndices);
+
+directional::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off",mesh);
+directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", mesh, N, field);
+directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", field);
+directional::DirectionalViewer viewer;
   
-  directional::DirectionalViewer viewer;
-  
-  viewer.set_mesh(V,F);
-  viewer.set_field(rawField);
-  viewer.set_singularities(singVertices, singIndices);
+viewer.set_mesh(mesh);
+viewer.set_field(field);
 ```
 
-The field is read in *raw* format (see [File Formats](../file_formats/index.html)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*, where ```singVertices``` are the singular vertices, and ```singIndices``` are the corresponding integer indices, so that the actual fractional indices are $\frac{singIndices}{N}$. If the mesh number is not prescribed explicitly, the default single mesh (number 0) is assumed. 
+The field is read in *raw* format (see [File Formats](../file_formats/index.html)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*,
 
 The singularities and glyphs (and most other properties) can be toggled by functions of the type  ```DirectionalViewer::toggle_field()``` and  ```DirectionalViewer::toggle_singularities()```.
 
 ![([Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png)
 
+### 102 Discrete Tangent Bundles
 
-### 102 Picking and editing
+This example shows a Cartesian field computed (with the power field method descsribed in [Example 301])(#301-power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
+
+```cpp
+directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
+powerFaceField.init(mesh, POWER_FIELD, N);
+powerVertexField.init(mesh, POWER_FIELD, N);
+
+...
+
+directional::power_field(mesh, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
+directional::power_field(mesh, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
+
+//computing power fields
+directional::power_to_raw(powerFaceField, N, rawFaceField,true);
+directional::power_to_raw(powerVertexField, N, rawVertexField,true);
+```
+
+One can see the stages of computing a field: first reading a mesh (```readOBJ()```), then initializing the approxiate tangent bundle with the mesh (```powerFace/VertexField.init()```), and then computing this power field on top of this representation (```power_field()```). The field is converted to raw representation in ```power_to_raw()```) for later visualization.
+
+![([Example 102]({{ repo_url }}/tutorial/102_DiscreteTangentBundles/main.cpp)) Power fields on a face-based tangent bundle (left) and vertex-based (right).](images/102_DiscreteTangentBundles.png)
+
+
+### 103 Picking and editing
 
 This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code in [Example 102]({{ repo_url }}/tutorial/102_PickingEditing/main.cpp).
 
@@ -140,25 +161,25 @@ directionalViewer->set_selected_vector(currF, currVec);
 ```
 
 
-![([Example 102]({{ repo_url }}/tutorial/102_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/102_PickingEditing.png)
+![([Example 103]({{ repo_url }}/tutorial/103_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/103_PickingEditing.png)
 
-### 103 Streamline Tracing
+### 104 Streamline Tracing
 
 Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `streamlines_next`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp). The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
 
-![([Example 103]({{ repo_url }}/tutorial/103_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/103_StreamlineTracing.png)
+![([Example 103]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/104_StreamlineTracing.png)
 
-### 104 Scalar quantities on meshes
+### 105 Scalar quantities on meshes
 
 It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, that also allow the setting of the viewable range of the function (the rest is clipped).
 
-![([Example 104]({{ repo_url }}/tutorial/104_FaceVertexEdgeData/main.cpp)) Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs..](images/104_FaceVertexEdgeData.png)
+![([Example 104]({{ repo_url }}/tutorial/105_FaceVertexEdgeData/main.cpp)) Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs..](images/105_FaceVertexEdgeData.png)
 
-### Sparse Glyph View
+### 106 Sparse Glyph View
 
 On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
 
-![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/105_Sparsity.png)
+![([Example 105]({{ repo_url }}/tutorial/105_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/1055_Sparsity.png)
 
 ## Chapter 2: Discretization and Representation
 
@@ -215,7 +236,7 @@ where ```combedField``` is the re-indexed ```rawField```, done according to the 
 
 The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local 2D basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of the 3D space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation.
 
-### 301 Power Fields
+### <a id="301-power-fields"></a> 301 Power Fields
 
 This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" coined in [^azencot_2017].
 
