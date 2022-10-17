@@ -76,7 +76,7 @@ namespace directional
     
     combedField.set_intrinsic_field(combedIntField);
     combedField.matching.resize(rawField.tb->adjSpaces.rows());
-    //giving combed matching
+    //Combed matching
     for (int i=0;i<rawField.tb->adjSpaces.rows();i++){
       if ((rawField.tb->adjSpaces(i,0)==-1)||(rawField.tb->adjSpaces(i,1)==-1))
         combedField.matching(i)=-1;

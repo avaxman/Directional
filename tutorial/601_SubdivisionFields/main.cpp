@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
   
   directional::curl_matching(rawFieldCoarse,  curlCoarse);
   directional::combing(rawFieldCoarse,combedFieldCoarse);
-  directional::curl_matching(combedFieldCoarse, curlCoarse);
+  //directional::curl_matching(combedFieldCoarse, curlCoarse);
   double curlMax = curlCoarse.maxCoeff();
   std::cout << "Coarse optimized absolute curl: " << curlMax << std::endl;
   

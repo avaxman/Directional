@@ -50,14 +50,11 @@ int main()
   ftb.init(mesh);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/lilium.rawfield", ftb, N, rawField);
   std::cout<<"Showing raw field"<<std::endl;
-  
-  //computing
+
+  //computing the principal matching and then combing the field to trivialize the matching anywhere but a set of seams
   directional::principal_matching(rawField);
   directional::combing(rawField, combedField);
-  
-  //to get the (mostly trivial) matching of the combed field
-  directional::principal_matching(combedField);
-  
+
   viewer.set_mesh(mesh);
   viewer.toggle_mesh_edges(false);
   update_raw_field_mesh();

@@ -124,14 +124,14 @@ int main(int argc, char *argv[])
   rawFieldCF.init(ftb, RAW_FIELD, N);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
   
-  //Eigen::VectorXi prinIndices;
+  //combing the field in a way that minimizes curl
   directional::curl_matching(rawFieldOrig,curlOrig);
   curlMaxOrig= curlOrig.maxCoeff();
   curlMax = curlMaxOrig;
   std:: cout<<"curlMax original: "<<curlMax<<std::endl;
   
   directional::combing(rawFieldOrig, combedFieldOrig);
-  directional::curl_matching(combedFieldOrig, curlOrig);
+  //directional::curl_matching(combedFieldOrig, curlOrig);
   
   //trivial constraints
   Eigen::VectorXi b; b.resize(1); b<<0;
