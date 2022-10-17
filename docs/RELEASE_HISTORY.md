@@ -1,5 +1,9 @@
 # Directional Version Log
 
+## Version 2.0 Changes
+
+- Paradigm shift of the entire library to work with polymoprhic discrete tangent bundles. All algorithms (if possible) converted to work with this paradigm directly.
+
 ## Version 1.8.0 Changes
 
 - Extension of the PolyVector and power field implementation to include soft and hard partial alignment, and rotational symmetry objectives.

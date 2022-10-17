@@ -30,14 +30,14 @@ markdown_extensions:
       guess_lang: false
   - footnotes
   - admonition
+  - attr_list
   - toc:
       permalink: true
-  - figureAltCaption
   - markdown.extensions.smarty
   - markdown.extensions.toc:
       permalink: true
   - markdown.extensions.wikilinks:
-      base_url: https://github.com/libigl/libigl/tree/master
+      base_url: https://github.com/avaxman/Directional/
   - pymdownx.arithmatex
   - pymdownx.betterem:
       smart_enable: all
@@ -56,9 +56,6 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
-  - urlprocessor:
-      variables:
-        repo_url: 'https://github.com/avaxman/Directional/tree/master'
 plugins:
   - search
 
@@ -71,5 +68,4 @@ nav:
   - Tutorial: tutorial.md
   - File Formats: file_formats.md
   - Website: website.md
-  - FAQ: faq.md
   - Release History: RELEASE_HISTORY.md

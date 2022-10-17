@@ -34,8 +34,6 @@ tool. Run the website locally, then run LinkChecker on it:
 ```bash
 linkchecker http://127.0.0.1:8000
 ```
-!!! note
-    The reason we are using `python -m mkdocs serve` instead of `mkdocs serve` directly is because we are using local extensions for mkdocs. Those extensions are located in the `scripts/` folder of libigl. Running `mkdocs` as a module adds the current directory to the `PYTHONPATH`, allowing us to load those extensions without installing them on the system or in a virtualenv.
 
 ## References
 

@@ -1,12 +1,8 @@
 # Directional - A Directional-Field Processing Library
 
-<!---[![Build Status](https://travis-ci.org/libigl/libigl.svg?branch=master)](https://travis-ci.org/libigl/libigl)
-[![Build status](https://ci.appveyor.com/api/projects/status/mf3t9rnhco0vhly8/branch/master?svg=true)](https://ci.appveyor.com/project/danielepanozzo/libigl-6hjk1/branch/master)
-![](libigl-teaser.png)!--->
-
 <https://github.com/avaxman/Directional/>
 
-Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes. It is based on both [libigl](https://www.github.com/libigl/libigl) and [Eigen](http://eigen.tuxfamily.org/). Directional represents directional fields:  discrete sets of vectors on meshes. Much of the content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis). Some visualization code is borrowed from the [libhedra](https://github.com/avaxman/libhedra) library. 
+Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes. It is based on [Eigen](http://eigen.tuxfamily.org/). Directional represents directional fields:  discrete sets of vectors on meshes. Much of the content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis). Some visualization code is borrowed from the [libhedra](https://github.com/avaxman/libhedra) library. 
 
 Directional was called "libdirectional" until version 1.5. The name was shortened to avoid a clash with [libDirectional](https://github.com/libDirectional/libDirectional).
 
@@ -19,24 +15,23 @@ git clone --recursive https://github.com/avaxman/Directional.git
 ```
 
 ## Features
-The current version is 1.7, comprising the following features:
+The current version is 2.0, which represents a big paradigm shift from previous versions. Namely, the library uses polymorphic classes to represent abstract discrete tangent bundles, and contains their impelmentations of these interfaces by finite elements on meshes. The library further comprises the following features
 
-1. Representation of per-face directional fields of any given degree and symmetry.
-2. Visualization of fields using (sparsified) glyphs and streamline tracing.
-3. Principal and curl matching, and combing for $N$-directional fields.
-4. Computation of power fields of $N$-RoSy fields.
-5. PolyVector fields.
-6. Optimization for curl reduction.
-7. Conjugate fields.
-8. Prescription of singularity, generator, and boundary indices.
-9. Rotationally- and fully-seamless integration of branched $N$-functions.
-10. Meshing of the arrangement of $N$-functions isolines into polygonal meshes.
-11. Subdivision fields.
+1. Visualization of fields using (sparsified) glyphs and streamline tracing.
+2. Principal and curl matching, and combing for $N$-directional fields.
+3. Computation of power fields of $N$-RoSy fields.
+4. PolyVector fields.
+5. Optimization for curl reduction.
+6. Conjugate fields.
+7. Prescription of singularity, generator, and boundary indices.
+8. Rotationally- and fully-seamless integration of branched $N$-functions.
+9. Meshing of the arrangement of $N$-functions isolines into polygonal meshes.
+10. Subdivision fields.
 
 Directional is **a header-only library**. You do not need to compile anything to use,
 just include directional headers (e.g. `#include <directional/index_prescription.h>`) and run.  Each
 header file contains a single function (e.g. `igl/index_prescription.h` contains
-`igl::index_prescription()`). Nevertheless, the meshing packages requires [CGAL](https://www.cgal.org/), which is facilitated using the [libigl](https://www.github.com/libigl/libigl) interface.
+`igl::index_prescription()`). The library needs [libigl](https://www.github.com/libigl/libigl) as a prerequisite which is automatically downloaded. Furthermore, the meshing packages requires [CGAL](https://www.cgal.org/) which is used through libigl.
 
 
 ## Tutorial
@@ -49,11 +44,6 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 This should properly set up the tutorial project, with the individual chapters as subprojects, and create project makefiles upon which you can build it using your favourite compiler. For windows, we recommend to use `cmake-gui ..` and follow the instructions to create a compilable Visual Studio file.
-
-## Coding Guidelines and Tips
-
-Directional inherits and follows the strict coding guidelines of libigl: please take a look [here](http://libigl.github.io/libigl/style-guidelines) before submitting your pull requests.
-
 
 ## How to Contribute
 
@@ -78,23 +68,11 @@ url          = {https://doi.org/10.5281/zenodo.3338174}
 
 ## Contact
 
-Directional is led by [Amir Vaxman](http://www.staff.science.uu.nl/~vaxma001/). Please [contact me](mailto:avaxman@gmail.com) if you have questions or comments. For troubleshooting, please post an [issue](https://github.com/avaxman/Directional/issues) on github.
+Directional is led by [Amir Vaxman](https://avaxman.github.io/). Please [contact me](mailto:avaxman@gmail.com) if you have questions or comments. For troubleshooting, please post an [issue](https://github.com/avaxman/Directional/issues) on github.
 
 If you're using Directional in your projects, quickly [drop me a note](mailto:avaxman@gmail.com). Tell me who you are and what you're using it for. This helps justify spending time maintaining this library!
 
-## Future Plans
-
-The following functionality is still in workds for Directional. Please contact me for any suggestions or contributions from this wish list which are very welcome!
-
-1. Other discretizations: discrete exterior calculus, vertex-based fields.
-2. 3D fields.
-3. Discrete vector calculus: operators and Hodge decomposition.
-4. Line-integral convolution visualization.
-
-
-If you would like to suggest further topics, would like to collaborate in implementation, complain about bugs or ask questions, please address [Amir Vaxman](avaxman@gmail.com) (or open an issue in the repository).
-
 ## Copyright
-2017 Amir Vaxman, Sam de Redelijkheid, Daniele Panozzo, Olga Diamanti, Olga Sorkine-Hornung, and others.
+2017 Amir Vaxman, Sam de Redelijkheid, Daniele Panozzo, Olga Diamanti, Olga Sorkine-Hornung, Bram Custers and others.
 
 Please see individual files for appropriate copyright notices.

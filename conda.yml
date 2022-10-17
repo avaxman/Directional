@@ -13,4 +13,3 @@ dependencies:
       - mkdocs-redirects==1.0.3
       - mkdocs-minify-plugin==0.4.0
       - LinkChecker==10.1.0
-      - "--editable=git+https://github.com/jdumas/figureAltCaption@c1eb51cffa0c500d5f7c9b78bd3b5e752e14aee9#egg=figureAltCaption"

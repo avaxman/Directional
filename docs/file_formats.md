@@ -3,13 +3,13 @@ Directional file formats
 
 ### Raw Field (```.rawfield```)
 
-This  file format describe a face-based field given in uncompressed xyz form as follows:
+This  file format describe a raw field given in uncompressed xyz form as follows:
 
-    [Degree]  [#faces]
+    [Degree]  [#tangent_spaces]
     [x] [y] [z] [x][y][z]  .... N*Degree columns
      ... #faces rows
      
-The convention is that the vectors are assumed to be ordered by the given index within each face. Mostly expected to be CCW ordering around the normal for several functions. Altering this might result in unexpected results. The indices are **not** assumed to be matching across neighboring faces, and are independently indexed per face.
+The convention is that the vectors are assumed to be ordered by the given index within each tangent space. Mostly expected to be CCW ordering around the normal for several functions. Altering this might result in unexpected results. The indices are **not** assumed to be matching across neighboring tangent spaces, and are independently indexed per space. Note that this file format does not assume anything about the tangent bundle itself or any of its implementations---it can store, for instance, either face- or vertex-based fields.
 
 ### Singularities (```.sing```)
 
@@ -19,17 +19,17 @@ This file format describes prescribed singularities as follows:
     [vertex_i] [index_i]
     ... #singularities rows
 
-Where ```index_i``` are integers, and the actual fractional index for vertex $i$ is $\frac{index_i}{Degree}$. The indices can be negative and are considered unbounded if need be.
+Where ```index_i``` are integers, and the actual fractional index for vertex $i$ is $\frac{index_i}{Degree}$. The indices can be negative and are considered unbounded if need be. These singularities should match the local cycles on the designated tangent bundle.
 
 ### Matching (```.matching```)
 
-This file format described the matching between each two neighboring faces $i$ and $j$ (across a dual edge: ([vertex_e], [vertex_f])) as follows:
+This file format described the matching between each two neighboring tangent spaces $i$ and $j$ (across an edge on the tangent bundle: ([vertex_e], [vertex_f])) as follows:
 
     [Degree]  [#dual_edges]
     [face_i] [face_j] [vertex_e] [vertex_f] [matching_k]
     ... #dual_edges rows
     
-  The order is generally compatible with the result of the field ```EF``` in ```igl::edge_topology()``` for the same mesh, but that is not a guarantee. That means the vector $k$ in face $i$ is matched to vector $k+matching_i$ (modulu $Degree$) in face $j$, and the rest in an order-preserving manner. See tutorial for details.
+  That means the vector $k$ in face $i$ is matched to vector $k+matching_i$ (modulu $Degree$) in face $j$, and the rest in an order-preserving manner. See tutorial for details.
     
 ### Data structures used from libigl
 

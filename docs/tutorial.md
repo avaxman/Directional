@@ -1,5 +1,4 @@
-
-<h1>Directional tutorial notes</h1>
+# Directional tutorial notes
 
 
 ## Introduction
@@ -39,7 +38,7 @@ To access a single example, say ``202_Sampling``, go to the ``build`` subfolder,
 
 Most examples require a modest amount of user interaction; the instructions of what to do are given in the command-line output upon execution.
 
-### <a Id="discrete-tangent-bundles">Discrete Tangent Bundles</a>
+### Discrete tangent bundles {: #discrete-tangent-bundles}
 
 In the continuum, directional fields are represented as elements of tangent spaces, where a tangent space is a linear space attached to each point of a manifold. The set of all such tangent spaces is called a *tangent bundle*. 
 
@@ -70,7 +69,7 @@ Oftentimes the above intrinsic quantities are enough for all algorithms; neverth
 
 8. **extrinsic to intrinsic and back**: functionality that projects extrinsic vectors into intrinsic space (might lose information), or produces the extrinsic representation of an intrinsic directional.
 
-9. **Cycles sources and normals**. Like (7), but for the cycles themselves, This would be where singularities are ```located'' in space, and might just be a visualization quantity.
+9. **Cycles sources and normals**. Like (7), but for the cycles themselves, This would be where singularities are ```located``` in space, and might just be a visualization quantity.
 
 Two main types are currently implemented in directional: ```IntrinsicFaceTangentBundle``` implements face-based tangent spaces, where the fields are tangent to the natural plane supporting triangles of surface meshes, and ```IntrinsicVertexTangentBundle``` implements vertex-based intrinsic tangent spaces, which parameterize the cone environment of the $1$-ring directly CITE. 
 
@@ -107,7 +106,7 @@ Directional uses a specialized class called ```DirectionalViewer``` which inheri
 
 ### 101 Glyph Rendering
 
-The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In [Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp), a mesh and a field are read from a file and visualized as follows:
+The most basic operation on directional fields is reading them from a file and drawing them in the most explicit way. In this example, a mesh and a field are read from a file and visualized as follows:
 
 ```cpp
 
@@ -120,15 +119,16 @@ viewer.set_mesh(mesh);
 viewer.set_field(field);
 ```
 
-The field is read in *raw* format (see [File Formats](../file_formats/index.html)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*,
+The field is read in *raw* format (see [File Formats](file_formats.md)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*,
 
 The singularities and glyphs (and most other properties) can be toggled by functions of the type  ```DirectionalViewer::toggle_field()``` and  ```DirectionalViewer::toggle_singularities()```.
 
-![([Example 101]({{ repo_url }}/tutorial/101_GlyphRendering/main.cpp)) Glyph Rendering on a mesh, with singularities visible.](images/101_GlyphRendering.png)
+![Example 101](images/101_GlyphRendering.png)
+<p align=center><em>Glyph Rendering on a mesh with singularities.</em></p>
 
 ### 102 Discrete Tangent Bundles
 
-This example shows a Cartesian field computed (with the power field method descsribed in [Example 301](#301-power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
+This example shows a Cartesian field computed (with the power field method described in [Example 301](#power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
 
 ```cpp
 directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
@@ -147,12 +147,12 @@ directional::power_to_raw(powerVertexField, N, rawVertexField,true);
 
 One can see the stages of computing a field: first reading a mesh (```readOBJ()```), then initializing the approxiate tangent bundle with the mesh (```powerFace/VertexField.init()```), and then computing this power field on top of this representation (```power_field()```). The field is converted to raw representation in ```power_to_raw()```) for later visualization.
 
-![([Example 102]({{ repo_url }}/tutorial/102_DiscreteTangentBundles/main.cpp)) Power fields on a face-based tangent bundle (left) and vertex-based (right).](images/102_DiscreteTangentBundles.png)
+![Example 102](images/102_DiscreteTangentBundles.png) <p align=center><em>Power fields on a face-based tangent bundle (left) and vertex-based (right)</em></p>
 
 
 ### 103 Picking and editing
 
-This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code in [Example 103]({{ repo_url }}/tutorial/103_PickingEditing/main.cpp).
+This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code:
 
 ```cpp
 directionalViewer->set_selected_faces(selectedFaces);
@@ -160,28 +160,28 @@ directionalViewer->set_selected_vector(currF, currVec);
     
 ```
 
-![([Example 103]({{ repo_url }}/tutorial/103_PickingEditing/main.cpp)) Editing several vectors on a single face.](images/103_PickingEditing.png)
+![Example 103](images/103_PickingEditing.png)<p align=center><em>Editing several vectors on a single face.</em></p>
 
 ### 104 Streamline Tracing
 
-Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `DirectionalViewer::streamlines_next()`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines, as demonstrated in [Example 104]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp). The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
+Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `DirectionalViewer::streamlines_next()`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines. The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
 
-![([Example 104]({{ repo_url }}/tutorial/104_StreamlineTracing/main.cpp)) Interactive streamlines tracing.](images/104_StreamlineTracing.png)
+![Example 104](images/104_StreamlineTracing.png)<p align=center><em>Interactive streamlines tracing.</em></p>
 
 ### 105 Scalar quantities on meshes
 
 It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, that also allow the setting of the viewable range of the function (the rest is clipped).
 
-![([Example 104]({{ repo_url }}/tutorial/105_FaceVertexEdgeData/main.cpp)) Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs..](images/105_FaceVertexEdgeData.png)
+![Example 105](images/105_FaceVertexEdgeData.png)<p align=center><em>Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs.</em></p>
 
 ### 106 Sparse Glyph View
 
 On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
 
-![([Example 106]({{ repo_url }}/tutorial/106_Sparsity/main.cpp)) Dense and Sparse views of a field as glyphs.](images/106_Sparsity.png)
+![Example 106](images/106_Sparsity.png)<p align=center><em>Dense and Sparse views of a field as glyphs.</em></p>
+
 
 ## Chapter 2: Discretization and Representation
-
 
 In the following sections, we show some effects of working with different representations and converting between them.
 
@@ -198,25 +198,25 @@ principal matching is done through the function ```principal_matching()``` , tha
 
 The singularities are computed as the <i>index</i> of each local cycle from the *effort* around it. The index of a cycle is the amount of rotations a directional object undergoes around a cycle. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index can be unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). Note that for face-based field singular cycles are vertices, whereas in vertex-based fields, singular cycles are faces. Further note that Directional computes singularities only around the *local* cycles. That is, ```principal_matching()``` does not update singularities around boundary or generator loops.
 
-![([Example 201]({{ repo_url }}/tutorial/201_PrincipalMatching/main.cpp)) A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).](images/201_PrincipalMatching.png)
-
+![Example 201](images/201_PrincipalMatching.png)<p align=center><em>A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).</em></p>
 
 ### 202 Sampling
 
 This is an educational example that demonstrates the loss of information when generating a Cartesian field from rotation angles, and then trying to retrieve them back by principal matching. This causes low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
 
-1. In the polar mode, the user can prescribe the index of a singularity directly, and compute the field with index prescription (see [example 401](#401-index-prescription)). With this, the rotation angles between adjacent faces can be arbitrarily large, and appear as noise in the low valence cycles.
+1. In the polar mode, the user can prescribe the index of a singularity directly, and compute the field with index prescription (see [example 401](#index-prescription)). With this, the rotation angles between adjacent faces can be arbitrarily large, and appear as noise in the low valence cycles.
 
 2. In the principal-matching mode, the rotations are reconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The large rotation between adjacent faces is lost, which gives rise to a "singularity party": many perceived singularities or a lower index.
 
 3. In the interpolation mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
 
-![([Example 202]({{ repo_url }}/tutorial/202_Sampling/main.cpp)) Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.](images/202_Sampling.png)
+![Example 202](images/202_Sampling.png)<p align=center><em>Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.</em></p>
 
 ### 203 Combing
 
 Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to prepare a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a forest of paths that connect between singularities, also known as *seams*. Note that such paths do not necessarily cut the mesh into a simply-connected patch, but may only connects subgroups of singularities with indices adding up to an integer; as a trivial example, a 1-vector field is always trivially combed, even in the presence of integral singularities, and the set of seams is zero. The combing is done through the function ```directional::combing()```. The matching in the output ```combedField``` is already set to the trivial matching in the combed regions, and the correct matching across the seam.
-![([Example 203]({{ repo_url }}/tutorial/203_Combing/main.cpp)) Colored indices of directionals, alternating between combed (with seams) and uncombed) indexing.](images/203_Combing.png)
+
+![Example 203](images/203_Combing.png)<p align=center><em>Colored indices of directionals, alternating between combed (with seams) and uncombed) indexing.</em></p>
 
 ## Chapter 3: Cartesian Methods
 
@@ -224,7 +224,7 @@ Given a matching (in this case, principal matching), it is possible to "comb" th
 
 The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local 2D basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of the 3D space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation.
 
-### <a id="301-power-fields"></a> 301 Power Fields
+### 301 Power Fields {: #power-fields }
 
 This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" coined in [^azencot_2017].
 
@@ -242,10 +242,10 @@ where $\lambda_S,\lambda_C, \omega_c, \forall c\in C$ are user-controlled.
 
 
 If the set $B$ is empty, the field is only well-defined up to a global rotation; therefore, the algorithm arbitrarily sets a single vector in one tangent space and interpolates it to the rest of the mesh.
-![([Example 301]({{ repo_url }}/tutorial/301_PowerFields/main.cpp)) hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.](images/301_PowerFields.png)
+![Example 301](images/301_PowerFields.png)<p align=center><em>Hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.</em></p>
 
 
-### <a id="302-polyvectors">302 PolyVectors</a> 
+### 302 PolyVectors {: #polyvectors}
 
 A Polyvector field [^diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local compex basis:
 
@@ -255,22 +255,21 @@ where the roots $P(z)=0$ are the vectors of the face-based directional object, r
 
 With the function ```polyvector_field()``` one can solve the linear Polyvector problem in its full capacity; the input is a set of prescribed constraints $v_b$ per tangent space set $B \subset V_{TB}$, where you can prescribe any amount of vectors smaller of equal than $N$ (unless there is symmetry) per tangent space (that means we allow set $B$ to have repeating tangent spaces). Further consider the soft-alignment vectors $v_c$ for face set $c \subset C$, accompanied by an alignment weight $\omega_c$ (again with repeating faces). We then solve the following quadratic optimization problem:
 
-$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\left|X_{n,f}e_f^{N-n} - X_{n,g}e_g^{N-n}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{f}{A_f\left|X_{n,f}\right|^2}}\right)+\left(\lambda_C\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
+$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\left|X_{n,f}e_f^{N-n} - X_{n,g}e_g^{N-n}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{f}{A_f\left|X_{n,f}\right|^2}}\right)+\left(\lambda_C\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
 
-So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Mekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. See an example that also allows playing with the weights in [Example 302]({{ repo_url }}/tutorial/302_PolyVectors/main.cpp).
+So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Mekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
 
-![([Example 302](302_PolyVectors/main.cpp)) Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right).](images/302_PolyVectors.png)
+![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right).</em></p>
 
-### <a Id=#303-polycurl-reduction>303 PolyCurl Reduction</a>
-
+### 303 PolyCurl Reduction {: #polycurl-reduction }
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
 Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
 of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors in the two adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the PolyVector itself, allowing for singularities to naturally emerge. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors (for a bijective parameterization), and opting for as smooth and orthogonal as possible result.
 
-A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-parameterization). In [Example 303]({{ repo_url }}/tutorial/303_PolyCurlReduction/main.cpp) we demonstrate the PolyCurl-reduction optimization. Note that this tutorial demonstrates an alternative matching ```curl_matching()```with that minimizes curl instead of rotation.
+A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-parameterization). We demonstrate the PolyCurl-reduction optimization. Note that this tutorial demonstrates an alternative matching ```curl_matching()```with that minimizes curl instead of rotation.
 
-![([Example 303](303_PolyCurlReduction/main.cpp)) PolyCurl is iteratively reduced from an initial PolyVector field, Top: fields for iteration 0 (original), 10, and 50. Bottom: PolyCurl plots. The color is the norm of the vector of the roots of the PolyCurl. Its maximal value (infinity norm) appears below.](images/303_PolyCurlReduction.png)
+![Example 303](images/303_PolyCurlReduction.png)<p align=center><em>PolyCurl is iteratively reduced from an initial PolyVector field, Top: fields for iteration 0 (original), 10, and 50. Bottom: PolyCurl plots. The color is the norm of the vector of the roots of the PolyCurl. Its maximal value (infinity norm) appears below.</em></p>
 
 ### 304 Conjugate Fields
 
@@ -283,10 +282,10 @@ where $k_1$ and $k_2$ are the principal curvatures and $d_1$ and $d_2$ are the r
 
 Conjugate vector fields are very important in architectural geometry: their integral lines form, informally speaking, an infinitesimal planar quad mesh. As such, the finite quad mesh that results from discretizing conjugate networks is a good candidate for consequent planarity parameterization [^liu_2011].
 
-Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates between a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field ([Example 304]({{ repo_url }}/tutorial/304_ConjugateFields/main.cpp)).
+Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates between a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field.
 
 
-![([Example 304]({{ repo_url }}/tutorial/304_ConjugateFields/main.cpp)) A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.](images/304_ConjugateFields.png)
+![Example 304](images/304_ConjugateFields.png)<p align=center><em>A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.</em></p>
 
 
 ## Chapter 4: Polar Methods
@@ -295,7 +294,7 @@ Finding a conjugate vector field that satisfies given directional constraints is
 
 Polar fields are represented using angles. These angles may encode the rotation from some given basis on a tangent space (and so it is a "logarithmic" representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent spaces (in the sense of deviation from parallel transport). The former usually requires integer variables for directional-field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, Directional supports the latter.
 
-### <a id="401-index-prescription"></a>401 Index Prescription
+### 401 Index Prescription {: #index-prescription }
 
 The notion of encoding rotation angles on dual edges, as means to encode deviation from parallel transport between adjacent tangent planes, appeared in several formats in the literature [^crane_2010],[^ray_2008]. The formulation and notation we use in Directional is that of Trivial Connections [^crane_2010]. Trivial connection solves for a single rotation angle $\delta_{ij}$ per (dual) edge $e_{ij}$ between two faces $f_i$ and $f_j$, encoding the deviation from parallel transport between them. The algorithm first computes a spanning set of *basis cycles*, around all of which the sum of $\delta_{ij}$ has to be prescribed. The summation is defined as a matrix $H$. Every such cycle (row in the matrix) has an original curvature $K_0$, and the prescribed index defines an alternative curvature that is induced by the vector field (and hence it's a trivial connection). The algorithm solves for the smoothest field, in the 2-norm least squares sense, as follows:
 
@@ -309,10 +308,10 @@ $H$ is the matrix that defines the basis-cycles sum, $K_0$ is a vector of the or
 
 #### Basis Cycles
 
-The basis cycles form the cycles around which curvatures (and singularities) have to be prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_I|$, where $E_I$ is the number of non-boundary (inner) edges in the tangent bundle $G_{TB}$. Each row in the matrix describes the sum over one cycle, and contains $1$ or $-1$ values depending on the (arbitrary) orientation of the dual edge participating in the cycle to the respective face. The types of indices are defined in [The introduction](#discrete-tangent-bundles). The singularity indices that are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle. If the prescribed indices do not conform to the Poincar&eacute; index theorem, a result will still be computed by least squares, but it will be unpredictable. The algorithm is performed through the function ```directional::index_prescription()```, which can also accept a solver for precomputation, for the purpose of prefactoring $H$ only once.
+The basis cycles form the cycles around which curvatures (and singularities) have to be prescribed on the mesh. The sum on basis cycles is described in a sparse matrix $H$ of size $|cycles|\times |E_I|$, where $E_I$ is the number of non-boundary (inner) edges in the tangent bundle $G_{TB}$. Each row in the matrix describes the sum over one cycle, and contains $1$ or $-1$ values depending on the (arbitrary) orientation of the dual edge participating in the cycle to the respective face. The types of indices are defined in The [introduction](#discrete-tangent-bundles). The singularity indices that are prescribed contain the singularity index corresponding to each basis cycle. A value of $k \in \mathbb{Z}$ represents an $\frac{2\pi k}{N}$ rotation around the respective cycle. If the prescribed indices do not conform to the Poincar&eacute; index theorem, a result will still be computed by least squares, but it will be unpredictable. The algorithm is performed through the function ```directional::index_prescription()```, which can also accept a solver for precomputation, for the purpose of prefactoring $H$ only once.
 
 
-![([Example 401]({{ repo_url }}/tutorial/401_IndexPrescription/main.cpp)) Indices are prescribed on several vertex singularities, and on a generator loop, to match the index theorem.](images/401_IndexPrescription.png)
+![Example 401](images/401_IndexPrescription.png)<p align=center><em>Indices are prescribed on several vertex singularities, and on a generator loop, to match the index theorem.</em></p>
 
 ## Chapter 5: Seamless Integration and Meshing
 
@@ -333,7 +332,7 @@ Seamless $N$-functions are denoted as such for that obeying the seamless constra
 
 ### 501 Seamless Integration
 
-In [Example 501]({{ repo_url }}/tutorial/501_SeamlessIntegration/main.cpp) we demonstrate the computation of such a integration, both permutationally, and fully seamless. The computed function is a $4$-function with sign-symmetry, computing seamless $(U,V,-U,-V)$ functions that we demonstrate as a quad texture. The core functionality is in these lines:
+In this example, we demonstrate the computation of such a integration, both permutationally, and fully seamless. The computed function is a $4$-function with sign-symmetry, computing seamless $(U,V,-U,-V)$ functions that we demonstrate as a quad texture. The core functionality is in these lines:
 
 ```cpp
   directional::IntegrationData intData(N);
@@ -365,29 +364,29 @@ bool localInjectivity;  //Enforce local injectivity; might result in failure!
 ```lengthRatio``` encodes a global scale for the Poisson problem (scaling the fields uniformly), where the ratio is measured against the bounding box diagonal. Some of the other parameters are demonstrated in the other examples in this chapter. The integrator takes the original (whole) mesh, and generates a cut-mesh (in ```VMeshCut,FMeshCut```) of disc-topology. The singularities are on the boundary of this mesh, and the function can consequently be defined without branching ambiguity on its vertices, with the appropriate permutation and translation across the cut seams.
 
 
-![([Example 501]({{ repo_url }}/tutorial/501_SeamlessParameterization/main.cpp)) Left: directional field. Center: permutationally-seamless integration. Right: fully-seamless integration.](images/501_SeamlessIntegration.png)
+![Example 501](images/501_SeamlessIntegration.png)<p align=center><em>Left: directional field. Center: permutationally-seamless integration. Right: fully-seamless integration.]</em></p>
 
 ### 502 Integration in various orders
 
 Directional can handle integration for every $N$, including less common ones like the non-periodic $N \neq 2,3,4,6$. The properties of fields and integration in such unconventional $N$ are explored in [^Meekes_2021].
 
-In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting. This is demonstrated in [Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp). 
+In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting.  
 
 
-![([Example 502]({{ repo_url }}/tutorial/502_DifferentOrders/main.cpp)) Left to right: $N=2,4,7,11$. Top: field. Bottom: integer isolines.](images/502_DifferentOrders.png)
+![Example 502](images/502_DifferentOrders.png)<p align=center><em>Left to right: $N=2,4,7,11$. Top: field. Bottom: integer isolines.</em></p>
 
 ### 503 Rounding either seams or singularities
 
 It is possible to choose whether to round the seam jumps $T_e \in \mathbb{Z}^N$ directly, or the function values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will have integer values, but the latter case is more restrictive and will result in multiple isolines meeting at every singularity. For quad meshes with $N=4$, for instance, this is the difference between pure-quad results (round singularities), or just quad-dominant (round seams).
 
-![([Example 503]({{ repo_url }}/tutorial/503_SeamsSingsRounding/main.cpp)) Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.](images/503_SeamsSingsRounding.png)
+![Example 503](images/503_SeamsSingsRounding.png)<p align=center><em>Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.]</em></p>
 
 ### 504 Linear Reductions
 
 It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix $U: N \times n$ so that $n \leq N$, and where $F = U\cdot f$ for the independent degrees of freedom encoded in $f$. This relationship should be mirrored in the integrated directional field. *Warning*: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where $U_{3 \times 2} = [1, 0; 0, 1; -1, -1]$. Another is sign symmetry where $U = [Id_{n \times n}; -Id_{n \times n}]$, and $n = \frac{N}{2}$. The latter is always assumed when $N$ is even, and both are always valid in any singularity configuration. Symmetries can also be combined. $U$ is fed into ```intData``` through the field ```linRed```, and there are pre-made funtcions to set it, such as ```set_triangular_symmetry(int N)```.
 
 
-![([Example 504]({{ repo_url }}/tutorial/504_LinearReductions/main.cpp)) Left to right: $6$-directional fields with a singularity, $N=6$ with only sign symmetry (the three lines don't always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.](images/504_LinearReductions.png)
+![Example 504](images/504_LinearReductions.png)<p align=center><em>Left to right: $6$-directional fields with a singularity, $N=6$ with only sign symmetry (the three lines don't always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.</em></p>
 
 ### 505 Meshing
 
@@ -402,7 +401,7 @@ There is a natural transition between the integrator and the mesher, which is do
 
 The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.
 
-![([Example 505]({{ repo_url }}/tutorial/505_Meshing/main.cpp)) Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders). The screenshots are from Meshlab[^Meshlab]](images/505_Meshing.png)
+![Example 505](images/505_Meshing.png)<p align=center><em>Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders). The screenshots are from Meshlab[^Meshlab]]</em></p>
 
 ## Chapter 6: High-Order Fields
 
@@ -412,9 +411,9 @@ This chapter introduces representations for fields that use high-order interpola
 
 This examples only works with ```IntrinsicFaceTangentBundle``` by design, since the algorithm targets face-based fields.
 
-Directional fields can be used with subdivision surfaces in a manner which is *structure preserving*. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  [^Custers_2020], which we demonstrate in [Example 601]({{repo_url }}/tutorial/601_SubdivisionFields/main.cpp). We optimize for a curl free field ```rawFieldCoarse```, subdivide it into ```rawFieldFine``` using ```subdivide_field()```, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  [Example 303](#303-polycurl-reduction)), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process. 
+Directional fields can be used with subdivision surfaces in a manner which is *structure preserving*. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  [^Custers_2020]. We optimize for a curl free field ```rawFieldCoarse```, subdivide it into ```rawFieldFine``` using ```subdivide_field()```, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  [Example 303](#polycurl-reduction), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process. 
 
-![([Example 601]({{ repo_url }}/tutorial/601_SubdivisionFields/main.cpp)) Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.](images/601_SubdivisionFields.png)
+![Example 601](images/601_SubdivisionFields.png)<p align=center><em>Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.</em></p>
 
 
 ## Outlook for continuing development
