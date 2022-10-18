@@ -15,85 +15,56 @@
 
 namespace directional
 {
-    
-  // Returns a list of faces, vertices and color values that can be used to draw singularities for non-zero index values.
-  // Input:
-  //  V:              #V X 3 vertex coordinates.
-  //  F:              #F X 3 mesh triangles.
-  //  indices:        #V x 1 index (/N) per vertex (must be 0<index<N-1)
-  //  singularityColors: 2*N x 3 colos per positive index in order [-N,..-1, 1, N]
-  // Output:
-  //  singV:          The vertices of the singularity spheres.
-  //  singF:          The faces of the singularity spheres.
-  //  singC:         The colors of the singularity spheres.
-  void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& sources,
-                                      const Eigen::MatrixXd& normals,
-                                      const int N,
-                                      const double avgScale,
-                                      const Eigen::VectorXi& singElements,
-                                      const Eigen::VectorXi& singIndices,
-                                      const Eigen::MatrixXd singularityColors,
-                                      Eigen::MatrixXd& singV,
-                                      Eigen::MatrixXi& singF,
-                                      Eigen::MatrixXd& singC,
-                                      const double radiusRatio)
-  
-  {
 
-    Eigen::MatrixXd points(singElements.size(), 3);
-    Eigen::MatrixXd pointNormals(singElements.size(), 3);
-    Eigen::MatrixXd colors(singElements.size(), 3);
-    Eigen::MatrixXd positiveColors=singularityColors.block(singularityColors.rows()/2,0,singularityColors.rows()/2,3);
-    Eigen::MatrixXd negativeColors=singularityColors.block(0,0,singularityColors.rows()/2,3);
-    
-    for (int i = 0; i < singIndices.rows(); i++)
+    // Returns a list of faces, vertices and color values that can be used to draw singularities for non-zero index values.
+    // Input:
+    //    sources:        #s X 3 point coordinates of the location of the elements
+    //    normals:        #n X 3 normals to the locations.
+    //    N:              Degree of the field.
+    //    avgScale:       Scale of the object (e.g., average edge length in meshes)
+    //    singElements:   Singular elements out of "sources".
+    //    singIndices:    Their indices
+    //    singularityColors: 2*N x 3 colos per positive index in order [-N,..-1, 1, N]
+    // Output:
+    //    singV:          The vertices of the singularity spheres.
+    //    singF:          The faces of the singularity spheres.
+    //    singC:         The colors of the singularity spheres.
+    void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& sources,
+                                        const Eigen::MatrixXd& normals,
+                                        const int N,
+                                        const double avgScale,
+                                        const Eigen::VectorXi& singElements,
+                                        const Eigen::VectorXi& singIndices,
+                                        const Eigen::MatrixXd singularityColors,
+                                        Eigen::MatrixXd& singV,
+                                        Eigen::MatrixXi& singF,
+                                        Eigen::MatrixXd& singC,
+                                        const double radiusRatio)
+
     {
-      points.row(i) = sources.row(singElements(i));
-      pointNormals.row(i) =normals.row(singElements(i));
-      if (singIndices(i) > 0)
-        colors.row(i) = positiveColors.row((singIndices(i)-1 > positiveColors.rows()-1 ? positiveColors.rows()-1  : singIndices(i)-1) );
-      else if (singIndices(i)<0)
-        colors.row(i) = negativeColors.row((negativeColors.rows()+singIndices(i) > 0 ? negativeColors.rows()+singIndices(i) : 0));
-      else
-        colors.row(i).setZero(); //this shouldn't have been input
-      
-    }
-    double radius = radiusRatio*avgScale/5.0;
-    directional::point_spheres(points, pointNormals, radius, colors, 8, singV, singF, singC);
-  
-  }
-  
 
-  //version that provides all vertex indices instead of only singularities
-  /*void IGL_INLINE singularity_spheres(const Eigen::MatrixXd& V,
-                                      const Eigen::MatrixXi& F,
-                                      const int N,
-                                      const Eigen::VectorXi& fullIndices,
-                                      Eigen::MatrixXd& singV,
-                                      Eigen::MatrixXi& singF,
-                                      Eigen::MatrixXd& singC)
-  
-  {
-    
-    Eigen::MatrixXd singularityColors=directional::default_singularity_colors(N);
-    std::vector<int> singVerticesList;
-    std::vector<int> singIndicesList;
-    for (int i=0;i<V.rows();i++)
-      if (fullIndices(i)!=0){
-        singVerticesList.push_back(i);
-        singIndicesList.push_back(fullIndices(i));
-      }
-    
-    Eigen::VectorXi singVertices(singVerticesList.size());
-    Eigen::VectorXi singIndices(singIndicesList.size());
-    for (int i=0;i<singVerticesList.size();i++){
-      singVertices(i)=singVerticesList[i];
-      singIndices(i)=singIndicesList[i];
+        Eigen::MatrixXd points(singElements.size(), 3);
+        Eigen::MatrixXd pointNormals(singElements.size(), 3);
+        Eigen::MatrixXd colors(singElements.size(), 3);
+        Eigen::MatrixXd positiveColors=singularityColors.block(singularityColors.rows()/2,0,singularityColors.rows()/2,3);
+        Eigen::MatrixXd negativeColors=singularityColors.block(0,0,singularityColors.rows()/2,3);
+
+        for (int i = 0; i < singIndices.rows(); i++)
+        {
+            points.row(i) = sources.row(singElements(i));
+            pointNormals.row(i) =normals.row(singElements(i));
+            if (singIndices(i) > 0)
+                colors.row(i) = positiveColors.row((singIndices(i)-1 > positiveColors.rows()-1 ? positiveColors.rows()-1  : singIndices(i)-1) );
+            else if (singIndices(i)<0)
+                colors.row(i) = negativeColors.row((negativeColors.rows()+singIndices(i) > 0 ? negativeColors.rows()+singIndices(i) : 0));
+            else
+                colors.row(i).setZero(); //this shouldn't have been input
+
+        }
+        double radius = radiusRatio*avgScale/5.0;
+        directional::point_spheres(points, pointNormals, radius, colors, 8, singV, singF, singC);
+
     }
-    
-    singularity_spheres(V,F, singVertices,singIndices,singularityColors,singV, singF, singC);
-  }*/
-  
 }
 
 #endif

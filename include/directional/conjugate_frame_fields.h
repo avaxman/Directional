@@ -16,21 +16,11 @@
 #include <vector>
 
 namespace directional {
-  //todo
-  // TODO: isConstrained should become a list of indices for consistency with
-  //       n_polyvector
-  
-  IGL_INLINE void conjugate_frame_fields(const directional::TriMesh& mesh,
-                                         const Eigen::VectorXi &isConstrained,
-                                         const directional::CartesianField &initialSolution,
-                                         directional::CartesianField &output,
-                                         int _maxIter = 50,
-                                         const double _lambdaOrtho = .1,
-                                         const double _lambdaInit = 10,
-                                         const double _lambdaMultFactor = 1.01,
-                                         bool _doHardConstraints = true);
-  
-  IGL_INLINE double conjugate_frame_fields(const ConjugateFFSolverData &csdata,
+    //todo
+    // TODO: isConstrained should become a list of indices for consistency with
+    //       n_polyvector
+
+    IGL_INLINE void conjugate_frame_fields(const directional::TriMesh& mesh,
                                            const Eigen::VectorXi &isConstrained,
                                            const directional::CartesianField &initialSolution,
                                            directional::CartesianField &output,
@@ -39,7 +29,17 @@ namespace directional {
                                            const double _lambdaInit = 10,
                                            const double _lambdaMultFactor = 1.01,
                                            bool _doHardConstraints = true);
-  
+
+    IGL_INLINE double conjugate_frame_fields(const ConjugateFFSolverData &csdata,
+                                             const Eigen::VectorXi &isConstrained,
+                                             const directional::CartesianField &initialSolution,
+                                             directional::CartesianField &output,
+                                             int _maxIter = 50,
+                                             const double _lambdaOrtho = .1,
+                                             const double _lambdaInit = 10,
+                                             const double _lambdaMultFactor = 1.01,
+                                             bool _doHardConstraints = true);
+
 };
 
 #include "conjugate_frame_fields.cpp"

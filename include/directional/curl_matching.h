@@ -23,11 +23,10 @@ namespace directional
     // Important: if the Raw field in not CCW ordered, the result is meaningless.
     // Note: curl is only (future work...) defined for face-based fields.
     // Input:
-    //  rawField:  a RAW_FIELD type *face-based* field.
+    //  rawField:   RAW_FIELD type field
     // Output:
-    // curlNorm: the L2-norm of the curl vector
-    // rawField: the input field matching, effort, and singularities are altered.
-
+    //  curlNorm:   L2-norm of the curl vector
+    //  rawField:   With input field matching, effort, and singularities computed
     IGL_INLINE void curl_matching(directional::CartesianField& rawField,
                                   Eigen::VectorXd& curlNorm)
     {

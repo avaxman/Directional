@@ -25,7 +25,13 @@
 #include <igl/edge_topology.h>
 
 
-//This file contains the default libdirectional visualization paradigms
+/***
+ This class implements the Directional viewer, as an extension of the libigl viewer (as a wrapper). This
+ viewer providers specialized functionality for outputting directional fields and their combinatorial and geometic properties.
+ The numerous tutorial examples highlight its functionality.
+ ***/
+
+
 namespace directional
 {
 

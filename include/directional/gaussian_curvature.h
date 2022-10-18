@@ -14,19 +14,13 @@
 
 namespace directional
 {
-    // Creates the set of independent dual cycles (closed loops of connected faces that cannot be morphed to each other) on a mesh. Primarily used for index prescription.
-    // The basis cycle matrix first contains #V-#b cycles for every inner vertex (by order), then #b boundary cycles, and finally 2*g generator cycles around all handles. Total #c cycles.The cycle matrix sums information on the dual edges between the faces, and is indexed into the inner edges alone (excluding boundary)
-    //input:
-    //  V: #V by 3 vertices.
-    //  F: #F by 3 triangles.
-    //  EV: #E by 2 matrix of edges (vertex indices)
-    //  EF: #E by 2 matrix of oriented adjacent faces
+    // Computes boundary-aware discrete Gaussian curvature on vertices (angle defect).
+    // Input:
+    //  V:                  #V by 3 vertices.
+    //  F:                  #F by 3 triangles.
+    //  isBoundaryVertex:   #V boolean indicating if vertex is a boundary.
     //output:
-    //  basisCycles:    #c by #iE basis cycles
-    //  cycleCurvature:   #c by 1 curvatures of each cycle (for inner-vertex cycles, simply the Gaussian curvature.
-    //  vertex2cycle:     #v by 1 map between vertex and corresponding cycle (for comfort of input from the user's side; inner vertices map to their cycles, boundary vertices to the bigger boundary cycle.
-    //  innerEdges:       #iE by 1 the subset of #EV that are inner edges, and with the same ordering as the columns of basisCycles.
-
+    //  G:                  #V discrete Gaussian curvature. sum(G) = eulerChar of mesh.
     IGL_INLINE void gaussian_curvature(const Eigen::MatrixXd& V,
                                        const Eigen::MatrixXi& F,
                                        const Eigen::VectorXi& isBoundaryVertex,

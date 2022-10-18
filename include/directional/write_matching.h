@@ -15,50 +15,50 @@
 
 
 namespace directional
-  {
-  
-  // Writes the vector field matching into a file. For the file format specification see: https://avaxman.github.io/Directional/file_formats/
-  // Inputs:
-  //   fileName:  The to be loaded file.
-  //   matching:  The matching per edge
-  //   EF:        The edge to face matching
-  //   EV:        The edge to vertices matching
-  //   N:         The degree of the field
-  // Return:
-  //   Whether or not the file was written successfully
-  bool IGL_INLINE write_matching(const std::string &fileName,
-                                 const Eigen::VectorXi& matching,
-                                 const Eigen::MatrixXi& EF,
-                                 const Eigen::MatrixXi& EV,
-                                 const Eigen::MatrixXi& FE,
-                                 int N)
-  {
-    try
+{
+    //TODO: this file is not updated to the tangent-bundle paradigm.
+    // Writes the vector field matching into a file. For the file format specification see: https://avaxman.github.io/Directional/file_formats/
+    // Inputs:
+    //   fileName:  The to be loaded file.
+    //   matching:  The matching per edge
+    //   EF:        The edge to face matching
+    //   EV:        The edge to vertices matching
+    //   N:         The degree of the field
+    // Return:
+    //   Whether or not the file was written successfully
+    bool IGL_INLINE write_matching(const std::string &fileName,
+                                   const Eigen::VectorXi& matching,
+                                   const Eigen::MatrixXi& EF,
+                                   const Eigen::MatrixXi& EV,
+                                   const Eigen::MatrixXi& FE,
+                                   int N)
     {
-      std::ofstream f(fileName);
-      
-      if (! f.is_open())
-        return false;
-      
-      int numEdges = EF.rows();
-      int numFaces = FE.rows();
-      
-      f << N << " " << numEdges << " " << numFaces << std::endl;
-      for (int i = 0; i < numEdges; i++)
-        f << EF(i,0) << " " << EF(i,1) << " " << EV(i, 0) << " " << EV(i, 1) << " "<< matching(i) << std::endl;
-      
-      for (int i=0;i<numFaces;i++)
-        f << FE(i,0) <<" "<<FE(i,1)<<" "<<FE(i,2)<<std::endl;
-      
-      f.close();
-      return f.fail();
+        try
+        {
+            std::ofstream f(fileName);
+
+            if (! f.is_open())
+                return false;
+
+            int numEdges = EF.rows();
+            int numFaces = FE.rows();
+
+            f << N << " " << numEdges << " " << numFaces << std::endl;
+            for (int i = 0; i < numEdges; i++)
+                f << EF(i,0) << " " << EF(i,1) << " " << EV(i, 0) << " " << EV(i, 1) << " "<< matching(i) << std::endl;
+
+            for (int i=0;i<numFaces;i++)
+                f << FE(i,0) <<" "<<FE(i,1)<<" "<<FE(i,2)<<std::endl;
+
+            f.close();
+            return f.fail();
+        }
+        catch (std::exception e)
+        {
+            return false;
+        }
+        return true;
     }
-    catch (std::exception e)
-    {
-      return false;
-    }
-    return true;
-  }
-  }
+}
 
 #endif

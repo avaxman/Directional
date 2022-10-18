@@ -23,6 +23,11 @@
 #include <igl/doublearea.h>
 #include <directional/dcel.h>
 
+/***
+ This class stores a general-purpose triangle mesh. The triangle mesh can be used to implement a tangent bundle in several ways
+ (for instance, face- or vertex-based bundles).
+***/
+
 namespace directional{
 
     class TriMesh{
@@ -32,11 +37,12 @@ namespace directional{
         Eigen::MatrixXd V;
         Eigen::MatrixXi F;
 
-        //Topological quantities (TODO: proper VE and VF with boundaries)
+        //combinatorial quantities
         Eigen::MatrixXi EF, FE, EV,TT, EFi, VE, VF;
         Eigen::MatrixXd FEs;
         Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
+
         //DCEL quantities
         Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
         Eigen::MatrixXi EH,FH;
@@ -56,15 +62,6 @@ namespace directional{
 
         TriMesh(){}
         ~TriMesh(){}
-
-        TriMesh(const TriMesh& tm):
-        V(tm.V), F(tm.F), EF(tm.EF), FE(tm.FE), EV(tm.EV), TT(tm.TT), EFi(tm.EFi), VE(tm.VE), VF(tm.VF),
-        FEs(tm.FEs), innerEdges(tm.innerEdges), boundEdges(tm.boundEdges), vertexValence(tm.vertexValence),
-        isBoundaryVertex(tm.isBoundaryVertex), isBoundaryEdge(tm.isBoundaryEdge),
-        VH(tm.VH), HV(tm.HV), HE(tm.HE), HF(tm.HF), nextH(tm.nextH), prevH(tm.prevH), twinH(tm.twinH),
-        faceNormals(tm.faceNormals), faceAreas(tm.faceAreas), vertexNormals(tm.vertexNormals), FBx(tm.FBx), FBy(tm.FBy),
-        VBx(tm.VBx),VBy(tm.VBy), barycenters(tm.barycenters), GaussianCurvature(tm.GaussianCurvature), eulerChar(tm.eulerChar), numGenerators(tm.numGenerators),
-        boundaryLoops(tm.boundaryLoops){}
 
         void IGL_INLINE set_mesh(const Eigen::MatrixXd& _V,
                                  const Eigen::MatrixXi& _F,
@@ -95,7 +92,7 @@ namespace directional{
 
             }
 
-            //computing extra topological information
+            //computing extra combinatorial information
             //Relative location of edges within faces
             EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
             for(int i = 0; i < EF.rows(); i++)
@@ -144,24 +141,24 @@ namespace directional{
             VE.resize(V.rows(),vertexValence.maxCoeff());
             VF.resize(V.rows(),vertexValence.maxCoeff());
             for (int i=0;i<V.rows();i++){
-              int counter=0;
-              int hebegin = VH(i);
-              if (isBoundaryVertex(i)) //winding up hebegin to the first boundary edge
-                  while (twinH(hebegin)!=-1)
-                      hebegin = nextH(twinH(hebegin));
+                int counter=0;
+                int hebegin = VH(i);
+                if (isBoundaryVertex(i)) //winding up hebegin to the first boundary edge
+                    while (twinH(hebegin)!=-1)
+                        hebegin = nextH(twinH(hebegin));
 
-              //resetting VH for future reference
-              VH(i)=hebegin;
-              int heiterate = hebegin;
-              do {
-                  VE(i, counter) = HE(heiterate);
-                  VF(i, counter++) = HF(heiterate);
-                  if (twinH(prevH(heiterate))==-1) { //last edge before end, adding the next edge
-                      VE(i, counter) = HE(prevH(heiterate));  //note counter is already ahead
-                      break;
-                  }
-                  heiterate = twinH(prevH(heiterate));
-              }while(hebegin!=heiterate);
+                //resetting VH for future reference
+                VH(i)=hebegin;
+                int heiterate = hebegin;
+                do {
+                    VE(i, counter) = HE(heiterate);
+                    VF(i, counter++) = HF(heiterate);
+                    if (twinH(prevH(heiterate))==-1) { //last edge before end, adding the next edge
+                        VE(i, counter) = HE(prevH(heiterate));  //note counter is already ahead
+                        break;
+                    }
+                    heiterate = twinH(prevH(heiterate));
+                }while(hebegin!=heiterate);
             }
 
             //computing vertex normals by area-weighted aveage of face normals

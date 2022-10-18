@@ -18,14 +18,15 @@
 namespace directional
 {
 
-  bool writeOBJ(const std::string& fileName,
-                const directional::TriMesh& mesh,
-                const Eigen::MatrixXd& TC,
-                const Eigen::MatrixXi& FTC)
-  {
-    Eigen::MatrixXd emptyMat;
-    return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);
-  }
+    //Wraps the libigl writeOBJ, but with a TriMesh object
+    bool writeOBJ(const std::string& fileName,
+                  const directional::TriMesh& mesh,
+                  const Eigen::MatrixXd& TC,
+                  const Eigen::MatrixXi& FTC)
+    {
+        Eigen::MatrixXd emptyMat;
+        return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);
+    }
 
 }
 

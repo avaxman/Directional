@@ -18,15 +18,16 @@
 
 namespace directional
 {
-  
-  //A wrapper around libigl readOBJ that uses the mesh class
-  bool IGL_INLINE readOBJ(const std::string obj_file_name, directional::TriMesh& mesh){
-    Eigen::MatrixXd V;
-    Eigen::MatrixXi F;
-    igl::readOBJ(obj_file_name,V,F);
-    mesh.set_mesh(V,F);
-    return true;
-  }
+
+    //A wrapper around libigl readOBJ that uses the mesh class
+    bool IGL_INLINE readOBJ(const std::string obj_file_name,
+                            directional::TriMesh& mesh){
+        Eigen::MatrixXd V;
+        Eigen::MatrixXi F;
+        igl::readOBJ(obj_file_name,V,F);
+        mesh.set_mesh(V,F);
+        return true;
+    }
 }
 
 #endif

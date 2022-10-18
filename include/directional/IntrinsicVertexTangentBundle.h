@@ -122,8 +122,8 @@ namespace directional{
             //drawing from mesh geometry
 
             /************masses****************/
-            Eigen::VectorXd connectionMassWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
-            Eigen::VectorXd tangentSpaceMassWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
+            connectionMass.resize(mesh->EV.rows());
+            tangentSpaceMass.resize(mesh->V.rows());
 
             //cotangent weights
             Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh->F.rows(),3);
@@ -136,20 +136,17 @@ namespace directional{
                     if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
                         faceCotWeights(i,j) = cosAngle/sinAngle;
 
-                    stiffnessWeights(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
+                    connectionMass(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
                 }
             }
 
             //masses are vertex voronoi areas
             Eigen::MatrixXd dAreas;
             igl::doublearea(mesh->V,mesh->F,dAreas);
-            tangentSpaceMassWeights = Eigen::VectorXd::Zero(mesh->V.rows());
+            tangentSpaceMass = Eigen::VectorXd::Zero(mesh->V.rows());
             for (int i=0;i<mesh->F.rows();i++)
                 for (int j=0;j<3;j++)
-                    tangentSpaceMassWeights(mesh->F(i,j)) += dAreas(i)/6.0;
-
-            igl::diag(connectionMass, connectionMassWeights);
-            igl::diag(tangentSpaceMass, tangentSpaceMassWeights);
+                    tangentSpaceMass(mesh->F(i,j)) += dAreas(i)/6.0;
 
         }
 

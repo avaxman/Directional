@@ -71,25 +71,20 @@ namespace directional{
             //drawing from mesh geometry
 
             /************masses****************/
-            Eigen::VectorXd connectionMassWeight(mesh->EF.rows());
-            Eigen::VectorXd tangentSpaceMassWeights;
 
             //mass are face areas
-            igl::doublearea(mesh->V,mesh->F,tangentSpaceMassWeights);
-            tangentSpaceMassWeights.array()/=2.0;
+            igl::doublearea(mesh->V,mesh->F,tangentSpaceMass);
+            tangentSpaceMass.array()/=2.0;
 
             //The "harmonic" weights from [Brandt et al. 2020].
+            connectionMass.resize(mesh->EF.rows());
             for (int i=0;i<mesh->EF.rows();i++){
                 if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
                     continue;  //boundary edge
 
                 double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
-                connectionMassWeight(i)=3*primalLengthSquared/(tangentSpaceMassWeights(mesh->EF(i,0))+tangentSpaceMassWeights(mesh->EF(i,0)));
+                connectionMass(i)=3*primalLengthSquared/(tangentSpaceMass(mesh->EF(i,0))+tangentSpaceMass(mesh->EF(i,0)));
             }
-
-            igl::diag(connectionMassWeight, connectionMass);
-            igl::diag(tangentSpaceMassWeights, tangentSpaceMass);
-
         }
 
 

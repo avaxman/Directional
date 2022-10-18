@@ -51,9 +51,8 @@ namespace directional{
         //Geometry
         //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
         Eigen::VectorXcd connection;                        //#V, Metric connection between adjacent spaces
-        Eigen::SparseMatrix<double> connectionMass;         //The mass matrix of connections, of size #V x #V
-        Eigen::SparseMatrix<double> tangentSpaceMass;       //The inner-product matrix for vectors in tangent spaces, of size #V x #V
-
+        Eigen::VectorXd connectionMass;                     //The mass matrix of connections, of size #adjSpaces
+        Eigen::VectorXd tangentSpaceMass;                   //The inner-product mass for vectors in tangent spaces, of size #V (self masses) + #E (adjSpaces masses;  optional, usually for high-order fields)
 
         //Extrinsic components
         Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
