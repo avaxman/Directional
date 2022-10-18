@@ -66,11 +66,13 @@ namespace directional{
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
         Eigen::MatrixXd virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
             assert(false && "The base class does not have an embedding");
+            return Eigen::MatrixXd();
         }
 
         //projecting extrinsic to intrinsic
         Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
             assert(false && "The base class does not have an embedding");
+            return Eigen::MatrixXd();
         }
 
         //interpolating field from nodes in palces specified by barycentric coordinates. The interpolator needs to interpret them.

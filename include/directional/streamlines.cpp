@@ -18,8 +18,6 @@
 #include <directional/streamlines.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
-#include <directional/definitions.h>
-
 
 namespace Directional {
     IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
@@ -113,7 +111,7 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
         //converting to a face-based field since streamlines don't handle fully-blown linear interpolation yet.
         data.stb.init(*(vtb->mesh));
-        data.field.init(data.stb, RAW_FIELD, field.N);
+        data.field.init(data.stb, fieldTypeEnum::RAW_FIELD, field.N);
 
         Eigen::MatrixXd baryCoords=Eigen::MatrixXd::Constant(data.slMesh->F.rows(),3,1.0/3.0);
         Eigen::MatrixXd interpSources, interpNormals, interpField;

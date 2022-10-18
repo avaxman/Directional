@@ -41,7 +41,7 @@ namespace directional{
 
         void IGL_INLINE init(const TriMesh& _mesh){
 
-            intDImension = 2;
+            intDimension = 2;
             typedef std::complex<double> Complex;
             mesh = &_mesh;
 

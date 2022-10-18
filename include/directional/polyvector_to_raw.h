@@ -182,7 +182,7 @@ namespace directional {
                                       bool signSymmetry = true,
                                       const double rootTolerance = 1e-8) {
 
-        rawField.init(*(pvField.tb), RAW_FIELD, pvField.N);
+        rawField.init(*(pvField.tb), fieldTypeEnum::RAW_FIELD, pvField.N);
         Eigen::MatrixXcd intField;
         if (pvField.N % 2 != 0) signSymmetry = false;  //by definition
         polyvector_to_raw(pvField.intField, pvField.N, intField, signSymmetry, rootTolerance);

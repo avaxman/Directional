@@ -9,11 +9,12 @@
 #ifndef DIRECTIONAL_STREAMLINES_H
 #define DIRECTIONAL_STREAMLINES_H
 
-#include <igl/igl_inline.h>
-#include <directional/definitions.h>
-
 #include <Eigen/Core>
 #include <vector>
+#include <igl/igl_inline.h>
+#include <directional/CartesianField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+
 
 namespace directional
 {

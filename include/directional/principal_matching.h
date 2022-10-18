@@ -11,11 +11,8 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <igl/igl_inline.h>
-#include <igl/gaussian_curvature.h>
-#include <directional/representative_to_raw.h>
 #include <directional/effort_to_indices.h>
 #include <directional/TangentBundle.h>
-#include <directional/definitions.h>
 
 namespace directional
 {

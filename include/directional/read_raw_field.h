@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <directional/TangentBundle.h>
-#include <directional/definitions.h>
 
 namespace directional
 {
