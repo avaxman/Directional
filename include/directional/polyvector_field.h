@@ -23,26 +23,21 @@
 namespace directional
 {
 
-#define UNIFORM_WEIGHTS 0
-#define BARYCENTRIC_WEIGHTS 1
-#define INV_COT_WEIGHTS 2
-
+    //Data for the precomputation of the PolyVector algorithm
     struct PolyVectorData{
     public:
 
         //User parameters
-        Eigen::VectorXi constSpaces;   //list of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
-        Eigen::MatrixXd constVectors; //corresponding to constSpaces.
+        Eigen::VectorXi constSpaces;    // List of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
+        Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
 
-        int N;                        //Degree of field
-        int sizeT;                    //#tangent spaces
-        bool signSymmetry;            //Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
-        bool perfectRoSy;             //Whether the field must be perfect rotationally-symmetric (but not unit).
-        double wSmooth;               //Weight of smoothness
-        double wRoSy;                 //Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
-        Eigen::VectorXd wAlignment;   //Weight of alignment per each of the constfaces. "-1" means a fixed vector
-
-        int lapType;                  //Choice of weights (from UNIFORM_WEIGHTS,BARYCENTRIC_WEIGHTS or INV_COT_WEIGHTS)
+        int N;                          // Degree of field
+        int sizeT;                      // #tangent spaces
+        bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+        bool perfectRoSy;               // Whether the field must be perfect rotationally-symmetric (but not unit).
+        double wSmooth;                 // Weight of smoothness
+        double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
+        Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
 
         Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
         Eigen::SparseMatrix<std::complex<double>> roSyMat;      //Rotational-symmetry energy
@@ -55,19 +50,19 @@ namespace directional
         Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
         double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
 
-        PolyVectorData():signSymmetry(true), lapType(BARYCENTRIC_WEIGHTS), wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+        PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
         ~PolyVectorData(){}
     };
 
 
     // Precalculate the operators needed for PolyVector computation according to the user-prescribed parameters. Must be called whenever any of them changes
-    // Inputs:
-    //  mesh:   input mesh object
-    //  N:        degree of the field
+    // Input:
+    //  tb:     underlying tangent bundle
+    //  N:      degree of the field
     //
-    // Outputs:
-    //  pvField: a POLYVECTOR_FIELD cartesian field initalized with the mesh
-    //  PolyVectorData:       Updated structure with all operators
+    // Output:
+    //  pvField: POLYVECTOR_FIELD cartesian field initalized with the tangent bundle
+    //  pvData:  Updated structure with all operators
     IGL_INLINE void polyvector_precompute(const directional::TangentBundle& tb,
                                           const int N,
                                           directional::CartesianField& pvField,
@@ -77,7 +72,7 @@ namespace directional
         using namespace std;
         using namespace Eigen;
 
-        pvField.init(tb, POLYVECTOR_FIELD, N);
+        pvField.init(tb, fieldTypeEnum::POLYVECTOR_FIELD, N);
 
         //Building the smoothness matrices, with an energy term for each inner edge and degree
         int rowCounter=0;
@@ -86,7 +81,7 @@ namespace directional
         pvData.sizeT = pvField.intField.rows();
         if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
 
-        pvData.totalSmoothWeight = pvField.tb->stiffnessWeights.sum();
+        pvData.totalSmoothWeight = pvField.tb->connectionMass.sum();
 
         vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
         for (int n = 0; n < pvData.N; n++)
@@ -101,7 +96,7 @@ namespace directional
                 dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.tb->adjSpaces(i,1), -1.0));
 
                 //stiffness weights
-                WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->stiffnessWeights(i)));
+                //WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->stiffnessWeights(i)));
                 rowCounter++;
             }
 
@@ -112,8 +107,10 @@ namespace directional
         pvData.smoothMat.resize(rowCounter, pvData.N*pvField.intField.rows());
         pvData.smoothMat.setFromTriplets(dTriplets.begin(), dTriplets.end());
 
-        pvData.WSmooth.resize(rowCounter, rowCounter);
-        pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
+        //pvData.WSmooth.resize(rowCounter, rowCounter);
+        //pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
+
+        pvData.WSmooth = tb.connectionMass.cast<complex<double>();
 
         pvData.M.resize(pvData.N*pvField.intField.rows(), pvData.N*pvField.intField.rows());
         pvData.M.setFromTriplets(MTriplets.begin(), MTriplets.end());
@@ -184,7 +181,7 @@ namespace directional
 
 
         /****************rotational-symmetry matrices********************/
-
+        //TODO: use new massweights
         if (pvData.wRoSy >= 0.0){ //this is anyhow enforced, this matrix is unnecessary)
             vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
             for (int i=pvField.intField.rows();i<pvData.N*pvField.intField.rows();i++){

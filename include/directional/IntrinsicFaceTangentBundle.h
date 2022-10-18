@@ -13,14 +13,19 @@
 #include <Eigen/Sparse>
 #include <igl/boundary_loop.h>
 #include <igl/doublearea.h>
+#include <igl/diag.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/TangentBundle.h>
 
 
+/***
+This class represents piecewise-constant face-based tangent bundles, where tangent spaces identify with the natural plane to every triangle of a 2-manifold mesh, connections are across
+ (dual) edges, and local cycles are around vertices, with curvature being discrete angle defect.
+ ***/
+
 namespace directional{
 
-//This is the interface class for any directional fields represented in cartesian coordinates, of any order N.
     class IntrinsicFaceTangentBundle : public TangentBundle{
     public:
 
@@ -29,12 +34,14 @@ namespace directional{
         discTangTypeEnum discTangType() const {return discTangTypeEnum::FACE_SPACES;}
 
         bool hasCochainSequence() const { return true; }
+        bool hasEmbedding() const { return true; }
 
         IntrinsicFaceTangentBundle(){}
         ~IntrinsicFaceTangentBundle(){}
 
         void IGL_INLINE init(const TriMesh& _mesh){
 
+            intDImension = 2;
             typedef std::complex<double> Complex;
             mesh = &_mesh;
 
@@ -63,12 +70,13 @@ namespace directional{
 
             //drawing from mesh geometry
 
-            /************Smoothness matrices****************/
-            stiffnessWeights=Eigen::VectorXd::Zero(mesh->EF.rows());
+            /************masses****************/
+            Eigen::VectorXd connectionMassWeight(mesh->EF.rows());
+            Eigen::VectorXd tangentSpaceMassWeights;
 
             //mass are face areas
-            igl::doublearea(mesh->V,mesh->F,massWeights);
-            massWeights.array()/=2.0;
+            igl::doublearea(mesh->V,mesh->F,tangentSpaceMassWeights);
+            tangentSpaceMassWeights.array()/=2.0;
 
             //The "harmonic" weights from [Brandt et al. 2020].
             for (int i=0;i<mesh->EF.rows();i++){
@@ -76,8 +84,11 @@ namespace directional{
                     continue;  //boundary edge
 
                 double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
-                stiffnessWeights(i)=3*primalLengthSquared/(massWeights(mesh->EF(i,0))+massWeights(mesh->EF(i,0)));
+                connectionMassWeight(i)=3*primalLengthSquared/(tangentSpaceMassWeights(mesh->EF(i,0))+tangentSpaceMassWeights(mesh->EF(i,0)));
             }
+
+            igl::diag(connectionMassWeight, connectionMass);
+            igl::diag(tangentSpaceMassWeights, tangentSpaceMass);
 
         }
 
@@ -85,12 +96,6 @@ namespace directional{
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
         Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
             assert(tangentSpaces.rows()==extDirectionals.rows());
-
-            /*Eigen::VectorXi actualTangentSpaces;
-            if (tangentSpaces.rows()==0)
-                actualTangentSpaces = Eigen::VectorXi::LinSpaced(sources.rows(), 0, sources.rows()-1);
-            else
-                actualTangentSpaces = tangentSpaces;*/
 
             int N = extDirectionals.cols()/3;
             Eigen::MatrixXd intDirectionals(tangentSpaces.rows(),2*N);
@@ -125,11 +130,11 @@ namespace directional{
         }
 
         void IGL_INLINE interpolate(const Eigen::MatrixXi &elemIndices,
-                                            const Eigen::MatrixXd &baryCoords,
-                                            const Eigen::MatrixXd &intDirectionals,
-                                            Eigen::MatrixXd& interpSources,
-                                            Eigen::MatrixXd& interpNormals,
-                                            Eigen::MatrixXd& interpField) const {
+                                    const Eigen::MatrixXd &baryCoords,
+                                    const Eigen::MatrixXd &intDirectionals,
+                                    Eigen::MatrixXd& interpSources,
+                                    Eigen::MatrixXd& interpNormals,
+                                    Eigen::MatrixXd& interpField) const {
 
             assert(elemIndices.rows()==baryCoords.rows());
             assert(baryCoords.rows()==intDirectionals.rows());

@@ -50,9 +50,7 @@ namespace directional
   // Given a mesh and a field the function computes the /data/ necessary for tracing the field'
   // streamlines, and creates the initial /state/ for the tracing.
   // Input:
-  //   V                #V by 3 list of mesh vertex coordinates
-  //   F                #F by 3 list of mesh faces
-  //   rawField         #F by 3n list of the 3D coordinates of the per-face vectors (n-degrees stacked horizontally for each triangle)
+  //   field            Cartesian field to be traced.
   //   seedLocations    indices into F of the seeds for streaming. Can be Eigen::VectorXi() for automatic generation.
   //   ringDistance     Samples are generated automatically in case seedLocations.size()=0 according to exclusion of two seeds < ringDistance faces apart.
   // Output:
@@ -65,10 +63,7 @@ namespace directional
                                    StreamlineState &state);
 
 
-  
   // The function computes the next state for each point in the sample
-  //   V             #V by 3 list of mesh vertex coordinates
-  //   F             #F by 3 list of mesh faces
   //   data          struct containing topology information
   //   state         struct containing the state of the tracing
   IGL_INLINE void streamlines_next(const StreamlineData & data,

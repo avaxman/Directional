@@ -87,14 +87,15 @@ namespace directional {
         polyValues.array() += z.array();  //the biggest and unit power
     }
 
+
     // Converts a field in PolyVector representation to raw represenation. This is done by the fixed-point Durand-Kerner method.
-    // Inputs:
+    // Input:
     //  pvField:    a POLYVECTOR_FIELD type cartesian field object
     //  signSymmetry: if the field is sign-symmetric (so comprising line-fields). Then all odd PV coefficients are zero.
     //  rootTolerance:  the numerical tolerance for the root computation.
     //
-    // Outputs:
-    //  raw:              #F by 3*N matrix with all N explicit vectors of each directional in raw format xyzxyz
+    // Output:
+    //  roots:              #TangentSpaces by N complex matrix with all N roots of the PolyVectors in order
     //    returns true if succeeded
     IGL_INLINE bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
                                       const int N,

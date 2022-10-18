@@ -20,25 +20,25 @@
 
 namespace directional
 {
-  // Reorders the vectors in a face (preserving CCW) so that the prescribed matching across most edges, except a small set (called a seam), is an identity, making it ready for cutting and parameterization.
+  // Reorders the vectors in a tangent space (preserving CCW direction) so that the prescribed matching across most TB edges is an identity, except for seams.
   // Important: if the Raw field in not CCW ordered, the result is unpredictable.
   // Input:
   //  rawField:   a RAW_FIELD uncombed cartesian field object
-  //  faceIs_Cut: #F x 3 optionally prescribing the halfedges (corresponding to mesh faces) that must be a seam.
+  //  _spaceIsCut: #F x |maxOneRing| optionally prescribing the TB edges (corresponding to mesh faces) that must be a seam.
   // Output:
   //  combedField: the combed field object, also RAW_FIELD
   
   IGL_INLINE void combing(const directional::CartesianField& rawField,
                           directional::CartesianField& combedField,
-                          const Eigen::MatrixXi& _faceIsCut=Eigen::MatrixXi())
+                          const Eigen::MatrixXi& _spaceIsCut=Eigen::MatrixXi())
   {
     using namespace Eigen;
-    combedField.init(*(rawField.tb), RAW_FIELD, rawField.N);
-    Eigen::MatrixXi faceIsCut(rawField.intField.rows(),3);
-    if (_faceIsCut.rows()==0)
-      faceIsCut.setZero();
+    combedField.init(*(rawField.tb), fieldTypeEnum::RAW_FIELD, rawField.N);
+    Eigen::MatrixXi spaceIsCut(rawField.intField.rows(),3);
+    if (_spaceIsCut.rows()==0)
+        spaceIsCut.setZero();
     else
-      faceIsCut=_faceIsCut;
+        spaceIsCut=_spaceIsCut;
     
     VectorXi spaceTurns(rawField.intField.rows());
     
@@ -67,7 +67,7 @@ namespace directional
         int nextFace=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),1) : rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0));
         nextMatching*=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? 1.0 : -1.0);
         nextMatching=(nextMatching+currSpaceMatching.second+10*rawField.N)%rawField.N;  //killing negatives
-        if ((nextFace!=-1)&&(!visitedSpaces(nextFace))&&(!faceIsCut(currSpaceMatching.first,i)))
+        if ((nextFace!=-1)&&(!visitedSpaces(nextFace))&&(!spaceIsCut(currSpaceMatching.first,i)))
           spaceMatchingQueue.push(std::pair<int,int>(nextFace, nextMatching));
         
       }

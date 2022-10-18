@@ -13,10 +13,16 @@
 #include <Eigen/Sparse>
 #include <igl/boundary_loop.h>
 #include <igl/doublearea.h>
+#include <igl/diag.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/raw_to_polyvector.h>
 #include <directional/polyvector_to_raw.h>
+
+/***
+ This class implements intrinsic vertex-based fields (defined intrinsically on the curved corners of a 1-ring), where the connection is on edges between neighboring vertices,
+ the local cycles are triangles, and the curvature identifies as the holonomy of the parallel transport around this triangle.
+ ***/
 
 
 namespace directional{
@@ -29,12 +35,15 @@ namespace directional{
         Eigen::MatrixXd tangentStartAngles;  //where each edge begins on the intrinsic space
 
         virtual discTangTypeEnum discTangType() const {return discTangTypeEnum::VERTEX_SPACES;}
+        virtual bool hasCochainSequence() const { return false; }
+        virtual bool hasEmbedding() const { return true; }
 
         IntrinsicVertexTangentBundle(){}
         ~IntrinsicVertexTangentBundle(){}
 
         void IGL_INLINE init(const TriMesh& _mesh){
 
+            intDimension = 2;
             typedef std::complex<double> Complex;
             mesh = &_mesh;
 
@@ -112,8 +121,9 @@ namespace directional{
 
             //drawing from mesh geometry
 
-            /************Smoothness matrices****************/
-            stiffnessWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
+            /************masses****************/
+            Eigen::VectorXd connectionMassWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
+            Eigen::VectorXd tangentSpaceMassWeights=Eigen::VectorXd::Zero(mesh->EV.rows());
 
             //cotangent weights
             Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh->F.rows(),3);
@@ -133,10 +143,13 @@ namespace directional{
             //masses are vertex voronoi areas
             Eigen::MatrixXd dAreas;
             igl::doublearea(mesh->V,mesh->F,dAreas);
-            massWeights = Eigen::VectorXd::Zero(mesh->V.rows());
+            tangentSpaceMassWeights = Eigen::VectorXd::Zero(mesh->V.rows());
             for (int i=0;i<mesh->F.rows();i++)
                 for (int j=0;j<3;j++)
-                    massWeights(mesh->F(i,j)) += dAreas(i)/6.0;
+                    tangentSpaceMassWeights(mesh->F(i,j)) += dAreas(i)/6.0;
+
+            igl::diag(connectionMass, connectionMassWeights);
+            igl::diag(tangentSpaceMass, tangentSpaceMassWeights);
 
         }
 

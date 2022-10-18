@@ -14,6 +14,14 @@
 
 namespace directional{
 
+    //Conversion from raw to polyvector representation on a Cartesian field. This operator works directly on the intrinsic representations.
+    //This computes the polynomial coefficients for the given roots.
+    //Input:
+    //  intField:       #TangentSpaces x 2N (x,y,x,y...) representation of the raw intrinsic field
+    //  N:              Degree of the field.
+    //  signSymmetry:   Whether the field has sign symmetry or not, only if N is even. Default: true
+    //Output:
+    //  pvField:        #TangentSpaces x N complex representation of the PolyVector.
     IGL_INLINE void raw_to_polyvector(const Eigen::MatrixXd& intField,
                                       const int N,
                                       Eigen::MatrixXcd& pvField,
