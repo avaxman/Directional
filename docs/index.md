@@ -2,7 +2,7 @@
 
 <https://github.com/avaxman/Directional/>
 
-Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes. It is based on [Eigen](http://eigen.tuxfamily.org/). Directional represents directional fields:  discrete sets of vectors on meshes. Much of the content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis). Some visualization code is borrowed from the [libhedra](https://github.com/avaxman/libhedra) library. 
+Directional is a C++ library for creating, manipulating and visualizing directional fields on 3D meshes. It is based on [Eigen](http://eigen.tuxfamily.org/). Directional represents directional fields:  discrete sets of vectors on meshes. Much of the content and the notations are based on the Eurographics 2016 star (adapted subsequently to SIGGRAPH Asia 2016/SIGGRAPH 2017 courses) on [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis). Some visualization code is borrowed from the [libhedra](https://github.com/avaxman/libhedra) library.
 
 Directional was called "libdirectional" until version 1.5. The name was shortened to avoid a clash with [libDirectional](https://github.com/libDirectional/libDirectional).
 
@@ -50,7 +50,7 @@ This should properly set up the tutorial project, with the individual chapters a
 If you are interested in joining development, please fork the repository and submit a [pull request](https://help.github.com/articles/using-pull-requests/) with your changes.
 
 ## License
-Directional is primarily [MPL2](http://www.mozilla.org/MPL/2.0/) licensed ([FAQ](http://www.mozilla.org/MPL/2.0/FAQ.html)). Some files contain third-party code under other licenses. 
+Directional is primarily [MPL2](http://www.mozilla.org/MPL/2.0/) licensed ([FAQ](http://www.mozilla.org/MPL/2.0/FAQ.html)). Some files contain third-party code under other licenses.
 
 ## Attribution
 
@@ -59,8 +59,7 @@ If you use Directional in your academic projects, please cite the implemented pa
 ```
 @misc{Directional,
 author       = {Amir Vaxman and others},
-title        = {{Directional: A library for Directional Field 
-Synthesis, Design, and Processing}},
+title        = {Directional: A library for Directional Field Synthesis, Design, and Processing},
 doi          = {10.5281/zenodo.3338174},
 url          = {https://doi.org/10.5281/zenodo.3338174}
 }

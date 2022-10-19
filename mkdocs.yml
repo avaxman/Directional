@@ -11,17 +11,16 @@ remote_branch: 'gh-pages'
 theme:
   name: material
   favicon: 'favicon.ico'
-  logo:
-    icon: ' '
+  logo: 'logo.png'
   palette:
     primary: 'light blue'
     accent: 'blue'
 extra:
   social:
-    - type: 'github'
+    - icon: fontawesome/brands/github-alt
       link: 'https://github.com/avaxman'
 extra_javascript:
-      - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
+  - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
 extra_css:
   - 'css/style.css'
   - 'css/pygments.css'
@@ -30,14 +29,13 @@ markdown_extensions:
       guess_lang: false
   - footnotes
   - admonition
-  - attr_list
   - toc:
       permalink: true
   - markdown.extensions.smarty
   - markdown.extensions.toc:
       permalink: true
   - markdown.extensions.wikilinks:
-      base_url: https://github.com/avaxman/Directional/
+      base_url: https://github.com/libigl/libigl/tree/main
   - pymdownx.arithmatex
   - pymdownx.betterem:
       smart_enable: all
@@ -58,6 +56,8 @@ markdown_extensions:
   - pymdownx.tilde
 plugins:
   - search
+  - macros:
+      verbose: true
 
 extra_javascript:
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
