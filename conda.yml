@@ -1,0 +1,15 @@
+name: directional-website
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - mkdocs=1.2.4
+  - mkdocs-material=8.2.7
+  - mkdocs-macros-plugin=0.7.0
+  - pygments=2.11.2
+  - pymdown-extensions=9.3
+  - pip=22.0.4
+  - pip:
+      - mkdocs-redirects==1.0.3
+      - mkdocs-minify-plugin==0.4.0
+      - LinkChecker==10.1.0
