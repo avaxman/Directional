@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   bc.resize(0, 3);
 
   cout<<"Computing initial field"<<endl;
-  powerField.init(ftbCoarse, POWER_FIELD, N);
+  powerField.init(ftbCoarse, directional::fieldTypeEnum::POWER_FIELD, N);
   directional::power_field(ftbCoarse, b, bc, Eigen::VectorXd::Constant(b.size(),-1),N, powerField);
   directional::power_to_raw(powerField, N, rawFieldCoarse, true);
    

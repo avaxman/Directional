@@ -409,7 +409,7 @@ IGL_INLINE void directional::conjugate_frame_fields(const directional::TriMesh& 
     Eigen::MatrixXd newOutput;//,B1,B2,normals;
     //igl::local_basis(V,F,B1,B2,normals);
     directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
-    output.init(*(initialSolution.tb),RAW_FIELD,initialSolution.N);
+    output.init(*(initialSolution.tb),directional::fieldTypeEnum::RAW_FIELD,initialSolution.N);
     output.set_extrinsic_field(newOutput);
 }
 
@@ -450,7 +450,7 @@ IGL_INLINE double directional::conjugate_frame_fields(const directional::Conjuga
     //reorienting field hack
     Eigen::MatrixXd newOutput;//,B1,B2,normals;
     directional::ccw_reorient_field(csdata.B1,csdata.B2,outputExtField, newOutput);
-    output.init(*(initialSolution.tb),RAW_FIELD,initialSolution.N);
+    output.init(*(initialSolution.tb),directional::fieldTypeEnum::RAW_FIELD,initialSolution.N);
     output.set_extrinsic_field(newOutput);
 
     return lambdaOut;

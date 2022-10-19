@@ -83,6 +83,9 @@ namespace directional
       else
         combedField.matching(i)=(spaceTurns(rawField.tb->adjSpaces(i,0))-spaceTurns(rawField.tb->adjSpaces(i,1))+rawField.matching(i)+1000*rawField.N)%rawField.N;
     }
+
+    //TODO: only update effort.
+    principal_matching(combedField);
   }
 }
 

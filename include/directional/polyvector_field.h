@@ -96,21 +96,19 @@ namespace directional
                 dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.tb->adjSpaces(i,1), -1.0));
 
                 //stiffness weights
-                //WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->stiffnessWeights(i)));
+                WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->connectionMass(i)));
                 rowCounter++;
             }
 
             for (int i=0;i<pvField.intField.rows();i++)
-                MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.tb->massWeights(i)));
+                MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.tb->tangentSpaceMass(i)));
         }
 
         pvData.smoothMat.resize(rowCounter, pvData.N*pvField.intField.rows());
         pvData.smoothMat.setFromTriplets(dTriplets.begin(), dTriplets.end());
 
-        //pvData.WSmooth.resize(rowCounter, rowCounter);
-        //pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
-
-        pvData.WSmooth = tb.connectionMass.cast<complex<double>();
+        pvData.WSmooth.resize(rowCounter, rowCounter);
+        pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
 
         pvData.M.resize(pvData.N*pvField.intField.rows(), pvData.N*pvField.intField.rows());
         pvData.M.setFromTriplets(MTriplets.begin(), MTriplets.end());
@@ -186,7 +184,7 @@ namespace directional
             vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
             for (int i=pvField.intField.rows();i<pvData.N*pvField.intField.rows();i++){
                 roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-                WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.tb->massWeights(i%pvField.intField.rows())));
+                WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.tb->tangentSpaceMass(i%pvField.intField.rows())));
             }
 
             pvData.roSyMat.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
@@ -195,7 +193,7 @@ namespace directional
             pvData.WRoSy.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
             pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
 
-            pvData.totalRoSyWeight=((double)pvData.N)*pvField.tb->massWeights.sum();
+            pvData.totalRoSyWeight=((double)pvData.N)*pvField.tb->tangentSpaceMass.sum();
         } else {
             pvData.roSyMat.resize(0, N*pvField.intField.rows());
             pvData.WRoSy.resize(0,0);  //Even necessary?
@@ -242,8 +240,8 @@ namespace directional
 
             alignRhsList.push_back(singleReducRhs);
             for (int j=0;j<singleReducRhs.size();j++){
-                WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.tb->massWeights(pvData.constSpaces(i))));
-                pvData.totalConstrainedWeight+=pvField.tb->massWeights(pvData.constSpaces(i));
+                WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.tb->tangentSpaceMass(pvData.constSpaces(i))));
+                pvData.totalConstrainedWeight+=pvField.tb->tangentSpaceMass(pvData.constSpaces(i));
             }
             rowCounter+=realN;
         }
@@ -312,7 +310,7 @@ namespace directional
             complex_eigs(X0Lhs, X0M, 10, U, S);
             int smallestIndex; S.cwiseAbs().minCoeff(&smallestIndex);
 
-            pvField.fieldType = POLYVECTOR_FIELD;
+            pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
             MatrixXcd intField(U.col(0).rows(),pvData.N);
             intField.col(0)=U.col(smallestIndex);
             pvField.set_intrinsic_field(intField);
@@ -327,7 +325,7 @@ namespace directional
             for (int i=0;i<pvData.N;i++)
                 intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
 
-            pvField.fieldType = POLYVECTOR_FIELD;
+            pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
             pvField.set_intrinsic_field(intField);
 
         }
@@ -359,7 +357,7 @@ namespace directional
         }
         pvData.wSmooth = smoothWeight;
         pvData.wRoSy = roSyWeight;
-        pvField.init(tb,POLYVECTOR_FIELD,N);
+        pvField.init(tb,fieldTypeEnum::POLYVECTOR_FIELD,N);
         polyvector_precompute(tb,N,pvField,pvData);
         polyvector_field(pvData, pvField);
     }

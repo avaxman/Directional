@@ -135,8 +135,8 @@ int main()
   // Load mesh
   directional::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", mesh);
   ftb.init(mesh);
-  pvFieldHard.init(ftb, POLYVECTOR_FIELD,N);
-  pvFieldSoft.init(ftb, POLYVECTOR_FIELD,N);
+  pvFieldHard.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
+  pvFieldSoft.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
   
   //discovering and constraining sharp edges
   std::vector<int> constFaceslist;
@@ -170,7 +170,7 @@ int main()
     rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
   
   
-  constraintsField.init(ftb, RAW_FIELD, N);
+  constraintsField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   constraintsField.set_extrinsic_field(rawFieldConstraints);
   
   smoothWeight = 1.0;

@@ -55,8 +55,8 @@ namespace directional{
         };
 
         void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
-            assert (!(fieldType==POWER_FIELD) || (_intField.cols()==2));
-            assert ((_intField.cols()==2*N) || !(fieldType==POLYVECTOR_FIELD || fieldType==RAW_FIELD));
+            assert (!(fieldType==fieldTypeEnum::POWER_FIELD) || (_intField.cols()==2));
+            assert ((_intField.cols()==2*N) || !(fieldType==fieldTypeEnum::POLYVECTOR_FIELD || fieldType==fieldTypeEnum::RAW_FIELD));
             intField = _intField;
 
             extField = tb->project_to_extrinsic(Eigen::VectorXi(), intField);

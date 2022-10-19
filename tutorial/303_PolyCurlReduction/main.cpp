@@ -120,8 +120,8 @@ int main(int argc, char *argv[])
   // Load a mesh
   directional::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", mesh);
   ftb.init(mesh);
-  rawFieldOrig.init(ftb, RAW_FIELD, N);
-  rawFieldCF.init(ftb, RAW_FIELD, N);
+  rawFieldOrig.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
+  rawFieldCF.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
   
   //combing the field in a way that minimizes curl

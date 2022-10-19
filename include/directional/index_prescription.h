@@ -57,7 +57,7 @@ namespace directional
 
         linfError = (field.tb->cycles*innerRotationAngles - (-field.tb->cycleCurvatures + cycleNewCurvature)).template lpNorm<Infinity>();
 
-        directional::rotation_to_raw(rotationAngles,N,globalRotation,field);
+        directional::rotation_to_raw(*(field.tb), rotationAngles,N,globalRotation,field);
     }
 
     //Minimal version: without a provided solver

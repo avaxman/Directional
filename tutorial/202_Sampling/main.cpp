@@ -124,7 +124,7 @@ int main()
   singIndices(0)=N;
   singIndices(1)=N;
   
-  field.init(ftb, RAW_FIELD, N);
+  field.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   
   //viewing mesh
   viewer.set_mesh(mesh);

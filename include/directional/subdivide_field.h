@@ -137,7 +137,7 @@ namespace directional
         directional::CartesianField coarseFieldAltered;
         directional::IntrinsicFaceTangentBundle ftbCoarseAltered;
         ftbCoarseAltered.init(coarseMesh);
-        coarseFieldAltered.init(ftbCoarseAltered, RAW_FIELD, rawFieldCoarse.N);
+        coarseFieldAltered.init(ftbCoarseAltered, directional::fieldTypeEnum::RAW_FIELD, rawFieldCoarse.N);
         coarseFieldAltered.set_extrinsic_field(rawFieldCoarse.extField);
         // Compute curl matching
         //Eigen::VectorXi matchingCoarse, matchingFine, singVertices, singIndices;
@@ -155,7 +155,7 @@ namespace directional
         subdivide_field(coarseMesh.V, coarseMesh.F, coarseMesh.EV, coarseMesh.EF, coarseFieldAltered.extField, coarseFieldAltered.matching, targetLevel, VFine, FFine, EVFine, EFFine, extFieldFine, matchingFine);
         meshFine.set_mesh(VFine, FFine);
         ftbFine.init(meshFine);
-        rawFieldFine.init(ftbFine, RAW_FIELD, rawFieldCoarse.N);
+        rawFieldFine.init(ftbFine, directional::fieldTypeEnum::RAW_FIELD, rawFieldCoarse.N);
         rawFieldFine.set_extrinsic_field(extFieldFine);
     }
 

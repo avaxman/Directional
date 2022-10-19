@@ -172,7 +172,7 @@ int main()
   
   directional::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj",mesh);
   ftb.init(mesh);
-  field.init(ftb, RAW_FIELD, N);
+  field.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
 
   cycleIndices=Eigen::VectorXi::Constant(field.tb->cycles.rows(),0);
   

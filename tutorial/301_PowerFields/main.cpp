@@ -43,7 +43,7 @@ void update_visualization()
     constraintIntField.row(constVertices(i))=powerFieldHard.intField.row(constVertices(i));
   
   directional::CartesianField constraintRawField, constraintPowerField;
-  constraintPowerField.init(*(rawField.tb),POWER_FIELD,N);
+  constraintPowerField.init(*(rawField.tb),directional::fieldTypeEnum::POWER_FIELD,N);
   constraintPowerField.set_intrinsic_field(constraintIntField);
   
   directional::power_to_raw(constraintPowerField, N, constraintRawField);
@@ -184,8 +184,8 @@ int main()
   // Load mesh
   directional::readOBJ(TUTORIAL_SHARED_PATH "/rocker-arm2500.obj", mesh);
   vtb.init(mesh);
-  powerFieldHard.init(vtb, POWER_FIELD, N);
-  powerFieldSoft.init(vtb, POWER_FIELD, N);
+  powerFieldHard.init(vtb, directional::fieldTypeEnum::POWER_FIELD, N);
+  powerFieldSoft.init(vtb, directional::fieldTypeEnum::POWER_FIELD, N);
   constVertices.resize(0);
   constVectors.resize(0, 3);
 

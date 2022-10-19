@@ -7,8 +7,6 @@
 #ifndef DIRECTIONAL_ROTATION_TO_RAW_H
 #define DIRECTIONAL_ROTATION_TO_RAW_H
 
-#include <directional/rotation_to_representative.h>
-#include <directional/representative_to_raw.h>
 #include <directional/CartesianField.h>
 
 namespace directional
