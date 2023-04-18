@@ -6,6 +6,10 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
+#include <iostream>
+#include <iomanip>
+#include <map>
+#include <random>
 #include <Eigen/Geometry>
 #include <igl/edge_topology.h>
 #include <igl/sort_vectors_ccw.h>
@@ -14,76 +18,113 @@
 #include <igl/barycenter.h>
 #include <igl/slice.h>
 #include <igl/speye.h>
+#include <igl/avg_edge_length.h>
+#include <directional/TriMesh.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
 
 namespace Directional {
-    IGL_INLINE void generate_sample_locations(const Eigen::MatrixXi& F,
-                                              const Eigen::MatrixXi& EF,
-                                              const int ringDistance,
-                                              Eigen::VectorXi& samples)
+    IGL_INLINE void generate_sample_locations(const directional::TriMesh& mesh,
+                                              const double distRatio,
+                                              Eigen::VectorXi& sampleTris,
+                                              Eigen::MatrixXd& samplePoints)
     {
-        //creating adjacency matrix
-        std::vector<Eigen::Triplet<int>> adjTris;
-        for (int i=0;i<EF.rows();i++)
-            if ((EF(i,0)!=-1)&&(EF(i,1)!=-1)){
-                adjTris.push_back(Eigen::Triplet<int>(EF(i,0), EF(i,1),1));
-                adjTris.push_back(Eigen::Triplet<int>(EF(i,1), EF(i,0),1));
-            }
 
-        Eigen::SparseMatrix<int> adjMat(F.rows(),F.rows());
-        adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
-        Eigen::SparseMatrix<int> newAdjMat(F.rows(),F.rows()),matMult;
-        igl::speye(F.rows(), F.rows(), matMult);
-        for (int i=0;i<ringDistance;i++){
-            matMult=matMult*adjMat;
-            newAdjMat+=matMult;
+        double minDist = distRatio*igl::avg_edge_length(mesh.V,mesh.F);
+        double minDist2=minDist*minDist;
+
+
+        //first creating a pool of samples to reject from
+        //Eigen::VectorXd sumAreas;
+        //igl::cumsum(mesh.faceAreas, 0, sumAreas);
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::vector<double> faceAreasVec(mesh.faceAreas.data(), mesh.faceAreas.data() + mesh.faceAreas.size());
+        std::discrete_distribution<double> distTriangles(faceAreasVec.begin(), faceAreasVec.end());
+        std::uniform_real_distribution<double> distBarycentrics(0.0,1.0);
+        std::map<int, double> map;
+        int nsamples = (int)(10/distRatio);
+
+        std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.size());
+        std::vector<std::vector<bool>> samplePoolAlive(mesh.F.size());
+        for (int i=0;i<nsamples;i++) {
+            //random triangle according to area weighting
+            int faceIndex = distTriangles(gen);
+            //random barycentric coordinate uniformly
+            double B1 = distBarycentrics(gen);
+            double B2 = distBarycentrics(gen);
+            double B3 = distBarycentrics(gen);
+            double sum = B1+B2+B3;
+            //assuming the unlikely case where they are all zero
+            //TODO: convert to actual locations
+            samplePool[i].push_back(Eigen::Vector3d(B1, B2, B3)/sum);
+            samplePoolAlive[i].push_back(true);
         }
 
-        //cout<<"newAdjMat: "<<newAdjMat<<endl;
-
-        adjMat=newAdjMat;
-
-        std::vector<std::set<int>> ringAdjacencies(F.rows());
-        for (int k=0; k<adjMat.outerSize(); ++k){
-            for (Eigen::SparseMatrix<int>::InnerIterator it(adjMat,k); it; ++it){
-                ringAdjacencies[it.row()].insert(it.col());
-                ringAdjacencies[it.col()].insert(it.row());
+        //Choosing samples and deleting everything too close
+        std::vector<int> sampleTrisVec;
+        std::vector<Eigen::Vector3d> samplePointsVec;
+        int nlivesamples = nsamples;
+        for (int i=0;i<nsamples;i++) {
+            int faceIndex = distTriangles(gen);
+            int sampleIndex=-1;
+            for (int j = 0; j < samplePoolAlive[faceIndex].size(); j++) {
+                if (samplePoolAlive[faceIndex][j]) {
+                    sampleIndex = j;
+                    break;
+                }
             }
-        }
 
-        Eigen::VectorXi sampleMask=Eigen::VectorXi::Zero(F.rows());
-        for (int i=0;i<F.rows();i++){
-            if (sampleMask(i)!=0) //occupied face
+            if (sampleIndex==-1) //no samples were found
                 continue;
 
-            sampleMask(i)=2;
-            //clearing out all other faces
-            //cout<<"closeby set to face "<<i<<endl;
-            for (std::set<int>::iterator si=ringAdjacencies[i].begin();si!=ringAdjacencies[i].end();si++){
-                if (sampleMask(*si)==0)
-                    sampleMask(*si)=1;
-                //cout<<*si<<" ";
-            }
-            //cout<<endl;
+            sampleTrisVec.push_back(faceIndex);
+            samplePointsVec.push_back(samplePool[faceIndex][sampleIndex]);
+            //deleting samples that are less than minDist away
+            std::queue<int> faceQueue;
+            faceQueue.push(faceIndex);
+            do{
+                int currFace = faceQueue.front();
+                faceQueue.pop();
+                //finding out if any samples get deleted. If they are, pushing the neighbors, otherwise terminating.
+                bool deleted=false;
+                for (int j=0;j<samplePool[currFace].size();j++){
+                    if (samplePoolAlive[currFace][j]){
+                        //TODO: checking if close enough and flagging "deleted" if it is
+                        double dEuc2 = (samplePool[faceIndex][sampleIndex]-samplePool[currFace][j]).squaredNorm();
+                        if (dEuc2>minDist2)
+                            continue;  //too far Euclideanly to delete
 
+                        //otherwise, computing geodesic distance TODO
+
+                        //if too close, delete sample
+                        samplePoolAlive[currFace][j]=false;
+                        deleted = true;
+                    }
+                }
+                if (deleted) //queuing neighboring faces since we are still close enough to the original sample
+                    for (int j=0;j<3;j++)
+                        if (mesh.TT(currFace, j)!=-1)
+                            faceQueue.push(mesh.TT(currFace,j));
+
+
+            }while (!faceQueue.empty());
         }
 
-        std::vector<int> samplesList;
-        for (int i=0;i<sampleMask.size();i++)
-            if (sampleMask(i)==2)
-                samplesList.push_back(i);
+        sampleTris = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(sampleTrisVec.data(), sampleTrisVec.size());
+        samplePoints.resize(samplePointsVec.size(),3);
+        for (int i=0;i<samplePointsVec.size();i++)
+            samplePoints.row(i)=samplePointsVec[i];
 
-        samples = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(samplesList.data(), samplesList.size());
     }
 }
 
 
 IGL_INLINE void directional::streamlines_init(const directional::CartesianField& field,
                                               const Eigen::VectorXi& seedLocations,
-                                              const int ringDistance,
+                                              const double distRatio,
                                               StreamlineData &data,
                                               StreamlineState &state){
     using namespace Eigen;
@@ -151,14 +192,8 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
     if (seedLocations.rows()==0){
         assert(ringDistance>=0);
-        Directional::generate_sample_locations(data.slMesh->F,data.slMesh->EF,ringDistance,data.samples);
+        Directional::generate_sample_locations(data.slMesh,distRatio,data.samples);
         nsamples = data.nsample = data.samples.size();
-        nsamples = data.nsample;
-        /*Eigen::VectorXd r;
-        r.setRandom(nsamples, 1);
-        r = (1 + r.array()) / 2.;
-        samples = (r.array() * F.rows()).cast<int>();
-        data.nsample = nsamples;*/
     } else {
         data.samples=seedLocations;
         nsamples = data.nsample = seedLocations.size();

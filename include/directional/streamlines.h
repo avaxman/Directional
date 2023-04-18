@@ -30,7 +30,8 @@ namespace directional
     //      the vector set in a is matched to vector #mab[i] in b)
     // Eigen::MatrixXi match_ba;   //  #E by N matrix, describing the inverse relation to match_ab
     int nsample;                //  #S, number of sample points
-    Eigen::VectorXi samples;    //all original faces
+    Eigen::VectorXi sampleFaces;    //all original faces
+    Eigen::MatrixXd samplePoints;  //3d point that must lie on the respective faces
   };
   
   struct StreamlineState
@@ -59,7 +60,7 @@ namespace directional
   //   state         struct containing the state of the tracing
   IGL_INLINE void streamlines_init(const directional::CartesianField& field,
                                    const Eigen::VectorXi& seedLocations,
-                                   const int ringDistance,
+                                   const double distRatio,
                                    StreamlineData &data,
                                    StreamlineState &state);
 

@@ -358,14 +358,14 @@ namespace directional
 
         void IGL_INLINE init_streamlines(const int meshNum=0,
                                          const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
-                                         const int sparsity=3)
+                                         const double distRatio=1.0)
         {
             if (slData.size()<meshNum+1){
                 slData.resize(meshNum+1);
                 slState.resize(meshNum+1);
             }
             //assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
-            directional::streamlines_init(*fieldList[meshNum], seedLocations,sparsity,slData[meshNum], slState[meshNum]);
+            directional::streamlines_init(*fieldList[meshNum], seedLocations,distRatio,slData[meshNum], slState[meshNum]);
         }
 
         void IGL_INLINE advance_streamlines(const int meshNum=0,
