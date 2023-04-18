@@ -45,10 +45,11 @@ namespace Directional {
         std::discrete_distribution<double> distTriangles(faceAreasVec.begin(), faceAreasVec.end());
         std::uniform_real_distribution<double> distBarycentrics(0.0,1.0);
         std::map<int, double> map;
-        int nsamples = (int)(10/distRatio);
+        int nsamples = (int)(10/distRatio)*mesh.F.rows();
 
         std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.size());
         std::vector<std::vector<bool>> samplePoolAlive(mesh.F.size());
+        //std::cout<<"SamplePool: "<<std::endl;
         for (int i=0;i<nsamples;i++) {
             //random triangle according to area weighting
             int faceIndex = distTriangles(gen);
@@ -59,8 +60,12 @@ namespace Directional {
             double sum = B1+B2+B3;
             //assuming the unlikely case where they are all zero
             //TODO: convert to actual locations
-            samplePool[i].push_back(Eigen::Vector3d(B1, B2, B3)/sum);
-            samplePoolAlive[i].push_back(true);
+            Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1/sum+
+                    mesh.V.row(mesh.F(faceIndex,1))*B2/sum+
+                    mesh.V.row(mesh.F(faceIndex,2))*B3/sum;
+            samplePool[faceIndex].push_back(sampleLocation);
+            samplePoolAlive[faceIndex].push_back(true);
+            //std::cout<<faceIndex<<":"<<sampleLocation.transpose()<<std::endl;
         }
 
         //Choosing samples and deleting everything too close
@@ -85,32 +90,41 @@ namespace Directional {
             //deleting samples that are less than minDist away
             std::queue<int> faceQueue;
             faceQueue.push(faceIndex);
+            std::set<int> facesVisited;
+            facesVisited.insert(faceIndex);
+
             do{
                 int currFace = faceQueue.front();
                 faceQueue.pop();
-                //finding out if any samples get deleted. If they are, pushing the neighbors, otherwise terminating.
-                bool deleted=false;
+                //std::cout<<"curr face: "<<currFace<<std::endl;
+                //finding out if any samples get deleted. If they are, also checking the neighbors, otherwise terminating.
+                bool deleted=true;
                 for (int j=0;j<samplePool[currFace].size();j++){
-                    if (samplePoolAlive[currFace][j]){
+                    //if (samplePoolAlive[currFace][j]){
                         //TODO: checking if close enough and flagging "deleted" if it is
                         double dEuc2 = (samplePool[faceIndex][sampleIndex]-samplePool[currFace][j]).squaredNorm();
                         if (dEuc2>minDist2)
                             continue;  //too far Euclideanly to delete
 
+                    //std::cout<<"deleting sample "<<j<<" with squared distance "<<dEuc2<<std::endl;
+
                         //otherwise, computing geodesic distance TODO
 
-                        //if too close, delete sample
+                        //if too close, delete sample (even if it was deleted before)
                         samplePoolAlive[currFace][j]=false;
                         deleted = true;
-                    }
+                    //}
                 }
                 if (deleted) //queuing neighboring faces since we are still close enough to the original sample
                     for (int j=0;j<3;j++)
-                        if (mesh.TT(currFace, j)!=-1)
+                        if ((mesh.TT(currFace, j)!=-1)&&(facesVisited.find(mesh.TT(currFace, j))==facesVisited.end())){
                             faceQueue.push(mesh.TT(currFace,j));
+                            facesVisited.insert(mesh.TT(currFace,j));
+                        }
 
 
             }while (!faceQueue.empty());
+            //std::cout<<"done with face"<<std::endl;
         }
 
         sampleTris = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(sampleTrisVec.data(), sampleTrisVec.size());
@@ -123,7 +137,7 @@ namespace Directional {
 
 
 IGL_INLINE void directional::streamlines_init(const directional::CartesianField& field,
-                                              const Eigen::VectorXi& seedLocations,
+                                              const Eigen::VectorXi& seedFaces,
                                               const double distRatio,
                                               StreamlineData &data,
                                               StreamlineState &state){
@@ -190,24 +204,23 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
     int nsamples;
 
-    if (seedLocations.rows()==0){
-        assert(ringDistance>=0);
-        Directional::generate_sample_locations(data.slMesh,distRatio,data.samples);
-        nsamples = data.nsample = data.samples.size();
+    if (seedFaces.rows()==0){
+        assert(distRatio>=0);
+        Directional::generate_sample_locations(*(data.slMesh),distRatio,data.sampleFaces,data.samplePoints);
     } else {
-        data.samples=seedLocations;
-        nsamples = data.nsample = seedLocations.size();
-    }
+        data.sampleFaces=seedFaces;
+        Eigen::MatrixXd BC_sample;
+        igl::slice(data.slMesh->barycenters, data.sampleFaces, 1, data.samplePoints);
 
-    Eigen::MatrixXd BC_sample;
-    igl::slice(data.slMesh->barycenters, data.samples, 1, BC_sample);
+    }
+    nsamples = data.nsample = data.sampleFaces.size();
 
     // initialize state for tracing vector field
 
-    state.start_point = BC_sample.replicate(field.N,1);
+    state.start_point = data.samplePoints.replicate(field.N,1);
     state.end_point = state.start_point;
 
-    state.current_face = data.samples.replicate(1, field.N);
+    state.current_face = data.sampleFaces.replicate(1, field.N);
 
     /*state.P1 =state.start_point;
     state.P2 =state.end_point;
@@ -242,7 +255,7 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
     {
         for (int j = 0; j < nsample; ++j)
         {
-            currFace(j + nsample * i)=data.samples(j);
+            currFace(j + nsample * i)=data.sampleFaces(j);
             currVector(j + nsample * i)=i;
             currTime(j + nsample * i)=state.numSteps;
 

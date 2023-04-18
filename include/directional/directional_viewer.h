@@ -358,7 +358,7 @@ namespace directional
 
         void IGL_INLINE init_streamlines(const int meshNum=0,
                                          const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
-                                         const double distRatio=1.0)
+                                         const double distRatio=3.0)
         {
             if (slData.size()<meshNum+1){
                 slData.resize(meshNum+1);

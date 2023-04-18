@@ -26,7 +26,7 @@ namespace directional
                                  directional::CartesianField& rawField,
                                  bool normalize=false)
     {
-        assert(powerField.fieldType==POWER_FIELD && "The input field should be a power/PolyVector field");
+        assert(powerField.fieldType==fieldTypeEnum::POWER_FIELD && "The input field should be a power/PolyVector field");
         rawField.init(*(powerField.tb), fieldTypeEnum::RAW_FIELD,N);
         Eigen::MatrixXcd intFieldComplex(powerField.intField.rows(),N);
         Eigen::VectorXcd complexPowerField(powerField.intField.rows());
