@@ -42,10 +42,11 @@ namespace Directional {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::vector<double> faceAreasVec(mesh.faceAreas.data(), mesh.faceAreas.data() + mesh.faceAreas.size());
-        std::discrete_distribution<double> distTriangles(faceAreasVec.begin(), faceAreasVec.end());
+        std::discrete_distribution<int> distTriangles(faceAreasVec.begin(), faceAreasVec.end());
         std::uniform_real_distribution<double> distBarycentrics(0.0,1.0);
         std::map<int, double> map;
         int nsamples = (int)(10/distRatio)*mesh.F.rows();
+        int indirection = 2*distRatio;  //in how far away from the one ring to look
 
         std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.size());
         std::vector<std::vector<bool>> samplePoolAlive(mesh.F.size());
@@ -61,20 +62,48 @@ namespace Directional {
             //assuming the unlikely case where they are all zero
             //TODO: convert to actual locations
             Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1/sum+
-                    mesh.V.row(mesh.F(faceIndex,1))*B2/sum+
-                    mesh.V.row(mesh.F(faceIndex,2))*B3/sum;
+                                             mesh.V.row(mesh.F(faceIndex,1))*B2/sum+
+                                             mesh.V.row(mesh.F(faceIndex,2))*B3/sum;
             samplePool[faceIndex].push_back(sampleLocation);
             samplePoolAlive[faceIndex].push_back(true);
             //std::cout<<faceIndex<<":"<<sampleLocation.transpose()<<std::endl;
         }
 
         //Choosing samples and deleting everything too close
+
+        //computing "indirection" level adjacencies
+        std::vector<Eigen::Triplet<int>> adjTris;
+        for (int i=0;i<mesh.EF.rows();i++)
+            if ((mesh.EF(i,0)!=-1)&&(mesh.EF(i,1)!=-1)){
+                adjTris.push_back(Eigen::Triplet<int>(mesh.EF(i,0), mesh.EF(i,1),1));
+                adjTris.push_back(Eigen::Triplet<int>(mesh.EF(i,1), mesh.EF(i,0),1));
+            }
+
+        Eigen::SparseMatrix<int> adjMat(mesh.F.rows(),mesh.F.rows());
+        adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
+        Eigen::SparseMatrix<int> newAdjMat(mesh.F.rows(),mesh.F.rows()),matMult;
+        igl::speye(mesh.F.rows(), mesh.F.rows(), matMult);
+        for (int i=0;i<indirection;i++){
+            matMult=matMult*adjMat;
+            newAdjMat+=matMult;
+        }
+
+        adjMat=newAdjMat;
+
+        std::vector<std::set<int>> ringAdjacencies(mesh.F.rows());
+        for (int k=0; k<adjMat.outerSize(); ++k){
+            for (Eigen::SparseMatrix<int>::InnerIterator it(adjMat,k); it; ++it){
+                ringAdjacencies[it.row()].insert(it.col());
+                ringAdjacencies[it.col()].insert(it.row());
+            }
+        }
+
         std::vector<int> sampleTrisVec;
         std::vector<Eigen::Vector3d> samplePointsVec;
         int nlivesamples = nsamples;
         for (int i=0;i<nsamples;i++) {
             int faceIndex = distTriangles(gen);
-            int sampleIndex=-1;
+            int sampleIndex = -1;
             for (int j = 0; j < samplePoolAlive[faceIndex].size(); j++) {
                 if (samplePoolAlive[faceIndex][j]) {
                     sampleIndex = j;
@@ -82,13 +111,50 @@ namespace Directional {
                 }
             }
 
-            if (sampleIndex==-1) //no samples were found
+            if (sampleIndex == -1) //no samples were found
                 continue;
 
             sampleTrisVec.push_back(faceIndex);
             samplePointsVec.push_back(samplePool[faceIndex][sampleIndex]);
+
             //deleting samples that are less than minDist away
-            std::queue<int> faceQueue;
+            //only checking faces that are "indirection" level apart
+            for (std::set<int>::iterator si = ringAdjacencies[faceIndex].begin();si != ringAdjacencies[faceIndex].end(); si++) {
+                int currFace = *si;
+                for (int j = 0; j < samplePool[currFace].size(); j++) {
+                    if (samplePoolAlive[currFace][j]) {
+                        //TODO: checking if close enough and flagging "deleted" if it is
+                        double dEuc2 = (samplePool[faceIndex][sampleIndex] - samplePool[currFace][j]).squaredNorm();
+                        if (dEuc2 > minDist2)
+                            continue;  //too far Euclideanly to delete
+
+                        //Approximate geodesic distance
+                        Eigen::Vector3d n1 = mesh.faceNormals.row(faceIndex);
+                        Eigen::Vector3d n2 = mesh.faceNormals.row(currFace);
+                        Eigen::Vector3d v = (samplePool[faceIndex][sampleIndex] - samplePool[currFace][j])/sqrt(dEuc2);
+                        double c1 = n1.dot(v); double c2 = n2.dot(v);
+                        double dGeod2;
+                        if (abs(c1-c2)<10e-8)
+                            dGeod2 = dEuc2/(1-c1*c1);
+                        else {
+                            dGeod2 = (asin(c2) - asin(c1)) / (c2 - c1);
+                            dGeod2 = dGeod2*dGeod2*dEuc2;
+                        }
+
+                        if (dGeod2 > minDist2)
+                            continue;  //too far Euclideanly to delete
+
+
+                        samplePoolAlive[currFace][j] = false;
+                    }
+
+                }
+            }
+
+
+
+
+            /*std::queue<int> faceQueue;
             faceQueue.push(faceIndex);
             std::set<int> facesVisited;
             facesVisited.insert(faceIndex);
@@ -98,7 +164,7 @@ namespace Directional {
                 faceQueue.pop();
                 //std::cout<<"curr face: "<<currFace<<std::endl;
                 //finding out if any samples get deleted. If they are, also checking the neighbors, otherwise terminating.
-                bool deleted=true;
+                bool deleted=false;
                 for (int j=0;j<samplePool[currFace].size();j++){
                     //if (samplePoolAlive[currFace][j]){
                         //TODO: checking if close enough and flagging "deleted" if it is
@@ -125,6 +191,7 @@ namespace Directional {
 
             }while (!faceQueue.empty());
             //std::cout<<"done with face"<<std::endl;
+        }*/
         }
 
         sampleTris = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(sampleTrisVec.data(), sampleTrisVec.size());
