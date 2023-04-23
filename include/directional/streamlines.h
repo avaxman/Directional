@@ -18,6 +18,8 @@
 
 namespace directional
 {
+    typedef enum slElementType{VERTEX, EDGE, FACE};
+
   struct StreamlineData
   {
     directional::CartesianField field;
@@ -29,23 +31,26 @@ namespace directional
     //      and b are the faces adjacent to the edge (i.e. vector #i of
     //      the vector set in a is matched to vector #mab[i] in b)
     // Eigen::MatrixXi match_ba;   //  #E by N matrix, describing the inverse relation to match_ab
-    int nsample;                //  #S, number of sample points
     Eigen::VectorXi sampleFaces;    //all original faces
     Eigen::MatrixXd samplePoints;  //3d point that must lie on the respective faces
   };
   
   struct StreamlineState
   {
-    Eigen::MatrixXd start_point;        //  #N*S by 3 starting points of segment (stacked vertically for each degree)
-    Eigen::MatrixXd end_point;          //  #N*S by 3 endpoints points of segment (stacked vertically for each degree)
-    Eigen::MatrixXi current_face;       //  #S by N face indices (stacked horizontally for each degree)
-    Eigen::MatrixXi current_direction;  //  #S by N field direction indices (stacked horizontally for each degree)
-    int numSteps;                       // number of steps taken so far
-    
-    Eigen::MatrixXd P1, P2;             //entire set of streamline segments
-    Eigen::VectorXi origFace, origVector; //original vectors from faces
-    Eigen::VectorXi timeSignature;        //time (in steps) of the current segment
-    
+    Eigen::MatrixXd startPoints;        //  #N*S by 3 starting points of segment (stacked vertically for each degree)
+    Eigen::MatrixXd endPoints;          //  #N*S by 3 endpoints points of segment (stacked vertically for each degree)
+    Eigen::MatrixXi currElements;       //  #S by N element indices (stacked horizontally for each degree)
+    std::vector<std::vector<slElementType>> currElementTypes;
+    Eigen::MatrixXi currDirections;  //  #S by N field direction indices (stacked horizontally for each degree)
+    Eigen::MatrixXi nextElements;
+    std::vector<std::vector<slElementType>> nextElementTypes;
+    Eigen::VectorXd nextTimes;        //the time of the switch to the next element
+    Eigen::VectorXd prevTimes;        //time signatures starting in the current elements.
+    double currTime;
+
+    Eigen::MatrixXd segStart, segEnd, segNormal;            //traced segments features
+    Eigen::VectorXi origFace, origVector;                   //original vectors and faces
+
   };
   
   

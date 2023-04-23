@@ -142,7 +142,7 @@ namespace Directional {
                         }
 
                         if (dGeod2 > minDist2)
-                            continue;  //too far Euclideanly to delete
+                            continue;  //too far geodesically to delete
 
 
                         samplePoolAlive[currFace][j] = false;
