@@ -280,24 +280,26 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
         igl::slice(data.slMesh->barycenters, data.sampleFaces, 1, data.samplePoints);
 
     }
-    nsamples = data.nsample = data.sampleFaces.size();
+    //nsamples = data.nsample = data.sampleFaces.size();
 
     // initialize state for tracing vector field
+    state.currStartPoints= data.samplePoints.replicate(field.N,1);
+    state.currElements = data.sampleFaces.replicate(field.N, 1);
+    state.currElementTypes.resize(field.N*data.sampleFaces.size());
+    for (int i=0;i<state.currElementTypes.size();i++)
+        state.currElementTypes[i]=slElementType::FACE;
 
-    state.start_point = data.samplePoints.replicate(field.N,1);
-    state.end_point = state.start_point;
 
-    state.current_face = data.sampleFaces.replicate(1, field.N);
-
+    state.currDirectionIndex.setZero(field.N*data.sampleFaces.size());
+    for (int j = 0; j < field.N; ++j)
+        for (int i = 0; i < data.sampleFaces.size(); ++i)
+            state.currDirectionIndex(j*data.sampleFaces.size()+i) = j;
+    
     /*state.P1 =state.start_point;
     state.P2 =state.end_point;
     state.origFace = state.current_face;
     state.origVector.resize(state.origFace.rows(), state.)*/
 
-    state.current_direction.setZero(nsamples, field.N);
-    for (int i = 0; i < nsamples; ++i)
-        for (int j = 0; j < field.N; ++j)
-            state.current_direction(i, j) = j;
 
 }
 

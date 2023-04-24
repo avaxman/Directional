@@ -37,15 +37,23 @@ namespace directional
   
   struct StreamlineState
   {
-    Eigen::MatrixXd startPoints;        //  #N*S by 3 starting points of segment (stacked vertically for each degree)
-    Eigen::MatrixXd endPoints;          //  #N*S by 3 endpoints points of segment (stacked vertically for each degree)
-    Eigen::MatrixXi currElements;       //  #S by N element indices (stacked horizontally for each degree)
-    std::vector<std::vector<slElementType>> currElementTypes;
-    Eigen::MatrixXi currDirections;  //  #S by N field direction indices (stacked horizontally for each degree)
-    Eigen::MatrixXi nextElements;
-    std::vector<std::vector<slElementType>> nextElementTypes;
-    Eigen::VectorXd nextTimes;        //the time of the switch to the next element
-    Eigen::VectorXd prevTimes;        //time signatures starting in the current elements.
+
+    //current element details (index, type, direction)
+    Eigen::VectorXi currElements;
+    std::vector<slElementType> currElementTypes;
+    Eigen::VectorXi currDirectionIndex;  //TODO: what to do if this is not a face!
+    Eigen::MatrixXd currStartPoints;
+    Eigen::VectorXd currTimes;
+    Eigen::VectorXi currSegmentIndex;  //index within the traced segments
+
+    //next element details
+    Eigen::VectorXi nextElements;
+    std::vector<slElementType> nextElementTypes;
+    Eigen::MatrixXd nextStartPoints;
+    Eigen::VectorXd nextTimes;
+    Eigen::VectorXi nextDirectionIndex;
+
+    //current time (live segments are such that beginTimes <= currTime < endTime
     double currTime;
 
     Eigen::MatrixXd segStart, segEnd, segNormal;            //traced segments features
