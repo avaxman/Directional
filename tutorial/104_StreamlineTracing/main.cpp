@@ -1,4 +1,4 @@
-#include <directional/readOFF.h>
+#include <directional/readOBJ.h>
 #include <directional/streamlines.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -25,7 +25,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
   if (!iglViewer.core().is_animating)
     return false;
   
-  directional_viewer->advance_streamlines();
+  directional_viewer->advance_streamlines(0.5);
   
   anim_t += anim_t_dir;
   
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   
   directional::DirectionalViewer viewer;
   
-  directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
+  directional::readOBJ(TUTORIAL_SHARED_PATH "/spherers.obj", mesh);
   ftb.init(mesh);
   // Create a power field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
   viewer.init_streamlines(0, Eigen::VectorXi(), 3);
-  viewer.advance_streamlines();  //to get the initial step
+  viewer.advance_streamlines(0.5);  //to get the initial step
 
   // Viewer Settings
   viewer.callback_pre_draw = &pre_draw;

@@ -368,34 +368,42 @@ namespace directional
             directional::streamlines_init(*fieldList[meshNum], seedLocations,distRatio,slData[meshNum], slState[meshNum]);
         }
 
-        void IGL_INLINE advance_streamlines(const int meshNum=0,
+        void IGL_INLINE advance_streamlines(const double dTimeRatio,
+                                            const int meshNum=0,
                                             const double widthRatio=0.05,
                                             const double colorAttenuation = 0.9){
 
-            directional::streamlines_next(slData[meshNum], slState[meshNum]);
+            double avgEdgeLength = igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);  //inefficient!
+            double dTime = dTimeRatio*avgEdgeLength;
+            directional::streamlines_next(slData[meshNum], slState[meshNum],dTime);
             double width = widthRatio*igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);
 
             //generating colors according to original elements and their time signature
-            Eigen::MatrixXd slColors(slState[meshNum].P1.rows(),3);
+            Eigen::MatrixXd slColors(slState[meshNum].segStart.size(),3);
 
             //problem: if the field is vertex-faced, "orig face" is invalid!
-            for (int i=0;i<slState[meshNum].origFace.size();i++){
+            for (int i=0;i<slState[meshNum].segOrigFace.size();i++){
                 if (fieldColors[meshNum].rows()==1)
                     slColors.row(i)=fieldColors[meshNum];
                 else{
-                    double blendFactor = pow(colorAttenuation,(double)slState[meshNum].timeSignature(i)-1.0);
+                    double blendFactor = pow(colorAttenuation,(double)slState[meshNum].segTimeSignatures[i]-1.0);
                     //HACK: currently not supporting different colors for vertex-based fields
                     if(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES)
-                        slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(i), 3*slState[meshNum].origVector(i), 1,3);
+                        slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].segOrigFace[i], 3*slState[meshNum].segOrigVector[i], 1,3);
                     else
-                        slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].origFace(0), 3*slState[meshNum].origVector(i), 1,3);
+                        slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].segOrigFace[0], 3*slState[meshNum].segOrigVector[i], 1,3);
                     slColors.row(i).array()=slColors.row(i).array()*blendFactor+default_mesh_color().array()*(1.0-blendFactor);
                 }
             }
 
             Eigen::MatrixXd VStream, CStream;
             Eigen::MatrixXi FStream;
-            directional::line_cylinders(slState[meshNum].P1,slState[meshNum].P2, width, slColors, 4, VStream, FStream, CStream);
+            Eigen::MatrixXd P1(slState[meshNum].segStart.size(),3), P2(slState[meshNum].segEnd.size(),3);
+            for (int i=0;i<slState[meshNum].segStart.size();i++){
+                P1.row(i)=slState[meshNum].segStart[i];
+                P2.row(i)=slState[meshNum].segEnd[i];
+            }
+            directional::line_cylinders(P1,P2, width, slColors, 4, VStream, FStream, CStream);
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].clear();
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_mesh(VStream, FStream);
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_colors(CStream);

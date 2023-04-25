@@ -211,7 +211,6 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
     using namespace Eigen;
     using namespace std;
 
-    state.numSteps=0;
 
     // prepare vector field
     // --------------------------
@@ -287,65 +286,37 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
     state.currElements = data.sampleFaces.replicate(field.N, 1);
     state.currElementTypes.resize(field.N*data.sampleFaces.size());
     for (int i=0;i<state.currElementTypes.size();i++)
-        state.currElementTypes[i]=slElementType::FACE;
+        state.currElementTypes[i]=SL_FACE;
 
 
     state.currDirectionIndex.setZero(field.N*data.sampleFaces.size());
-    for (int j = 0; j < field.N; ++j)
-        for (int i = 0; i < data.sampleFaces.size(); ++i)
-            state.currDirectionIndex(j*data.sampleFaces.size()+i) = j;
-    
-    /*state.P1 =state.start_point;
-    state.P2 =state.end_point;
-    state.origFace = state.current_face;
-    state.origVector.resize(state.origFace.rows(), state.)*/
+    state.segmentAlive.resize(field.N*data.sampleFaces.size());
+    for (int j = 0; j < field.N; ++j) {
+        for (int i = 0; i < data.sampleFaces.size(); ++i) {
+            state.currDirectionIndex(j * data.sampleFaces.size() + i) = j;
+            state.segmentAlive(j * data.sampleFaces.size() + i) = true;
+        }
+    }
+    state.currTimes.setZero(field.N*data.sampleFaces.size());
+    state.currSegmentIndex.setZero(field.N*data.sampleFaces.size());
 
-
-}
-
-IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
-                                              StreamlineState & state){
-
-
-    using namespace Eigen;
-    using namespace std;
-
-    int nsample = data.nsample;
-
-    //IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)data.field.tb;  //maye not efficient since virtual lookup, or negligible?
-    state.start_point = state.end_point;
-    state.numSteps++;
-
-    Eigen::VectorXi currFace=Eigen::VectorXi::Zero(state.start_point.rows());
-    Eigen::VectorXi currVector=Eigen::VectorXi::Zero(state.start_point.rows());
-    Eigen::VectorXi currTime=Eigen::VectorXi::Zero(state.start_point.rows());
-
-    for (int i = 0; i < data.field.N; ++i)
-    {
-        for (int j = 0; j < nsample; ++j)
-        {
-            currFace(j + nsample * i)=data.sampleFaces(j);
-            currVector(j + nsample * i)=i;
-            currTime(j + nsample * i)=state.numSteps;
-
-            int f0 = state.current_face(j,i);
-            if (f0 == -1) // reach boundary
-                continue;
-            int m0 = state.current_direction(j, i);
-
-            // the starting point of the vector
-            const Eigen::RowVector3d &p = state.start_point.row(j + nsample * i);
-
-            // the direction where we are trying to go
-            const Eigen::RowVector3d &r = data.slField.block(f0, 3 * m0, 1, 3);
-
-
-            // new state,
+    //initializing "next" values
+    state.nextElements.resize(state.currElements.size());
+    state.nextStartPoints.resize(state.currStartPoints.rows(),3);
+    state.nextTimes.resize(state.currTimes.size());
+    state.nextDirectionIndex.resize(state.currDirectionIndex.size());
+    state.nextElementTypes.resize(state.nextElementTypes.size());
+    for (int j = 0; j < field.N; ++j) {
+        for (int i = 0; i < data.sampleFaces.size(); ++i) {
+            int currIndex = j*data.sampleFaces.size()+i;
+            int f0 = state.currElements(currIndex);
+            int m0 = state.currDirectionIndex(currIndex);
+            RowVector3d p=state.currStartPoints.row(currIndex);
+            RowVector3d vec = data.slField.block(i, 3*j, 1,3);
             int f1, m1;
-
-            for (int k = 0; k < 3; ++k)
-            {
-                f1 = data.slMesh->TT(f0, k);
+            double foundIntersection = false;
+            for (int k = 0; k < 3; ++k) {
+                f1 = data.slMesh->TT(state.currElements(currIndex), k);
 
                 // edge vertices
                 const Eigen::RowVector3d &q = data.slMesh->V.row(data.slMesh->F(f0, k));
@@ -355,37 +326,147 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
 
                 double u;
                 double t;
-                if (igl::segment_segment_intersect(p, r, q, s, t, u, -1e-6))
-                {
-                    // point on next face
-                    state.end_point.row(j + nsample * i) = p + t * r;
-                    state.current_face(j,i) = f1;
+                if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
+                    foundIntersection = true;
+                    state.nextElements(currIndex) = f1;
+                    state.nextTimes(currIndex) = state.currTime + t;
+                    state.nextStartPoints.row(currIndex) = p + t * vec;
 
                     // matching direction on next face
                     int e1 = data.slMesh->FE(f0, k);
                     if (data.slMesh->EF(e1, 0) == f0)
-                        m1 = (data.field.matching(e1)+m0)%data.field.N; //m1 = data.match_ab(e1, m0);
+                        m1 = (data.field.matching(e1) + m0) % data.field.N;
                     else
-                        m1 = (-data.field.matching(e1)+m0+data.field.N)%data.field.N;  //data.match_ba(e1, m0);
+                        m1 = (-data.field.matching(e1) + m0 + data.field.N) % data.field.N;
 
-                    state.current_direction(j, i) = m1;
+                    state.nextDirectionIndex(currIndex) = m1;
+                    break;
+                }
+            }
+            if (!foundIntersection) {  //something went bad, we couldn't find the next face
+                state.segmentAlive(currIndex) = false;
+                break;
+            }
+
+            //creating new traced segment for the new face
+            state.segStart.push_back(state.currStartPoints.row(currIndex));
+            state.segEnd.push_back(state.currStartPoints.row(currIndex));
+            state.segNormal.push_back(data.slMesh->faceNormals.row(state.currElements(currIndex)));
+            state.segOrigFace.push_back(state.currElements(currIndex));
+            state.segOrigVector.push_back(i);
+            state.segTimeSignatures.push_back(0.0);
+            state.currSegmentIndex(currIndex)=state.segStart.size()-1;
+
+        }
+
+    }
+
+
+
+    //Creating initial next values and segments
+
+    /*state.P1 =state.start_point;
+    state.P2 =state.end_point;
+    state.origFace = state.current_face;
+    state.origVector.resize(state.origFace.rows(), state.)*/
+
+
+}
+
+IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
+                                              StreamlineState & state,
+                                              const double dTime){
+
+
+    using namespace Eigen;
+    using namespace std;
+
+
+
+    //IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)data.field.tb;  //maye not efficient since virtual lookup, or negligible?
+
+
+    //Going through all ongoing streamlines. Those where the currTime+dTime < nextTime only extend their segment. Otherwise tracing forward through triangles until this happens
+    for (int i = 0; i < data.field.N; ++i) {
+        for (int j = 0; j < data.sampleFaces.size(); ++j) {
+            int currIndex = i * data.sampleFaces.size() + j;
+            if (!state.segmentAlive(currIndex))
+                continue;
+            bool inCurrFace = false;
+            bool keepTracing = true;
+            do{
+                RowVector3d vec = data.slField.row(state.currElements(currIndex));
+                RowVector3d p = state.currStartPoints.row(currIndex);
+                if (vec.squaredNorm() < 10e-8) {   //we don't stuck in a local minima;
+                    state.segmentAlive(currIndex) = false;
                     break;
                 }
 
-            }
+                if ((state.currTime+dTime>=state.currTimes(currIndex)) && (state.currTime+dTime<state.nextTimes(currIndex))) {  //updating segment within this face
+
+                    double timeDiffFromStart =
+                            state.currTime + dTime - state.currTimes(currIndex);
+
+                    state.segEnd[currIndex]=state.segStart[currIndex]+timeDiffFromStart*vec;
+                    break;
+                } else {//trace forward
+
+                    state.currElements(currIndex) = state.nextElements(currIndex);
+                    state.currTimes(currIndex) = state.nextTimes(currIndex);
+                    state.currStartPoints.row(currIndex) = state.nextStartPoints.row(currIndex);
+                    state.currDirectionIndex(currIndex) = state.nextDirectionIndex(currIndex);
+                    int f0 = state.currElements(currIndex);
+                    int m0 = state.currDirectionIndex(currIndex);
+                    vec = data.slField.row(state.currElements(i * data.sampleFaces.size() + j));
+                    //Updating the next element
+                    int f1, m1;
+                    double foundIntersection = false;
+                    for (int k = 0; k < 3; ++k) {
+                        f1 = data.slMesh->TT(state.currElements(currIndex), k);
+
+                        // edge vertices
+                        const Eigen::RowVector3d &q = data.slMesh->V.row(data.slMesh->F(f0, k));
+                        const Eigen::RowVector3d &qs = data.slMesh->V.row(data.slMesh->F(f0, (k + 1) % 3));
+                        // edge direction
+                        Eigen::RowVector3d s = qs - q;
+
+                        double u;
+                        double t;
+                        if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
+                            foundIntersection = true;
+                            state.nextElements(currIndex) = f1;
+                            state.nextTimes(currIndex) = state.currTime + t;
+                            state.nextStartPoints.row(currIndex) = p + t * vec;
+
+                            // matching direction on next face
+                            int e1 = data.slMesh->FE(f0, k);
+                            if (data.slMesh->EF(e1, 0) == f0)
+                                m1 = (data.field.matching(e1) + m0) % data.field.N;
+                            else
+                                m1 = (-data.field.matching(e1) + m0 + data.field.N) % data.field.N;
+
+                            state.nextDirectionIndex(currIndex) = m1;
+                            break;
+                        }
+                    }
+                    if (!foundIntersection) {  //something went bad, we couldn't find the next face
+                         state.segmentAlive(currIndex) = false;
+                         break;
+                    }
+
+                    //creating new traced segment for the new face
+                    state.segStart.push_back(state.currStartPoints.row(currIndex));
+                    state.segEnd.push_back(state.currStartPoints.row(currIndex));
+                    state.segNormal.push_back(data.slMesh->faceNormals.row(state.currElements(currIndex)));
+                    state.segOrigFace.push_back(state.currElements(currIndex));
+                    state.segOrigVector.push_back(i);
+                    state.segTimeSignatures.push_back(state.currTimes(currIndex));
+                    state.currSegmentIndex(currIndex)=state.segStart.size()-1;
+                }
+            }while(keepTracing);
         }
     }
-
-    //aggregating
-    state.P1.conservativeResize(state.P1.rows()+state.start_point.rows(),3);
-    state.P2.conservativeResize(state.P2.rows()+state.end_point.rows(),3);
-    state.P1.block(state.P1.rows()-state.start_point.rows(),0,state.start_point.rows(),3)=state.start_point;
-    state.P2.block(state.P2.rows()-state.end_point.rows(),0,state.end_point.rows(),3)=state.end_point;
-    state.origFace.conservativeResize(state.origFace.size()+state.start_point.rows());
-    state.origVector.conservativeResize(state.origVector.size()+state.start_point.rows());
-    state.timeSignature.conservativeResize(state.timeSignature.size()+state.start_point.rows());
-    state.origFace.tail(state.start_point.rows())=currFace;
-    state.origVector.tail(state.end_point.rows())=currVector;
-    state.timeSignature.tail(state.end_point.rows())=currTime;
+    state.currTime+=dTime;
 
 }
+

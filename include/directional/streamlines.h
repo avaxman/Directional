@@ -18,7 +18,10 @@
 
 namespace directional
 {
-    typedef enum slElementType{VERTEX, EDGE, FACE};
+#define SL_VERTEX 0
+#define SL_EDGE 1
+#define SL_FACE 2
+
 
   struct StreamlineData
   {
@@ -40,7 +43,7 @@ namespace directional
 
     //current element details (index, type, direction)
     Eigen::VectorXi currElements;
-    std::vector<slElementType> currElementTypes;
+    Eigen::VectorXi currElementTypes;
     Eigen::VectorXi currDirectionIndex;  //TODO: what to do if this is not a face!
     Eigen::MatrixXd currStartPoints;
     Eigen::VectorXd currTimes;
@@ -48,16 +51,18 @@ namespace directional
 
     //next element details
     Eigen::VectorXi nextElements;
-    std::vector<slElementType> nextElementTypes;
+    Eigen::VectorXi nextElementTypes;
     Eigen::MatrixXd nextStartPoints;
     Eigen::VectorXd nextTimes;
     Eigen::VectorXi nextDirectionIndex;
+    Eigen::Matrix<bool,Eigen::Dynamic, 1> segmentAlive;
 
     //current time (live segments are such that beginTimes <= currTime < endTime
     double currTime;
 
-    Eigen::MatrixXd segStart, segEnd, segNormal;            //traced segments features
-    Eigen::VectorXi origFace, origVector;                   //original vectors and faces
+    std::vector<Eigen::RowVector3d> segStart, segEnd, segNormal;            //traced segments features
+    std::vector<int> segOrigFace, segOrigVector;                   //original vectors and faces
+    std::vector<double> segTimeSignatures;  //the time of the beginning of the segment
 
   };
   
@@ -82,8 +87,8 @@ namespace directional
   //   data          struct containing topology information
   //   state         struct containing the state of the tracing
   IGL_INLINE void streamlines_next(const StreamlineData & data,
-                                   StreamlineState & state
-                                   );
+                                   StreamlineState & state,
+                                   const double dTime);
 }
 
 #include "streamlines.cpp"
