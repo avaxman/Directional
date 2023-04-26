@@ -40,6 +40,7 @@ namespace Directional {
         //Eigen::VectorXd sumAreas;
         //igl::cumsum(mesh.faceAreas, 0, sumAreas);
         std::random_device rd;
+        std::default_random_engine generator;
         std::mt19937 gen(rd());
         std::vector<double> faceAreasVec(mesh.faceAreas.data(), mesh.faceAreas.data() + mesh.faceAreas.size());
         std::discrete_distribution<int> distTriangles(faceAreasVec.begin(), faceAreasVec.end());
@@ -48,17 +49,20 @@ namespace Directional {
         int nsamples = (int)(10/distRatio)*mesh.F.rows();
         int indirection = 2*distRatio;  //in how far away from the one ring to look
 
-        std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.size());
-        std::vector<std::vector<bool>> samplePoolAlive(mesh.F.size());
+        std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.rows());
+        std::vector<std::vector<bool>> samplePoolAlive(mesh.F.rows());
+        Eigen::VectorXi faceCounter=Eigen::VectorXi::Zero(mesh.F.rows());
         //std::cout<<"SamplePool: "<<std::endl;
         for (int i=0;i<nsamples;i++) {
             //random triangle according to area weighting
-            int faceIndex = distTriangles(gen);
+            int faceIndex = distTriangles(generator);
+            faceCounter(faceIndex)++;
             //random barycentric coordinate uniformly
             double B1 = distBarycentrics(gen);
             double B2 = distBarycentrics(gen);
             double B3 = distBarycentrics(gen);
             double sum = B1+B2+B3;
+            std::cout<<"B1, B2, B3: "<<B1/sum<<","<<B2/sum<<","<<B3/sum<<std::endl;
             //assuming the unlikely case where they are all zero
             //TODO: convert to actual locations
             Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1/sum+
@@ -68,6 +72,14 @@ namespace Directional {
             samplePoolAlive[faceIndex].push_back(true);
             //std::cout<<faceIndex<<":"<<sampleLocation.transpose()<<std::endl;
         }
+
+        for (int i=0;i<mesh.F.rows();i++) {
+            std::cout << "Face " << i << " area " << mesh.faceAreas(i) << " chosen "
+                      << faceCounter(i) / mesh.faceAreas(i) << " times" << std::endl;
+            /*for (int j=0;j<samplePool[i].size();j++)
+                std::cout<<samplePool[i][j]<<std::endl;*/
+        }
+
 
         //Choosing samples and deleting everything too close
 
@@ -104,6 +116,7 @@ namespace Directional {
         for (int i=0;i<nsamples;i++) {
             int faceIndex = distTriangles(gen);
             int sampleIndex = -1;
+            //TODO: this is wrong! it only chooses a single value in a face!
             for (int j = 0; j < samplePoolAlive[faceIndex].size(); j++) {
                 if (samplePoolAlive[faceIndex][j]) {
                     sampleIndex = j;
@@ -145,7 +158,7 @@ namespace Directional {
                             continue;  //too far geodesically to delete
 
 
-                        samplePoolAlive[currFace][j] = false;
+                        //samplePoolAlive[currFace][j] = false;
                     }
 
                 }
