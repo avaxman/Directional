@@ -19,6 +19,7 @@
 #include <igl/edge_topology.h>
 #include <igl/boundary_loop.h>
 #include <igl/triangle_triangle_adjacency.h>
+#include <igl/avg_edge_length.h>
 #include <directional/gaussian_curvature.h>
 #include <igl/doublearea.h>
 #include <directional/dcel.h>
@@ -55,6 +56,11 @@ namespace directional{
         Eigen::MatrixXd VBx,VBy;  //local basis vectors per vertex
         Eigen::MatrixXd barycenters;
         Eigen::VectorXd GaussianCurvature;
+
+        //Measures of the scale of a mesh
+        double avgEdgeLength;
+        Eigen::RowVector3d minBox, maxBox;   //bounding box
+
         int eulerChar;
         int numGenerators;
 
@@ -129,6 +135,9 @@ namespace directional{
             faceAreas.array()/=2.0;
             eulerChar = V.rows() - EV.rows() + F.rows();
             numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
+            avgEdgeLength=igl::avg_edge_length(V,F);
+            minBox = V.colwise().minCoeff();
+            maxBox = V.colwise().maxCoeff();
 
             hedra::dcel(Eigen::VectorXi::Constant(F.rows(),3),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
             vertexValence=Eigen::VectorXi::Zero(V.rows());

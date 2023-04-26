@@ -300,11 +300,11 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
     state.currSegmentIndex.setZero(field.N*data.sampleFaces.size());
 
     //initializing "next" values
-    state.nextElements.resize(state.currElements.size());
+    state.nextElements.setConstant(state.currElements.size(),-1);
     state.nextStartPoints.resize(state.currStartPoints.rows(),3);
     state.nextTimes.resize(state.currTimes.size());
-    state.nextDirectionIndex.resize(state.currDirectionIndex.size());
-    state.nextElementTypes.resize(state.nextElementTypes.size());
+    state.nextDirectionIndex.setConstant(state.currDirectionIndex.size(),-1);
+    state.nextElementTypes.setConstant(state.nextElementTypes.size(),-1);
     for (int j = 0; j < field.N; ++j) {
         for (int i = 0; i < data.sampleFaces.size(); ++i) {
             int currIndex = j*data.sampleFaces.size()+i;
@@ -313,9 +313,13 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
             RowVector3d p=state.currStartPoints.row(currIndex);
             RowVector3d vec = data.slField.block(f0, 3*m0, 1,3);
             int f1, m1;
-            double foundIntersection = false;
+            bool foundIntersection = false;
+            //cout<<"currIndex: "<<currIndex<<endl;
             for (int k = 0; k < 3; ++k) {
                 f1 = data.slMesh->TT(state.currElements(currIndex), k);
+                //cout<<"f1: "<<f1<<endl;
+                /*if (f1==-1)
+                    continue;  //boundary*/
 
                 // edge vertices
                 const Eigen::RowVector3d &q = data.slMesh->V.row(data.slMesh->F(f0, k));
@@ -327,6 +331,7 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
                 double t;
                 if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
                     foundIntersection = true;
+                    //cout<<"Found intersection "<<endl;
                     state.nextElements(currIndex) = f1;
                     state.nextTimes(currIndex) = state.currTime + t;
                     state.nextStartPoints.row(currIndex) = p + t * vec;
@@ -342,9 +347,9 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
                     break;
                 }
             }
-            if (!foundIntersection) {  //something went bad, we couldn't find the next face
+            if (!foundIntersection) {  //something went bad
                 state.segmentAlive(currIndex) = false;
-                break;
+                continue;
             }
 
             //creating new traced segment for the new face
@@ -395,7 +400,7 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                 continue;
             bool inCurrFace = false;
             bool keepTracing = true;
-            cout<<"currIndex: "<<currIndex<<endl;
+            //cout<<"currIndex: "<<currIndex<<endl;
             do{
                 RowVector3d vec = data.slField.block(f0, 3*m0, 1,3);
                 RowVector3d p = state.currStartPoints.row(currIndex);
@@ -403,10 +408,16 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                     state.segmentAlive(currIndex) = false;
                     break;
                 }
-                cout<<"state.currTime: "<<state.currTime<<endl;
+                /*cout<<"state.currTime: "<<state.currTime<<endl;
                 cout<<"dTime: "<<dTime<<endl;
                 cout<<"state.currTimes(currIndex): "<<state.currTimes(currIndex)<<endl;
                 cout<<"state.nextTimes(currIndex): "<<state.nextTimes(currIndex)<<endl;
+                cout<<"state.currElement(currIndex): "<<state.currElements(currIndex)<<endl;
+                cout<<"state.nextElement(currIndex): "<<state.nextElements(currIndex)<<endl;
+                cout<<"state.currStartPoints(currIndex): "<<state.currStartPoints(currIndex)<<endl;
+                cout<<"state.nextStartPoints(currIndex): "<<state.nextStartPoints(currIndex)<<endl;
+                cout<<"state.currDirectionIndex(currIndex): "<<state.currDirectionIndex(currIndex)<<endl;
+                cout<<"state.nextDirectionIndex(currIndex): "<<state.nextDirectionIndex(currIndex)<<endl;*/
 
                 if ((state.currTime+dTime>=state.currTimes(currIndex)) && (state.currTime+dTime<state.nextTimes(currIndex))) {  //updating segment within this face
 
@@ -414,23 +425,36 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                             state.currTime + dTime - state.currTimes(currIndex);
 
                     state.segEnd[state.currSegmentIndex(currIndex)]=state.segStart[state.currSegmentIndex(currIndex)]+timeDiffFromStart*vec;
-                    cout<<"Stopping mid-face"<<endl;
+                    //cout<<"Stopping mid-face"<<endl;
+                    //cout<<"Segment "<<state.currSegmentIndex(currIndex)<<" is ("<<state.segStart[state.currSegmentIndex(currIndex)]<<")->("<<state.segEnd[state.currSegmentIndex(currIndex)]<<")"<<endl;
                     break;
                 } else {//trace forward
                     //finishing previous segment
-                    cout<<"Tracing forward"<<endl;
+                    //cout << "Tracing forward" << endl;
                     state.segEnd[state.currSegmentIndex(currIndex)] = state.nextStartPoints.row(currIndex);
+                    //cout << "Fully traced segment " << state.currSegmentIndex(currIndex) << " is ("<< state.segStart[state.currSegmentIndex(currIndex)] << ")->("<< state.segEnd[state.currSegmentIndex(currIndex)] << ")" << endl;
+
+                    //advancing to next face
+                    if (state.nextElements(currIndex) < 0) {  //there isn't a next element
+                        state.segmentAlive(currIndex) = false;
+                        break;
+                    }
+
                     state.currElements(currIndex) = state.nextElements(currIndex);
                     state.currTimes(currIndex) = state.nextTimes(currIndex);
                     state.currStartPoints.row(currIndex) = state.nextStartPoints.row(currIndex);
                     state.currDirectionIndex(currIndex) = state.nextDirectionIndex(currIndex);
                     f0 = state.currElements(currIndex);
                     m0 = state.currDirectionIndex(currIndex);
+                    vec = data.slField.block(f0, 3*m0, 1,3);
+                    p = state.currStartPoints.row(currIndex);
                     //Updating the next element
                     int f1, m1;
-                    double foundIntersection = false;
+                    bool foundIntersection = false;
                     for (int k = 0; k < 3; ++k) {
                         f1 = data.slMesh->TT(state.currElements(currIndex), k);
+                        /*if (f1==-1)
+                            continue;*/
 
                         // edge vertices
                         const Eigen::RowVector3d &q = data.slMesh->V.row(data.slMesh->F(f0, k));
@@ -443,7 +467,7 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                         if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
                             foundIntersection = true;
                             state.nextElements(currIndex) = f1;
-                            cout<<"Found intersection after: "<<t<<endl;
+                            //cout<<"Found intersection after: "<<t<<endl;
                             state.nextTimes(currIndex) = state.currTimes(currIndex) + t;
                             state.nextStartPoints.row(currIndex) = p + t * vec;
 

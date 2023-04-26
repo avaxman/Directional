@@ -241,7 +241,7 @@ namespace directional
 
              const int sparsity=0,
              const double offsetRatio = 0.2)*/
-            directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity, offsetRatio);
+            directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio, meshList[meshNum]->avgEdgeLength, VField, FField, CField, sparsity, offsetRatio);
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].clear();
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -270,7 +270,7 @@ namespace directional
             //TODO: something more efficient than feeding the entire field again
             Eigen::MatrixXd VField, CField;
             Eigen::MatrixXi FField;
-            directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), VField, FField, CField, sparsity);
+            directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,meshList[meshNum]->avgEdgeLength, VField, FField, CField, sparsity);
 
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
@@ -285,7 +285,7 @@ namespace directional
         {
             Eigen::MatrixXd VSings, CSings;
             Eigen::MatrixXi FSings;
-            directional::singularity_spheres(fieldList[meshNum]->tb->cycleSources, fieldList[meshNum]->tb->cycleNormals, fieldList[meshNum]->N, igl::avg_edge_length(meshList[meshNum]->V,meshList[meshNum]->F), singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
+            directional::singularity_spheres(fieldList[meshNum]->tb->cycleSources, fieldList[meshNum]->tb->cycleNormals, fieldList[meshNum]->N, meshList[meshNum]->avgEdgeLength, singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
@@ -371,12 +371,12 @@ namespace directional
         void IGL_INLINE advance_streamlines(const double dTimeRatio,
                                             const int meshNum=0,
                                             const double widthRatio=0.05,
-                                            const double colorAttenuation = 0.9){
+                                            const double colorAttenuationRate = 0.9){
 
-            double avgEdgeLength = igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);  //inefficient!
-            double dTime = dTimeRatio*avgEdgeLength;
+            //double avgEdgeLength = igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);  //inefficient!
+            double dTime = dTimeRatio*meshList[meshNum]->avgEdgeLength;
             directional::streamlines_next(slData[meshNum], slState[meshNum],dTime);
-            double width = widthRatio*igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);
+            double width = widthRatio*meshList[meshNum]->avgEdgeLength;
 
             //generating colors according to original elements and their time signature
             Eigen::MatrixXd slColors(slState[meshNum].segStart.size(),3);
@@ -386,7 +386,7 @@ namespace directional
                 if (fieldColors[meshNum].rows()==1)
                     slColors.row(i)=fieldColors[meshNum];
                 else{
-                    double blendFactor = pow(colorAttenuation,(double)slState[meshNum].segTimeSignatures[i]-1.0);
+                    double blendFactor = pow(colorAttenuationRate,(double)slState[meshNum].segTimeSignatures[i]/meshList[meshNum]->avgEdgeLength);
                     //HACK: currently not supporting different colors for vertex-based fields
                     if(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES)
                         slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].segOrigFace[i], 3*slState[meshNum].segOrigVector[i], 1,3);
@@ -426,7 +426,7 @@ namespace directional
 
             directional::branched_isolines(cutMesh.V, cutMesh.F, vertexFunction, isoV, isoE, isoOrigE, isoN, funcNum);
 
-            double l = sizeRatio*igl::avg_edge_length(cutMesh.V, cutMesh.F);
+            double l = sizeRatio*cutMesh.avgEdgeLength;
 
             Eigen::MatrixXd VIso, CIso;
             Eigen::MatrixXi FIso;
