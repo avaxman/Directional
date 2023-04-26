@@ -25,7 +25,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
   if (!iglViewer.core().is_animating)
     return false;
   
-  directional_viewer->advance_streamlines(0.5,  0,0.05,0.9);
+  directional_viewer->advance_streamlines(0.5);
   
   anim_t += anim_t_dir;
   
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
   viewer.init_streamlines(0, Eigen::VectorXi(), 3);
-  viewer.advance_streamlines(0.1);  //to get the initial step
+  viewer.advance_streamlines(0.5);  //to get the initial step
 
   // Viewer Settings
   viewer.callback_pre_draw = &pre_draw;
