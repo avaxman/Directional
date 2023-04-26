@@ -11,7 +11,7 @@ directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField field, powerField;
 
-int N = 1;
+int N = 2;
 int anim_t = 0;
 int anim_t_dir = 1;
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
-  viewer.init_streamlines(0, Eigen::VectorXi(), 0.1);
+  viewer.init_streamlines(0, Eigen::VectorXi(), 1);
   viewer.advance_streamlines(0.1, 0,0.01, 0.9);  //to get the initial step
 
   // Viewer Settings

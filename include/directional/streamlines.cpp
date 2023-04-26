@@ -51,34 +51,39 @@ namespace Directional {
 
         std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.rows());
         std::vector<std::vector<bool>> samplePoolAlive(mesh.F.rows());
-        Eigen::VectorXi faceCounter=Eigen::VectorXi::Zero(mesh.F.rows());
+        //Eigen::VectorXi faceCounter=Eigen::VectorXi::Zero(mesh.F.rows());
         //std::cout<<"SamplePool: "<<std::endl;
         for (int i=0;i<nsamples;i++) {
             //random triangle according to area weighting
             int faceIndex = distTriangles(generator);
-            faceCounter(faceIndex)++;
+            //faceCounter(faceIndex)++;
             //random barycentric coordinate uniformly
-            double B1 = distBarycentrics(gen);
-            double B2 = distBarycentrics(gen);
-            double B3 = distBarycentrics(gen);
-            double sum = B1+B2+B3;
-            std::cout<<"B1, B2, B3: "<<B1/sum<<","<<B2/sum<<","<<B3/sum<<std::endl;
+            double B1 = -1, B2 = -1;
+            while ((B1+B2<0)||(B1+B2>1)){
+                B1 = distBarycentrics(gen);
+                B2 = distBarycentrics(gen);
+            }
+            double B3 = 1.0-B1-B2;
+
+            //double B3 = distBarycentrics(gen);
+           // double sum = B1+B2+B3;
+            //std::cout<<"B1, B2, B3: "<<B1/sum<<","<<B2/sum<<","<<B3/sum<<std::endl;
             //assuming the unlikely case where they are all zero
             //TODO: convert to actual locations
-            Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1/sum+
-                                             mesh.V.row(mesh.F(faceIndex,1))*B2/sum+
-                                             mesh.V.row(mesh.F(faceIndex,2))*B3/sum;
+            Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1+
+                                             mesh.V.row(mesh.F(faceIndex,1))*B2+
+                                             mesh.V.row(mesh.F(faceIndex,2))*B3;
             samplePool[faceIndex].push_back(sampleLocation);
             samplePoolAlive[faceIndex].push_back(true);
             //std::cout<<faceIndex<<":"<<sampleLocation.transpose()<<std::endl;
         }
 
-        for (int i=0;i<mesh.F.rows();i++) {
+        /*for (int i=0;i<mesh.F.rows();i++) {
             std::cout << "Face " << i << " area " << mesh.faceAreas(i) << " chosen "
                       << faceCounter(i) / mesh.faceAreas(i) << " times" << std::endl;
             /*for (int j=0;j<samplePool[i].size();j++)
-                std::cout<<samplePool[i][j]<<std::endl;*/
-        }
+                std::cout<<samplePool[i][j]<<std::endl;
+        }*/
 
 
         //Choosing samples and deleting everything too close
@@ -129,6 +134,7 @@ namespace Directional {
 
             sampleTrisVec.push_back(faceIndex);
             samplePointsVec.push_back(samplePool[faceIndex][sampleIndex]);
+            samplePoolAlive[faceIndex][sampleIndex]=false;
 
             //deleting samples that are less than minDist away
             //only checking faces that are "indirection" level apart
@@ -158,7 +164,7 @@ namespace Directional {
                             continue;  //too far geodesically to delete
 
 
-                        //samplePoolAlive[currFace][j] = false;
+                        samplePoolAlive[currFace][j] = false;
                     }
 
                 }
