@@ -105,7 +105,8 @@ namespace Directional {
             newAdjMat+=matMult;
         }
 
-        adjMat=newAdjMat;
+        adjMat.setIdentity();
+        adjMat+=newAdjMat;
 
         std::vector<std::set<int>> ringAdjacencies(mesh.F.rows());
         for (int k=0; k<adjMat.outerSize(); ++k){
@@ -121,7 +122,6 @@ namespace Directional {
         for (int i=0;i<nsamples;i++) {
             int faceIndex = distTriangles(gen);
             int sampleIndex = -1;
-            //TODO: this is wrong! it only chooses a single value in a face!
             for (int j = 0; j < samplePoolAlive[faceIndex].size(); j++) {
                 if (samplePoolAlive[faceIndex][j]) {
                     sampleIndex = j;

@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
-  viewer.init_streamlines(0, Eigen::VectorXi(), 1);
+  viewer.init_streamlines(0, Eigen::VectorXi(), 1.0);
   viewer.advance_streamlines(0.1, 0,0.01, 0.9);  //to get the initial step
 
   // Viewer Settings
