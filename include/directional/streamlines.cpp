@@ -26,7 +26,7 @@
 #include <directional/IntrinsicVertexTangentBundle.h>
 
 namespace Directional {
-    IGL_INLINE void generate_sample_locations(const directional::TriMesh& mesh,
+    IGL_INLINE void poisson_disk_sampling(const directional::TriMesh& mesh,
                                               const double distRatio,
                                               Eigen::VectorXi& sampleTris,
                                               Eigen::MatrixXd& samplePoints)
@@ -47,7 +47,7 @@ namespace Directional {
         std::uniform_real_distribution<double> distBarycentrics(0.0,1.0);
         std::map<int, double> map;
         int nsamples = (int)(10/distRatio)*mesh.F.rows();
-        int indirection = 2*distRatio;  //in how far away from the one ring to look
+        int indirection = 10*distRatio;  //in how far away from the one ring to look
 
         std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.rows());
         std::vector<std::vector<bool>> samplePoolAlive(mesh.F.rows());
@@ -65,11 +65,6 @@ namespace Directional {
             }
             double B3 = 1.0-B1-B2;
 
-            //double B3 = distBarycentrics(gen);
-           // double sum = B1+B2+B3;
-            //std::cout<<"B1, B2, B3: "<<B1/sum<<","<<B2/sum<<","<<B3/sum<<std::endl;
-            //assuming the unlikely case where they are all zero
-            //TODO: convert to actual locations
             Eigen::Vector3d sampleLocation = mesh.V.row(mesh.F(faceIndex,0))*B1+
                                              mesh.V.row(mesh.F(faceIndex,1))*B2+
                                              mesh.V.row(mesh.F(faceIndex,2))*B3;
@@ -169,48 +164,6 @@ namespace Directional {
 
                 }
             }
-
-
-
-
-            /*std::queue<int> faceQueue;
-            faceQueue.push(faceIndex);
-            std::set<int> facesVisited;
-            facesVisited.insert(faceIndex);
-
-            do{
-                int currFace = faceQueue.front();
-                faceQueue.pop();
-                //std::cout<<"curr face: "<<currFace<<std::endl;
-                //finding out if any samples get deleted. If they are, also checking the neighbors, otherwise terminating.
-                bool deleted=false;
-                for (int j=0;j<samplePool[currFace].size();j++){
-                    //if (samplePoolAlive[currFace][j]){
-                        //TODO: checking if close enough and flagging "deleted" if it is
-                        double dEuc2 = (samplePool[faceIndex][sampleIndex]-samplePool[currFace][j]).squaredNorm();
-                        if (dEuc2>minDist2)
-                            continue;  //too far Euclideanly to delete
-
-                    //std::cout<<"deleting sample "<<j<<" with squared distance "<<dEuc2<<std::endl;
-
-                        //otherwise, computing geodesic distance TODO
-
-                        //if too close, delete sample (even if it was deleted before)
-                        samplePoolAlive[currFace][j]=false;
-                        deleted = true;
-                    //}
-                }
-                if (deleted) //queuing neighboring faces since we are still close enough to the original sample
-                    for (int j=0;j<3;j++)
-                        if ((mesh.TT(currFace, j)!=-1)&&(facesVisited.find(mesh.TT(currFace, j))==facesVisited.end())){
-                            faceQueue.push(mesh.TT(currFace,j));
-                            facesVisited.insert(mesh.TT(currFace,j));
-                        }
-
-
-            }while (!faceQueue.empty());
-            //std::cout<<"done with face"<<std::endl;
-        }*/
         }
 
         sampleTris = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(sampleTrisVec.data(), sampleTrisVec.size());
@@ -263,24 +216,6 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
         data.field.set_extrinsic_field(data.slField);
         //cout<<"data.field.intField: "<<data.field.intField<<endl;
     }
-    //this is currently quite primitive and only samples in mid-faces and considers the entire triangle to be constant
-    //It's fine for face-based fields but distorts vertex-based fields considerably.
-
-    /*data.field.extField.setZero(ftb->mesh->F.rows(), field.N * 3);
-    for (unsigned i = 0; i < ftb->mesh->F.rows(); ++i){
-      const Eigen::RowVectorXd &n = ftb->mesh->faceNormals.row(i);
-      Eigen::RowVectorXd temp(1, field.N * 3);
-      temp = field.extField.row(i);
-      igl::sort_vectors_ccw(temp, n, order, sorted);
-
-      // project vectors to tangent plane
-      for (int j = 0; j < field.N; ++j)
-      {
-        Eigen::RowVector3d pd = sorted.segment(j * 3, 3);
-        pd = (pd - (n.dot(pd)) * n).normalized();
-        data.field.extField.block(i, j * 3, 1, 3) = pd;
-      }
-    }*/
 
     directional::principal_matching(data.field);
 
@@ -291,7 +226,7 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
     if (seedFaces.rows()==0){
         assert(distRatio>=0);
-        Directional::generate_sample_locations(*(data.slMesh),distRatio,data.sampleFaces,data.samplePoints);
+        Directional::poisson_disk_sampling(*(data.slMesh),distRatio,data.sampleFaces,data.samplePoints);
     } else {
         data.sampleFaces=seedFaces;
         Eigen::MatrixXd BC_sample;

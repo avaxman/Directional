@@ -11,7 +11,7 @@ directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField field, powerField;
 
-int N = 2;
+int N = 3;
 int anim_t = 0;
 int anim_t_dir = 1;
 
@@ -25,7 +25,7 @@ bool pre_draw(igl::opengl::glfw::Viewer &iglViewer)
   if (!iglViewer.core().is_animating)
     return false;
   
-  directional_viewer->advance_streamlines(0.5,0,0.01, 0.9);
+  directional_viewer->advance_streamlines(0.5);
   
   anim_t += anim_t_dir;
   
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   
   directional::DirectionalViewer viewer;
   
-  directional::readOFF(TUTORIAL_SHARED_PATH "/Chassis_-_upright_f_l-1_front_upright-1_B9-1.off", mesh);
+  directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
   ftb.init(mesh);
   // Create a power field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
   viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
-  viewer.init_streamlines(0, Eigen::VectorXi(), 1.0);
-  viewer.advance_streamlines(0.1, 0,0.01, 0.9);  //to get the initial step
+  viewer.init_streamlines(0, Eigen::VectorXi(), 3);
+  viewer.advance_streamlines(0.5);  //to get the initial step
 
   // Viewer Settings
   viewer.callback_pre_draw = &pre_draw;
