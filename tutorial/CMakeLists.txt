@@ -14,20 +14,8 @@ option(TUTORIALS_CHAPTER4 "Compile chapter 4" ON)
 option(TUTORIALS_CHAPTER5 "Compile chapter 5" ON)
 option(TUTORIALS_CHAPTER6 "Compile chapter 6" ON)
 
-### libIGL options:
-option(LIBIGL_EMBREE           "Build target igl::embree"           ON)
-option(LIBIGL_GLFW             "Build target igl::glfw"             ON)
-option(LIBIGL_IMGUI            "Build target igl::imgui"            ON)
-option(LIBIGL_OPENGL           "Build target igl::opengl"           ON)
-option(LIBIGL_PNG              "Build target igl::png"              ON)
-if(TUTORIALS_CHAPTER5)
-  option(LIBIGL_COPYLEFT_CGAL    "Build target igl_copyleft::cgal"    ON)
-endif()
-### set(LIBIGL_WITH_PNG CACHE BOOL ON)
-
 
 ### Adding libIGL and Directional: choose the path to your local copy
-include(libigl)
 include(Directional)
 
 ### Output directories
@@ -37,7 +25,6 @@ if(MSVC)
 else()
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../")
 endif()
-
 
 
 # Store location of tutorial/shared directory
