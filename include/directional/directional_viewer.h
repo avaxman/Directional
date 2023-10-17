@@ -8,9 +8,7 @@
 #define DIRECTIONAL_VIEWER_H
 
 #include <Eigen/Core>
-#include <igl/jet.h>
-#include <igl/parula.h>
-#include <igl/opengl/glfw/Viewer.h>
+#include <GLFW/glfw3.h>
 #include <directional/glyph_lines_mesh.h>
 #include <directional/singularity_spheres.h>
 #include <directional/seam_lines.h>
@@ -22,8 +20,6 @@
 #include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
-#include <igl/edge_topology.h>
-
 
 /***
  This class implements the Directional viewer, as an extension of the libigl viewer (as a wrapper). This
@@ -43,8 +39,15 @@ namespace directional
 #define EDGE_DIAMOND_MESH 5
 #define ISOLINES_MESH 6
 
-    class DirectionalViewer: public igl::opengl::glfw::Viewer{
+    class DirectionalViewer{
     private:
+        //GLFW stuff
+        GLFWwindow* glfwWindow;
+        GLuint vertex_buffer, default_vertex_shader, default_fragment_shader, glfwProgram;
+        void(* callback_key_down) (GLFWwindow *window, int key, int scancode, int action, int mods);
+        Camera* camera;
+
+        //Geometry
         std::vector<const TriMesh*> meshList;  //meshes that are being viewed
 
         std::vector<const CartesianField*> fieldList;
@@ -60,8 +63,70 @@ namespace directional
         std::vector<Eigen::MatrixXi> fieldFList;
 
     public:
-        DirectionalViewer(){}
-        ~DirectionalViewer(){}
+        DirectionalViewer(){
+            assert(glfwInit() && "GLFW failed to initialize!");
+            glfwWindow=NULL;
+            callback_key_down=&default_key_down;
+
+        }
+        ~DirectionalViewer(){
+            if (glfwWindow!=NULL)
+                glfwDestroyWindow(glfwWindow);
+            glfwTerminate();
+        }
+
+        static void default_key_down(GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+
+        bool launch(){
+            glfwWindow = glfwCreateWindow(1920, 1280, "Directional Viewer", NULL, NULL);
+            if (!glfwWindow)
+                return false;
+
+            glfwSetKeyCallback(glfwWindow, callback_key_down);
+
+            glfwMakeContextCurrent(glfwWindow);
+            //gladLoadGL(glfwGetProcAddress);
+            glfwSwapInterval(1);
+
+            //Default shaders
+            default_vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(default_vertex_shader, 1, &default_vertex_shader_text, NULL);
+            glCompileShader(default_vertex_shader);
+
+            default_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(default_fragment_shader, 1, &default_fragment_shader_text, NULL);
+            glCompileShader(default_fragment_shader);
+
+            glfwProgram = glCreateProgram();
+            glAttachShader(glfwProgram, default_vertex_shader);
+            glAttachShader(glfwProgram, default_fragment_shader);
+            glLinkProgram(glfwProgram);
+
+            while (!glfwWindowShouldClose(glfwWindow))
+            {
+                float ratio;
+                int width, height;
+
+                glfwGetFramebufferSize(glfwWindow, &width, &height);
+
+                glViewport(0, 0, width, height);
+                glClear(GL_COLOR_BUFFER_BIT);
+
+
+
+                glUseProgram(program);
+                //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+
+                glfwSwapBuffers(window);
+                glfwPollEvents();
+            }
+        }
+
 
         void IGL_INLINE set_mesh(const TriMesh& mesh,
                                  const int meshNum=0)
