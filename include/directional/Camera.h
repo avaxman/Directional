@@ -3,9 +3,6 @@
 
 #include <Eigen/Eigen>
 
-
-
-
 namespace directional {
 
     class Camera{
