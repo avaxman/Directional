@@ -20,7 +20,9 @@ namespace Directional{
         void(* callback_key_down) (GLFWwindow *window, int key, int scancode, int action, int mods);
         Camera* camera;
 
-        std::string vertexShaderText, fragmentShaderText;
+
+
+        const char* vertexShaderText, fragmentShaderText;
 
 
 
@@ -28,7 +30,9 @@ namespace Directional{
         OpenGLViewer(){}
         ~OpenGLViewer(){}
 
-        void init(const std::string& _vertexShaderText, const std::string& _fragmentShaderText){
+        void init(const char*& _vertexShaderText, const char* _fragmentShaderText){
+
+            //Default shaders
             vertexShaderText=_vertexShaderText;
             fragmentShaderText= _fragmentShaderText;
             assert(glfwInit() && "GLFW failed to initialize!");
@@ -37,6 +41,19 @@ namespace Directional{
 
             glGenBuffers(1, &vertexBuffer);
             glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
+            vertexShader = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(vertexShader, 1, &vertexShaderText, NULL);
+            glCompileShader(vertexShader);
+
+            fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(fragmentShader, 1, &fragmentShaderText, NULL);
+            glCompileShader(fragmentShader);
+
+            glfwProgram = glCreateProgram();
+            glAttachShader(glfwProgram, vertexShader);
+            glAttachShader(glfwProgram, fragmentShader);
+            glLinkProgram(glfwProgram);
 
         }
 
@@ -57,19 +74,7 @@ namespace Directional{
             //gladLoadGL(glfwGetProcAddress);
             glfwSwapInterval(1);
 
-            //Default shaders
-            vertexShader = glCreateShader(GL_VERTEX_SHADER);
-            glShaderSource(vertexShader, 1, &vertexShaderText, NULL);
-            glCompileShader(vertexShader);
 
-            fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-            glShaderSource(fragmentShader, 1, &fragmentShaderText, NULL);
-            glCompileShader(fragmentShader);
-
-            glfwProgram = glCreateProgram();
-            glAttachShader(glfwProgram, vertexShader);
-            glAttachShader(glfwProgram, fragmentShader);
-            glLinkProgram(glfwProgram);
 
             while (!glfwWindowShouldClose(glfwWindow))
             {

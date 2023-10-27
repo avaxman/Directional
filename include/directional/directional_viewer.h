@@ -39,6 +39,45 @@ namespace directional
 #define EDGE_DIAMOND_MESH 5
 #define ISOLINES_MESH 6
 
+    static const char* defaultVertexShaderText =
+            "#version 110\n"
+            "uniform mat4 MVP;\n"
+            "attribute vec3 vCol;\n"
+            "attribute vec2 vPos;\n"
+            "varying vec3 color;\n"
+            "void main()\n"
+            "{\n"
+            "    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+            "    color = vCol;\n"
+            "}\n";
+
+    static const char* defaultFragmentShaderText =
+            "#version 110\n"
+            "varying vec3 color;\n"
+            "void main()\n"
+            "{\n"
+            "    gl_FragColor = vec4(color, 1.0);\n"
+            "}\n";
+
+
+    struct viewerMeshStatus{
+    public:
+        typedef enum colorInterpolationType{FACE_BASED, CORNER_BASED, VERTEX_BASED};
+
+        colorInterpolationType ciType;
+        bool showEdges;
+
+        Eigen::MatrixXd V;  //vertices
+        Eigen::MatrixXi F;  //#Fx3 faces
+        Eigen::MatrixXd C;  //colors one row per X={face,corner,vertex} based according to order (corner order is within mesh.F row by row)
+
+        void clear(){
+            V=Eigen::MatrixXd(0,3);
+            F=Eigen::MatrixXi(0,3);
+            C=Eigen::MatrixXd(0,3);
+        }
+    };
+
     class DirectionalViewer{
     private:
         OpenGLViewer glViewer;
@@ -58,20 +97,20 @@ namespace directional
         std::vector<Eigen::MatrixXd> fieldVList;
         std::vector<Eigen::MatrixXi> fieldFList;
 
-        std::string defaultVertexShaderText, defaultFragmentShaderText;
+        std::list<viewerMeshStatus> vmList;
+
 
     public:
         DirectionalViewer(){
-            glViewer.init();
+            glViewer.init(defaultVertexShaderText, defaultFragmentShaderText);
         }
         ~DirectionalViewer(){
             glViewer.terminate();
         }
 
         bool launch(){
-            glViewer.launch(defaultVertexShaderText, defaultFragmentShaderText);
+            glViewer.launch();
         }
-
 
         void inline set_mesh(const TriMesh& mesh,
                                  const int meshNum=0)
@@ -79,13 +118,13 @@ namespace directional
             Eigen::MatrixXd meshColors;
             meshColors=default_mesh_color();
 
-            if (NUMBER_OF_SUBMESHES*(meshNum+1)>data_list.size()){  //allocating until there
-                int currDLSize=data_list.size();
+            if (NUMBER_OF_SUBMESHES*(meshNum+1)>glViewer.data_list.size()){  //allocating until there
+                int currDLSize=glViewer.data_list.size();
                 for (int i=currDLSize;i<NUMBER_OF_SUBMESHES*(meshNum+1);i++)
                     glViewer.append_mesh();
             }
 
-            selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
+            glViewer.selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
             glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
             glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(mesh.V,mesh.F);
             if ((mesh.V.rows()==mesh.F.rows())||(meshColors.rows()!=mesh.V.rows()))  //assume face_based was meant
