@@ -71,17 +71,32 @@ namespace directional
         Eigen::MatrixXi F;  //#Fx3 faces
         Eigen::MatrixXd C;  //colors one row per X={face,corner,vertex} based according to order (corner order is within mesh.F row by row)
 
+        const char* vertexShaderText;
+        const char* fragmentShaderText;
+
         void clear(){
             V=Eigen::MatrixXd(0,3);
             F=Eigen::MatrixXi(0,3);
             C=Eigen::MatrixXd(0,3);
+            vertexShaderText=defaultVertexShaderText;
+            fragmentShaderText=defaultFragmentShaderText;
         }
+
+        void setMesh(const TriMesh& mesh){
+            V=mesh.V;
+            F=mesh.F;
+            C=Eigen::MatrixXd(0,3);
+            vertexShaderText=defaultVertexShaderText;
+            fragmentShaderText=defaultFragmentShaderText;
+        }
+
+        viewerMeshStatus(){clear();}
+        ~viewerMeshStatus();
     };
 
     class DirectionalViewer{
     private:
         OpenGLViewer glViewer;
-
         //Geometry
         std::vector<const TriMesh*> meshList;  //meshes that are being viewed
 
@@ -97,11 +112,14 @@ namespace directional
         std::vector<Eigen::MatrixXd> fieldVList;
         std::vector<Eigen::MatrixXi> fieldFList;
 
+        //Handling the different meshes
+        int currMesh;
         std::list<viewerMeshStatus> vmList;
 
 
     public:
         DirectionalViewer(){
+            currMesh=0;
             glViewer.init(defaultVertexShaderText, defaultFragmentShaderText);
         }
         ~DirectionalViewer(){
@@ -118,19 +136,18 @@ namespace directional
             Eigen::MatrixXd meshColors;
             meshColors=default_mesh_color();
 
-            if (NUMBER_OF_SUBMESHES*(meshNum+1)>glViewer.data_list.size()){  //allocating until there
-                int currDLSize=glViewer.data_list.size();
+            if (NUMBER_OF_SUBMESHES*(meshNum+1)>vmList.size()){  //allocating until there
+                int currDLSize=vmList.size();
                 for (int i=currDLSize;i<NUMBER_OF_SUBMESHES*(meshNum+1);i++)
-                    glViewer.append_mesh();
+                    vmList.push_back(viewerMeshStatus());
             }
 
-            glViewer.selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(mesh.V,mesh.F);
-            if ((mesh.V.rows()==mesh.F.rows())||(meshColors.rows()!=mesh.V.rows()))  //assume face_based was meant
-                glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;
+            currMesh=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
+            vmList[NUMBER_OF_SUBMESHES*meshNum].clear();
+            vmList[NUMBER_OF_SUBMESHES*meshNum].set_mesh(mesh);
+            vmList[NUMBER_OF_SUBMESHES*meshNum].ciType=viewerMeshStatus::colorInterpolationType::FACE_BASED;
+            vmList[NUMBER_OF_SUBMESHES*meshNum].C=meshColors;
+            vmList[NUMBER_OF_SUBMESHES*meshNum].show_edges=false;
 
             if (meshList.size()<meshNum+1){
                 meshList.resize(meshNum+1);
@@ -151,15 +168,13 @@ namespace directional
             else
                 meshColors=C;
 
-            if ((meshList[meshNum]->V.rows()==meshList[meshNum]->F.rows())&&(meshColors.rows()!=meshList[meshNum]->F.rows()))  //assume face_based was meant
-                glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
-            glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=true;
+            vmList[NUMBER_OF_SUBMESHES*meshNum].ciType=viewerMeshStatus::colorInterpolationType::FACE_BASED;
+            vmList[NUMBER_OF_SUBMESHES*meshNum].C=meshColors;
             if (edgeVList[meshNum].size()!=0){
-                glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=false;
-                glViewer.data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_lines=false;
+                vmList[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH]=ciType =viewerMeshStatus::colorInterpolationType::VERTEX_BASED;
+                vmList[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_edges=false;
             }
-            glViewer.selected_data_index=NUMBER_OF_SUBMESHES*meshNum;
+            currMesh=NUMBER_OF_SUBMESHES*meshNum;
             //CList[meshNum]=C;
         }
 
@@ -169,9 +184,11 @@ namespace directional
                                         const int meshNum=0)
         {
             Eigen::MatrixXd C;
-            glViewer::parula(vertexData, minRange,maxRange, C);
-            glViewer.set_mesh_colors(C, meshNum);
+            parula(vertexData, minRange,maxRange, C);
+            set_mesh_colors(C, meshNum);
         }
+
+        //STOPPED HERE
 
         void inline set_face_data(const Eigen::VectorXd& faceData,
                                       const double minRange,
