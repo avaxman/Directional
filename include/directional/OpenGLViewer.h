@@ -19,13 +19,7 @@ namespace Directional{
         GLuint vertexBuffer, vertexShader, fragmentShader, glfwProgram;
         void(* callback_key_down) (GLFWwindow *window, int key, int scancode, int action, int mods);
         Camera* camera;
-
-
-
-        const char* vertexShaderText, fragmentShaderText;
-
-
-
+        char* vertexShaderText, fragmentShaderText;
     public:
         OpenGLViewer(){}
         ~OpenGLViewer(){}
