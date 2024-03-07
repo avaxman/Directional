@@ -13,7 +13,6 @@
 #include <igl/setdiff.h>
 #include <igl/speye.h>
 #include <igl/slice.h>
-#include <igl/diag.h>
 #include "sparse_block.h"
 
 
