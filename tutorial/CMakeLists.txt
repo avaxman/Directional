@@ -29,12 +29,22 @@ add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")
 make_directory(${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 
+include(FetchContent)
 
-# Store location of tutorial/shared directory
-set(TUTORIAL_SHARED_PATH ${CMAKE_CURRENT_SOURCE_DIR}/shared CACHE PATH "location of shared tutorial resources")
+# Fetch Polyscope
+FetchContent_Declare(
+    polyscope
+    GIT_REPOSITORY https://github.com/nmwsharp/polyscope.git
+    GIT_TAG        master
+)
+FetchContent_MakeAvailable(polyscope)
+
+
+# Store location of tutorial data directory
+set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
 add_library(tutorials INTERFACE)
-target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_SHARED_PATH=\"${TUTORIAL_SHARED_PATH}\"")
-target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_DATA_PATH=\"${TUTORIAL_DATA_PATH}\"")
+target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${polyscope_SOURCE_DIR}/include)
 
 
 # Chapter 1

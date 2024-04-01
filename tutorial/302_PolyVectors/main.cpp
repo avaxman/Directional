@@ -2,6 +2,7 @@
 #include <Eigen/Core>
 #include <directional/readOFF.h>
 #include <directional/polyvector_to_raw.h>
+#include <directional/raw_to_polyvector.h>
 #include <directional/polyvector_field.h>
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
@@ -44,6 +45,13 @@ void update_visualization()
     
   if (viewingMode==HARD_PRESCRIPTION){
     directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
+
+      //testing raw_to_polyvector
+      Eigen::MatrixXcd testPVField;
+      directional::raw_to_polyvector(rawFieldHard.intField, N, testPVField, N%2==0);
+      std::cout<<"testPVField: "<<testPVField.row(2543)<<std::endl;
+      std::cout<<"pvFieldHard: "<<pvFieldHard.intField.row(2543)<<std::endl;
+
     directional::principal_matching(rawFieldHard);
     viewer.set_field(rawFieldHard,Eigen::MatrixXd(), 0,0.9,0,2.0);
     viewer.toggle_field(true,0);
@@ -51,7 +59,10 @@ void update_visualization()
   
   if (viewingMode==SOFT_PRESCRIPTION){
     directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
-    directional::principal_matching(rawFieldSoft);
+
+
+
+      directional::principal_matching(rawFieldSoft);
     viewer.set_field(rawFieldSoft,Eigen::MatrixXd(), 0,0.9,0,2.0);
     viewer.toggle_field(true,0);
   }
@@ -137,6 +148,8 @@ int main()
   ftb.init(mesh);
   pvFieldHard.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
   pvFieldSoft.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
+
+
   
   //discovering and constraining sharp edges
   std::vector<int> constFaceslist;

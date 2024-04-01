@@ -38,7 +38,7 @@ namespace directional{
                 for (int j=0;j<intField.rows();j++)
                     actualRoots(j,i)=std::complex<double>(intField(j,2*i), intField(j,2*i+1));
 
-            actualRoots=actualRoots*actualRoots;
+            actualRoots = actualRoots.array().square();
         }else {
             actualRoots.resize(intField.rows(), intField.cols()/2);
             actualN = N;
