@@ -13,7 +13,6 @@
 #include <Eigen/Sparse>
 #include <igl/boundary_loop.h>
 #include <igl/doublearea.h>
-#include <igl/diag.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/TangentBundle.h>

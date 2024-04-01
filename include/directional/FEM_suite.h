@@ -15,7 +15,6 @@
 #include <igl/igl_inline.h>
 #include <igl/local_basis.h>
 #include <igl/edge_topology.h>
-#include <igl/diag.h>
 #include <directional/FEM_masses.h>
 #include <igl/per_face_normals.h>
 
@@ -58,7 +57,7 @@ namespace directional
     SparseMatrix<double> Mchi;
     VectorXd MvVec, MeVec, MfVec, MchiVec;
     directional::FEM_masses(V, F, EV, FE, EF, MvVec, MeVec, MfVec, MchiVec);
-    igl::diag(MchiVec, Mchi);
+    Mchi = MchiVec.asDiagonal();
     Eigen::MatrixXd N;
     igl::per_face_normals(V, F, N);
     
