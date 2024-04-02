@@ -11,16 +11,18 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
+#include <directional/barycenter.h>
+#include <directional/local_basis.h>
 //#include <igl/barycenter.h>
 //#include <igl/readOBJ.h>
 //#include <igl/readOFF.h>
 //#include <igl/local_basis.h>
 //#include <igl/per_face_normals.h>
-//#include <igl/edge_topology.h>
+
 //#include <igl/boundary_loop.h>
 //#include <igl/triangle_triangle_adjacency.h>
 //#include <igl/avg_edge_length.h>
-//#include <directional/gaussian_curvature.h>
+#include <directional/gaussian_curvature.h>
 //#include <igl/doublearea.h>
 #include <directional/dcel.h>
 
@@ -70,7 +72,7 @@ namespace directional{
         ~TriMesh(){}
 
         //computing a full HE structure
-        void inline compute_dcel(){
+        void inline compute_edge_quantities(){
 
             struct ComparePairs {
                 bool operator()(const std::pair<std::pair<int, int>, int>& a, const std::pair<std::pair<int, int>, int>& b) const {
@@ -83,20 +85,23 @@ namespace directional{
             };
 
             //This is done in the polyscope compatible fashion
-            HE.resize(3*F.rows(),3);
+            HE.resize(3*F.rows());
             nextH.resize(3*F.rows());
             prevH.resize(3*F.rows());
             HV.resize(3*F.rows());
             HF.resize(3*F.rows());
+            FH.resize(F.rows(), 3);
             twinH = Eigen::VectorXi::Constant(3*F.rows(),-1);
+            Eigen::MatrixXi halfedges(3*F.rows(),2);
             for (int i=0;i<F.rows();i++) {
-                HE.block(3 * i, 0, 3, 3) << F(i, 0), F(i, 1),
+                halfedges.block(3 * i, 0, 3, 3) << F(i, 0), F(i, 1),
                         F(i, 1), F(i, 2),
                         F(i, 2), F(i, 0);
                 nextH.segment(3*i,3)<<3*i+1, 3*i+2, 3*i;
                 prevH.segment(3*i,3)<<3*i+2, 3*i, 3*i+1;
                 HV.segment(3*i,3)<<F.row(i);
                 HF.segment(3*i,3)<<i,i,i;
+                FH.row(i)<<3*i+1, 3*i+2, 3*i;
             }
 
             //finding twins
@@ -118,20 +123,64 @@ namespace directional{
 
             //creating the edge quantities from the halfedge quantities
             EH = Eigen::Map<Eigen::VectorXi>(EHList.data(), EHList.size());
+            HE.resize(halfedges.rows());
             EV.resize(EHList.size(),2);
             EF = Eigen::MatrixXi::Constant(EHList.size(),2,-1);
             EFi.resize(EHList.size(),2);
-            VE.resize(V.size());
+            //VE.resize(V.size());
             FE.resize(F.size(),3);
             FEs.resize(F.size(),3);
+            Eigen::VectorXi HEs(EH.rows());
             for (int i=0;i<EH.size();i++){
-                EV.row(i)<<HV(EH(i)),HV(nextH(EH(i)));
+                EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
                 EF(i,0) = HF(EH(i));
                 if (twinH(EH(i))!=-1)
                     EF(i,1) = HF(twinH(EH(i)));
-                
+
+                HE(EH(i))=i;
+                HEs(EH(i))=1;
+                if (twinH((EH(i)))!=-1) {
+                    HE(twinH(HE(EH(i)))) = i;
+                    HEs(twinH(HE(EH(i)))) = -1;
+                }
+
+                EFi(i,0) = (EH(i) + 1) % 3;
+                if (twinH((EH(i)))!=-1)
+                    EFi(i,1) = (twinH(EH(i)) + 1) % 3;
+            }
+            for (int i=0;i<FH.rows();i++){
+                for (int j=0;j<3;j++){
+                    FE(i,(j+2)%3) = HE(FH(i,j));
+                    //checking the orientation of the edge vs. the halfedge
+                    FEs(i,(j+2)%3) = HEs(FH(i,j));
+                }
             }
 
+            //TODO: computing boundary loops
+        }
+
+        void inline compute_geometric_quantities(){
+
+            //barycenters and local bases
+            barycenters.resize(F.rows(),3);
+            FBx.resize(F.rows(),3);
+            FBy.resize(F.rows(),3);
+            faceNormals.resize(F.rows(),3);
+            faceAreas.resize(F.rows());
+            for (int i=0;i<F.rows();i++) {
+                barycenters.row(i) = (V.row(F(i, 0)) + V.row(F(i, 1)) + V.row(F(i, 2))) / 3;
+                Eigen::RowVector3d localx = V.row(F(i,1))-V.row(F(i,0));
+                Eigen::RowVector3d localy = V.row(F(i,2))-V.row(F(i,0));
+                Eigen::RowVector3d localz = localx.cross(localy);
+                faceAreas(i) = localz.norm()/2.0;
+                localy = localz.cross(localx);
+                FBx.row(i) = localx.normalized();
+                FBy.row(i) = localy.normalized();
+                faceNormals.row(i) = localz.normalized();
+            }
+
+            //igl::triangle_triangle_adjacency(F, TT);
+            gaussian_curvature(V,F,isBoundaryVertex, GaussianCurvature);
 
         }
 
@@ -144,12 +193,14 @@ namespace directional{
             V = _V;
             F = _F;
             if (_EV.rows() == 0) {
-                compute_topology();
+                compute_edge_quantities();
             } else {
                 EV = _EV;
                 FE = _FE;
                 EF = _EF;
             }
+
+            //TODO: move this inside compute edge quantities
             std::vector<int> innerEdgesList, boundEdgesList;
             isBoundaryVertex=Eigen::VectorXi::Zero(V.size());
             isBoundaryEdge=Eigen::VectorXi::Zero(EV.size());
@@ -192,12 +243,10 @@ namespace directional{
 
             innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
             boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());
-            igl::barycenter(V, F, barycenters);
-            igl::local_basis(V, F, FBx, FBy, faceNormals);
-            igl::triangle_triangle_adjacency(F, TT);
-            igl::boundary_loop(F, boundaryLoops);
-            directional::gaussian_curvature(V,F,isBoundaryVertex, GaussianCurvature);
-            igl::doublearea(V,F,faceAreas);
+
+            compute_geometric_quantities();
+
+
             faceAreas.array()/=2.0;
             eulerChar = V.rows() - EV.rows() + F.rows();
             numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
@@ -205,7 +254,7 @@ namespace directional{
             minBox = V.colwise().minCoeff();
             maxBox = V.colwise().maxCoeff();
 
-            hedra::dcel(Eigen::VectorXi::Constant(F.rows(),3),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
+            //hedra::dcel(Eigen::VectorXi::Constant(F.rows(),3),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
             vertexValence=Eigen::VectorXi::Zero(V.rows());
             for (int i=0;i<EV.rows();i++){
                 vertexValence(EV(i,0))++;
