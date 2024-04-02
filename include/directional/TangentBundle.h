@@ -64,19 +64,19 @@ namespace directional{
         ~TangentBundle() {}
 
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
-        Eigen::MatrixXd virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
+        Eigen::MatrixXd virtual inline project_to_intrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
             assert(false && "The base class does not have an embedding");
             return Eigen::MatrixXd();
         }
 
         //projecting extrinsic to intrinsic
-        Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
+        Eigen::MatrixXd virtual inline project_to_extrinsic(const Eigen::VectorXi &tangentSpaces, const Eigen::MatrixXd &extDirectionals) const {
             assert(false && "The base class does not have an embedding");
             return Eigen::MatrixXd();
         }
 
         //interpolating field from nodes in palces specified by barycentric coordinates. The interpolator needs to interpret them.
-        void virtual IGL_INLINE interpolate(const Eigen::MatrixXi &elemIndices,
+        void virtual inline interpolate(const Eigen::MatrixXi &elemIndices,
                                             const Eigen::MatrixXd &baryCoords,
                                             const Eigen::MatrixXd &intDirectionals,
                                             Eigen::MatrixXd& interpSources,
@@ -87,13 +87,13 @@ namespace directional{
             interpField=Eigen::MatrixXd();
         }
 
-        Eigen::SparseMatrix<double> virtual IGL_INLINE gradient_operator(const int N,
+        Eigen::SparseMatrix<double> virtual inline gradient_operator(const int N,
                                                                          const boundCondTypeEnum boundCondType){
             assert(hasCochainSequence()==true);
             return Eigen::SparseMatrix<double>();  //actually unreachable since assert would fail.
         }
 
-        Eigen::SparseMatrix<double> virtual IGL_INLINE curl_operator(const int N,
+        Eigen::SparseMatrix<double> virtual inline curl_operator(const int N,
                                                                      const boundCondTypeEnum boundCondType,
                                                                      const Eigen::VectorXi& matching=Eigen::VectorXi()){
             assert(hasCochainSequence()==true);

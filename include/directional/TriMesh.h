@@ -39,9 +39,9 @@ namespace directional{
         Eigen::MatrixXi F;
 
         //combinatorial quantities
-        Eigen::MatrixXi EF, FE, EV,TT, EFi, VE, VF;
+        Eigen::MatrixXi EF, FE, EV,TT, EFi;
         Eigen::MatrixXd FEs;
-        Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
+        Eigen::VectorXi innerEdges, boundEdges, vertexValence, VE;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
 
         //DCEL quantities
@@ -69,7 +69,73 @@ namespace directional{
         TriMesh(){}
         ~TriMesh(){}
 
-        void IGL_INLINE set_mesh(const Eigen::MatrixXd& _V,
+        //computing a full HE structure
+        void inline compute_dcel(){
+
+            struct ComparePairs {
+                bool operator()(const std::pair<std::pair<int, int>, int>& a, const std::pair<std::pair<int, int>, int>& b) const {
+                    if (a.first == b.first) {
+                        return a.second < b.second;
+                    } else {
+                        return a.first < b.first;
+                    }
+                }
+            };
+
+            //This is done in the polyscope compatible fashion
+            HE.resize(3*F.rows(),3);
+            nextH.resize(3*F.rows());
+            prevH.resize(3*F.rows());
+            HV.resize(3*F.rows());
+            HF.resize(3*F.rows());
+            twinH = Eigen::VectorXi::Constant(3*F.rows(),-1);
+            for (int i=0;i<F.rows();i++) {
+                HE.block(3 * i, 0, 3, 3) << F(i, 0), F(i, 1),
+                        F(i, 1), F(i, 2),
+                        F(i, 2), F(i, 0);
+                nextH.segment(3*i,3)<<3*i+1, 3*i+2, 3*i;
+                prevH.segment(3*i,3)<<3*i+2, 3*i, 3*i+1;
+                HV.segment(3*i,3)<<F.row(i);
+                HF.segment(3*i,3)<<i,i,i;
+            }
+
+            //finding twins
+            typedef std::pair<std::pair<int, int>, int> pairPlusOne;
+            std::set<pairPlusOne, ComparePairs> edgeSet;
+            std::vector<int> EHList;
+            for (int i=0;i<HE.rows();i++){
+                std::pair<int,int> oppEdge(HE(i,1), HE(i,0));
+                pairPlusOne oppEdgePlus(oppEdge, -1);
+                std::set<pairPlusOne>::iterator si = edgeSet.find(oppEdgePlus);
+                if (si == edgeSet.end()) {
+                    edgeSet.insert(pairPlusOne(std::pair<int, int>(HE(i, 0), HE(i, 1)), i));
+                    EHList.push_back(i);
+                } else {  //found matching twin
+                    twinH[si->second] = i;
+                    twinH[i] = si->second;
+                }
+            }
+
+            //creating the edge quantities from the halfedge quantities
+            EH = Eigen::Map<Eigen::VectorXi>(EHList.data(), EHList.size());
+            EV.resize(EHList.size(),2);
+            EF = Eigen::MatrixXi::Constant(EHList.size(),2,-1);
+            EFi.resize(EHList.size(),2);
+            VE.resize(V.size());
+            FE.resize(F.size(),3);
+            FEs.resize(F.size(),3);
+            for (int i=0;i<EH.size();i++){
+                EV.row(i)<<HV(EH(i)),HV(nextH(EH(i)));
+                EF(i,0) = HF(EH(i));
+                if (twinH(EH(i))!=-1)
+                    EF(i,1) = HF(twinH(EH(i)));
+                
+            }
+
+
+        }
+
+        void inline set_mesh(const Eigen::MatrixXd& _V,
                                  const Eigen::MatrixXi& _F,
                                  const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
                                  const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
@@ -78,7 +144,7 @@ namespace directional{
             V = _V;
             F = _F;
             if (_EV.rows() == 0) {
-                igl::edge_topology(V, F, EV, FE, EF);
+                compute_topology();
             } else {
                 EV = _EV;
                 FE = _FE;

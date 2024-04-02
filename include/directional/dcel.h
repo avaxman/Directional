@@ -37,7 +37,7 @@ namespace hedra
     // HF   #F by 1 - face containing halfedge
     // nextH, prevH, twinH - #H by 1 DCEL traversing operations. twinH(i)=-1 for boundary edges.
     
-    IGL_INLINE void dcel(const Eigen::VectorXi& D,
+    inline void dcel(const Eigen::VectorXi& D,
                          const Eigen::MatrixXi& F,
                          const Eigen::MatrixXi& EV,
                          const Eigen::MatrixXi& EF,

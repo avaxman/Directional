@@ -21,7 +21,13 @@ message(STATUS "DIRECTIONAL_ROOT: ${DIRECTIONAL_ROOT}")
 include_directories(${DIRECTIONAL_SOURCE_DIR})
 include_directories(${DIRECTIONAL_EXTERNAL}/eigen)
 message("\n\n == CMAKE recursively building Polyscope\n")
-add_subdirectory(/Users/avaxman/Directional/external/polyscope)
+set(POLYSCOPE_SOURCE_DIR ${DIRECTIONAL_EXTERNAL}/polyscope)
+
+# Create the build directory for Polyscope
+set(POLYSCOPE_BUILD_DIR ${CMAKE_BINARY_DIR}/polyscope-build)
+file(MAKE_DIRECTORY ${POLYSCOPE_BUILD_DIR})
+
+# add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope ${CMAKE_CURRENT_BINARY_DIR})
 
 
 # define the path where all the input meshes are available
@@ -36,9 +42,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
 add_library(tutorials INTERFACE)
 target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_DATA_PATH=\"${TUTORIAL_DATA_PATH}\"")
-target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${polyscope_SOURCE_DIR}/include)
-# target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${polyscope_SOURCE_DIR}/deps/imgui/imgui)
-# target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${polyscope_SOURCE_DIR}/deps/glm)
+target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/include)
+target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/imgui/imgui)
+target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/glm)
+target_compile_definitions(tutorials INTERFACE GLM_ENABLE_EXPERIMENTAL)
 
 
 
