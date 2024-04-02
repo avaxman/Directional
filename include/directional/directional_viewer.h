@@ -14,12 +14,12 @@
 //#include <directional/glyph_lines_mesh.h>
 //#include <directional/singularity_spheres.h>
 //#include <directional/seam_lines.h>
-#include <directional/edge_diamond_mesh.h>
+//#include <directional/edge_diamond_mesh.h>
 //#include <directional/branched_isolines.h>
 //#include <directional/bar_chain.h>
 //#include <directional/halfedge_highlights.h>
 //#include <directional/vertex_highlights.h>
-#include <directional/streamlines.h>
+//#include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 

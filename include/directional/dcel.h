@@ -8,7 +8,7 @@
 #ifndef HEDRA_DCEL_H
 #define HEDRA_DCEL_H
 
-#include <igl/igl_inline.h>
+//#include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <vector>
 

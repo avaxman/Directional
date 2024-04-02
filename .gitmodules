@@ -2,3 +2,6 @@
 	path = external/googletest
 	url = https://github.com/google/googletest.git
 	branch = master
+[submodule "external/polyscope"]
+	path = external/polyscope
+	url = https://github.com/nmwsharp/polyscope.git

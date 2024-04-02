@@ -11,17 +11,17 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <igl/barycenter.h>
-#include <igl/readOBJ.h>
-#include <igl/readOFF.h>
-#include <igl/local_basis.h>
-#include <igl/per_face_normals.h>
-#include <igl/edge_topology.h>
-#include <igl/boundary_loop.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/avg_edge_length.h>
-#include <directional/gaussian_curvature.h>
-#include <igl/doublearea.h>
+//#include <igl/barycenter.h>
+//#include <igl/readOBJ.h>
+//#include <igl/readOFF.h>
+//#include <igl/local_basis.h>
+//#include <igl/per_face_normals.h>
+//#include <igl/edge_topology.h>
+//#include <igl/boundary_loop.h>
+//#include <igl/triangle_triangle_adjacency.h>
+//#include <igl/avg_edge_length.h>
+//#include <directional/gaussian_curvature.h>
+//#include <igl/doublearea.h>
 #include <directional/dcel.h>
 
 /***

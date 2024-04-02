@@ -11,7 +11,7 @@
 
 #include <Eigen/Core>
 #include <vector>
-#include <igl/igl_inline.h>
+//#include <igl/igl_inline.h>
 #include <directional/CartesianField.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 
