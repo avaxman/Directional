@@ -64,10 +64,10 @@ namespace directional{
 
             struct ComparePairs {
                 bool operator()(const std::pair<std::pair<int, int>, int>& a, const std::pair<std::pair<int, int>, int>& b) const {
-                    if (a.first == b.first) {
-                        return a.second < b.second;
+                    if (a.first.first == b.first.first) {
+                        return a.first.second < b.first.second;
                     } else {
-                        return a.first < b.first;
+                        return a.first.first < b.first.first;
                     }
                 }
             };
@@ -96,7 +96,7 @@ namespace directional{
             typedef std::pair<std::pair<int, int>, int> pairPlusOne;
             std::set<pairPlusOne, ComparePairs> edgeSet;
             std::vector<int> EHList;
-            for (int i=0;i<HE.rows();i++){
+            for (int i=0;i<halfedges.rows();i++){
                 std::pair<int,int> oppEdge(halfedges(i,1), halfedges(i,0));
                 pairPlusOne oppEdgePlus(oppEdge, -1);
                 std::set<pairPlusOne>::iterator si = edgeSet.find(oppEdgePlus);
@@ -109,6 +109,7 @@ namespace directional{
                 }
             }
 
+            //std::cout<<"twinH: "<<twinH<<std::endl;
             //creating the edge quantities from the halfedge quantities
             EH = Eigen::Map<Eigen::VectorXi>(EHList.data(), EHList.size());
             HE.resize(halfedges.rows());
@@ -118,7 +119,7 @@ namespace directional{
             //VE.resize(V.size());
             FE.resize(F.size(),3);
             FEs.resize(F.size(),3);
-            Eigen::VectorXi HEs(EH.rows());
+            Eigen::VectorXi HEs(halfedges.rows());
             for (int i=0;i<EH.size();i++){
                 EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
                 EF(i,0) = HF(EH(i));
@@ -128,8 +129,8 @@ namespace directional{
                 HE(EH(i))=i;
                 HEs(EH(i))=1;
                 if (twinH((EH(i)))!=-1) {
-                    HE(twinH(HE(EH(i)))) = i;
-                    HEs(twinH(HE(EH(i)))) = -1;
+                    HE(twinH(EH(i))) = i;
+                    HEs(twinH(EH(i))) = -1;
                 }
 
                 EFi(i,0) = (EH(i) + 1) % 3;
@@ -285,7 +286,7 @@ namespace directional{
             vertexNormals.rowwise().normalize();
 
             //computing local basis that aligns with the first projected edge of each triangle
-            VBx.resize(V.rows(),3);
+            /*VBx.resize(V.rows(),3);
             VBy.resize(V.rows(),3);
             for (int i=0;i<V.rows();i++){
                 Eigen::RowVector3d firstEdge = V.row(HV(nextH(VH(i))))-V.row(i);
@@ -295,7 +296,7 @@ namespace directional{
                 Eigen::RowVector3d currn=vertexNormals.row(i);
                 VBy.row(i)=currn.cross(currx);
                 VBy.row(i).normalize();
-            }
+            }*/
 
         }
 

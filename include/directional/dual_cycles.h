@@ -84,8 +84,11 @@ namespace directional
       MatrixXi reducedEF;
       directional::setdiff(fullIndices, primalTreeEdges, reducedEFIndices, inFullIndices);
       VectorXi Two = VectorXi::LinSpaced(2, 0, 1);
-      
+
+      cout<<"mesh.EF: "<<mesh.EF<<endl;
+      cout<<"reducedEFIndices: "<<reducedEFIndices<<endl;
       directional::slice(mesh.EF, reducedEFIndices, Two, reducedEF);
+      cout<<"reducedEF: "<<reducedEF<<endl;
       tree(reducedEF, dualTreeEdges, dualTreeFathers);
       //converting dualTreeEdges from reducedEF to EF
       for (int i = 0; i < dualTreeEdges.size(); i++)

@@ -66,14 +66,17 @@ namespace directional
         DirectionalViewer(){}
         ~DirectionalViewer(){}
 
-        void launch(){
+        void init(){
             polyscope::init();
+        }
+
+        void launch(){
             polyscope::show();
         }
 
         void inline set_mesh(const TriMesh& mesh,
                              const int meshNum=0,
-                             const std::string meshName="")
+                             const std::string meshName="Mesh")
         {
             /*Eigen::MatrixXd meshColors;
             meshColors=default_mesh_color();
@@ -222,15 +225,17 @@ namespace directional
         }*/
 
         void inline set_field(const CartesianField& _field,
-                                  const std::string fieldName = "",
+                                  const std::string fieldName = "field",
                                   const int fieldNum=0,
                                   const double sizeRatio = 0.9,
                                   const int sparsity=0,
                                   const double offsetRatio = 0.2)
 
         {
-            if (fieldList.size()<fieldNum+1)
-                fieldList.resize(fieldNum+1);
+            if (fieldList.size()<fieldNum+1) {
+                fieldList.resize(fieldNum + 1);
+                psPointCloudList.resize(fieldNum + 1);
+            }
 
             fieldList[fieldNum]=&_field;
 
@@ -239,7 +244,7 @@ namespace directional
             psPointCloudList[fieldNum]->setPointRadius(10e-6);
             psPointCloudList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             for (int i=0;i<_field.N;i++)
-                psPointCloudList[fieldNum]->addVectorQuantity("", _field.extField.block(0,3*i,_field.extField.rows(),3));
+                psPointCloudList[fieldNum]->addVectorQuantity(std::string("field")+std::to_string(i), _field.extField.block(0,3*i,_field.extField.rows(),3));
 
             /*set_singularities(fieldList[fieldNum]->singLocalCycles,
                               fieldList[fieldNum]->singIndices,
