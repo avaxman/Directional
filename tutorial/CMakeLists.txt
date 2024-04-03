@@ -21,14 +21,14 @@ message(STATUS "DIRECTIONAL_ROOT: ${DIRECTIONAL_ROOT}")
 include_directories(${DIRECTIONAL_SOURCE_DIR})
 include_directories(${DIRECTIONAL_EXTERNAL}/eigen)
 message("\n\n == CMAKE recursively building Polyscope\n")
-set(POLYSCOPE_SOURCE_DIR ${DIRECTIONAL_EXTERNAL}/polyscope)
+#set(POLYSCOPE_SOURCE_DIR ${DIRECTIONAL_EXTERNAL}/polyscope)
 
 # Create the build directory for Polyscope
-set(POLYSCOPE_BUILD_DIR ${CMAKE_BINARY_DIR}/polyscope-build)
-file(MAKE_DIRECTORY ${POLYSCOPE_BUILD_DIR})
+#set(POLYSCOPE_BUILD_DIR ${CMAKE_BINARY_DIR}/polyscope-build)
+#file(MAKE_DIRECTORY ${POLYSCOPE_BUILD_DIR})
 
 # add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope ${CMAKE_CURRENT_BINARY_DIR})
-
+add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope "polyscope")
 
 # define the path where all the input meshes are available
 add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")

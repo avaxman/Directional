@@ -63,15 +63,15 @@ namespace directional{
             }
 
             //TODO: cycles, cycleCurvature
-            directional::dual_cycles(mesh->V, mesh->F, mesh->EV, mesh->EF, cycles, cycleCurvatures, local2Cycle, innerAdjacencies);
+            directional::dual_cycles(*mesh, cycles, cycleCurvatures, local2Cycle, innerAdjacencies);
 
             //drawing from mesh geometry
 
             /************masses****************/
 
             //mass are face areas
-            igl::doublearea(mesh->V,mesh->F,tangentSpaceMass);
-            tangentSpaceMass.array()/=2.0;
+            //igl::doublearea(mesh->V,mesh->F,tangentSpaceMass);
+            tangentSpaceMass=mesh->faceAreas;
 
             //The "harmonic" weights from [Brandt et al. 2020].
             connectionMass.resize(mesh->EF.rows());

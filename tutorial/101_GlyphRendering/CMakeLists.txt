@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.20)
 project(101_GlyphRendering)
 
 add_executable(${PROJECT_NAME}_bin main.cpp)

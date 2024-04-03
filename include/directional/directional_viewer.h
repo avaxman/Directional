@@ -66,6 +66,11 @@ namespace directional
         DirectionalViewer(){}
         ~DirectionalViewer(){}
 
+        void launch(){
+            polyscope::init();
+            polyscope::show();
+        }
+
         void inline set_mesh(const TriMesh& mesh,
                              const int meshNum=0,
                              const std::string meshName="")
