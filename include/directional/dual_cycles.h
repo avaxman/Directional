@@ -6,15 +6,8 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_DUAL_CYCLES_H
 #define DIRECTIONAL_DUAL_CYCLES_H
+
 #include <Eigen/Core>
-#include <igl/boundary_loop.h>
-#include <igl/local_basis.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/colon.h>
-#include <igl/setdiff.h>
-#include <igl/slice.h>
-#include <igl/unique.h>
-#include <igl/edge_topology.h>
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -36,7 +29,7 @@ namespace directional
   //  vertex2cycle:     #v by 1 map between vertex and corresponding cycle (for comfort of input from the user's side; inner vertices map to their cycles, boundary vertices to the bigger boundary cycle.
   //  innerEdges:       #iE by 1 the subset of #EV that are inner edges, and with the same ordering as the columns of basisCycles.
   
-  IGL_INLINE void dual_cycles(const Eigen::MatrixXd& V,
+  inline void dual_cycles(const Eigen::MatrixXd& V,
                               const Eigen::MatrixXi& F,
                               const Eigen::MatrixXi& EV,
                               const Eigen::MatrixXi& EF,

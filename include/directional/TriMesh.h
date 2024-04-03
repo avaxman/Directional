@@ -11,20 +11,8 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <directional/barycenter.h>
-#include <directional/local_basis.h>
-//#include <igl/barycenter.h>
-//#include <igl/readOBJ.h>
-//#include <igl/readOFF.h>
-//#include <igl/local_basis.h>
-//#include <igl/per_face_normals.h>
-
-//#include <igl/boundary_loop.h>
-//#include <igl/triangle_triangle_adjacency.h>
-//#include <igl/avg_edge_length.h>
 #include <directional/gaussian_curvature.h>
-//#include <igl/doublearea.h>
-#include <directional/dcel.h>
+
 
 /***
  This class stores a general-purpose triangle mesh. The triangle mesh can be used to implement a tangent bundle in several ways
@@ -43,16 +31,16 @@ namespace directional{
         //combinatorial quantities
         Eigen::MatrixXi EF, FE, EV,TT, EFi;
         Eigen::MatrixXd FEs;
-        Eigen::VectorXi innerEdges, boundEdges, vertexValence, VE;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
+        Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
 
         //DCEL quantities
         Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
-        Eigen::MatrixXi EH,FH;
+        Eigen::MatrixXi EH,FH, VE, VF;
 
         //Geometric quantities
         Eigen::MatrixXd faceNormals;
-        Eigen::MatrixXd faceAreas;
+        Eigen::VectorXd faceAreas;
         Eigen::MatrixXd vertexNormals;
         Eigen::MatrixXd FBx,FBy;  //local basis vectors per face
         Eigen::MatrixXd VBx,VBy;  //local basis vectors per vertex
@@ -182,6 +170,12 @@ namespace directional{
             //igl::triangle_triangle_adjacency(F, TT);
             gaussian_curvature(V,F,isBoundaryVertex, GaussianCurvature);
 
+            //Average edge length
+            double sumEdgeLength=0.0;
+            for (int i=0;i<EV.rows();i++)
+                sumEdgeLength += (V.row(EV(i,0))-V.row(EV(i,1))).norm();
+
+            avgEdgeLength =sumEdgeLength/(double)EV.rows();
         }
 
         void inline set_mesh(const Eigen::MatrixXd& _V,
@@ -246,11 +240,8 @@ namespace directional{
 
             compute_geometric_quantities();
 
-
-            faceAreas.array()/=2.0;
             eulerChar = V.rows() - EV.rows() + F.rows();
             numGenerators = (2 - eulerChar)/2 - boundaryLoops.size();
-            avgEdgeLength=igl::avg_edge_length(V,F);
             minBox = V.colwise().minCoeff();
             maxBox = V.colwise().maxCoeff();
 

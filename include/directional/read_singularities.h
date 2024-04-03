@@ -27,7 +27,7 @@ namespace directional
     //   singIndices:   The numerator of the index of the singularities.
     // Return:
     //   Whether or not the file was written successfully
-    bool IGL_INLINE read_singularities(const std::string &fileName,
+    bool inline read_singularities(const std::string &fileName,
                                        int& N,
                                        Eigen::VectorXi& singElements,
                                        Eigen::VectorXi& singIndices)
@@ -56,7 +56,7 @@ namespace directional
 
 
     //This version reads directly into a field object.
-    bool IGL_INLINE read_singularities(const std::string &fileName,
+    bool inline read_singularities(const std::string &fileName,
                                        directional::CartesianField& field)
     {
         try

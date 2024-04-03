@@ -6,7 +6,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef DIRECTIONAL_TREE_H
 #define DIRECTIONAL_TREE_H
-#include <igl/igl_inline.h>
+
 #include <Eigen/Core>
 #include <vector>
 #include <queue>
@@ -21,7 +21,7 @@ namespace directional
     // Output:
     //  tE:   #Te vector of edges (within EV) in the graph.
     //  tEf:  #V the edges leading to each vertex. -1 for the root
-    IGL_INLINE void tree(const Eigen::MatrixXi& EV,
+    inline void tree(const Eigen::MatrixXi& EV,
                          Eigen::VectorXi& tE,
                          Eigen::VectorXi& tEf)
     {

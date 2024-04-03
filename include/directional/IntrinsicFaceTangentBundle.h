@@ -11,8 +11,6 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <igl/boundary_loop.h>
-#include <igl/doublearea.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/TangentBundle.h>
@@ -38,7 +36,7 @@ namespace directional{
         IntrinsicFaceTangentBundle(){}
         ~IntrinsicFaceTangentBundle(){}
 
-        void IGL_INLINE init(const TriMesh& _mesh){
+        void inline init(const TriMesh& _mesh){
 
             intDimension = 2;
             typedef std::complex<double> Complex;
@@ -88,7 +86,7 @@ namespace directional{
 
 
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
-        Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
+        Eigen::MatrixXd  virtual inline project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
             assert(tangentSpaces.rows()==extDirectionals.rows());
 
             int N = extDirectionals.cols()/3;
@@ -103,7 +101,7 @@ namespace directional{
 
 
         //projecting intrinsic to extrinsic
-        Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
+        Eigen::MatrixXd virtual inline project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
 
             assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
             Eigen::VectorXi actualTangentSpaces;
@@ -123,7 +121,7 @@ namespace directional{
             return extDirectionals;
         }
 
-        void IGL_INLINE interpolate(const Eigen::MatrixXi &elemIndices,
+        void inline interpolate(const Eigen::MatrixXi &elemIndices,
                                     const Eigen::MatrixXd &baryCoords,
                                     const Eigen::MatrixXd &intDirectionals,
                                     Eigen::MatrixXd& interpSources,
@@ -149,7 +147,7 @@ namespace directional{
 
         }
 
-        Eigen::SparseMatrix<double> IGL_INLINE gradient_operator(const int N,
+        Eigen::SparseMatrix<double> inline gradient_operator(const int N,
                                                                  const boundCondTypeEnum boundCondType){
             assert(hasCochainSequence()==true);
             Eigen::SparseMatrix<double> singleGradMatrix(2*mesh->F.size(), mesh->V.size());
@@ -179,7 +177,7 @@ namespace directional{
         }
 
         //TODO: boundaries
-        Eigen::SparseMatrix<double> IGL_INLINE curl_operator(const int N,
+        Eigen::SparseMatrix<double> inline curl_operator(const int N,
                                                              const boundCondTypeEnum boundCondType,
                                                              const Eigen::VectorXi& matching){
             assert(hasCochainSequence()==true);

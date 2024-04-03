@@ -8,7 +8,7 @@
 #ifndef DIRECTIONAL_GAUSSIAN_CURVATURE_H
 #define DIRECTIONAL_GAUSSIAN_CURVATURE_H
 
-#include <igl/PI.h>
+#include <directional/definitions.h>
 #include <Eigen/Core>
 
 
@@ -21,14 +21,14 @@ namespace directional
     //  isBoundaryVertex:   #V boolean indicating if vertex is a boundary.
     //output:
     //  G:                  #V discrete Gaussian curvature. sum(G) = eulerChar of mesh.
-    IGL_INLINE void gaussian_curvature(const Eigen::MatrixXd& V,
+    inline void gaussian_curvature(const Eigen::MatrixXd& V,
                                        const Eigen::MatrixXi& F,
                                        const Eigen::VectorXi& isBoundaryVertex,
                                        Eigen::VectorXd& G){
 
         G.resize(V.rows());
         for (int i=0;i<V.rows();i++)
-            G(i)=(isBoundaryVertex(i) ? igl::PI : 2.0*igl::PI);
+            G(i)=(isBoundaryVertex(i) ? directional::PI : 2.0*directional::PI);
 
         for (int i=0;i<F.rows();i++) {
             for (int j = 0; j < 3; j++) {

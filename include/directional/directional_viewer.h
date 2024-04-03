@@ -49,11 +49,11 @@ namespace directional
         std::vector<const TriMesh*> meshList;  //meshes that are being viewed
         std::vector<const CartesianField*> fieldList;
 
-        std::vector<const PolyScope::SurfaceMesh*> psSurfaceMeshList;
-        std::vector<const PolyScope::PointCloud*> psPointCloudList;
+        std::vector<polyscope::SurfaceMesh*> psSurfaceMeshList;
+        std::vector<polyscope::PointCloud*> psPointCloudList;
         //std::vector<Eigen::MatrixXd> fieldColors;
-        std::vector<directional::StreamlineData> slData;
-        std::vector<directional::StreamlineState> slState;
+        //std::vector<directional::StreamlineData> slData;
+        //std::vector<directional::StreamlineState> slState;
 
         //std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
         //std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
@@ -96,7 +96,7 @@ namespace directional
             psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName, mesh.V, mesh.F);
         }
 
-        /*void IGL_INLINE set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+        /*void inline set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                                         const int meshNum=0)
         {
             Eigen::MatrixXd meshColors;
@@ -141,7 +141,7 @@ namespace directional
             psSurfaceMeshList[meshNum]->addFaceScalarQuantity(dataName, faceData);
         }
 
-        /*void IGL_INLINE set_edge_data(const Eigen::VectorXd& edgeData,
+        /*void inline set_edge_data(const Eigen::VectorXd& edgeData,
                                       const double minRange,
                                       const double maxRange,
                                       const int meshNum=0)
@@ -169,7 +169,7 @@ namespace directional
 
         //this function assumes face-based fields
 
-        /*void IGL_INLINE set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
+        /*void inline set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
             assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
             Eigen::MatrixXd CMesh=directional::DirectionalViewer::default_mesh_color().replicate(meshList[meshNum]->F.rows(),1);
             for (int i=0;i<selectedFaces.size();i++)
@@ -185,7 +185,7 @@ namespace directional
         }*/
 
         //This function assumes vertex-based fields
-        /*void IGL_INLINE set_selected_vertices(const Eigen::VectorXi& selectedVertices, const int meshNum=0){
+        /*void inline set_selected_vertices(const Eigen::VectorXi& selectedVertices, const int meshNum=0){
             assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
             std::vector<int> selectedFacesList;
             for (int i=0;i<selectedVertices.size();i++)
@@ -208,7 +208,7 @@ namespace directional
             set_field_colors(glyphColors,meshNum);
         }*/
 
-        /*void IGL_INLINE set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
+        /*void inline set_selected_vector(const int selectedFace, const int selectedVector, const int meshNum=0)
         {
             Eigen::MatrixXd glyphColors=directional::DirectionalViewer::default_glyph_color().replicate(meshList[meshNum]->F.rows(),fieldList[meshNum]->N);
             glyphColors.row(selectedFace)=directional::DirectionalViewer::selected_face_glyph_color().replicate(1,fieldList[meshNum]->N);
@@ -217,7 +217,7 @@ namespace directional
         }*/
 
         void inline set_field(const CartesianField& _field,
-                                  const std::String fieldName = "",
+                                  const std::string fieldName = "",
                                   const int fieldNum=0,
                                   const double sizeRatio = 0.9,
                                   const int sparsity=0,
@@ -225,23 +225,23 @@ namespace directional
 
         {
             if (fieldList.size()<fieldNum+1)
-                fieldList.resize(meshNum+1);
+                fieldList.resize(fieldNum+1);
 
             fieldList[fieldNum]=&_field;
 
-            psPointCloudList[fieldNum] = polyscope::registerPointCloud("sources", _field->tb->sources);
+            psPointCloudList[fieldNum] = polyscope::registerPointCloud("sources", _field.tb->sources);
 
             psPointCloudList[fieldNum]->setPointRadius(10e-6);
             psPointCloudList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             for (int i=0;i<_field.N;i++)
-                PointCloud::addVectorQuantity("", _field.extField.block(0,3*i,_field.rows(),3))
+                psPointCloudList[fieldNum]->addVectorQuantity("", _field.extField.block(0,3*i,_field.extField.rows(),3));
 
-            set_singularities(fieldList[meshNum]->singLocalCycles,
-                              fieldList[meshNum]->singIndices,
-                              fieldNum);
+            /*set_singularities(fieldList[fieldNum]->singLocalCycles,
+                              fieldList[fieldNum]->singIndices,
+                              fieldNum);*/
         }
 
-        /*void IGL_INLINE set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
+        /*void inline set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
                                          const int meshNum=0,
                                          const double sizeRatio = 0.9,
                                          const int sparsity=0)
@@ -267,7 +267,7 @@ namespace directional
         }*/
 
 
-        void IGL_INLINE set_singularities(const Eigen::VectorXi& singElements,
+        /*void inline set_singularities(const Eigen::VectorXi& singElements,
                                           const Eigen::VectorXi& singIndices,
                                           const int meshNum=0,
                                           const double radiusRatio=1.25)
@@ -280,9 +280,9 @@ namespace directional
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_lines=false;
 
-        }
+        }*/
 
-        void IGL_INLINE set_seams(const Eigen::VectorXi& combedMatching,
+        void inline set_seams(const Eigen::VectorXi& combedMatching,
                                   const int meshNum=0,
                                   const double widthRatio = 0.05)
         {
@@ -323,8 +323,8 @@ namespace directional
             int currPos=0;
             for (std::set<int>::iterator si=seamVertexSet.begin();si!=seamVertexSet.end();si++)
                 seamVertices(currPos++)=*si;
-            directional::halfedge_highlights(meshList[meshNum]->V, meshList[meshNum]->F, hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
-            directional::vertex_highlights(meshList[meshNum]->V, meshList[meshNum]->F, seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
+            //directional::halfedge_highlights(meshList[meshNum]->V, meshList[meshNum]->F, hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
+            //directional::vertex_highlights(meshList[meshNum]->V, meshList[meshNum]->F, seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
 
             //uniting both meshes
             VSeams.resize(VSeams1.rows()+VSeams2.rows(),3);
@@ -337,15 +337,15 @@ namespace directional
             CSeams.topRows(CSeams1.rows())=CSeams1;
             CSeams.bottomRows(CSeams2.rows())=CSeams2;
 
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_colors(CSeams);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_colors(CSeams);
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;
         }
 
 
 
-        void IGL_INLINE init_streamlines(const int meshNum=0,
+        /*void inline init_streamlines(const int meshNum=0,
                                          const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
                                          const double distRatio=3.0)
         {
@@ -357,7 +357,7 @@ namespace directional
             directional::streamlines_init(*fieldList[meshNum], seedLocations,distRatio,slData[meshNum], slState[meshNum]);
         }
 
-        void IGL_INLINE advance_streamlines(const double dTimeRatio,
+        void inline advance_streamlines(const double dTimeRatio,
                                             const int meshNum=0,
                                             const double widthRatio=0.05,
                                             const double colorAttenuationRate = 0.9){
@@ -402,7 +402,7 @@ namespace directional
 
         }
 
-        void IGL_INLINE set_isolines(const directional::TriMesh& cutMesh,
+        void inline set_isolines(const directional::TriMesh& cutMesh,
                                      const Eigen::MatrixXd& vertexFunction,
                                      const int meshNum=0,
                                      const double sizeRatio=0.1)
@@ -434,13 +434,13 @@ namespace directional
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_lines = false;
         }
 
-        void IGL_INLINE set_uv(const Eigen::MatrixXd UV,
+        void inline set_uv(const Eigen::MatrixXd UV,
                                const int meshNum=0)
         {
             data_list[NUMBER_OF_SUBMESHES*meshNum].set_uv(UV);
         }
 
-        void IGL_INLINE set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
+        void inline set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
                                     const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& G,
                                     const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& B,
                                     const int meshNum=0)
@@ -448,77 +448,77 @@ namespace directional
             data_list[NUMBER_OF_SUBMESHES*meshNum].set_texture(R,G,B);
         }
 
-        void IGL_INLINE set_active(const bool active, const int meshNum=0){
+        void inline set_active(const bool active, const int meshNum=0){
             for (int i=NUMBER_OF_SUBMESHES*meshNum;i<NUMBER_OF_SUBMESHES*meshNum+NUMBER_OF_SUBMESHES;i++)
                 data_list[i].show_faces=active;
         }
 
-        void IGL_INLINE toggle_mesh(const bool active, const int meshNum=0){
+        void inline toggle_mesh(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=active;
         }
 
-        void IGL_INLINE toggle_mesh_edges(const bool active, const int meshNum=0){
+        void inline toggle_mesh_edges(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
         }
 
-        void IGL_INLINE toggle_field(const bool active, const int meshNum=0){
+        void inline toggle_field(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_faces=active;
         }
 
-        void IGL_INLINE toggle_singularities(const bool active, const int meshNum=0){
+        void inline toggle_singularities(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_faces=active;
         }
 
-        void IGL_INLINE toggle_seams(const bool active, const int meshNum=0){
+        void inline toggle_seams(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_faces=active;
         }
 
-        void IGL_INLINE toggle_streamlines(const bool active, const int meshNum=0){
+        void inline toggle_streamlines(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_faces=active;
         }
 
-        void IGL_INLINE toggle_isolines(const bool active, const int meshNum=0){
+        void inline toggle_isolines(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_faces=active;
         }
 
-        void IGL_INLINE toggle_texture(const bool active, const int meshNum=0){
+        void inline toggle_texture(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
         }
 
         //disabling the original mesh
-        void IGL_INLINE toggle_edge_data(const bool active, const int meshNum=0){
+        void inline toggle_edge_data(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=active;
             //data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
         }
 
         //static functions for default values
         //Mesh colors
-        static Eigen::RowVector3d IGL_INLINE default_mesh_color(){
+        static Eigen::RowVector3d inline default_mesh_color(){
             return Eigen::RowVector3d::Constant(1.0);
         }
 
         //Color for faces that are selected for editing and constraints
-        static Eigen::RowVector3d IGL_INLINE selected_face_color(){
+        static Eigen::RowVector3d inline selected_face_color(){
             return Eigen::RowVector3d(0.7,0.2,0.2);
         }
 
         //Glyph colors
-        static Eigen::RowVector3d IGL_INLINE default_glyph_color(){
+        static Eigen::RowVector3d inline default_glyph_color(){
             return Eigen::RowVector3d(0.0,0.2,1.0);
         }
 
         //Glyphs in selected faces
-        static Eigen::RowVector3d IGL_INLINE selected_face_glyph_color(){
+        static Eigen::RowVector3d inline selected_face_glyph_color(){
             return Eigen::RowVector3d(223.0/255.0, 210.0/255.0, 16.0/255.0);
         }
 
         //The selected glyph currently edited from a selected face
-        static Eigen::RowVector3d IGL_INLINE selected_vector_glyph_color(){
+        static Eigen::RowVector3d inline selected_vector_glyph_color(){
             return Eigen::RowVector3d(0.0,1.0,0.5);
         }
 
         //Colors by indices in each directional object.
-        static Eigen::MatrixXd IGL_INLINE isoline_colors(){
+        static Eigen::MatrixXd inline isoline_colors(){
 
             Eigen::Matrix<double, 15,3> glyphPrincipalColors;
             glyphPrincipalColors<< 0.0,0.5,1.0,
@@ -542,7 +542,7 @@ namespace directional
 
 
         //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
-        static Eigen::MatrixXd IGL_INLINE indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
+        static Eigen::MatrixXd inline indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
 
             Eigen::Matrix<double, 15,3> glyphPrincipalColors;
             glyphPrincipalColors<< 0.0,0.5,1.0,
@@ -571,7 +571,7 @@ namespace directional
         }
 
         //Jet-based singularity colors
-        static Eigen::MatrixXd IGL_INLINE default_singularity_colors(const int N){
+        static Eigen::MatrixXd inline default_singularity_colors(const int N){
             Eigen::MatrixXd fullColors;
             Eigen::VectorXd NList(2*N);
             for (int i=0;i<N;i++){
@@ -583,11 +583,11 @@ namespace directional
         }
 
         //Colors for emphasized edges, mostly seams and cuts
-        static Eigen::RowVector3d IGL_INLINE default_seam_color(){
+        static Eigen::RowVector3d inline default_seam_color(){
             return Eigen::RowVector3d(0.0,0.0,0.0);
         }
 
-        static Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> IGL_INLINE default_texture(){
+        static Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> inline default_texture(){
             Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R,texture_G,texture_B;
             unsigned size = 128;
             unsigned size2 = size/2;
@@ -605,7 +605,7 @@ namespace directional
             Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> fullTexMat(size*3,size);
             fullTexMat<<texture_R, texture_G, texture_B;
             return fullTexMat;
-        }
+        }*/
 
     };  //of DirectionalViewer class
 

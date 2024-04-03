@@ -46,7 +46,7 @@ namespace directional{
         ~CartesianField(){}
 
         //Initializing the field with the proper tangent spaces
-        void IGL_INLINE init(const TangentBundle& _tb, const fieldTypeEnum _fieldType, const int _N){
+        void inline init(const TangentBundle& _tb, const fieldTypeEnum _fieldType, const int _N){
             tb = &_tb;
             fieldType = _fieldType;
             N=_N;
@@ -54,7 +54,7 @@ namespace directional{
             extField.resize(tb->sources.rows(),3*N);
         };
 
-        void IGL_INLINE set_intrinsic_field(const Eigen::MatrixXd& _intField){
+        void inline set_intrinsic_field(const Eigen::MatrixXd& _intField){
             assert (!(fieldType==fieldTypeEnum::POWER_FIELD) || (_intField.cols()==2));
             assert ((_intField.cols()==2*N) || !(fieldType==fieldTypeEnum::POLYVECTOR_FIELD || fieldType==fieldTypeEnum::RAW_FIELD));
             intField = _intField;
@@ -63,7 +63,7 @@ namespace directional{
         }
 
         //The same, just with complex coordinates
-        void virtual IGL_INLINE set_intrinsic_field(const Eigen::MatrixXcd& _intField){
+        void virtual inline set_intrinsic_field(const Eigen::MatrixXcd& _intField){
             intField.resize(_intField.rows(),_intField.cols()*2);
             for (int i=0;i<N;i++){
                 intField.col(2*i)=_intField.col(i).real();
@@ -73,7 +73,7 @@ namespace directional{
         }
 
         //Setting the field by the extrinsic ambient field, which will get projected to the intrinsic tangent spaces.
-        void IGL_INLINE set_extrinsic_field(const Eigen::MatrixXd& _extField){
+        void inline set_extrinsic_field(const Eigen::MatrixXd& _extField){
             assert(_extField.cols()==3*N);
             extField=_extField;
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
@@ -81,7 +81,7 @@ namespace directional{
 
 
         //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
-        void IGL_INLINE set_singularities(const Eigen::VectorXi& _singLocalCycles,
+        void inline set_singularities(const Eigen::VectorXi& _singLocalCycles,
                                           const Eigen::VectorXi& _singIndices){
 
             //TODO: remove boundary elements

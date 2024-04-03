@@ -26,7 +26,7 @@ namespace directional
     //   field: the read RAW_FIELD field.
     // Return:
     //   Whether or not the file was read successfully
-    bool IGL_INLINE read_raw_field(const std::string &fileName,
+    bool inline read_raw_field(const std::string &fileName,
                                    const directional::TangentBundle& tb,
                                    int& N,
                                    directional::CartesianField& field)
