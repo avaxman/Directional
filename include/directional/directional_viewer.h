@@ -1,5 +1,5 @@
 // This file is part of Directional, a library for directional field processing.
-// Copyright (C) 2020 Amir Vaxman <avaxman@gmail.com>
+// Copyright (C) 2024 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -11,20 +11,9 @@
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
 #include <polyscope/point_cloud.h>
-//#include <directional/glyph_lines_mesh.h>
-//#include <directional/singularity_spheres.h>
-//#include <directional/seam_lines.h>
-//#include <directional/edge_diamond_mesh.h>
-//#include <directional/branched_isolines.h>
-//#include <directional/bar_chain.h>
-//#include <directional/halfedge_highlights.h>
-//#include <directional/vertex_highlights.h>
 //#include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
-
-//#include <igl/edge_topology.h>
-
 
 /***
  This class implements the Directional viewer, as an extension of the libigl viewer (as a wrapper). This
@@ -50,7 +39,9 @@ namespace directional
         std::vector<const CartesianField*> fieldList;
 
         std::vector<polyscope::SurfaceMesh*> psSurfaceMeshList;
-        std::vector<polyscope::PointCloud*> psPointCloudList;
+        std::vector<polyscope::PointCloud*> psFieldSourceList;
+        std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psFieldList;
+        std::vector<polyscope::PointCloud*> psSingList;
         //std::vector<Eigen::MatrixXd> fieldColors;
         //std::vector<directional::StreamlineData> slData;
         //std::vector<directional::StreamlineState> slState;
@@ -58,9 +49,6 @@ namespace directional
         //std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
         //std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
         //std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
-
-        //std::vector<Eigen::MatrixXd> fieldVList;
-        //std::vector<Eigen::MatrixXi> fieldFList;
 
     public:
         DirectionalViewer(){}
@@ -225,30 +213,37 @@ namespace directional
         }*/
 
         void inline set_field(const CartesianField& _field,
-                                  const std::string fieldName = "field",
-                                  const int fieldNum=0,
-                                  const double sizeRatio = 0.9,
-                                  const int sparsity=0,
-                                  const double offsetRatio = 0.2)
+                              const std::string fieldName = "field",
+                              const int meshNum=0,
+                              const int fieldNum=0,
+                              const double sizeRatio = 0.3,
+                              const int sparsity=0,
+                              const double offsetRatio = 0.2)
 
         {
             if (fieldList.size()<fieldNum+1) {
                 fieldList.resize(fieldNum + 1);
-                psPointCloudList.resize(fieldNum + 1);
+                psFieldSourceList.resize(fieldNum + 1);
+                psFieldList.resize(fieldNum+1);
+                psSingList.resize(fieldNum+1);
             }
 
             fieldList[fieldNum]=&_field;
 
-            psPointCloudList[fieldNum] = polyscope::registerPointCloud("sources", _field.tb->sources);
+            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources", _field.tb->sources);
+            psFieldList[fieldNum].resize(_field.N);
+            psFieldSourceList[fieldNum]->setPointRadius(10e-6);
+            psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
+            for (int i=0;i<_field.N;i++) {
+                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field") + std::to_string(i),
+                                                               _field.extField.block(0, 3 * i, _field.extField.rows(),
+                                                                                     3));
+                psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
+            }
 
-            psPointCloudList[fieldNum]->setPointRadius(10e-6);
-            psPointCloudList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
-            for (int i=0;i<_field.N;i++)
-                psPointCloudList[fieldNum]->addVectorQuantity(std::string("field")+std::to_string(i), _field.extField.block(0,3*i,_field.extField.rows(),3));
-
-            /*set_singularities(fieldList[fieldNum]->singLocalCycles,
+            set_singularities(fieldList[fieldNum]->singLocalCycles,
                               fieldList[fieldNum]->singIndices,
-                              fieldNum);*/
+                              fieldNum);
         }
 
         /*void inline set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -277,20 +272,19 @@ namespace directional
         }*/
 
 
-        /*void inline set_singularities(const Eigen::VectorXi& singElements,
+        void inline set_singularities(const Eigen::VectorXi& singElements,
                                           const Eigen::VectorXi& singIndices,
-                                          const int meshNum=0,
+                                          const int fieldNum=0,
                                           const double radiusRatio=1.25)
         {
-            Eigen::MatrixXd VSings, CSings;
-            Eigen::MatrixXi FSings;
-            directional::singularity_spheres(fieldList[meshNum]->tb->cycleSources, fieldList[meshNum]->tb->cycleNormals, fieldList[meshNum]->N, meshList[meshNum]->avgEdgeLength, singElements, singIndices, default_singularity_colors(fieldList[meshNum]->N), VSings, FSings, CSings, radiusRatio);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].clear();
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_mesh(VSings,FSings);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].set_colors(CSings);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_lines=false;
 
-        }*/
+            Eigen::MatrixXd singSources(singElements.rows(),3);
+            for (int i=0;i<singElements.size();i++)
+                singSources.row(i) = fieldList[fieldNum]->tb->cycleSources.row(singElements(i));
+
+            psSingList[fieldNum] = polyscope::registerPointCloud("sings", singSources);
+            psSingList[fieldNum]->addScalarQuantity("indices", singIndices.cast<double>());
+        }
 
         void inline set_seams(const Eigen::VectorXi& combedMatching,
                                   const int meshNum=0,
