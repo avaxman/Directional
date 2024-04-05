@@ -28,7 +28,7 @@ namespace directional
     //  N: The degree of the field.
     // Output:
     //  powerField: a cartesian power-field object.
-    IGL_INLINE void power_field(const TangentBundle& tb,
+    inline void power_field(const TangentBundle& tb,
                                 const Eigen::VectorXi& constSpaces,
                                 const Eigen::MatrixXd& constVectors,
                                 const Eigen::VectorXd& alignWeights,

@@ -13,7 +13,7 @@
 #include <Eigen/Sparse>
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
-#include <igl/PI.h>
+#include <directional/definitions.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 
@@ -22,7 +22,7 @@
 
 namespace directional {
 
-    IGL_INLINE void multiply_polynomials(Eigen::RowVectorXcd &p1,
+    inline void multiply_polynomials(Eigen::RowVectorXcd &p1,
                                          const Eigen::RowVectorXcd &p2) {
         Eigen::RowVectorXcd newp = Eigen::RowVectorXcd::Zero(p1.size() + p2.size());
         for (int i = 0; i < p1.size(); i++)
@@ -32,7 +32,7 @@ namespace directional {
         p1 = newp;
     }
 
-    IGL_INLINE void multiply_polynomials(Eigen::MatrixXcd &p1,
+    inline void multiply_polynomials(Eigen::MatrixXcd &p1,
                                          const Eigen::MatrixXcd &p2) {
         assert(p1.rows() == p2.rows());
         Eigen::MatrixXcd newp = Eigen::MatrixXcd::Zero(p1.rows(), p1.cols() + p2.cols());
@@ -43,7 +43,7 @@ namespace directional {
         p1 = newp;
     }
 
-    IGL_INLINE void polynomial_eval_from_roots(const Eigen::RowVectorXcd &roots,
+    inline void polynomial_eval_from_roots(const Eigen::RowVectorXcd &roots,
                                                const std::complex<double> &evalPoint,
                                                std::complex<double> &polyValue) {
         polyValue = std::complex<double>(1.0, 0.0);
@@ -51,7 +51,7 @@ namespace directional {
             polyValue *= (evalPoint - roots(i));
     }
 
-    IGL_INLINE void polynomial_eval_from_roots(const Eigen::MatrixXcd &roots,
+    inline void polynomial_eval_from_roots(const Eigen::MatrixXcd &roots,
                                                const Eigen::VectorXcd &evalPoints,
                                                Eigen::VectorXcd &polyValues) {
         assert(evalPoints.rows() == roots.rows());
@@ -61,7 +61,7 @@ namespace directional {
 
     }
 
-    IGL_INLINE void polynomial_eval(const Eigen::RowVectorXcd &coeffs,
+    inline void polynomial_eval(const Eigen::RowVectorXcd &coeffs,
                                     const std::complex<double> &evalPoint,
                                     std::complex<double> &polyValue) {
         polyValue = std::complex<double>(0.0, 0.0);
@@ -74,7 +74,7 @@ namespace directional {
         polyValue += z;  //the biggest and unit power
     }
 
-    IGL_INLINE void polynomial_eval(const Eigen::MatrixXcd &coeffs,
+    inline void polynomial_eval(const Eigen::MatrixXcd &coeffs,
                                     const Eigen::VectorXcd &evalPoints,
                                     Eigen::VectorXcd &polyValues) {
         polyValues = Eigen::VectorXcd::Zero(coeffs.rows());
@@ -97,7 +97,7 @@ namespace directional {
     // Output:
     //  roots:              #TangentSpaces by N complex matrix with all N roots of the PolyVectors in order
     //    returns true if succeeded
-    IGL_INLINE bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
+    inline bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
                                       const int N,
                                       Eigen::MatrixXcd &roots,
                                       bool signSymmetry = true,
@@ -129,7 +129,7 @@ namespace directional {
         roots.col(0).array() = (-actualPVField.col(0).array()).pow(1.0 / (double) actualN);
         for (int i = 1; i < actualN; i++)
             roots.col(i).array() =
-                    roots.col(i - 1).array() * std::exp(std::complex<double>(0, 2.0 * igl::PI / (double) actualN));
+                    roots.col(i - 1).array() * std::exp(std::complex<double>(0, 2.0 * directional::PI / (double) actualN));
 
         MatrixXd rootError = MatrixXd::Constant(actualPVField.rows(), actualN, 1000.0);
         double maxError = 1000.0;
@@ -177,7 +177,7 @@ namespace directional {
     }
 
 
-    IGL_INLINE bool polyvector_to_raw(const directional::CartesianField &pvField,
+    inline bool polyvector_to_raw(const directional::CartesianField &pvField,
                                       directional::CartesianField &rawField,
                                       bool signSymmetry = true,
                                       const double rootTolerance = 1e-8) {

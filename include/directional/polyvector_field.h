@@ -13,10 +13,8 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
 #include <unsupported/Eigen/Polynomials>
-#include <igl/speye.h>
-#include <igl/eigs.h>
 #include <iostream>
-#include <directional/complex_eigs.h>
+//#include <directional/complex_eigs.h>
 #include <directional/TangentBundle.h>
 #include <directional/CartesianField.h>
 
@@ -63,7 +61,7 @@ namespace directional
     // Output:
     //  pvField: POLYVECTOR_FIELD cartesian field initalized with the tangent bundle
     //  pvData:  Updated structure with all operators
-    IGL_INLINE void polyvector_precompute(const directional::TangentBundle& tb,
+    inline void polyvector_precompute(const directional::TangentBundle& tb,
                                           const int N,
                                           directional::CartesianField& pvField,
                                           PolyVectorData& pvData)
@@ -267,7 +265,7 @@ namespace directional
     // Outputs:
     //  pvField: a POLYVECTOR_FIELD type cartesian field object
 
-    IGL_INLINE void polyvector_field(const PolyVectorData& pvData,
+    inline void polyvector_field(const PolyVectorData& pvData,
                                      directional::CartesianField& pvField)
     {
         using namespace std;
@@ -283,7 +281,8 @@ namespace directional
 
         SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
         VectorXcd totalRhs = pvData.reducMat.adjoint()*(totalUnreducedRhs - totalUnreducedLhs*pvData.reducRhs);
-        if (pvData.constSpaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
+        //TODO: treat the zero constraint solution by simply randomly putting one constraint
+        /*if (pvData.constSpaces.size() == 0)  //alignmat should be empty and the reduction matrix should be only sign symmetry, if applicable
         {
             //using a matrix with only the first sizeT x sizeT block
             vector<Triplet<complex<double>>> X0LhsTriplets, X0MTriplets;
@@ -314,7 +313,7 @@ namespace directional
             MatrixXcd intField(U.col(0).rows(),pvData.N);
             intField.col(0)=U.col(smallestIndex);
             pvField.set_intrinsic_field(intField);
-        } else { //just solving the system
+        } else { //just solving the system*/
             SimplicialLDLT<SparseMatrix<complex<double>>> solver;
             //solver.analyzePattern(totalLhs);   // for this step the numerical values of A are not used
             solver.compute(totalLhs);
@@ -328,14 +327,14 @@ namespace directional
             pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
             pvField.set_intrinsic_field(intField);
 
-        }
+        //}
 
 
     }
 
 
     // minimal version without auxiliary data
-    IGL_INLINE void polyvector_field(const TangentBundle& tb,
+    inline void polyvector_field(const TangentBundle& tb,
                                      const Eigen::VectorXi& constSpaces,
                                      const Eigen::MatrixXd& constVectors,
                                      const double smoothWeight,
@@ -364,7 +363,7 @@ namespace directional
 
 
 //A version with default parameters (in which alignment is hard by default).
-    IGL_INLINE void polyvector_field(const TangentBundle& tb,
+    inline void polyvector_field(const TangentBundle& tb,
                                      const Eigen::VectorXi& constSpaces,
                                      const Eigen::MatrixXd& constVectors,
                                      const int N,

@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   
   directional::DirectionalViewer viewer;
   
-  directional::readOFF(TUTORIAL_SHARED_PATH "/lion.off", mesh);
+  directional::readOFF(TUTORIAL_DATA_PATH "/lion.off", mesh);
   ftb.init(mesh);
   // Create a power field
   Eigen::VectorXi constFaces(1); constFaces(0) = 0;
@@ -61,7 +61,6 @@ int main(int argc, char *argv[])
   viewer.set_mesh(mesh);
   viewer.set_field(field);
   Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
-  viewer.set_field_colors(fieldColors);
   viewer.toggle_field(false);
   viewer.init_streamlines(0, Eigen::VectorXi(), 3);
   viewer.advance_streamlines(0.5);  //to get the initial step

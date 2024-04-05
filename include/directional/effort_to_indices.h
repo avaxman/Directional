@@ -11,8 +11,7 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/boundary_loop.h>
+#include <directional/definitions.h>
 #include <directional/dual_cycles.h>
 #include <directional/CartesianField.h>
 
@@ -28,14 +27,14 @@ namespace directional
     //  N:              The degree of the field
     // Output:
     //  indices:     #c the index of the cycle x N (always an integer).
-    IGL_INLINE void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
+    inline void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
                                       const Eigen::VectorXd& effort,
                                       const Eigen::VectorXd& cycleCurvature,
                                       const int N,
                                       Eigen::VectorXi& indices)
     {
         using namespace std;
-        Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*igl::PI));  //this should already be an integer up to numerical precision
+        Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*directional::PI));  //this should already be an integer up to numerical precision
 
         //cout<<"dIndices: "<<dIndices<<endl;
         indices.conservativeResize(dIndices.size());
@@ -46,7 +45,7 @@ namespace directional
 
 
     // version that accepts a cartesian field object and operates on it as input and output.
-    IGL_INLINE void effort_to_indices(directional::CartesianField& field)
+    inline void effort_to_indices(directional::CartesianField& field)
     {
         //field.effort = Eigen::VectorXd::Zero(field.adjSpaces.rows());
         Eigen::VectorXd effortInner(field.tb->innerAdjacencies.size());

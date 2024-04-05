@@ -10,7 +10,6 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
 #include <directional/effort_to_indices.h>
 #include <directional/TangentBundle.h>
 
@@ -19,7 +18,7 @@ namespace directional
     // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
     // Important: if the Raw field in not CCW ordered, the result is meaningless.
     // The input and output are both a RAW_FIELD type cartesian field, in which the matching, effort, and singularities are set.
-    IGL_INLINE void principal_matching(directional::CartesianField& field)
+    inline void principal_matching(directional::CartesianField& field)
     {
 
         typedef std::complex<double> Complex;
@@ -73,7 +72,7 @@ namespace directional
                 currEffort+= arg(vecjgc / transvecjfc);
             }
 
-            field.matching(i)=indexMinFromZero-round((currEffort-field.effort(i))/(2.0*igl::PI));
+            field.matching(i)=indexMinFromZero-round((currEffort-field.effort(i))/(2.0*directional::PI));
         }
 
         //Getting final singularities and their indices

@@ -9,10 +9,11 @@
 #define DIRECTIONAL_TRIMESH_H
 
 #include <iostream>
+#include <vector>
+#include <set>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <directional/gaussian_curvature.h>
-
 
 /***
  This class stores a general-purpose triangle mesh. The triangle mesh can be used to implement a tangent bundle in several ways
@@ -77,6 +78,7 @@ namespace directional{
             nextH.resize(3*F.rows());
             prevH.resize(3*F.rows());
             HV.resize(3*F.rows());
+            VH.resize(V.rows());
             HF.resize(3*F.rows());
             FH.resize(F.rows(), 3);
             twinH = Eigen::VectorXi::Constant(3*F.rows(),-1);
@@ -97,6 +99,7 @@ namespace directional{
             std::set<pairPlusOne, ComparePairs> edgeSet;
             std::vector<int> EHList;
             for (int i=0;i<halfedges.rows();i++){
+                VH(HV(i))=i;
                 std::pair<int,int> oppEdge(halfedges(i,1), halfedges(i,0));
                 pairPlusOne oppEdgePlus(oppEdge, -1);
                 std::set<pairPlusOne>::iterator si = edgeSet.find(oppEdgePlus);
@@ -247,7 +250,7 @@ namespace directional{
             maxBox = V.colwise().maxCoeff();
 
             //hedra::dcel(Eigen::VectorXi::Constant(F.rows(),3),F,EV,EF,EFi, innerEdges,VH,EH,FH,HV,HE,HF,nextH,prevH,twinH);
-            /*vertexValence=Eigen::VectorXi::Zero(V.rows());
+            vertexValence=Eigen::VectorXi::Zero(V.rows());
             for (int i=0;i<EV.rows();i++){
                 vertexValence(EV(i,0))++;
                 vertexValence(EV(i,1))++;
@@ -275,7 +278,7 @@ namespace directional{
                     }
                     heiterate = twinH(prevH(heiterate));
                 }while(hebegin!=heiterate);
-            }*/
+            }
 
             //computing vertex normals by area-weighted aveage of face normals
             vertexNormals=Eigen::MatrixXd::Zero(V.rows(),3);
@@ -286,7 +289,7 @@ namespace directional{
             vertexNormals.rowwise().normalize();
 
             //computing local basis that aligns with the first projected edge of each triangle
-            /*VBx.resize(V.rows(),3);
+            VBx.resize(V.rows(),3);
             VBy.resize(V.rows(),3);
             for (int i=0;i<V.rows();i++){
                 Eigen::RowVector3d firstEdge = V.row(HV(nextH(VH(i))))-V.row(i);
@@ -296,7 +299,7 @@ namespace directional{
                 Eigen::RowVector3d currn=vertexNormals.row(i);
                 VBy.row(i)=currn.cross(currx);
                 VBy.row(i).normalize();
-            }*/
+            }
 
         }
 

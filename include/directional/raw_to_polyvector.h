@@ -22,7 +22,7 @@ namespace directional{
     //  signSymmetry:   Whether the field has sign symmetry or not, only if N is even. Default: true
     //Output:
     //  pvField:        #TangentSpaces x N complex representation of the PolyVector.
-    IGL_INLINE void raw_to_polyvector(const Eigen::MatrixXd& intField,
+    inline void raw_to_polyvector(const Eigen::MatrixXd& intField,
                                       const int N,
                                       Eigen::MatrixXcd& pvField,
                                       const bool signSymmetry=true){

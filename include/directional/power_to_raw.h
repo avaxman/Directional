@@ -8,7 +8,7 @@
 #ifndef DIRECTIONAL_POWER_TO_RAW_H
 #define DIRECTIONAL_POWER_TO_RAW_H
 
-#include <igl/igl_inline.h>
+#include <directional/definitions.h>
 #include <directional/TangentBundle.h>
 #include <directional/CartesianField.h>
 
@@ -21,7 +21,7 @@ namespace directional
     //  normalize: whether to produce a normalized result (length = 1)
     // Output:
     //  rawField: a RAW_FIELD object representing the (CCW sorted) roots of the power field.
-    IGL_INLINE void power_to_raw(const directional::CartesianField& powerField,
+    inline void power_to_raw(const directional::CartesianField& powerField,
                                  int N,
                                  directional::CartesianField& rawField,
                                  bool normalize=false)
@@ -36,7 +36,7 @@ namespace directional
         complexPowerField.array().imag()=-powerField.intField.col(1);
         intFieldComplex.col(0)=pow(complexPowerField.array(),1.0/(double)N);
         for (int i=1;i<N;i++)
-            intFieldComplex.col(i)=intFieldComplex.col(0)*exp(std::complex<double>(0,2*igl::PI*(double)i/(double)N));
+            intFieldComplex.col(i)=intFieldComplex.col(0)*exp(std::complex<double>(0,2*directional::PI*(double)i/(double)N));
 
         if (normalize)
             intFieldComplex.array()/=intFieldComplex.array().abs();

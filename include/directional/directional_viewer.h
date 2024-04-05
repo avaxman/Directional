@@ -62,6 +62,10 @@ namespace directional
             polyscope::show();
         }
 
+        void set_callback(void (*callbackFunc)()){
+            polyscope::state::userCallback = callbackFunc;
+        }
+
         void inline set_mesh(const TriMesh& mesh,
                              const int meshNum=0,
                              const std::string meshName="Mesh")
@@ -89,7 +93,7 @@ namespace directional
             }
 
             meshList[meshNum]=&mesh;
-            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName, mesh.V, mesh.F);
+            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName + std::to_string(meshNum), mesh.V, mesh.F);
         }
 
         /*void inline set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -230,12 +234,12 @@ namespace directional
 
             fieldList[fieldNum]=&_field;
 
-            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources", _field.tb->sources);
+            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), _field.tb->sources);
             psFieldList[fieldNum].resize(_field.N);
             psFieldSourceList[fieldNum]->setPointRadius(10e-6);
             psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             for (int i=0;i<_field.N;i++) {
-                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field") + std::to_string(i),
+                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field ") + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
                                                                _field.extField.block(0, 3 * i, _field.extField.rows(),
                                                                                      3));
                 psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
@@ -282,7 +286,7 @@ namespace directional
             for (int i=0;i<singElements.size();i++)
                 singSources.row(i) = fieldList[fieldNum]->tb->cycleSources.row(singElements(i));
 
-            psSingList[fieldNum] = polyscope::registerPointCloud("sings", singSources);
+            psSingList[fieldNum] = polyscope::registerPointCloud("sings" + std::to_string(fieldNum), singSources);
             psSingList[fieldNum]->addScalarQuantity("indices", singIndices.cast<double>());
         }
 
@@ -455,25 +459,28 @@ namespace directional
         void inline set_active(const bool active, const int meshNum=0){
             for (int i=NUMBER_OF_SUBMESHES*meshNum;i<NUMBER_OF_SUBMESHES*meshNum+NUMBER_OF_SUBMESHES;i++)
                 data_list[i].show_faces=active;
-        }
+        }*/
 
         void inline toggle_mesh(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=active;
+            psSurfaceMeshList[meshNum]->setEnabled(active);
         }
 
         void inline toggle_mesh_edges(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
+            //data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
         }
 
-        void inline toggle_field(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_faces=active;
+        void inline toggle_field(const bool active, const int fieldNum=0){
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_faces=active;
+            for (int i=0;i<psFieldList[fieldNum].size();i++)
+                psFieldList[fieldNum][i]->setEnabled(active);
         }
 
-        void inline toggle_singularities(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_faces=active;
+        void inline toggle_singularities(const bool active, const int fieldNum=0){
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_faces=active;
+            psSingList[fieldNum]->setEnabled(active);
         }
 
-        void inline toggle_seams(const bool active, const int meshNum=0){
+        /*void inline toggle_seams(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_faces=active;
         }
 

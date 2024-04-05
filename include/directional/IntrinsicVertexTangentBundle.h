@@ -11,8 +11,6 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <igl/boundary_loop.h>
-#include <igl/doublearea.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/raw_to_polyvector.h>
@@ -40,7 +38,7 @@ namespace directional{
         IntrinsicVertexTangentBundle(){}
         ~IntrinsicVertexTangentBundle(){}
 
-        void IGL_INLINE init(const TriMesh& _mesh){
+        void inline init(const TriMesh& _mesh){
 
             intDimension = 2;
             typedef std::complex<double> Complex;
@@ -58,7 +56,7 @@ namespace directional{
             //creating vertex tangent lookup table
             tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff());
             for (int i=0;i<mesh->V.rows();i++){
-                double totalTangentSum = (mesh->isBoundaryVertex(i) ? igl::PI : 2.0*igl::PI);
+                double totalTangentSum = (mesh->isBoundaryVertex(i) ? directional::PI : 2.0*directional::PI);
                 double angleSum =  totalTangentSum - mesh->GaussianCurvature(i);
                 tangentStartAngles.col(0).setZero();  //the first angle
                 Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
@@ -140,18 +138,16 @@ namespace directional{
             }
 
             //masses are vertex voronoi areas
-            Eigen::MatrixXd dAreas;
-            igl::doublearea(mesh->V,mesh->F,dAreas);
             tangentSpaceMass = Eigen::VectorXd::Zero(mesh->V.rows());
             for (int i=0;i<mesh->F.rows();i++)
                 for (int j=0;j<3;j++)
-                    tangentSpaceMass(mesh->F(i,j)) += dAreas(i)/6.0;
+                    tangentSpaceMass(mesh->F(i,j)) += mesh->faceAreas(i)/3.0;
 
         }
 
 
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
-        Eigen::MatrixXd  virtual IGL_INLINE project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
+        Eigen::MatrixXd  virtual inline project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
             assert(tangentSpaces.rows()==extDirectionals.rows());// || tangentSpaces.rows()==0);
 
            /* Eigen::VectorXi actualTangentSpaces;
@@ -172,7 +168,7 @@ namespace directional{
 
 
         //projecting intrinsic to extrinsicc
-        Eigen::MatrixXd virtual IGL_INLINE project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
+        Eigen::MatrixXd virtual inline project_to_extrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& intDirectionals) const {
 
             assert(tangentSpaces.rows()==intDirectionals.rows() || tangentSpaces.rows()==0);
             Eigen::VectorXi actualTangentSpaces;
@@ -194,7 +190,7 @@ namespace directional{
 
 
         //Primitive version that just interpolates inside the triangle - should be changed to a full linear version!
-        void IGL_INLINE interpolate(const Eigen::MatrixXi &faceIndices,
+        void inline interpolate(const Eigen::MatrixXi &faceIndices,
                                     const Eigen::MatrixXd &baryCoords,
                                     const Eigen::MatrixXd &intDirectionals,
                                     Eigen::MatrixXd& interpSources,
