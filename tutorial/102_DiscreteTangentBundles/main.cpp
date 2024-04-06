@@ -50,6 +50,8 @@ void callbackFunc()
     viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
     viewer.toggle_field(viewingMode==FACE_FIELD,0);
     viewer.toggle_field(viewingMode==VERTEX_FIELD,1);
+
+    ImGui::PopItemWidth();
 }
 
 

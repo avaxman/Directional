@@ -55,6 +55,17 @@ namespace directional{
 
     }
 
+    template<typename T>
+    inline void speye(const int numRows,
+                      const int numCols,
+                      Eigen::SparseMatrix<T>& eyeMat){
+        eyeMat.resize(numRows, numCols);
+        std::vector<Eigen::Triplet<T>> eyeMatTris;
+        for (int i=0;i<(numRows < numCols ? numRows : numCols);i++)
+            eyeMatTris.push_back(Eigen::Triplet<T>(i, i, 1.0));
+        eyeMat.setFromTriplets(eyeMatTris.begin(), eyeMatTris.end());
+    }
+
 }
 
 #endif //DIRECTIONAL_TUTORIALS_INDEX_OPERATIONS_H

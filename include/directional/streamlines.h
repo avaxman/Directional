@@ -11,7 +11,7 @@
 
 #include <Eigen/Core>
 #include <vector>
-//#include <igl/igl_inline.h>
+//#include <igl/inline.h>
 #include <directional/CartesianField.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 
@@ -76,7 +76,7 @@ namespace directional
   // Output:
   //   data          struct containing topology information of the mesh and field
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_init(const directional::CartesianField& field,
+  inline void streamlines_init(const directional::CartesianField& field,
                                    const Eigen::VectorXi& seedLocations,
                                    const double distRatio,
                                    StreamlineData &data,
@@ -86,7 +86,7 @@ namespace directional
   // The function computes the next state for each point in the sample
   //   data          struct containing topology information
   //   state         struct containing the state of the tracing
-  IGL_INLINE void streamlines_next(const StreamlineData & data,
+  inline void streamlines_next(const StreamlineData & data,
                                    StreamlineState & state,
                                    const double dTime);
 }

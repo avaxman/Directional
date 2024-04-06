@@ -11,14 +11,8 @@
 #include <map>
 #include <random>
 #include <Eigen/Geometry>
-#include <igl/edge_topology.h>
-#include <igl/sort_vectors_ccw.h>
-#include <igl/segment_segment_intersect.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/barycenter.h>
-#include <igl/slice.h>
-#include <igl/speye.h>
-#include <igl/avg_edge_length.h>
+#include <directional/definitions.h>
+#include <directional/index_operations.h>
 #include <directional/TriMesh.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
@@ -26,13 +20,13 @@
 #include <directional/IntrinsicVertexTangentBundle.h>
 
 namespace Directional {
-    IGL_INLINE void poisson_disk_sampling(const directional::TriMesh& mesh,
-                                              const double distRatio,
-                                              Eigen::VectorXi& sampleTris,
-                                              Eigen::MatrixXd& samplePoints)
+    inline void poisson_disk_sampling(const directional::TriMesh& mesh,
+                                      const double distRatio,
+                                      Eigen::VectorXi& sampleTris,
+                                      Eigen::MatrixXd& samplePoints)
     {
 
-        double minDist = distRatio*igl::avg_edge_length(mesh.V,mesh.F);
+        double minDist = distRatio*mesh.avgEdgeLength;
         double minDist2=minDist*minDist;
 
 
@@ -94,7 +88,7 @@ namespace Directional {
         Eigen::SparseMatrix<int> adjMat(mesh.F.rows(),mesh.F.rows());
         adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
         Eigen::SparseMatrix<int> newAdjMat(mesh.F.rows(),mesh.F.rows()),matMult;
-        igl::speye(mesh.F.rows(), mesh.F.rows(), matMult);
+        directional::speye(mesh.F.rows(), mesh.F.rows(), matMult);
         for (int i=0;i<indirection;i++){
             matMult=matMult*adjMat;
             newAdjMat+=matMult;
@@ -175,11 +169,11 @@ namespace Directional {
 }
 
 
-IGL_INLINE void directional::streamlines_init(const directional::CartesianField& field,
-                                              const Eigen::VectorXi& seedFaces,
-                                              const double distRatio,
-                                              StreamlineData &data,
-                                              StreamlineState &state){
+inline void directional::streamlines_init(const directional::CartesianField& field,
+                                          const Eigen::VectorXi& seedFaces,
+                                          const double distRatio,
+                                          StreamlineData &data,
+                                          StreamlineState &state){
     using namespace Eigen;
     using namespace std;
 
@@ -230,7 +224,8 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
     } else {
         data.sampleFaces=seedFaces;
         Eigen::MatrixXd BC_sample;
-        igl::slice(data.slMesh->barycenters, data.sampleFaces, 1, data.samplePoints);
+        Eigen::VectorXi one(1); one(0)=1;
+        directional::slice(data.slMesh->barycenters, data.sampleFaces, one, data.samplePoints);
 
     }
     //nsamples = data.nsample = data.sampleFaces.size();
@@ -283,7 +278,12 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
                 double u;
                 double t;
-                if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
+                //working out the problem in 2D
+                RowVector2d p2 = RowVector2d::Zero();
+                RowVector2d q2; q2<<(q-p).dot(data.slMesh->FBx.row(f0)),(q-p).dot(data.slMesh->FBy.row(f0));
+                RowVector2d vec2; vec2<<vec.dot(data.slMesh->FBx.row(f0)),vec.dot(data.slMesh->FBy.row(f0));
+                RowVector2d s2; s2<<s.dot(data.slMesh->FBx.row(f0)),s.dot(data.slMesh->FBy.row(f0));
+                if (directional::segment_segment_intersection(p2, vec2, q2, s2, t, u, -1e-6)) {
                     foundIntersection = true;
                     //cout<<"Found intersection "<<endl;
                     state.nextElements(currIndex) = f1;
@@ -331,9 +331,9 @@ IGL_INLINE void directional::streamlines_init(const directional::CartesianField&
 
 }
 
-IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
-                                              StreamlineState & state,
-                                              const double dTime){
+inline void directional::streamlines_next(const StreamlineData & data,
+                                          StreamlineState & state,
+                                          const double dTime){
 
 
     using namespace Eigen;
@@ -418,7 +418,11 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
 
                         double u;
                         double t;
-                        if (igl::segment_segment_intersect(p, vec, q, s, t, u, -1e-6)) {
+                        RowVector2d p2 = RowVector2d::Zero();
+                        RowVector2d q2; q2<<(q-p).dot(data.slMesh->FBx.row(f0)),(q-p).dot(data.slMesh->FBy.row(f0));
+                        RowVector2d vec2; vec2<<vec.dot(data.slMesh->FBx.row(f0)),vec.dot(data.slMesh->FBy.row(f0));
+                        RowVector2d s2; s2<<s.dot(data.slMesh->FBx.row(f0)),s.dot(data.slMesh->FBy.row(f0));
+                        if (directional::segment_segment_intersection(p2, vec2, q2, s2, t, u, -1e-6)) {
                             foundIntersection = true;
                             state.nextElements(currIndex) = f1;
                             //cout<<"Found intersection after: "<<t<<endl;
@@ -437,8 +441,8 @@ IGL_INLINE void directional::streamlines_next(const StreamlineData & data,
                         }
                     }
                     if (!foundIntersection) {  //something went bad, we couldn't find the next face
-                         state.segmentAlive(currIndex) = false;
-                         break;
+                        state.segmentAlive(currIndex) = false;
+                        break;
                     }
 
                     //creating new traced segment for the new face

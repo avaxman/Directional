@@ -91,7 +91,7 @@ namespace directional{
                 prevH.segment(3*i,3)<<3*i+2, 3*i, 3*i+1;
                 HV.segment(3*i,3)<<F.row(i).transpose();
                 HF.segment(3*i,3)<<i,i,i;
-                FH.row(i)<<3*i+1, 3*i+2, 3*i;
+                FH.row(i)<<3*i, 3*i+1, 3*i+2;
             }
 
             //finding twins
@@ -122,6 +122,7 @@ namespace directional{
             //VE.resize(V.size());
             FE.resize(F.size(),3);
             FEs.resize(F.size(),3);
+            TT.resize(F.size(),3);
             Eigen::VectorXi HEs(halfedges.rows());
             for (int i=0;i<EH.size();i++){
                 EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
@@ -136,19 +137,65 @@ namespace directional{
                     HEs(twinH(EH(i))) = -1;
                 }
 
-                EFi(i,0) = (EH(i) + 1) % 3;
+                EFi(i,0) = (EH(i) + 0) % 3;
                 if (twinH((EH(i)))!=-1)
-                    EFi(i,1) = (twinH(EH(i)) + 1) % 3;
+                    EFi(i,1) = (twinH(EH(i)) + 0) % 3;
             }
             for (int i=0;i<FH.rows();i++){
                 for (int j=0;j<3;j++){
-                    FE(i,(j+2)%3) = HE(FH(i,j));
+                    FE(i,j) = HE(FH(i,j));
                     //checking the orientation of the edge vs. the halfedge
-                    FEs(i,(j+2)%3) = HEs(FH(i,j));
+                    FEs(i,j) = HEs(FH(i,j));
+
+                    if (twinH(FH(i,j)) == -1)
+                        TT(i, j) = -1;
+                    else
+                        TT(i, j) = HF(twinH(FH(i,j)));
                 }
             }
 
-            //TODO: computing boundary loops
+            //gathering all boundary halfedges
+            std::vector<int> innerEdgesList, boundEdgesList, boundHalfedgesList;
+            isBoundaryVertex=Eigen::VectorXi::Zero(V.size());
+            isBoundaryEdge=Eigen::VectorXi::Zero(EV.size());
+            for (int i = 0; i < halfedges.rows(); i++) {
+                if (twinH(i) == -1){
+                    boundEdgesList.push_back(HE(i));
+                    boundHalfedgesList.push_back(i);
+                    isBoundaryEdge(HE(i))=1;
+                    isBoundaryVertex(EV(HE(i),0))=1;
+                    isBoundaryVertex(EV(HE(i),1))=1;
+                }else
+                    innerEdgesList.push_back(i);
+            }
+
+
+            innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
+            boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());
+
+            //creating boundary loops
+            Eigen::VectorXi isVisited = Eigen::VectorXi::Constant(halfedges.size(),0);
+            while (isVisited.sum()!=boundHalfedgesList.size()){
+                //choose a first one
+                int beginHE;
+                for (beginHE=0;beginHE<boundHalfedgesList.size();beginHE++)
+                    if (isVisited(boundHalfedgesList[beginHE])==0)
+                        break;
+
+                beginHE = boundHalfedgesList[beginHE];  //in the global indexing
+                int currHE = beginHE;
+                std::vector<int> currBoundaryLoop;
+                do{
+                    currBoundaryLoop.push_back(HV(currHE));
+                    isVisited(currHE) = 1;
+                    //finding the next boundary halfedge
+                    currHE =nextH(currHE);
+                    while (twinH(currHE)!=-1)
+                        currHE = nextH(twinH(currHE));
+                }while(currHE!=beginHE);
+                boundaryLoops.push_back(currBoundaryLoop);
+            }
+
         }
 
         void inline compute_geometric_quantities(){
@@ -198,24 +245,10 @@ namespace directional{
                 EF = _EF;
             }
 
-            //TODO: move this inside compute edge quantities
-            std::vector<int> innerEdgesList, boundEdgesList;
-            isBoundaryVertex=Eigen::VectorXi::Zero(V.size());
-            isBoundaryEdge=Eigen::VectorXi::Zero(EV.size());
-            for (int i = 0; i < EF.rows(); i++) {
-                if ((EF(i, 1) == -1) || (EF(i, 0) == -1)) {
-                    boundEdgesList.push_back(i);
-                    isBoundaryEdge(i)=1;
-                    isBoundaryVertex(EV(i,0))=1;
-                    isBoundaryVertex(EV(i,1))=1;
-                }else
-                    innerEdgesList.push_back(i);
-
-            }
 
             //computing extra combinatorial information
             //Relative location of edges within faces
-            EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
+            /*EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
             for(int i = 0; i < EF.rows(); i++)
             {
                 for (int k = 0; k < 2; k++)
@@ -237,10 +270,8 @@ namespace directional{
                     FEs(EF(i, 0), EFi(i, 0)) = 1.0;
                 if(EFi(i,1) != -1)
                     FEs(EF(i, 1), EFi(i, 1)) = -1.0;
-            }
+            }*/
 
-            innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
-            boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());
 
             compute_geometric_quantities();
 

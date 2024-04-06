@@ -10,8 +10,9 @@
 #include <Eigen/Core>
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_mesh.h>
+#include <polyscope/curve_network.h>
 #include <polyscope/point_cloud.h>
-//#include <directional/streamlines.h>
+#include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 
@@ -25,14 +26,6 @@
 namespace directional
 {
 
-#define NUMBER_OF_SUBMESHES 1
-//#define FIELD_MESH 1
-//#define SING_MESH 2
-//#define SEAMS_MESH 3
-//#define STREAMLINE_MESH 4
-//#define EDGE_DIAMOND_MESH 5
-//#define ISOLINES_MESH 6
-
     class DirectionalViewer{
     private:
         std::vector<const TriMesh*> meshList;  //meshes that are being viewed
@@ -42,9 +35,10 @@ namespace directional
         std::vector<polyscope::PointCloud*> psFieldSourceList;
         std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psFieldList;
         std::vector<polyscope::PointCloud*> psSingList;
+        std::vector<polyscope::CurveNetwork*> psStreamlineList;
         //std::vector<Eigen::MatrixXd> fieldColors;
-        //std::vector<directional::StreamlineData> slData;
-        //std::vector<directional::StreamlineState> slState;
+        std::vector<directional::StreamlineData> slData;
+        std::vector<directional::StreamlineState> slState;
 
         //std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
         //std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
@@ -70,23 +64,6 @@ namespace directional
                              const int meshNum=0,
                              const std::string meshName="Mesh")
         {
-            /*Eigen::MatrixXd meshColors;
-            meshColors=default_mesh_color();
-
-            if (NUMBER_OF_SUBMESHES*(meshNum+1)>data_list.size()){  //allocating until there
-                int currDLSize=data_list.size();
-                for (int i=currDLSize;i<NUMBER_OF_SUBMESHES*(meshNum+1);i++)
-                    append_mesh();
-            }
-
-            selected_data_index=NUMBER_OF_SUBMESHES*meshNum;  //the last triangle mesh
-            data_list[NUMBER_OF_SUBMESHES*meshNum].clear();
-            data_list[NUMBER_OF_SUBMESHES*meshNum].set_mesh(mesh.V,mesh.F);
-            if ((mesh.V.rows()==mesh.F.rows())||(meshColors.rows()!=mesh.V.rows()))  //assume face_based was meant
-                data_list[NUMBER_OF_SUBMESHES*meshNum].set_face_based(true);
-            data_list[NUMBER_OF_SUBMESHES*meshNum].set_colors(meshColors);
-            data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=false;*/
-
             if (meshList.size()<meshNum+1) {
                 meshList.resize(meshNum + 1);
                 psSurfaceMeshList.resize(meshNum + 1);
@@ -118,54 +95,33 @@ namespace directional
         }*/
 
         void inline set_vertex_data(const Eigen::VectorXd& vertexData,
-                                        const double minRange,
-                                        const double maxRange,
-                                        const std::string dataName="",
-                                        const int meshNum=0)
+                                    const double minRange,
+                                    const double maxRange,
+                                    const std::string dataName="",
+                                    const int meshNum=0)
         {
-            //Eigen::MatrixXd C;
             psSurfaceMeshList[meshNum]->addVertexScalarQuantity(dataName, vertexData);
-            //igl::parula(vertexData, minRange,maxRange, C);
-            //set_mesh_colors(C, meshNum);
         }
 
         void inline set_face_data(const Eigen::VectorXd& faceData,
-                                      const double minRange,
-                                      const double maxRange,
-                                      const std::string dataName="",
-                                      const int meshNum=0)
+                                  const double minRange,
+                                  const double maxRange,
+                                  const std::string dataName="",
+                                  const int meshNum=0)
         {
-           // Eigen::MatrixXd C;
-            //igl::parula(faceData, minRange,maxRange, C);
-            //set_mesh_colors(C, meshNum);
             psSurfaceMeshList[meshNum]->addFaceScalarQuantity(dataName, faceData);
         }
 
-        /*void inline set_edge_data(const Eigen::VectorXd& edgeData,
-                                      const double minRange,
-                                      const double maxRange,
-                                      const int meshNum=0)
+        void inline set_edge_data(const Eigen::VectorXd& edgeData,
+                                  const double minRange,
+                                  const double maxRange,
+                                  const std::string dataName="",
+                                  const int meshNum=0)
         {
+            psSurfaceMeshList[meshNum]->addEdgeScalarQuantity(dataName, edgeData);
+        }
 
-            if (edgeVList[meshNum].size()==0){  //allocate
-                edge_diamond_mesh(meshList[meshNum]->V,meshList[meshNum]->F,meshList[meshNum]->EV,meshList[meshNum]->EF,edgeVList[meshNum],edgeFList[meshNum],edgeFEList[meshNum]);
-                data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].clear();
-                data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_mesh(edgeVList[meshNum],edgeFList[meshNum]);
-            }
 
-            Eigen::VectorXd edgeFData(edgeFList[meshNum].rows());
-            for (int i=0;i<edgeFList[meshNum].rows();i++)
-                edgeFData(i)=edgeData(edgeFEList[meshNum](i));
-
-            Eigen::MatrixXd C;
-            igl::parula(edgeFData, minRange,maxRange, C);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].set_colors(C);
-
-            data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=false;
-            data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_lines=false;
-
-            selected_data_index=NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH;
-        }*/
 
         //this function assumes face-based fields
 
@@ -240,8 +196,8 @@ namespace directional
             psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             for (int i=0;i<_field.N;i++) {
                 psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field ") + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
-                                                               _field.extField.block(0, 3 * i, _field.extField.rows(),
-                                                                                     3));
+                                                                                          _field.extField.block(0, 3 * i, _field.extField.rows(),
+                                                                                                                3));
                 psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
             }
 
@@ -277,9 +233,9 @@ namespace directional
 
 
         void inline set_singularities(const Eigen::VectorXi& singElements,
-                                          const Eigen::VectorXi& singIndices,
-                                          const int fieldNum=0,
-                                          const double radiusRatio=1.25)
+                                      const Eigen::VectorXi& singIndices,
+                                      const int fieldNum=0,
+                                      const double radiusRatio=1.25)
         {
 
             Eigen::MatrixXd singSources(singElements.rows(),3);
@@ -291,8 +247,8 @@ namespace directional
         }
 
         void inline set_seams(const Eigen::VectorXi& combedMatching,
-                                  const int meshNum=0,
-                                  const double widthRatio = 0.05)
+                              const int meshNum=0,
+                              const double widthRatio = 0.05)
         {
 
 
@@ -353,13 +309,14 @@ namespace directional
 
 
 
-        /*void inline init_streamlines(const int meshNum=0,
-                                         const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
-                                         const double distRatio=3.0)
+        void inline init_streamlines(const int meshNum=0,
+                                     const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
+                                     const double distRatio=3.0)
         {
             if (slData.size()<meshNum+1){
                 slData.resize(meshNum+1);
                 slState.resize(meshNum+1);
+                psStreamlineList.resize(meshNum+1);
             }
             //assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
             directional::streamlines_init(*fieldList[meshNum], seedLocations,distRatio,slData[meshNum], slState[meshNum]);
@@ -376,7 +333,7 @@ namespace directional
             double width = widthRatio*meshList[meshNum]->avgEdgeLength;
 
             //generating colors according to original elements and their time signature
-            Eigen::MatrixXd slColors(slState[meshNum].segStart.size(),3);
+            /*Eigen::MatrixXd slColors(slState[meshNum].segStart.size(),3);
 
             //problem: if the field is vertex-faced, "orig face" is invalid!
             for (int i=0;i<slState[meshNum].segOrigFace.size();i++){
@@ -391,7 +348,7 @@ namespace directional
                         slColors.row(i)=fieldColors[meshNum].block(slState[meshNum].segOrigFace[0], 3*slState[meshNum].segOrigVector[i], 1,3);
                     slColors.row(i).array()=slColors.row(i).array()*blendFactor+default_mesh_color().array()*(1.0-blendFactor);
                 }
-            }
+            }*/
 
             Eigen::MatrixXd VStream, CStream;
             Eigen::MatrixXi FStream;
@@ -400,17 +357,23 @@ namespace directional
                 P1.row(i)=slState[meshNum].segStart[i];
                 P2.row(i)=slState[meshNum].segEnd[i];
             }
-            directional::line_cylinders(P1,P2, width, slColors, 4, VStream, FStream, CStream);
+            Eigen::MatrixXd nodes(P1.rows()+P2.rows(),3);
+            nodes<<P1, P2;
+            Eigen::MatrixXi edges(P1.rows(),2);
+            edges.col(0) = Eigen::VectorXi::LinSpaced(P1.rows(), 0, P1.rows()-1);
+            edges.col(1) = Eigen::VectorXi::LinSpaced(P2.rows(), P1.rows(), P1.rows()+P2.rows()-1);
+            psStreamlineList[meshNum] = polyscope::registerCurveNetwork("streamlines" + std::to_string(meshNum), nodes, edges);
+            /*directional::line_cylinders(P1,P2, width, slColors, 4, VStream, FStream, CStream);
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].clear();
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_mesh(VStream, FStream);
             data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_colors(CStream);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_lines = false;
+            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_lines = false;*/
 
 
 
         }
 
-        void inline set_isolines(const directional::TriMesh& cutMesh,
+        /*void inline set_isolines(const directional::TriMesh& cutMesh,
                                      const Eigen::MatrixXd& vertexFunction,
                                      const int meshNum=0,
                                      const double sizeRatio=0.1)
