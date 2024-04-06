@@ -100,7 +100,7 @@ namespace directional
                                     const std::string dataName="",
                                     const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addVertexScalarQuantity(dataName, vertexData);
+            psSurfaceMeshList[meshNum]->addVertexScalarQuantity("vertex data" + std::to_string(meshNum), vertexData);
         }
 
         void inline set_face_data(const Eigen::VectorXd& faceData,
@@ -109,7 +109,7 @@ namespace directional
                                   const std::string dataName="",
                                   const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addFaceScalarQuantity(dataName, faceData);
+            psSurfaceMeshList[meshNum]->addFaceScalarQuantity("face data" + std::to_string(meshNum), faceData);
         }
 
         void inline set_edge_data(const Eigen::VectorXd& edgeData,
@@ -118,7 +118,11 @@ namespace directional
                                   const std::string dataName="",
                                   const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addEdgeScalarQuantity(dataName, edgeData);
+            std::vector<int> permArr(edgeData.size());
+            for (int i=0;i<permArr.size();i++)
+                permArr[i]=i;
+            psSurfaceMeshList[meshNum]->setEdgePermutation(permArr);
+            psSurfaceMeshList[meshNum]->addEdgeScalarQuantity("edge data" + std::to_string(meshNum), edgeData);
         }
 
 
