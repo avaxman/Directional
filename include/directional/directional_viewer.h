@@ -181,8 +181,7 @@ namespace directional
                               const int meshNum=0,
                               const int fieldNum=0,
                               const double sizeRatio = 0.3,
-                              const int sparsity=0,
-                              const double offsetRatio = 0.2)
+                              const int sparsity=0)
 
         {
             if (fieldList.size()<fieldNum+1) {
@@ -194,13 +193,21 @@ namespace directional
 
             fieldList[fieldNum]=&_field;
 
-            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), _field.tb->sources);
-            psFieldList[fieldNum].resize(_field.N);
+            Eigen::VectorXi sampledSpaces = samples_tangent_bundle(fieldList[fieldNum]->tb->sources,fieldList[fieldNum]->tb->adjSpaces, sparsity);
+            Eigen::MatrixXd sampledSources, sampledField;
+            Eigen::VectorXi three(3); three<<0,1,2;
+            Eigen::VectorXi threeN(3*fieldList[fieldNum]->N);
+            for (int i=0;i<fieldList[fieldNum]->N;i++)
+                threeN.segment(3*i,3)<<3*i,3*i+1,3*i+2;
+            directional::slice(fieldList[fieldNum]->tb->sources, sampledSpaces, three, sampledSources);
+            directional::slice(fieldList[fieldNum]->extField, sampledSpaces, threeN, sampledField);
+            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), sampledSources);
+            psFieldList[fieldNum].resize(fieldList[fieldNum]->N);
             psFieldSourceList[fieldNum]->setPointRadius(10e-6);
             psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
-            for (int i=0;i<_field.N;i++) {
+            for (int i=0;i<fieldList[fieldNum]->N;i++) {
                 psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field ") + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
-                                                                                          _field.extField.block(0, 3 * i, _field.extField.rows(),
+                                                                                          sampledField.block(0, 3 * i, sampledField.rows(),
                                                                                                                 3));
                 psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
             }
@@ -584,6 +591,67 @@ namespace directional
             fullTexMat<<texture_R, texture_G, texture_B;
             return fullTexMat;
         }*/
+
+        Eigen::VectorXi samples_tangent_bundle(const Eigen::MatrixXd& sources,
+                                               const Eigen::MatrixXi& adjSpaces,
+                                               const int sparsity)
+        {
+            using namespace Eigen;
+            using namespace std;
+            VectorXi sampledSpaces;
+            if (sparsity!=0){
+                //creating adjacency matrix
+                vector<Triplet<int>> adjTris;
+                for (int i=0;i<adjSpaces.rows();i++)
+                    if ((adjSpaces(i,0)!=-1)&&(adjSpaces(i,1)!=-1)){
+                        adjTris.push_back(Triplet<int>(adjSpaces(i,0), adjSpaces(i,1),1));
+                        adjTris.push_back(Triplet<int>(adjSpaces(i,1), adjSpaces(i,0),1));
+                    }
+
+                SparseMatrix<int> adjMat(sources.rows(),sources.rows());
+                adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
+                SparseMatrix<int> newAdjMat(sources.rows(),sources.rows()),matMult;
+                directional::speye(sources.rows(), sources.rows(), matMult);
+                for (int i=0;i<sparsity;i++){
+                    matMult=matMult*adjMat;
+                    newAdjMat+=matMult;
+                }
+
+                //cout<<"newAdjMat: "<<newAdjMat<<endl;
+
+                adjMat=newAdjMat;
+
+                vector<set<int>> ringAdjacencies(sources.rows());
+                for (int k=0; k<adjMat.outerSize(); ++k){
+                    for (SparseMatrix<int>::InnerIterator it(adjMat,k); it; ++it){
+                        ringAdjacencies[it.row()].insert(it.col());
+                        ringAdjacencies[it.col()].insert(it.row());
+                    }
+                }
+
+                VectorXi sampleMask=VectorXi::Zero(sources.rows());
+                for (int i=0;i<sources.rows();i++){
+                    if (sampleMask(i)!=0) //occupied face
+                        continue;
+
+                    sampleMask(i)=2;
+                    //clearing out all other faces
+                    for (set<int>::iterator si=ringAdjacencies[i].begin();si!=ringAdjacencies[i].end();si++){
+                        if (sampleMask(*si)==0)
+                            sampleMask(*si)=1;
+
+                    }
+                }
+
+                vector<int> samplesList;
+                for (int i=0;i<sampleMask.size();i++)
+                    if (sampleMask(i)==2)
+                        samplesList.push_back(i);
+
+                sampledSpaces = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(samplesList.data(), samplesList.size());
+                return sampledSpaces;
+            } else return Eigen::VectorXi::LinSpaced(sources.rows(),0,sources.rows()-1);
+        }
 
     };  //of DirectionalViewer class
 

@@ -16,29 +16,31 @@ int sparsity=0;
 
 directional::DirectionalViewer viewer;
 
-bool key_down(igl::opengl::glfw::Viewer& iglViewer, int key, int modifiers)
-{
-  igl::opengl::glfw::Viewer* iglViewerPointer=&iglViewer;
-  directional::DirectionalViewer* directionalViewer = static_cast<directional::DirectionalViewer*>(iglViewerPointer);
-  switch (key)
-  {
-    case '1': sparsity++; break;
-    case '2': sparsity--; break;
-    default: return false;
-  }
-  if (sparsity<0) sparsity = 0;
-  std::cout<<"Sparsity: "<<sparsity<<std::endl;
-  directionalViewer->set_field(field,Eigen::MatrixXd(),0,0.9*((double)sparsity+1.0),sparsity);
-  return true;
+void callbackFunc() {
+    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
+    ImGui::Text("Sparsity: %d", sparsity);
+    ImGui::SameLine();
+    if (ImGui::Button("+")) {
+        sparsity++;
+        viewer.set_field(field,"",0, 0, 0.3*((double)sparsity+1.0),sparsity);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("-")) {
+        sparsity --;
+        viewer.set_field(field,"",0, 0, 0.3*((double)sparsity+1.0),sparsity);
+    }
+
+    ImGui::PopItemWidth();
 }
+
 
 int main()
 {
-  std::cout <<"1  Sparser field view" << std::endl;
-  std::cout <<"2  Denser field view" << std::endl;
- 
-  directional::readOBJ(TUTORIAL_SHARED_PATH "/armadillo.obj",mesh);
+
+  directional::readOBJ(TUTORIAL_DATA_PATH "/armadillo.obj",mesh);
   ftb.init(mesh);
+  viewer.init();
+  viewer.set_callback(&callbackFunc);
   Eigen::VectorXi bc(1); bc(0)=0;
   Eigen::MatrixXd b(1,3); b.row(0)=mesh.V.row(mesh.F(0,1))-mesh.V.row(mesh.F(0,2));
   directional::power_field(ftb, bc,b, Eigen::VectorXd::Constant(bc.size(),-1), N, powerField);
@@ -46,9 +48,6 @@ int main()
   
   viewer.set_mesh(mesh);
   viewer.set_field(field);
-  viewer.toggle_mesh_edges(false);
-  
-  viewer.callback_key_down = &key_down;
   viewer.launch();
 }
 
