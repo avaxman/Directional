@@ -27,7 +27,7 @@ namespace directional
 {
 
     class DirectionalViewer{
-    private:
+    public:
         std::vector<const TriMesh*> meshList;  //meshes that are being viewed
         std::vector<const CartesianField*> fieldList;
 
@@ -128,6 +128,11 @@ namespace directional
 
 
         //this function assumes face-based fields
+
+        void inline highlight_faces(const Eigen::VectorXi& selectedFaces,
+                                    const int meshNum=0){
+            //TODO
+        }
 
         /*void inline set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
             assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);

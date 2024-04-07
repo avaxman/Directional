@@ -11,7 +11,7 @@
 #include <Eigen/Core>
 #include <vector>
 #include <cmath>
-#include <igl/igl_inline.h>
+#include <directional/definitions.h>
 #include <directional/CartesianField.h>
 #include <directional/rotation_to_raw.h>
 
@@ -29,18 +29,18 @@ namespace directional
     // Output:
     //  rotationAngles: #adjSpaces rotation angles (difference from parallel transport) per inner space adjacency relation
     //  linfError:      l_infinity error of the computation. If this is not approximately 0, the prescribed indices are likely inconsistent (don't add up to the correct sum).
-    IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
-                                       const int N,
-                                       const double globalRotation,
-                                       Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
-                                       directional::CartesianField& field,
-                                       Eigen::VectorXd& rotationAngles,
-                                       double &linfError)
+    inline void index_prescription(const Eigen::VectorXi& cycleIndices,
+                                   const int N,
+                                   const double globalRotation,
+                                   Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> >& ldltSolver,
+                                   directional::CartesianField& field,
+                                   Eigen::VectorXd& rotationAngles,
+                                   double &linfError)
     {
         using namespace Eigen;
         using namespace std;
 
-        VectorXd cycleNewCurvature = cycleIndices.cast<double>()*(2.0*igl::PI/(double)N);
+        VectorXd cycleNewCurvature = cycleIndices.cast<double>()*(2.0*directional::PI/(double)N);
 
         //Initialize solver if never before
         if (!ldltSolver.rows())
@@ -61,12 +61,12 @@ namespace directional
     }
 
     //Minimal version: without a provided solver
-    IGL_INLINE void index_prescription(const Eigen::VectorXi& cycleIndices,
-                                       const int N,
-                                       const double globalRotation,
-                                       directional::CartesianField& field,
-                                       Eigen::VectorXd& rotationAngles,
-                                       double &error)
+    inline void index_prescription(const Eigen::VectorXi& cycleIndices,
+                                   const int N,
+                                   const double globalRotation,
+                                   directional::CartesianField& field,
+                                   Eigen::VectorXd& rotationAngles,
+                                   double &error)
     {
         Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > ldltSolver;
         index_prescription(cycleIndices, N, globalRotation,ldltSolver,  field, rotationAngles, error);

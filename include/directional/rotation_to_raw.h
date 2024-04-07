@@ -7,6 +7,7 @@
 #ifndef DIRECTIONAL_ROTATION_TO_RAW_H
 #define DIRECTIONAL_ROTATION_TO_RAW_H
 
+#include <directional/definitions.h>
 #include <directional/CartesianField.h>
 
 namespace directional
@@ -19,11 +20,11 @@ namespace directional
     //  globalRotation: The angle between the vector on the first face and its basis in radians.
     // Outputs:
     //  field:          The raw Cartesian field.
-    IGL_INLINE void rotation_to_raw(const TangentBundle& tb,
-                                    const Eigen::VectorXd& rotationAngles,
-                                    const int N,
-                                    const double globalRotation,
-                                    directional::CartesianField& field)
+    inline void rotation_to_raw(const TangentBundle& tb,
+                                const Eigen::VectorXd& rotationAngles,
+                                const int N,
+                                const double globalRotation,
+                                directional::CartesianField& field)
     {
         typedef std::complex<double> Complex;
         using namespace Eigen;
@@ -62,7 +63,7 @@ namespace directional
 
         MatrixXd intField(complexField.rows(),2*N);
         for (int j=0;j<N;j++){
-            VectorXcd currComplexField = complexField.array()*exp(Complex(0,2*j*igl::PI/N));
+            VectorXcd currComplexField = complexField.array()*exp(Complex(0,2*j*directional::PI/N));
             intField.block(0,2*j,intField.rows(),2)<<currComplexField.array().real(),currComplexField.array().imag();
         }
         //constructing raw intField
