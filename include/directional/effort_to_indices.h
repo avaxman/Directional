@@ -34,7 +34,18 @@ namespace directional
                                       Eigen::VectorXi& indices)
     {
         using namespace std;
-        Eigen::VectorXd dIndices = ((basisCycles * effort + N*cycleCurvature).array() / (2.0*directional::PI));  //this should already be an integer up to numerical precision
+        Eigen::VectorXd dIndices = ((basisCycles * effort + (double)N*cycleCurvature).array() / (2.0*directional::PI));  //this should already be an integer up to numerical precision
+        Eigen::VectorXd try1 = basisCycles * effort;
+        Eigen::VectorXd try2 = (double)N*cycleCurvature;
+
+        cout<<"dIndices: "<<dIndices<<endl;
+
+        for (int k=0; k<basisCycles.outerSize(); ++k)
+            for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it) {
+                cout << it.row() << ", " << it.col() << ", " << it.value() << endl;
+                int kaka = 5;
+            }
+
 
         //cout<<"dIndices: "<<dIndices<<endl;
         indices.conservativeResize(dIndices.size());
