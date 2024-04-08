@@ -13,7 +13,6 @@
 #include <queue>
 #include <vector>
 #include <cmath>
-#include <igl/igl_inline.h>
 #include <directional/CartesianField.h>
 #include <directional/tree.h>
 #include <directional/principal_matching.h>
@@ -28,7 +27,7 @@ namespace directional
   // Output:
   //  combedField: the combed field object, also RAW_FIELD
   
-  IGL_INLINE void combing(const directional::CartesianField& rawField,
+  inline void combing(const directional::CartesianField& rawField,
                           directional::CartesianField& combedField,
                           const Eigen::MatrixXi& _spaceIsCut=Eigen::MatrixXi())
   {

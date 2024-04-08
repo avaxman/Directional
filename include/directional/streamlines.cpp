@@ -31,8 +31,6 @@ namespace Directional {
 
 
         //first creating a pool of samples to reject from
-        //Eigen::VectorXd sumAreas;
-        //igl::cumsum(mesh.faceAreas, 0, sumAreas);
         std::random_device rd;
         std::default_random_engine generator;
         std::mt19937 gen(rd());
@@ -45,8 +43,6 @@ namespace Directional {
 
         std::vector<std::vector<Eigen::Vector3d> > samplePool(mesh.F.rows());
         std::vector<std::vector<bool>> samplePoolAlive(mesh.F.rows());
-        //Eigen::VectorXi faceCounter=Eigen::VectorXi::Zero(mesh.F.rows());
-        //std::cout<<"SamplePool: "<<std::endl;
         for (int i=0;i<nsamples;i++) {
             //random triangle according to area weighting
             int faceIndex = distTriangles(generator);
@@ -64,16 +60,7 @@ namespace Directional {
                                              mesh.V.row(mesh.F(faceIndex,2))*B3;
             samplePool[faceIndex].push_back(sampleLocation);
             samplePoolAlive[faceIndex].push_back(true);
-            //std::cout<<faceIndex<<":"<<sampleLocation.transpose()<<std::endl;
         }
-
-        /*for (int i=0;i<mesh.F.rows();i++) {
-            std::cout << "Face " << i << " area " << mesh.faceAreas(i) << " chosen "
-                      << faceCounter(i) / mesh.faceAreas(i) << " times" << std::endl;
-            /*for (int j=0;j<samplePool[i].size();j++)
-                std::cout<<samplePool[i][j]<<std::endl;
-        }*/
-
 
         //Choosing samples and deleting everything too close
 

@@ -36,7 +36,7 @@ namespace directional
         std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psFieldList;
         std::vector<polyscope::PointCloud*> psSingList;
         std::vector<polyscope::CurveNetwork*> psStreamlineList;
-        //std::vector<Eigen::MatrixXd> fieldColors;
+        std::vector<polyscope::CurveNetwork*> psSeamList;
         std::vector<directional::StreamlineData> slData;
         std::vector<directional::StreamlineState> slState;
 
@@ -275,9 +275,28 @@ namespace directional
                               const int meshNum=0,
                               const double widthRatio = 0.05)
         {
+            if (psSeamList.size()<meshNum+1)
+                psSeamList.resize(meshNum+1);
+            int numSeams = 0;
+            for (int i=0;i<combedMatching.size();i++)
+                if (combedMatching(i)!=0)
+                    numSeams++;
+            Eigen::MatrixXi seamEdges(numSeams, 2);
+            Eigen::MatrixXd seamNodes(2*numSeams, 3);
+            int seamIndex = 0;
+            for (int i=0;i<meshList[meshNum]->EV.rows();i++)
+                if (combedMatching(i)!=0) {
+                    seamEdges.row(seamIndex) << 2 * seamIndex, 2 * seamIndex + 1;
+                    seamNodes.row(2*seamIndex)<<meshList[meshNum]->V.row(meshList[meshNum]->EV(i,0));
+                    seamNodes.row(2*seamIndex+1)<<meshList[meshNum]->V.row(meshList[meshNum]->EV(i,1));
+                    seamIndex++;
+                }
 
+            psSeamList[meshNum] = polyscope::registerCurveNetwork("seams " + std::to_string(meshNum), seamNodes, seamEdges);
+            psSeamList[meshNum]->setColor(glm::vec3());
+            psSeamList[meshNum]->setRadius(widthRatio*meshList[meshNum]->avgEdgeLength, false);
 
-            Eigen::MatrixXd VSeams1, CSeams1,VSeams2, CSeams2, VSeams, CSeams;
+            /*Eigen::MatrixXd VSeams1, CSeams1,VSeams2, CSeams2, VSeams, CSeams;
             Eigen::MatrixXi FSeams1, FSeams2, FSeams;
 
             Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(meshList[meshNum]->F.rows(),3,-1);
@@ -329,7 +348,7 @@ namespace directional
             //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
             //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);
             //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_colors(CSeams);
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;
+            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;*/
         }
 
 

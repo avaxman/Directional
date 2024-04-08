@@ -8,6 +8,7 @@
 #ifndef DIRECTIONAL_TANGENT_BUNDLE_H
 #define DIRECTIONAL_TANGENT_BUNDLE_H
 
+#include <cassert>
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
