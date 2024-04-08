@@ -231,32 +231,6 @@ namespace directional
                               fieldNum);
         }
 
-        /*void inline set_field_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
-                                         const int meshNum=0,
-                                         const double sizeRatio = 0.9,
-                                         const int sparsity=0)
-        {
-            if (fieldColors.size()<meshNum+1)
-                fieldColors.resize(meshNum+1);
-            if (fieldList.size()<meshNum+1)
-                fieldList.resize(meshNum+1);
-            fieldColors[meshNum]=C;
-            if (C.rows()==0)
-                fieldColors[meshNum]=default_glyph_color();
-
-            //directional::glyph_lines_mesh(meshList[meshNum]->F, N[meshNum], fieldColors, CField);
-
-            //TODO: something more efficient than feeding the entire field again
-            Eigen::MatrixXd VField, CField;
-            Eigen::MatrixXi FField;
-            directional::glyph_lines_mesh(fieldList[meshNum]->tb->sources, fieldList[meshNum]->tb->normals, fieldList[meshNum]->tb->adjSpaces, fieldList[meshNum]->extField, fieldColors[meshNum], sizeRatio,meshList[meshNum]->avgEdgeLength, VField, FField, CField, sparsity);
-
-            data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_mesh(VField,FField);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].set_colors(CField);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_lines=false;
-        }*/
-
-
         void inline set_singularities(const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
                                       const int fieldNum=0,
@@ -296,62 +270,7 @@ namespace directional
             psSeamList[meshNum]->setColor(glm::vec3());
             psSeamList[meshNum]->setRadius(widthRatio*meshList[meshNum]->avgEdgeLength, false);
 
-            /*Eigen::MatrixXd VSeams1, CSeams1,VSeams2, CSeams2, VSeams, CSeams;
-            Eigen::MatrixXi FSeams1, FSeams2, FSeams;
-
-            Eigen::MatrixXi hlHalfedges = Eigen::MatrixXi::Constant(meshList[meshNum]->F.rows(),3,-1);
-
-            std::set<int> seamVertexSet;
-
-            //figuring out the highlighted halfedges
-            for (int i=0;i<combedMatching.size();i++){
-                if (combedMatching(i)==0)
-                    continue;
-
-                int inFaceIndex=-1;
-
-                if (meshList[meshNum]->EF(i,0)!=-1){
-                    for (int j=0;j<3;j++)
-                        if (meshList[meshNum]->FE(meshList[meshNum]->EF(i,0),j)==i)
-                            inFaceIndex=j;
-                    hlHalfedges(meshList[meshNum]->EF(i,0), inFaceIndex)=0;
-                    seamVertexSet.insert(meshList[meshNum]->F(meshList[meshNum]->EF(i,0), inFaceIndex));
-                }
-                inFaceIndex=-1;
-                if (meshList[meshNum]->EF(i,1)!=-1){
-                    for (int j=0;j<3;j++)
-                        if (meshList[meshNum]->FE(meshList[meshNum]->EF(i,1),j)==i)
-                            inFaceIndex=j;
-                    hlHalfedges(meshList[meshNum]->EF(i,1), inFaceIndex)=0;
-                    seamVertexSet.insert(meshList[meshNum]->F(meshList[meshNum]->EF(i,1), inFaceIndex));
-                }
-            }
-
-            Eigen::VectorXi seamVertices(seamVertexSet.size());
-            int currPos=0;
-            for (std::set<int>::iterator si=seamVertexSet.begin();si!=seamVertexSet.end();si++)
-                seamVertices(currPos++)=*si;
-            //directional::halfedge_highlights(meshList[meshNum]->V, meshList[meshNum]->F, hlHalfedges, default_seam_color(),VSeams1,FSeams1,CSeams1, widthRatio, 1e-4);
-            //directional::vertex_highlights(meshList[meshNum]->V, meshList[meshNum]->F, seamVertices, default_seam_color().replicate(seamVertexSet.size(),1),VSeams2,FSeams2,CSeams2, widthRatio, 1e-4);
-
-            //uniting both meshes
-            VSeams.resize(VSeams1.rows()+VSeams2.rows(),3);
-            VSeams.topRows(VSeams1.rows())=VSeams1;
-            VSeams.bottomRows(VSeams2.rows())=VSeams2;
-            FSeams.resize(FSeams1.rows()+FSeams2.rows(),3);
-            FSeams.topRows(FSeams1.rows())=FSeams1;
-            FSeams.bottomRows(FSeams2.rows())=FSeams2.array()+VSeams1.rows();
-            CSeams.resize(CSeams1.rows()+CSeams2.rows(),3);
-            CSeams.topRows(CSeams1.rows())=CSeams1;
-            CSeams.bottomRows(CSeams2.rows())=CSeams2;
-
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].clear();
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_mesh(VSeams, FSeams);
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].set_colors(CSeams);
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_lines = false;*/
         }
-
-
 
         void inline init_streamlines(const int meshNum=0,
                                      const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
@@ -371,10 +290,10 @@ namespace directional
                                             const double widthRatio=0.05,
                                             const double colorAttenuationRate = 0.9){
 
-            //double avgEdgeLength = igl::avg_edge_length(meshList[meshNum]->V, meshList[meshNum]->F);  //inefficient!
             double dTime = dTimeRatio*meshList[meshNum]->avgEdgeLength;
             directional::streamlines_next(slData[meshNum], slState[meshNum],dTime);
             double width = widthRatio*meshList[meshNum]->avgEdgeLength;
+            //TODO: attentuation
 
             //generating colors according to original elements and their time signature
             /*Eigen::MatrixXd slColors(slState[meshNum].segStart.size(),3);
@@ -407,14 +326,6 @@ namespace directional
             edges.col(0) = Eigen::VectorXi::LinSpaced(P1.rows(), 0, P1.rows()-1);
             edges.col(1) = Eigen::VectorXi::LinSpaced(P2.rows(), P1.rows(), P1.rows()+P2.rows()-1);
             psStreamlineList[meshNum] = polyscope::registerCurveNetwork("streamlines" + std::to_string(meshNum), nodes, edges);
-            /*directional::line_cylinders(P1,P2, width, slColors, 4, VStream, FStream, CStream);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].clear();
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_mesh(VStream, FStream);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].set_colors(CStream);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_lines = false;*/
-
-
-
         }
 
         /*void inline set_isolines(const directional::TriMesh& cutMesh,
@@ -472,30 +383,27 @@ namespace directional
             psSurfaceMeshList[meshNum]->setEnabled(active);
         }
 
-        void inline toggle_mesh_edges(const bool active, const int meshNum=0){
-            //data_list[NUMBER_OF_SUBMESHES*meshNum].show_lines=active;
-        }
 
         void inline toggle_field(const bool active, const int fieldNum=0){
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+FIELD_MESH].show_faces=active;
+            if (fieldNum+1>psFieldList.size())
+                return;  //just ignore the command
             for (int i=0;i<psFieldList[fieldNum].size();i++)
                 psFieldList[fieldNum][i]->setEnabled(active);
         }
 
         void inline toggle_singularities(const bool active, const int fieldNum=0){
-            //data_list[NUMBER_OF_SUBMESHES*meshNum+SING_MESH].show_faces=active;
             psSingList[fieldNum]->setEnabled(active);
         }
 
-        /*void inline toggle_seams(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum+SEAMS_MESH].show_faces=active;
+        void inline toggle_seams(const bool active, const int meshNum=0){
+            psSeamList[meshNum]->setEnabled(active);
         }
 
         void inline toggle_streamlines(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum+STREAMLINE_MESH].show_faces=active;
+            psStreamlineList[meshNum]->setEnabled(active);
         }
 
-        void inline toggle_isolines(const bool active, const int meshNum=0){
+        /*void inline toggle_isolines(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_faces=active;
         }
 

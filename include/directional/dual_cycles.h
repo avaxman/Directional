@@ -193,20 +193,14 @@ namespace directional
         for (int i=numV;i<numV+numGenerators;i++)
             sumBoundaryLoopsTriplets.push_back(Triplet<double>(i, i,1.0));
 
+        //Creating a matrix that aggregates basic cycles on boundary vertices
         sumBoundaryLoops.setFromTriplets(sumBoundaryLoopsTriplets.begin(), sumBoundaryLoopsTriplets.end());
 
         basisCycles.resize(numV+numGenerators, mesh.EV.rows());
         basisCycles.setFromTriplets(basisCycleTriplets.begin(), basisCycleTriplets.end());
-
-        /* Eigen::SparseMatrix<double> bt = basisCycles.transpose();
-         for (SparseMatrix<double>::InnerIterator it(bt,0); it; ++it) {
-             cout << it.row() << "," << it.col() << endl;
-             cout<<"EV.row("<<it.row()<<"): "<<mesh.EV.row(it.row())<<endl;
-         }*/
-
         basisCycles=sumBoundaryLoops*basisCycles;
 
-        //removing rows and columns
+        //removing rows and columns of boundary vertices
         remainRows.resize(innerVerticesList.size()+numBoundaries+numGenerators);
         remainColumns.resize(innerEdgesList.size());
         for (int i=0;i<innerVerticesList.size();i++)

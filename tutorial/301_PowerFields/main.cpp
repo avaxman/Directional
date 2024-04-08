@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/readOBJ.h>
 #include <directional/IntrinsicVertexTangentBundle.h>

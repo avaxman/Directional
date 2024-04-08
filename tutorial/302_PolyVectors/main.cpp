@@ -1,6 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <directional/readOFF.h>
+#include <directional/write_raw_field.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
 #include <directional/polyvector_field.h>
@@ -15,142 +16,107 @@ directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField pvFieldHard, pvFieldSoft, rawFieldHard, rawFieldSoft,constraintsField;
 Eigen::MatrixXd constVectors;
-Eigen::VectorXd alignWeights;
 
-double smoothWeight, roSyWeight;
+double smoothWeight, roSyWeight, alignWeight;
 
 directional::DirectionalViewer viewer;
 
 int N = 4;
-
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
-bool alterRoSyWeight=false;
 
 void recompute_field()
 {
   directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, Eigen::VectorXd::Constant(constFaces.size(),-1), N, pvFieldHard);
-  directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeights, N, pvFieldSoft);
+  directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldSoft);
+
+  directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
+  directional::principal_matching(rawFieldHard);
+
+  directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
+  directional::principal_matching(rawFieldSoft);
+
 }
 
 void update_visualization()
 {
-  viewer.set_field(constraintsField,Eigen::MatrixXd(), 1,0.9,0,0.2);
-  viewer.set_selected_faces(constFaces,1);
-  viewer.toggle_field(true,1);
-  viewer.toggle_mesh(false,0);
-  if (viewingMode==CONSTRAINTS)
-    viewer.toggle_field(false,0);
-    
-  if (viewingMode==HARD_PRESCRIPTION){
-    directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
+    viewer.set_field(constraintsField,"",0, 0);
+    viewer.highlight_faces(constFaces,0);
+    if (viewingMode==CONSTRAINTS) {
+        viewer.toggle_field(true, 0);
+        viewer.toggle_field(false, 1);
+    }
+    if (viewingMode==HARD_PRESCRIPTION){
+        viewer.set_field(rawFieldHard,"", 0, 1);
+        viewer.toggle_field(true, 1);
+    }
 
-      //testing raw_to_polyvector
-      Eigen::MatrixXcd testPVField;
-      directional::raw_to_polyvector(rawFieldHard.intField, N, testPVField, N%2==0);
-      std::cout<<"testPVField: "<<testPVField.row(2543)<<std::endl;
-      std::cout<<"pvFieldHard: "<<pvFieldHard.intField.row(2543)<<std::endl;
+    if (viewingMode==SOFT_PRESCRIPTION){
+        viewer.set_field(rawFieldSoft,"", 0, 1);
+        viewer.toggle_field(true, 1);
+    }
 
-    directional::principal_matching(rawFieldHard);
-    viewer.set_field(rawFieldHard,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    viewer.toggle_field(true,0);
-  }
-  
-  if (viewingMode==SOFT_PRESCRIPTION){
-    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
-
-
-
-      directional::principal_matching(rawFieldSoft);
-    viewer.set_field(rawFieldSoft,Eigen::MatrixXd(), 0,0.9,0,2.0);
-    viewer.toggle_field(true,0);
-  }
 }
 
 
-// Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-      // Select vector
-    case '1':
-      alterRoSyWeight = !alterRoSyWeight;
-      if (alterRoSyWeight)
-        std::cout<<"Altering RoSy weight"<<std::endl;
-      else
-        std::cout<<"Altering alignment weight"<<std::endl;
-      break;
-      
-    case 'P':
-      if (alterRoSyWeight){
-        roSyWeight*=2.0;
-        std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
-      }else{
-        alignWeights.array()*=2.0;
-        std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
-      }
-      recompute_field();
-      break;
-      
-    case 'M':
-      if (alterRoSyWeight){
-        roSyWeight/=2.0;
-        std::cout<<"roSyWeight: "<<roSyWeight<<std::endl;
-      }else{
-        alignWeights.array()/=2.0;
-        std::cout<<"alignWeights: "<<alignWeights(1)<<std::endl;
-      }
-      recompute_field();
-      break;
-      
-    case '2':
-      viewingMode=CONSTRAINTS;
-      break;
-      
-    case '3':
-      viewingMode=HARD_PRESCRIPTION;
-      break;
-      
-    case '4':
-      viewingMode=SOFT_PRESCRIPTION;
-      break;
-    
-    case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/fandisk.rawfield", (viewingMode==HARD_PRESCRIPTION ? rawFieldHard : rawFieldSoft)))
-        std::cout << "Saved raw field" << std::endl;
-      else
-        std::cout << "Unable to save raw field. " << std::endl;
-      break;
-      
-      
-  }
-  
-  update_visualization();
-  return true;
+void callbackFunc() {
+    ImGui::PushItemWidth(100);
+
+    bool recomputeField = false;
+    recomputeField = recomputeField || ImGui::InputDouble("RoSy Weight", &roSyWeight);
+    recomputeField = recomputeField || ImGui::InputDouble("Alignment Weight", &alignWeight);
+
+    if (recomputeField) {
+        recompute_field();
+        update_visualization();
+    }
+
+    const char* items[] = { "Only Constraints", "Hard prescription", "Soft prescription"};
+    static const char* current_item = NULL;
+
+    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            if (ImGui::Selectable(items[n], is_selected)){
+                switch (n){
+                    case 0:
+                        viewingMode = CONSTRAINTS;
+                        break;
+                    case 1:
+                        viewingMode = HARD_PRESCRIPTION;
+                        break;
+                    case 2:
+                        viewingMode = SOFT_PRESCRIPTION;
+                        break;
+                }
+                update_visualization();
+            }
+            current_item = items[n];
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+        }
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::Button("Save Raw Field"))
+        directional::write_raw_field(TUTORIAL_DATA_PATH "/polyvector.rawfield", (viewingMode==HARD_PRESCRIPTION ? rawFieldHard : rawFieldSoft));
+
+    ImGui::PopItemWidth();
 }
 
 
 int main()
 {
-  
-  std::cout <<
-  "  1    Choose either RoSy or Alignment weight altering (default: Alignment)" << std::endl <<
-  "  P/M  Increase/Decrease (RoSy or Alignment) weight" << std::endl<<
-  "  2    Show only constraints" << std::endl <<
-  "  3    Show fixed-alignment result" << std::endl <<
-  "  4    Shoe soft-alignment result" << std::endl <<
-  "  W    Save field"<< std::endl;
-  
+
   // Load mesh
-  directional::readOFF(TUTORIAL_SHARED_PATH "/fandisk.off", mesh);
+  directional::readOFF(TUTORIAL_DATA_PATH "/fandisk.off", mesh);
   ftb.init(mesh);
   pvFieldHard.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
   pvFieldSoft.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
 
-
-  
   //discovering and constraining sharp edges
   std::vector<int> constFaceslist;
   std::vector<Eigen::Vector3d> constVectorslist;
@@ -181,23 +147,20 @@ int main()
   //Just to show the other direction if N is even, since we are by default constraining it
   if (N%2==0)
     rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
-  
-  
+
   constraintsField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   constraintsField.set_extrinsic_field(rawFieldConstraints);
   
   smoothWeight = 1.0;
   roSyWeight = 1.0;
-  alignWeights = Eigen::VectorXd::Constant(constFaces.size(),1.0);
+  alignWeight = 1.0;
   
   //triangle mesh setup
+  viewer.init();
   viewer.set_mesh(mesh,0);
-  //ghost mesh only for constraints
-  viewer.set_mesh(mesh, 1);
   recompute_field();
   update_visualization();
-  
-  viewer.callback_key_down = &key_down;
+  viewer.set_callback(callbackFunc);
 
   viewer.launch();
 }
