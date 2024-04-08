@@ -131,7 +131,16 @@ namespace directional
 
         void inline highlight_faces(const Eigen::VectorXi& selectedFaces,
                                     const int meshNum=0){
-            //TODO
+
+            glm::vec3 defaultColorglm = psSurfaceMeshList[meshNum]->getSurfaceColor();
+            Eigen::RowVector3d defaultColor; for (int i=0;i<3;i++) defaultColor(i)=defaultColorglm[i];
+            Eigen::RowVector3d highlightColor = highlight_face_color();
+            Eigen::MatrixXd faceColors(meshList[meshNum]->F.rows(),3);
+            faceColors.rowwise() = defaultColor;
+            for (int i=0;i<selectedFaces.size();i++)
+                faceColors.row(selectedFaces(i))=highlightColor;
+
+            psSurfaceMeshList[meshNum]->addFaceColorQuantity("highlights " + std::to_string(meshNum), faceColors);
         }
 
         /*void inline set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
@@ -485,15 +494,15 @@ namespace directional
         //Mesh colors
         static Eigen::RowVector3d inline default_mesh_color(){
             return Eigen::RowVector3d::Constant(1.0);
-        }
+        }*/
 
         //Color for faces that are selected for editing and constraints
-        static Eigen::RowVector3d inline selected_face_color(){
+        static Eigen::RowVector3d inline highlight_face_color(){
             return Eigen::RowVector3d(0.7,0.2,0.2);
         }
 
         //Glyph colors
-        static Eigen::RowVector3d inline default_glyph_color(){
+        /*static Eigen::RowVector3d inline default_glyph_color(){
             return Eigen::RowVector3d(0.0,0.2,1.0);
         }
 
