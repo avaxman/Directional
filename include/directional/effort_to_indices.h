@@ -35,22 +35,12 @@ namespace directional
     {
         using namespace std;
         Eigen::VectorXd dIndices = ((basisCycles * effort + (double)N*cycleCurvature).array() / (2.0*directional::PI));  //this should already be an integer up to numerical precision
-        Eigen::VectorXd try1 = basisCycles * effort;
-        Eigen::VectorXd try2 = (double)N*cycleCurvature;
 
-        cout<<"dIndices: "<<dIndices<<endl;
-
-        for (int k=0; k<basisCycles.outerSize(); ++k)
-            for (Eigen::SparseMatrix<double>::InnerIterator it(basisCycles,k); it; ++it) {
-                cout << it.row() << ", " << it.col() << ", " << it.value() << endl;
-                int kaka = 5;
-            }
-
-
-        //cout<<"dIndices: "<<dIndices<<endl;
         indices.conservativeResize(dIndices.size());
-        for (int i=0;i<indices.size();i++)
-            indices(i)=std::round(dIndices(i));
+        for (int i=0;i<indices.size();i++) {
+            assert("Indices are not naturally integer!" && fabs(std::round(dIndices(i))-dIndices(i))<1e-6);
+            indices(i) = std::round(dIndices(i));
+        }
 
     }
 
