@@ -60,6 +60,7 @@ namespace directional
         assert(solver.info() == Success);
 
         VectorXcd complexField = pow(complexPowerField.array(), 1.0 / (double)N);
+        complexField.array()/=complexField.array().abs();    //field should be unit length
 
         MatrixXd intField(complexField.rows(),2*N);
         for (int j=0;j<N;j++){

@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
@@ -28,7 +27,7 @@ bool _select = false;
 
 double globalRotation=0;
 
-void update_raw_field()
+void update_field()
 {
   using namespace Eigen;
   VectorXd rotationAngles;
@@ -46,7 +45,7 @@ void update_raw_field()
   std::cout<<"Index prescription linfError: "<<linfError<<std::endl;
   
   viewer.set_field(field);
-  viewer.set_selected_faces(cycleFaces[currCycle]);
+  viewer.highlight_faces(cycleFaces[currCycle]);
 
 }
 
@@ -71,69 +70,7 @@ void update_singularities()
 }
 
 
-bool key_up(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-    case '0': _select=false; break;
-  }
-  return true;
-}
-bool key_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-    case '0': _select=true; break;
-    case '1':
-      globalRotation+=0.314;
-      update_raw_field();
-      break;
-    case '-':
-    case '_':
-      cycleIndices(currCycle)--;
-      update_raw_field();
-      update_singularities();
-      break;
-    case '+':
-    case '=':
-      cycleIndices(currCycle)++;
-      update_raw_field();
-      update_singularities();
-      break;
-
-    case 'B':
-      if (mesh.boundaryLoops.size())
-      {
-        //Loop through the boundary cycles.
-        if (currCycle >= field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators && currCycle < field.tb->cycles.rows()-mesh.numGenerators-1)
-          currCycle++;
-        else
-          currCycle = field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators;
-          viewer.set_selected_faces(cycleFaces[currCycle]);
-      }
-      break;
-    case 'G':
-      if (mesh.numGenerators)
-      {
-        //Loop through the generators cycles.
-        if (currCycle >= field.tb->cycles.rows() - mesh.numGenerators && currCycle < field.tb->cycles.rows() - 1)
-          currCycle++;
-        else
-          currCycle = field.tb->cycles.rows() - mesh.numGenerators;
-        viewer.set_selected_faces(cycleFaces[currCycle]);
-      }
-      break;
-    case 'W':
-      if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/fertility.rawfield", field))
-        std::cout << "Saved raw field" << std::endl;
-      else
-        std::cout << "Unable to save raw field. Error: " << errno << std::endl;
-  }
-  return true;
-}
-
-
-bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
+/*bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
 {
   if ((key != 0)||(!_select))
     return false;
@@ -154,35 +91,81 @@ bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
     return true;
   }
   return false;
-};
+};*/
+
+void callbackFunc() {
+
+    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
+    ImGui::Text("Prescribed cycle index: %d", cycleIndices(currCycle));
+    ImGui::SameLine();
+    if (ImGui::Button("+")) {
+        cycleIndices(currCycle)++;
+        update_field();
+        update_singularities();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("-")) {
+        cycleIndices(currCycle)--;
+        update_field();
+        update_singularities();
+    }
+    if (ImGui::Button("Global Rotation")) {
+        globalRotation += directional::PI / 10;
+        update_field();
+        update_singularities();
+    }
+
+    if (ImGui::Button("Change boundary cycle")){
+        if (mesh.boundaryLoops.size())
+        {
+            //Loop through the boundary cycles.
+            if (currCycle >= field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators && currCycle < field.tb->cycles.rows()-mesh.numGenerators-1)
+                currCycle++;
+            else
+                currCycle = field.tb->cycles.rows()-mesh.boundaryLoops.size()-mesh.numGenerators;
+            viewer.highlight_faces(cycleFaces[currCycle]);
+        }
+    }
+
+    if (ImGui::Button("Change generator cycle")){
+        if (mesh.numGenerators)
+        {
+            //Loop through the generators cycles.
+            if (currCycle >= field.tb->cycles.rows() - mesh.numGenerators && currCycle < field.tb->cycles.rows() - 1)
+                currCycle++;
+            else
+                currCycle = field.tb->cycles.rows() - mesh.numGenerators;
+            viewer.highlight_faces(cycleFaces[currCycle]);
+        }
+    }
+
+    if (ImGui::Button("Save field")){
+        if (directional::write_raw_field(TUTORIAL_DATA_PATH "/index-prescription.rawfield", field))
+            std::cout << "Saved raw field" << std::endl;
+        else
+            std::cout << "Unable to save raw field. Error: " << errno << std::endl;
+    }
+
+    ImGui::PopItemWidth();
+}
 
 
 int main()
 {
-  
-  
-  std::cout <<
-  "  The field will appear if indices are correct " << std::endl<<
-  "  0+ L-bttn  Select vertex cycle" << std::endl <<
-  "  B          Loop through boundary cycles" << std::endl <<
-  "  G          Loop through generator cycles" << std::endl <<
-  "  +          Increase index of current cycle" << std::endl <<
-  "  -          Decrease index  of current cycle" << std::endl <<
-  "  1          rotate field globally" << std::endl;
-  
-  directional::readOBJ(TUTORIAL_SHARED_PATH "/fertility.obj",mesh);
+    
+  directional::readOBJ(TUTORIAL_DATA_PATH "/fertility.obj",mesh);
   ftb.init(mesh);
   field.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
 
   cycleIndices=Eigen::VectorXi::Constant(field.tb->cycles.rows(),0);
   
   //loading singularities
-  directional::read_singularities(TUTORIAL_SHARED_PATH "/fertility.sings", N,presSingVertices,presSingIndices);
+  directional::read_singularities(TUTORIAL_DATA_PATH "/fertility.sings", N,presSingVertices,presSingIndices);
   field.set_singularities(presSingVertices,presSingIndices);
   
-  std::cout<<"Euler characteristic: "<<mesh.eulerChar<<std::endl;
+  /*std::cout<<"Euler characteristic: "<<mesh.eulerChar<<std::endl;
   std::cout<<"#generators: "<<mesh.numGenerators<<std::endl;
-  std::cout<<"#boundaries: "<<mesh.boundaryLoops.size()<<std::endl;
+  std::cout<<"#boundaries: "<<mesh.boundaryLoops.size()<<std::endl;*/
   
   //collecting cycle faces for visualization
   std::vector<std::vector<int> > cycleFaceList(field.tb->cycles.rows());
@@ -205,14 +188,12 @@ int main()
     cycleFaces[i] = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(cycleFaceList[i].data(), cycleFaceList[i].size());
   
   //triangle mesh setup
+  viewer.init();
   viewer.set_mesh(mesh);
   viewer.set_field(field);
-  viewer.set_selected_faces(cycleFaces[currCycle]);
-  update_raw_field();
+  viewer.highlight_faces(cycleFaces[currCycle]);
+  update_field();
   update_singularities();
-  
-  viewer.callback_key_down = &key_down;
-  viewer.callback_key_up = &key_up;
-  viewer.callback_mouse_down = &mouse_down;
+  viewer.set_callback(callbackFunc);
   viewer.launch();
 }

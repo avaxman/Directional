@@ -29,7 +29,7 @@ namespace directional{
         std::vector<int> IAList;
         std::set<T> BSet(B.begin(), B.end());
         for (int i = 0; i < A.size(); i++) {
-            if (BSet.find(A[i]) == BSet.end())
+            if (BSet.find(A[i]) != BSet.end())  //found in both A and B and thus not included
                 continue;
 
             CList.push_back(A[i]);
