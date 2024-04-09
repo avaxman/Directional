@@ -7,21 +7,10 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <directional/cut_mesh_with_singularities.h>
-#include <igl/dijkstra.h>
-#include <igl/vertex_triangle_adjacency.h>
-#include <igl/adjacency_list.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <igl/is_border_vertex.h>
-#include <igl/cut_mesh_from_singularities.h>
 #include <set>
 
 
-IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& V,
-                                                         const Eigen::MatrixXi& F,
-                                                         const std::vector<std::vector<int> >& VF,
-                                                         const std::vector<std::vector<int> >& VV,
-                                                         const Eigen::MatrixXi& TT,
-                                                         const Eigen::MatrixXi& TTi,
+IGL_INLINE void directional::cut_mesh_with_singularities(const TriMesh& mesh,
                                                          const Eigen::VectorXi &singularities,
                                                          Eigen::MatrixXi &cuts)
 {
@@ -81,7 +70,7 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
 }
 
 //Wrapper of the above with only vertices and faces as mesh input
-IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& V,
+/*IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& V,
                                                          const Eigen::MatrixXi& F,
                                                          const Eigen::VectorXi& singularities,
                                                          Eigen::MatrixXi& cuts)
@@ -99,6 +88,6 @@ IGL_INLINE void directional::cut_mesh_with_singularities(const Eigen::MatrixXd& 
   directional::cut_mesh_with_singularities(V, F, VF, VV, TT, TTi, singularities, cuts);
   
   
-}
+}*/
 
 

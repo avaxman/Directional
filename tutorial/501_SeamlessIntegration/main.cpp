@@ -132,8 +132,8 @@ int main()
   viewer.set_mesh(meshCut,1);
   viewer.set_field(combedField,"", 0,0);
   viewer.set_seams(combedField.matching, 0);
-  viewer.set_texture(texture_R,texture_G,texture_B,1);
-  update_viewer();
+  //viewer.set_texture(texture_R,texture_G,texture_B,1);
+  //update_viewer();
   viewer.set_callback(callbackFunc);
   viewer.launch();
 }

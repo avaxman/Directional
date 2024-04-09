@@ -359,15 +359,15 @@ namespace directional
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_colors(CIso);
             data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_lines = false;
-        }
+        }*/
 
         void inline set_uv(const Eigen::MatrixXd UV,
                                const int meshNum=0)
         {
-            data_list[NUMBER_OF_SUBMESHES*meshNum].set_uv(UV);
+            psSurfaceMeshList[meshNum]->addParameterizationQuantity("UV" + std::to_string(meshNum), UV);
         }
 
-        void inline set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
+        /*void inline set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
                                     const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& G,
                                     const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& B,
                                     const int meshNum=0)

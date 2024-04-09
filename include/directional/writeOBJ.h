@@ -1,5 +1,5 @@
 // This file is part of Directional, a library for directional field processing.
-// Copyright (C) 2022 Amir Vaxman <avaxman@gmail.com>
+// Copyright (C) 2024 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -11,8 +11,6 @@
 #include <Eigen/Core>
 #include <string>
 #include <vector>
-#include <igl/igl_inline.h>
-#include <igl/writeOBJ.h>
 #include <directional/TriMesh.h>
 
 namespace directional
@@ -24,8 +22,8 @@ namespace directional
                   const Eigen::MatrixXd& TC,
                   const Eigen::MatrixXi& FTC)
     {
-        Eigen::MatrixXd emptyMat;
-        return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);
+        //Eigen::MatrixXd emptyMat;
+        //return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);
     }
 
 }
