@@ -14,9 +14,6 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/min_quad_with_fixed.h>
-#include <igl/bounding_box_diagonal.h>
 #include <directional/tree.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
@@ -38,7 +35,7 @@ namespace directional
     // Output:
     //  NFunction:          #cV x N parameterization functions per cut vertex (full version with all symmetries unpacked)
     //  NCornerFunctions   (3*N) x #F parameterization functions per corner of whole mesh
-    IGL_INLINE bool integrate(const directional::CartesianField& field,
+    inline bool integrate(const directional::CartesianField& field,
                               IntegrationData& intData,
                               const directional::TriMesh& meshCut,
                               Eigen::MatrixXd& NFunction,
@@ -82,8 +79,8 @@ namespace directional
 
         //creating face vector mass matrix
         std::vector<Triplet<double>> MxTri;
-        VectorXd darea;
-        igl::doublearea(meshCut.V,meshCut.F,darea);
+        VectorXd darea = meshCut.faceAreas/2.0;
+        //igl::doublearea(meshCut.V,meshCut.F,darea);
         for (int i=0;i<meshCut.F.rows();i++)
             for (int j=0;j<intData.N;j++)
                 for (int k=0;k<3;k++)

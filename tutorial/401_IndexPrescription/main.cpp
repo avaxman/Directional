@@ -152,7 +152,7 @@ void callbackFunc() {
 
 int main()
 {
-    
+
   directional::readOBJ(TUTORIAL_DATA_PATH "/fertility.obj",mesh);
   ftb.init(mesh);
   field.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);

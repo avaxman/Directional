@@ -12,8 +12,6 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/edge_topology.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
@@ -70,10 +68,10 @@ namespace directional
         }
         ~IntegrationData(){}
 
-        IGL_INLINE void set_linear_reduction(const Eigen::MatrixXi& _linRed, const Eigen::MatrixXi& _periodMat){linRed =_linRed; N=linRed.rows(); n=linRed.cols(); periodMat=_periodMat;}
+        inline void set_linear_reduction(const Eigen::MatrixXi& _linRed, const Eigen::MatrixXi& _periodMat){linRed =_linRed; N=linRed.rows(); n=linRed.cols(); periodMat=_periodMat;}
 
         //the default symmetry, where for even N there are N/2 lines
-        IGL_INLINE void set_sign_symmetry(int N){
+        inline void set_sign_symmetry(int N){
             assert(N%2==0);
             linRed.resize(N,N/2);
             linRed<<Eigen::MatrixXi::Identity(N/2,N/2),-Eigen::MatrixXi::Identity(N/2,N/2);
@@ -82,7 +80,7 @@ namespace directional
         }
 
         //the entire first N/3 lines are symmetric w.r.t. to the next two (N/3) packets, and where if N is even we also add sign symmetry.
-        IGL_INLINE void set_triangular_symmetry(int N){
+        inline void set_triangular_symmetry(int N){
             assert(N%3==0);
             if (N%2==0){
                 linRed.resize(N,N/3);
@@ -97,7 +95,7 @@ namespace directional
             set_default_period_matrix(n);
         }
 
-        IGL_INLINE void set_default_period_matrix(int n){
+        inline void set_default_period_matrix(int n){
             periodMat=Eigen::MatrixXi::Identity(n,n);
         }
     };
@@ -111,7 +109,7 @@ namespace directional
     //  intData:      updated integration data.
     //  meshCut:      a mesh which is face-corresponding with meshWhole, but is cut so that it has disc-topology.
     //  combedField:  The raw field combed so that all singularities are on the seams of the cut mesh
-    IGL_INLINE void setup_integration(const directional::CartesianField& field,
+    inline void setup_integration(const directional::CartesianField& field,
                                       IntegrationData& intData,
                                       directional::TriMesh& meshCut,
                                       directional::CartesianField& combedField)

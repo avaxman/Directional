@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
@@ -46,37 +45,47 @@ void setup_line_texture()
       texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
 }
 
-void update_viewer()
-{
-  if (viewingMode==FIELD){
-    viewer.set_active(true,0);
-    viewer.set_active(false,1);
-    viewer.toggle_texture(false,1);
-  } else if ((viewingMode==ROT_INTEGRATION) || (viewingMode==FULL_INTEGRATION)){
-    viewer.set_uv(viewingMode==ROT_INTEGRATION ? cutUVRot : cutUVFull,1);
-    viewer.set_active(true,1);
-    viewer.set_active(false,0);
-    viewer.toggle_texture(true,1);
-  }
-}
 
-// Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-      // Select vector
-    case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = ROT_INTEGRATION; break;
-    case '3': viewingMode = FULL_INTEGRATION; break;
-    case 'W':
-      Eigen::MatrixXd emptyMat;
-      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, meshCut.F);
-      directional::writeOBJ(TUTORIAL_SHARED_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, meshCut.F);
-      break;
-  }
-  update_viewer();
-  return true;
+void callbackFunc(){
+    ImGui::PushItemWidth(100);
+
+    const char* items[] = { "Original field", "Rotationally seamless", "Full seamless"};
+    static const char* current_item = NULL;
+
+    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            if (ImGui::Selectable(items[n], is_selected)){
+                switch (n){
+                    case 0:
+                        viewingMode = FIELD;
+                        break;
+                    case 1:
+                        viewingMode = ROT_INTEGRATION;
+                        viewer.set_uv(cutUVRot,1);
+                        break;
+                    case 2:
+                        viewingMode = FULL_INTEGRATION;
+                        viewer.set_uv(cutUVFull,1);
+                        break;
+                }
+            }
+            current_item = items[n];
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+        }
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::Button("Save Textured OBJ File")){
+        Eigen::MatrixXd emptyMat;
+        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, meshCut.F);
+        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, meshCut.F);
+    }
+
+    ImGui::PopItemWidth();
 }
 
 
@@ -89,9 +98,9 @@ int main()
   "  W  Save parameterized OBJ file "<< std::endl;
   
   setup_line_texture();
-  directional::readOFF(TUTORIAL_SHARED_PATH "/horsers.off", meshWhole);
+  directional::readOFF(TUTORIAL_DATA_PATH "/horsers.off", meshWhole);
   ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/horsers-cf.rawfield", ftb, N, rawField);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/horsers-cf.rawfield", ftb, N, rawField);
   
   //combing and cutting
   Eigen::VectorXd curlNorm;
@@ -118,23 +127,14 @@ int main()
   std::cout<<"Done!"<<std::endl;
   
   //viewer cut (texture) and whole (field) meshes
+  viewer.init();
   viewer.set_mesh(meshWhole,0);
   viewer.set_mesh(meshCut,1);
-  viewer.set_field(combedField,directional::DirectionalViewer::indexed_glyph_colors(combedField.extField, false));
-  viewer.set_seams(combedField.matching);
+  viewer.set_field(combedField,"", 0,0);
+  viewer.set_seams(combedField.matching, 0);
   viewer.set_texture(texture_R,texture_G,texture_B,1);
-  
-  viewer.toggle_texture(false,0);
-  viewer.toggle_field(true,0);
-  viewer.toggle_seams(true,0);
-  
-  viewer.toggle_texture(true,1);
-  viewer.toggle_field(false,1);
-  viewer.toggle_seams(false,1);
-  
   update_viewer();
-  
-  viewer.callback_key_down = &key_down;
+  viewer.set_callback(callbackFunc);
   viewer.launch();
 }
 
