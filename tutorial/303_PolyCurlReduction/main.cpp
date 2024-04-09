@@ -11,7 +11,6 @@
 #include <directional/polycurl_reduction.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
-#include "tutorial_shared_path.h"
 
 using namespace std;
 
@@ -37,102 +36,97 @@ typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} Vi
 ViewingModes viewingMode=ORIGINAL_FIELD;
 
 
-void update_triangle_mesh()
-{
-  Eigen::VectorXd currCurl = (viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
-    viewer.set_edge_data(currCurl, 0.0,curlMaxOrig);
 
-}
-
-void update_raw_field_mesh()
+void update_visualization()
 {
   using namespace std;
   using namespace Eigen;
-  
-  if ((viewingMode==ORIGINAL_CURL) || (viewingMode==OPTIMIZED_CURL)){
-    viewer.toggle_seams(false);
-    viewer.toggle_singularities(false);
-    viewer.toggle_field(false);
-    viewer.toggle_mesh(false);
-    viewer.toggle_edge_data(true);
-  } else {
-    viewer.toggle_seams(true);
-    viewer.toggle_singularities(true);
-    viewer.toggle_field(true);
-    viewer.toggle_mesh(true);
-    viewer.toggle_edge_data(false);
-    viewer.set_field(viewingMode==ORIGINAL_FIELD ? combedFieldOrig : combedFieldCF,directional::DirectionalViewer::indexed_glyph_colors(viewingMode==ORIGINAL_FIELD ? combedFieldOrig.extField : combedFieldCF.extField));
-    viewer.set_seams((viewingMode==ORIGINAL_FIELD ? combedFieldOrig.matching : combedFieldCF.matching));
-  }
-  
+
+  Eigen::VectorXd currCurl = (viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
+  viewer.set_edge_data(currCurl, 0.0,curlMaxOrig);
+  //viewer.toggle_edge_data((viewingMode==ORIGINAL_CURL) || (viewingMode==OPTIMIZED_CURL))
 }
 
+void callbackFunc() {
+    ImGui::PushItemWidth(100);
 
-bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier)
-{
-  
-  if ((key >= '1') && (key <='4'))
-    viewingMode = (ViewingModes)(key - '1');
-  
-  if (key == 'A')
-  {
-    //do a batch of iterations
-    printf("--Improving Curl--\n");
-    for (int bi = 0; bi<5; ++bi)
-    {
-      
-      printf("\n\n **** Batch %d ****\n", iter);
-      directional::polycurl_reduction_solve(pcrdata, params, rawFieldCF, iter ==0);
-      iter++;
-      params.wSmooth *= params.redFactor_wsmooth;
+    if (ImGui::Button("Reduce Curl")){
+        for (int bi = 0; bi<5; ++bi)
+        {
+            directional::polycurl_reduction_solve(pcrdata, params, rawFieldCF, iter ==0);
+            iter++;
+            params.wSmooth *= params.redFactor_wsmooth;
+        }
+
+        Eigen::VectorXi prinIndices;
+        directional::curl_matching(rawFieldCF, curlCF);
+        directional::combing(rawFieldCF, combedFieldCF);
+        directional::curl_matching(combedFieldCF,curlCF);
+        viewer.set_field(combedFieldCF,"", 0, 1);
+        viewer.set_seams(combedFieldCF.matching, 0,1);
     }
-    
-    Eigen::VectorXi prinIndices;
-    directional::curl_matching(rawFieldCF, curlCF);
-    directional::combing(rawFieldCF, combedFieldCF);
-    directional::curl_matching(combedFieldCF,curlCF);
     curlMax= curlCF.maxCoeff();
-    std:: cout<<"curlMax optimized: "<<curlMax<<std::endl;
-  }
-  
-  if (key == 'W'){
-    if (directional::write_raw_field(TUTORIAL_SHARED_PATH "/cheburashka-cf.rawfield", rawFieldCF))
-      std::cout << "Saved raw field" << std::endl;
-    else
-      std::cout << "Unable to save raw field. " << std::endl;
-  }
-  
-  update_triangle_mesh();
-  update_raw_field_mesh();
-  return false;
+    ImGui::SameLine();
+    ImGui::Text("Maxmimum absolute curl: %ld", curlMax);
+
+    const char* items[] = { "Original field", "Original curl", "Optimized field", "Optimized curl"};
+    static const char* current_item = NULL;
+
+    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            if (ImGui::Selectable(items[n], is_selected)){
+                switch (n){
+                    case 0:
+                        viewingMode = ORIGINAL_FIELD;
+                        break;
+                    case 1:
+                        viewingMode = ORIGINAL_CURL;
+
+                        break;
+                    case 2:
+                        viewingMode = OPTIMIZED_FIELD;
+                        break;
+                    case 3:
+                        viewingMode = OPTIMIZED_CURL;
+                        break;
+                }
+                update_visualization();
+            }
+            current_item = items[n];
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+        }
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::Button("Save optimized Field"))
+        directional::write_raw_field(TUTORIAL_DATA_PATH "/polycurl.rawfield", combedFieldCF);
+
+    ImGui::PopItemWidth();
 }
+
 
 int main(int argc, char *argv[])
 {
   
-  std::cout <<
-  "  A      Optimize 5 batches for curl reduction." << std::endl <<
-  "  1      Original field" << std::endl <<
-  "  2      L2 norm of original-field curl" << std::endl <<
-  "  3      Curl-reduced field" << std::endl <<
-  "  4      Curl of curl-reduced field." << std::endl;
-  
+
   // Load a mesh
-  directional::readOFF(TUTORIAL_SHARED_PATH "/cheburashka.off", mesh);
+  directional::readOFF(TUTORIAL_DATA_PATH "/cheburashka.off", mesh);
   ftb.init(mesh);
   rawFieldOrig.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   rawFieldCF.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
   
   //combing the field in a way that minimizes curl
   directional::curl_matching(rawFieldOrig,curlOrig);
   curlMaxOrig= curlOrig.maxCoeff();
   curlMax = curlMaxOrig;
-  std:: cout<<"curlMax original: "<<curlMax<<std::endl;
-  
+
   directional::combing(rawFieldOrig, combedFieldOrig);
-  //directional::curl_matching(combedFieldOrig, curlOrig);
-  
+
   //trivial constraints
   Eigen::VectorXi b; b.resize(1); b<<0;
   Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.extField.row(0).head(6);
@@ -144,11 +138,15 @@ int main(int argc, char *argv[])
   curlCF = curlOrig;
   
   //triangle mesh setup
+  viewer.init();
   viewer.set_mesh(mesh);
-  update_triangle_mesh();
-  update_raw_field_mesh();
+  viewer.set_field(combedFieldOrig, "", 0, 0);
+  viewer.set_seams((combedFieldOrig.matching, 0,0);
+  viewer.set_field(combedFieldCF, "", 0, 1);
+  viewer.set_seams((combedFieldCF.matching, 0,1);
+  update_visualization();
   
-  viewer.callback_key_down = &key_down;
+  viewer.set_callback(callbackFunc);
   viewer.launch();
   
   return 0;

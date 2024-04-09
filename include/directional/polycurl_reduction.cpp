@@ -8,20 +8,13 @@
 
 
 #include <iostream>
-#include <igl/parallel_transport_angles.h>
-#include <igl/local_basis.h>
-#include <igl/edge_topology.h>
-#include <igl/sparse.h>
-#include <igl/sort.h>
-#include <igl/slice.h>
-#include <igl/slice_into.h>
-#include <igl/sort_vectors_ccw.h>
+#include <directional/TriMesh.h>
 #include <directional/polycurl_reduction.h>
 #include <directional/field_local_global_conversions.h>
 #include <directional/CartesianField.h>
 
 
-IGL_INLINE directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
+inline directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
         numIter(5),
         wBarrier(0.1),
         sBarrier(0.9),
@@ -46,7 +39,7 @@ namespace directional
 
         PolyCurlReductionSolverData &data;
         //Symbolic calculations
-        IGL_INLINE void rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
+        inline void rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
                                         const double &s,
                                         Eigen::VectorXd &residuals,
                                         bool do_jac = false,
@@ -54,21 +47,21 @@ namespace directional
                 // point some undefined junk? This is asking
                 // for trouble...
                                         Eigen::MatrixXd &J = *(Eigen::MatrixXd*)NULL);
-        IGL_INLINE void rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
+        inline void rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
                                          const Eigen::RowVector2d &ea,
                                          const Eigen::RowVectorXd &vec2D_b,
                                          const Eigen::RowVector2d &eb,
                                          Eigen::VectorXd &residuals,
                                          bool do_jac = false,
                                          Eigen::MatrixXd &Jac = *(Eigen::MatrixXd*)NULL);
-        IGL_INLINE void rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
+        inline void rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
                                                      const Eigen::RowVector2d &ea,
                                                      const Eigen::RowVectorXd &vec2D_b,
                                                      const Eigen::RowVector2d &eb,
                                                      Eigen::VectorXd &residuals,
                                                      bool do_jac = false,
                                                      Eigen::MatrixXd &Jac = *(Eigen::MatrixXd*)NULL);
-        IGL_INLINE void rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
+        inline void rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
                                            const Eigen::RowVectorXd &vec2D_b,
                                            const double &k,
                                            const int nA,
@@ -78,47 +71,47 @@ namespace directional
                                            Eigen::MatrixXd &Jac = *(Eigen::MatrixXd*)NULL);
 
     public:
-        IGL_INLINE PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata);
+        inline PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata);
 
-        IGL_INLINE bool solve(polycurl_reduction_parameters &params,
+        inline bool solve(polycurl_reduction_parameters &params,
                               Eigen::MatrixXd& currentField,
                               bool fieldNotCCW);
 
-        IGL_INLINE void solveGaussNewton(polycurl_reduction_parameters &params,
+        inline void solveGaussNewton(polycurl_reduction_parameters &params,
                                          const Eigen::VectorXd &x_initial,
                                          Eigen::VectorXd &x);
 
         //Compute residuals and Jacobian for Gauss Newton
-        IGL_INLINE double RJ(const Eigen::VectorXd &x,
+        inline double RJ(const Eigen::VectorXd &x,
                              const Eigen::VectorXd &x0,
                              const polycurl_reduction_parameters &params,
                              bool doJacs = false);
 
-        IGL_INLINE void RJ_Smoothness(const Eigen::MatrixXd &sol2D,
+        inline void RJ_Smoothness(const Eigen::MatrixXd &sol2D,
                                       const double &wSmoothSqrt,
                                       const int startRowInJacobian,
                                       bool doJacs = false,
                                       const int startIndexInVectors = 0);
-        IGL_INLINE void RJ_Barrier(const Eigen::MatrixXd &sol2D,
+        inline void RJ_Barrier(const Eigen::MatrixXd &sol2D,
                                    const double &s,
                                    const double &wBarrierSqrt,
                                    const int startRowInJacobian,
                                    bool doJacs = false,
                                    const int startIndexInVectors = 0);
-        IGL_INLINE void RJ_Closeness(const Eigen::MatrixXd &sol2D,
+        inline void RJ_Closeness(const Eigen::MatrixXd &sol2D,
                                      const Eigen::MatrixXd &sol02D,
                                      const double &wCloseUnconstrainedSqrt,
                                      const double &wCloseConstrainedSqrt,
                                      const int startRowInJacobian,
                                      bool doJacs = false,
                                      const int startIndexInVectors = 0);
-        IGL_INLINE void RJ_Curl(const Eigen::MatrixXd &sol2D,
+        inline void RJ_Curl(const Eigen::MatrixXd &sol2D,
                                 const double &wCASqrt,
                                 const double &wCBSqrt,
                                 const int startRowInJacobian,
                                 bool doJacs = false,
                                 const int startIndexInVectors = 0);
-        IGL_INLINE void RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
+        inline void RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
                                     const double &wQuotCurlSqrt,
                                     const int startRowInJacobian,
                                     bool doJacs = false,
@@ -130,28 +123,35 @@ namespace directional
 
 
 
-IGL_INLINE directional::PolyCurlReductionSolverData::PolyCurlReductionSolverData(){}
+inline directional::PolyCurlReductionSolverData::PolyCurlReductionSolverData(){}
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::precomputeMesh(const Eigen::MatrixXd &_V,
-                                                                         const Eigen::MatrixXi &_F)
+inline void directional::PolyCurlReductionSolverData::precomputeMesh(const IntrinsicFaceTangentBundle& tb)
 {
-    numV = _V.rows();
-    numF = _F.rows();
+    numV = tb.mesh->V.rows();
+    numF = tb.mesh->F.rows();
     numVariables = 2*2*numF;
     //Mesh stuff
-    igl::edge_topology(_V,_F,E,F2E,E2F);
+    E = tb.mesh->EV;
+    F2E = tb.mesh->FE;
+    E2F = tb.mesh->EF;
+    //igl::edge_topology(_V,_F,E,F2E,E2F);
     numE = E.rows();
-    igl::local_basis(_V,_F,B1,B2,FN);
+    B1 = tb.mesh->FBx;
+    B2 = tb.mesh->FBy;
+    FN = tb.mesh->faceNormals;
+    //igl::local_basis(_V,_F,B1,B2,FN);
     computeInteriorEdges();
-    igl::parallel_transport_angles(_V, _F, FN, E2F, F2E, K);
+    K = tb.connection;
+
+    //igl::parallel_transport_angles(_V, _F, FN, E2F, F2E, K);
     EVecNorm.setZero(numE,3);
     for (int k = 0; k<numE; ++k)
-        EVecNorm.row(k) = (_V.row(E(k,1))-_V.row(E(k,0))).normalized();
+        EVecNorm.row(k) = (tb.mesh->V.row(E(k,1))-tb.mesh->V.row(E(k,0))).normalized();
 }
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::initializeConstraints(const Eigen::VectorXi& b,
+inline void directional::PolyCurlReductionSolverData::initializeConstraints(const Eigen::VectorXi& b,
                                                                                 const Eigen::MatrixXd& bc,
                                                                                 const Eigen::VectorXi& constraintLevel)
 {
@@ -180,7 +180,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::initializeConstraints(
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::makeFieldCCW(Eigen::MatrixXd &sol3D)
+inline void directional::PolyCurlReductionSolverData::makeFieldCCW(Eigen::MatrixXd &sol3D)
 {
     //sort ccw
     Eigen::RowVectorXd t;
@@ -219,7 +219,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::makeFieldCCW(Eigen::Ma
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::initializeOriginalVariable(const Eigen::MatrixXd& original_field)
+inline void directional::PolyCurlReductionSolverData::initializeOriginalVariable(const Eigen::MatrixXd& original_field)
 {
     Eigen::MatrixXd sol2D;
     Eigen::MatrixXd sol3D = original_field.cast<double>();
@@ -232,7 +232,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::initializeOriginalVari
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::computeInteriorEdges()
+inline void directional::PolyCurlReductionSolverData::computeInteriorEdges()
 {
     Eigen::VectorXi isBorderEdge;
     // Flag border edges
@@ -265,7 +265,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::computeInteriorEdges()
 
 }
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::add_Jacobian_to_svector(const int &toplace,
+inline void directional::PolyCurlReductionSolverData::add_Jacobian_to_svector(const int &toplace,
                                                                                   const Eigen::MatrixXd &tJac,
                                                                                   Eigen::VectorXd &SS_Jac)
 {
@@ -278,7 +278,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::add_Jacobian_to_svecto
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_face(const int numInnerRows,
+inline void directional::PolyCurlReductionSolverData::add_jac_indices_face(const int numInnerRows,
                                                                                const int numInnerCols,
                                                                                const int startRowInJacobian,
                                                                                const int startIndexInVectors,
@@ -296,7 +296,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_face(c
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::face_Jacobian_indices(const int &startRow,
+inline void directional::PolyCurlReductionSolverData::face_Jacobian_indices(const int &startRow,
                                                                                 const int &toplace,
                                                                                 const int& fi,
                                                                                 const int& half_degree,
@@ -319,7 +319,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::face_Jacobian_indices(
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_edge(const int numInnerRows,
+inline void directional::PolyCurlReductionSolverData::add_jac_indices_edge(const int numInnerRows,
                                                                                const int numInnerCols,
                                                                                const int startRowInJacobian,
                                                                                const int startIndexInVectors,
@@ -342,7 +342,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::add_jac_indices_edge(c
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::edge_Jacobian_indices(const int &startRow,
+inline void directional::PolyCurlReductionSolverData::edge_Jacobian_indices(const int &startRow,
                                                                                 const int &toplace,
                                                                                 const int& a,
                                                                                 const int& b,
@@ -367,7 +367,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::edge_Jacobian_indices(
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::computeJacobianPattern()
+inline void directional::PolyCurlReductionSolverData::computeJacobianPattern()
 {
     num_residuals_smooth = 4*numInteriorEdges;
     num_residuals_close = 4*numF;
@@ -450,7 +450,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::computeJacobianPattern
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::computeHessianPattern()
+inline void directional::PolyCurlReductionSolverData::computeHessianPattern()
 {
     //II_Jac is sorted in ascending order already
     int starti = 0;
@@ -484,7 +484,7 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::computeHessianPattern(
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolverData::computeNewHessValues()
+inline void directional::PolyCurlReductionSolverData::computeNewHessValues()
 {
     for (int i =0; i<Hess_triplets.size(); ++i)
         Hess_triplets[i] = Eigen::Triplet<double>(Hess_triplets[i].row(),
@@ -497,11 +497,11 @@ IGL_INLINE void directional::PolyCurlReductionSolverData::computeNewHessValues()
 
 
 
-IGL_INLINE directional::PolyCurlReductionSolver::PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata):data(cffsoldata)
+inline directional::PolyCurlReductionSolver::PolyCurlReductionSolver(PolyCurlReductionSolverData &cffsoldata):data(cffsoldata)
 { };
 
 
-IGL_INLINE bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_parameters &params,
+inline bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_parameters &params,
                                                             Eigen::MatrixXd& currentField,
                                                             bool fieldNotCCW)
 {
@@ -527,7 +527,7 @@ IGL_INLINE bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_p
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_reduction_parameters &params,
+inline void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_reduction_parameters &params,
                                                                        const Eigen::VectorXd &x_initial,
                                                                        Eigen::VectorXd &x)
 {
@@ -626,7 +626,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_
 }
 
 
-IGL_INLINE double directional::PolyCurlReductionSolver::RJ(const Eigen::VectorXd &x,
+inline double directional::PolyCurlReductionSolver::RJ(const Eigen::VectorXd &x,
                                                            const Eigen::VectorXd &x0,
                                                            const polycurl_reduction_parameters &params,
                                                            bool doJacs)
@@ -679,7 +679,7 @@ IGL_INLINE double directional::PolyCurlReductionSolver::RJ(const Eigen::VectorXd
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
+inline void directional::PolyCurlReductionSolver::rj_smoothness_edge(const Eigen::RowVectorXd &vec2D_a,
                                                                          const Eigen::RowVectorXd &vec2D_b,
                                                                          const double &k,
                                                                          const int nA,
@@ -754,7 +754,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::rj_smoothness_edge(const E
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Smoothness(const Eigen::MatrixXd &sol2D,
+inline void directional::PolyCurlReductionSolver::RJ_Smoothness(const Eigen::MatrixXd &sol2D,
                                                                     const double &wSmoothSqrt,
                                                                     const int startRowInJacobian,
                                                                     bool doJacs,
@@ -794,7 +794,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Smoothness(const Eigen:
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
+inline void directional::PolyCurlReductionSolver::rj_barrier_face(const Eigen::RowVectorXd &vec2D_a,
                                                                       const double &s,
                                                                       Eigen::VectorXd &residuals,
                                                                       bool do_jac,
@@ -843,7 +843,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::rj_barrier_face(const Eige
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Barrier(const Eigen::MatrixXd &sol2D,
+inline void directional::PolyCurlReductionSolver::RJ_Barrier(const Eigen::MatrixXd &sol2D,
                                                                  const double &s,
                                                                  const double &wBarrierSqrt,
                                                                  const int startRowInJacobian,
@@ -875,7 +875,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Barrier(const Eigen::Ma
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Closeness(const Eigen::MatrixXd &sol2D,
+inline void directional::PolyCurlReductionSolver::RJ_Closeness(const Eigen::MatrixXd &sol2D,
                                                                    const Eigen::MatrixXd &sol02D,
                                                                    const double &wCloseUnconstrainedSqrt,
                                                                    const double &wCloseConstrainedSqrt,
@@ -918,7 +918,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Closeness(const Eigen::
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
+inline void directional::PolyCurlReductionSolver::rj_polycurl_edge(const Eigen::RowVectorXd &vec2D_a,
                                                                        const Eigen::RowVector2d &ea,
                                                                        const Eigen::RowVectorXd &vec2D_b,
                                                                        const Eigen::RowVector2d &eb,
@@ -961,7 +961,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::rj_polycurl_edge(const Eig
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Curl(const Eigen::MatrixXd &sol2D,
+inline void directional::PolyCurlReductionSolver::RJ_Curl(const Eigen::MatrixXd &sol2D,
                                                               const double &wCASqrt,
                                                               const double &wCBSqrt,
                                                               const int startRowInJacobian,
@@ -1021,7 +1021,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_Curl(const Eigen::Matri
 
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
+inline void directional::PolyCurlReductionSolver::rj_quotcurl_edge_polyversion(const Eigen::RowVectorXd &vec2D_a,
                                                                                    const Eigen::RowVector2d &ea,
                                                                                    const Eigen::RowVectorXd &vec2D_b,
                                                                                    const Eigen::RowVector2d &eb,
@@ -1062,7 +1062,7 @@ IGL_INLINE void directional::PolyCurlReductionSolver::rj_quotcurl_edge_polyversi
 }
 
 
-IGL_INLINE void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
+inline void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::MatrixXd &sol2D,
                                                                   const double &wQuotCurlSqrt,
                                                                   const int startRowInJacobian,
                                                                   bool doJacs,
@@ -1111,14 +1111,14 @@ IGL_INLINE void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::M
 }
 
 
-IGL_INLINE void directional::polycurl_reduction_precompute(const directional::TriMesh& mesh,
+inline void directional::polycurl_reduction_precompute(const directional::TriMesh& mesh,
                                                            const Eigen::VectorXi& b,
                                                            const Eigen::MatrixXd& bc,
                                                            const Eigen::VectorXi& constraintLevel,
                                                            const directional::CartesianField& original_field,
                                                            directional::PolyCurlReductionSolverData &data)
 {
-    data.precomputeMesh(mesh.V,mesh.F);
+    data.precomputeMesh(mesh);
 
     data.computeJacobianPattern();
     data.computeHessianPattern();
@@ -1131,7 +1131,7 @@ IGL_INLINE void directional::polycurl_reduction_precompute(const directional::Tr
 
 
 
-IGL_INLINE void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData &cffsoldata,
+inline void directional::polycurl_reduction_solve(directional::PolyCurlReductionSolverData &cffsoldata,
                                                       directional::polycurl_reduction_parameters &params,
                                                       directional::CartesianField& currentField,
                                                       bool fieldNotCCW)

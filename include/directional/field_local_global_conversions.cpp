@@ -8,7 +8,7 @@
 #include <directional/field_local_global_conversions.h>
 
  template <typename DerivedG, typename DerivedL, typename DerivedB>
-IGL_INLINE void igl::global2local(
+inline void igl::global2local(
 const Eigen::PlainObjectBase<DerivedB>& B1,
 const Eigen::PlainObjectBase<DerivedB>& B2,
 const Eigen::PlainObjectBase<DerivedG>& global,
@@ -29,7 +29,7 @@ Eigen::PlainObjectBase<DerivedL>& local)
 }
 
 template <typename DerivedG, typename DerivedL, typename DerivedB>
-IGL_INLINE void igl::local2global(
+inline void igl::local2global(
 const Eigen::PlainObjectBase<DerivedB>& B1,
 const Eigen::PlainObjectBase<DerivedB>& B2,
 const Eigen::PlainObjectBase<DerivedL>& local,

@@ -247,10 +247,11 @@ namespace directional
 
         void inline set_seams(const Eigen::VectorXi& combedMatching,
                               const int meshNum=0,
+                              const int fieldNum=0,
                               const double widthRatio = 0.05)
         {
-            if (psSeamList.size()<meshNum+1)
-                psSeamList.resize(meshNum+1);
+            if (psSeamList.size()<fieldNum+1)
+                psSeamList.resize(fieldNum+1);
             int numSeams = 0;
             for (int i=0;i<combedMatching.size();i++)
                 if (combedMatching(i)!=0)
@@ -266,9 +267,9 @@ namespace directional
                     seamIndex++;
                 }
 
-            psSeamList[meshNum] = polyscope::registerCurveNetwork("seams " + std::to_string(meshNum), seamNodes, seamEdges);
-            psSeamList[meshNum]->setColor(glm::vec3());
-            psSeamList[meshNum]->setRadius(widthRatio*meshList[meshNum]->avgEdgeLength, false);
+            psSeamList[fieldNum] = polyscope::registerCurveNetwork("seams " + std::to_string(fieldNum), seamNodes, seamEdges);
+            psSeamList[fieldNum]->setColor(glm::vec3());
+            psSeamList[fieldNum]->setRadius(widthRatio*meshList[meshNum]->avgEdgeLength, false);
 
         }
 
@@ -395,8 +396,8 @@ namespace directional
             psSingList[fieldNum]->setEnabled(active);
         }
 
-        void inline toggle_seams(const bool active, const int meshNum=0){
-            psSeamList[meshNum]->setEnabled(active);
+        void inline toggle_seams(const bool active, const int fieldNum=0){
+            psSeamList[fieldNum]->setEnabled(active);
         }
 
         void inline toggle_streamlines(const bool active, const int meshNum=0){
@@ -409,16 +410,15 @@ namespace directional
 
         void inline toggle_texture(const bool active, const int meshNum=0){
             data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
-        }
+        }*/
 
         //disabling the original mesh
         void inline toggle_edge_data(const bool active, const int meshNum=0){
-            data_list[NUMBER_OF_SUBMESHES*meshNum+EDGE_DIAMOND_MESH].show_faces=active;
-            //data_list[NUMBER_OF_SUBMESHES*meshNum].show_faces=!active;
+            //TODO: save edge data somewhere
         }
 
         //static functions for default values
-        //Mesh colors
+        /*//Mesh colors
         static Eigen::RowVector3d inline default_mesh_color(){
             return Eigen::RowVector3d::Constant(1.0);
         }*/

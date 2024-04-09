@@ -8,7 +8,6 @@
 
 #ifndef IGL_FIELD_LOCAL_GLOBAL_CONVERSIONS
 #define IGL_FIELD_LOCAL_GLOBAL_CONVERSIONS
-#include <igl/igl_inline.h>
 
 #include <Eigen/Core>
 #include <vector>
@@ -28,7 +27,7 @@ namespace igl {
   //                    (stacked horizontally for each triangle)
   //
 template <typename DerivedG, typename DerivedL, typename DerivedB>
-IGL_INLINE void global2local(
+inline void global2local(
 const Eigen::PlainObjectBase<DerivedB>& B1,
 const Eigen::PlainObjectBase<DerivedB>& B2,
 const Eigen::PlainObjectBase<DerivedG>& global,
@@ -48,7 +47,7 @@ Eigen::PlainObjectBase<DerivedL>& local);
 //                    (stacked horizontally for each triangle)
 //
 template <typename DerivedG, typename DerivedL, typename DerivedB>
-IGL_INLINE void local2global(
+inline void local2global(
 const Eigen::PlainObjectBase<DerivedB>& B1,
 const Eigen::PlainObjectBase<DerivedB>& B2,
 const Eigen::PlainObjectBase<DerivedL>& local,

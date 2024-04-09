@@ -12,7 +12,6 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 #include <directional/effort_to_indices.h>
@@ -27,7 +26,7 @@ namespace directional
     // Output:
     //  curlNorm:   L2-norm of the curl vector
     //  rawField:   With input field matching, effort, and singularities computed
-    IGL_INLINE void curl_matching(directional::CartesianField& rawField,
+    inline void curl_matching(directional::CartesianField& rawField,
                                   Eigen::VectorXd& curlNorm)
     {
 

@@ -9,11 +9,11 @@
 #ifndef DIRECTIONAL_CONJUGATE_FF_SOLVER_DATA_H
 #define DIRECTIONAL_CONJUGATE_FF_SOLVER_DATA_H
 
-#include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
-#include <igl/dot_row.h>
 #include <iostream>
+#include <directional/barycentric_subdivision.h>
+#include <directional/shape_operator.h>
 
 
 using namespace std;
@@ -23,6 +23,7 @@ namespace directional
     class ConjugateFFSolverData
     {
     public:
+        const directional::TriMesh* mesh;
         const Eigen::MatrixXd V; int numV;
         const Eigen::MatrixXi F; int numF;
 
@@ -58,40 +59,34 @@ namespace directional
         Eigen::SparseMatrix<std::complex<double>> DDA, DDB;
 
     private:
-        IGL_INLINE void computeCurvatureAndPrincipals();
-        IGL_INLINE void precomputeConjugacyStuff();
-        IGL_INLINE void computeLaplacians();
-        IGL_INLINE void computek();
-        IGL_INLINE void computeCoefficientLaplacian(int n, Eigen::SparseMatrix<std::complex<double> > &D);
+        inline void computeCurvatureAndPrincipals();
+        inline void precomputeConjugacyStuff();
+        inline void computeLaplacians();
+        inline void computek();
+        inline void computeCoefficientLaplacian(int n, Eigen::SparseMatrix<std::complex<double> > &D);
 
-        IGL_INLINE void precomputeInteriorEdges();
+        inline void precomputeInteriorEdges();
 
     public:
-        IGL_INLINE ConjugateFFSolverData(const directional::TriMesh& mesh);
-        IGL_INLINE void evaluateConjugacy(const directional::CartesianField& rawField,
+        inline ConjugateFFSolverData(const directional::TriMesh& mesh);
+        inline void evaluateConjugacy(const directional::CartesianField& rawField,
                                           Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const ;
 
-        IGL_INLINE void evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
+        inline void evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
                                           const Eigen::Matrix<double, Eigen::Dynamic, 2> pvV,
                                           Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const ;
     };
 }
 
-#include <igl/colon.h>
-#include <igl/edge_topology.h>
-#include <igl/false_barycentric_subdivision.h>
-#include <igl/local_basis.h>
-#include <igl/principal_curvature.h>
-#include <igl/sparse.h>
 
-
-IGL_INLINE directional::ConjugateFFSolverData::
-ConjugateFFSolverData(const directional::TriMesh& mesh):
+inline directional::ConjugateFFSolverData::
+ConjugateFFSolverData(const directional::TriMesh& _mesh):
         V(mesh.V),
         numV(mesh.V.rows()),
         F(mesh.F),
         numF(mesh.F.rows())
 {
+    mesh = &_mesh;
     EV = mesh.EV;
     F2E = mesh.FE;
     E2F = mesh.EF;
@@ -115,17 +110,21 @@ ConjugateFFSolverData(const directional::TriMesh& mesh):
 };
 
 
-IGL_INLINE void directional::ConjugateFFSolverData::computeCurvatureAndPrincipals()
+inline void directional::ConjugateFFSolverData::computeCurvatureAndPrincipals()
 {
     Eigen::MatrixXd VCBary;
     Eigen::MatrixXi FCBary;
 
     VCBary.setZero(numV+numF,3);
     FCBary.setZero(3*numF,3);
-    igl::false_barycentric_subdivision(V, F, VCBary, FCBary);
+    directional::barycentric_subdivision(V, F, VCBary, FCBary);
 
     Eigen::MatrixXd dmax3_,dmin3_;
-    igl::principal_curvature(VCBary, FCBary, dmax3_, dmin3_, kmax, kmin, 5,true);
+    std::vector<Eigen::Matrix3d> Se, Sv, Sf;
+    directional::shape_operator(mesh, Se, Sv, Sf);
+
+
+    //directional::principal_curvatures(VCBary, FCBary, dmax3_, dmin3_, kmax, kmin, 5,true);
 
     dmax3 = dmax3_.bottomRows(numF);
     dmin3 = dmin3_.bottomRows(numF);
@@ -169,11 +168,11 @@ IGL_INLINE void directional::ConjugateFFSolverData::computeCurvatureAndPrincipal
     double maxP = nonPlanarityMeasure.maxCoeff();
     nonPlanarityMeasure = (nonPlanarityMeasure.array()-minP)/(maxP-minP);
     Eigen::VectorXi I = igl::colon<int>(0, numF-1);
-    igl::sparse(I, I, nonPlanarityMeasure, numF, numF, planarityWeight);
+    directional::sparse(I, I, nonPlanarityMeasure, numF, numF, planarityWeight);
 
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::precomputeConjugacyStuff()
+inline void directional::ConjugateFFSolverData::precomputeConjugacyStuff()
 {
     H.resize(numF);
     UH.resize(numF);
@@ -203,14 +202,14 @@ IGL_INLINE void directional::ConjugateFFSolverData::precomputeConjugacyStuff()
 }
 
 
-IGL_INLINE void directional::ConjugateFFSolverData::computeLaplacians()
+inline void directional::ConjugateFFSolverData::computeLaplacians()
 {
     computeCoefficientLaplacian(2, DDA);
 
     computeCoefficientLaplacian(4, DDB);
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::
+inline void directional::ConjugateFFSolverData::
 precomputeInteriorEdges()
 {
     // Flag border edges
@@ -245,7 +244,7 @@ precomputeInteriorEdges()
 
 
 
-IGL_INLINE void directional::ConjugateFFSolverData::computeCoefficientLaplacian(int n, Eigen::SparseMatrix<std::complex<double> > &D)
+inline void directional::ConjugateFFSolverData::computeCoefficientLaplacian(int n, Eigen::SparseMatrix<std::complex<double> > &D)
 {
     std::vector<Eigen::Triplet<std::complex<double> >> tripletList;
 
@@ -278,7 +277,7 @@ IGL_INLINE void directional::ConjugateFFSolverData::computeCoefficientLaplacian(
 
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::
+inline void directional::ConjugateFFSolverData::
 computek()
 {
     K.setZero(numE);
@@ -362,7 +361,7 @@ computek()
 
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const directional::CartesianField& rawField,
+inline void directional::ConjugateFFSolverData::evaluateConjugacy(const directional::CartesianField& rawField,
                                                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const
 {
     const Eigen::MatrixXd &Us = rawField.extField.block(0,0,rawField.extField.rows(),3);
@@ -377,7 +376,7 @@ IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const dire
     }
 }
 
-IGL_INLINE void directional::ConjugateFFSolverData::evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
+inline void directional::ConjugateFFSolverData::evaluateConjugacy(const Eigen::Matrix<double, Eigen::Dynamic, 2> pvU,
                                                                       const Eigen::Matrix<double, Eigen::Dynamic, 2> pvV,
                                                                       Eigen::Matrix<double, Eigen::Dynamic, 1> &conjValues) const
 {

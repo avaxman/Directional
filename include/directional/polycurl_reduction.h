@@ -11,7 +11,6 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
-#include <igl/igl_inline.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 
@@ -41,7 +40,7 @@ namespace directional {
     // Output:
     //   data              PolyCurlReductionSolverData object that holds all intermediate
     //                     data needed by the solve routine, with correctly initialized values.
-    IGL_INLINE void polycurl_reduction_precompute(const directional::TriMesh& mesh,
+    inline void polycurl_reduction_precompute(const directional::TriMesh& mesh,
                                                   const Eigen::VectorXi& b,
                                                   const Eigen::MatrixXd& bc,
                                                   const Eigen::VectorXi& constraintLevel,
@@ -63,7 +62,7 @@ namespace directional {
     //                                needs to be set to true during the first call to solve(). If unsure, set to true.
     // Returns:
     //   currentField                updated estimate for the integrable field
-    IGL_INLINE void polycurl_reduction_solve(PolyCurlReductionSolverData &cffsoldata,
+    inline void polycurl_reduction_solve(PolyCurlReductionSolverData &cffsoldata,
                                              polycurl_reduction_parameters &params,
                                              directional::CartesianField& currentField,
                                              bool fieldNotCCW);
@@ -98,7 +97,7 @@ struct directional::polycurl_reduction_parameters
     //tikhonov regularization term (typically not needed, default value should suffice)
     double tikh_gamma;
 
-    IGL_INLINE polycurl_reduction_parameters();
+    inline polycurl_reduction_parameters();
 
 };
 
@@ -155,13 +154,13 @@ public:
     int numJacElements_barrier;
     int numJacElements_close;
     int numJacElements;
-    IGL_INLINE void add_jac_indices_face(const int numInnerRows,
+    inline void add_jac_indices_face(const int numInnerRows,
                                          const int numInnerCols,
                                          const int startRowInJacobian,
                                          const int startIndexInVectors,
                                          Eigen::VectorXi &Rows,
                                          Eigen::VectorXi &Columns);
-    IGL_INLINE void face_Jacobian_indices(const int &startRow,
+    inline void face_Jacobian_indices(const int &startRow,
                                           const int &toplace,
                                           const int& fi,
                                           const int& half_degree,
@@ -169,17 +168,17 @@ public:
                                           const int &numInnerCols,
                                           Eigen::VectorXi &rows,
                                           Eigen::VectorXi &columns);
-    IGL_INLINE void add_Jacobian_to_svector(const int &toplace,
+    inline void add_Jacobian_to_svector(const int &toplace,
                                             const Eigen::MatrixXd &tJac,
                                             Eigen::VectorXd &SS_Jac);
 
-    IGL_INLINE void add_jac_indices_edge(const int numInnerRows,
+    inline void add_jac_indices_edge(const int numInnerRows,
                                          const int numInnerCols,
                                          const int startRowInJacobian,
                                          const int startIndexInVectors,
                                          Eigen::VectorXi &Rows,
                                          Eigen::VectorXi &Columns);
-    IGL_INLINE void edge_Jacobian_indices(const int &startRow,
+    inline void edge_Jacobian_indices(const int &startRow,
                                           const int &toplace,
                                           const int& a,
                                           const int& b,
@@ -194,22 +193,22 @@ public:
     std::vector<Eigen::Triplet<double> > Hess_triplets;
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
 
-    IGL_INLINE void precomputeMesh(const Eigen::MatrixXd &_V,
+    inline void precomputeMesh(const Eigen::MatrixXd &_V,
                                    const Eigen::MatrixXi &_F);
-    IGL_INLINE void computeInteriorEdges();
-    IGL_INLINE void computeJacobianPattern();
-    IGL_INLINE void computeHessianPattern();
-    IGL_INLINE void computeNewHessValues();
-    IGL_INLINE void initializeOriginalVariable(const Eigen::MatrixXd& originalField);
-    IGL_INLINE void initializeConstraints(const Eigen::VectorXi& b,
+    inline void computeInteriorEdges();
+    inline void computeJacobianPattern();
+    inline void computeHessianPattern();
+    inline void computeNewHessValues();
+    inline void initializeOriginalVariable(const Eigen::MatrixXd& originalField);
+    inline void initializeConstraints(const Eigen::VectorXi& b,
                                           const Eigen::MatrixXd& bc,
                                           const Eigen::VectorXi& constraintLevel);
-    IGL_INLINE void makeFieldCCW(Eigen::MatrixXd &sol3D);
+    inline void makeFieldCCW(Eigen::MatrixXd &sol3D);
 
 public:
-    IGL_INLINE PolyCurlReductionSolverData();
+    inline PolyCurlReductionSolverData();
 
-    IGL_INLINE PolyCurlReductionSolverData(const directional::TriMesh &_mesh,
+    inline PolyCurlReductionSolverData(const directional::TriMesh &_mesh,
                                            const Eigen::VectorXi& b,
                                            const Eigen::VectorXi& constraintLevel,
                                            const directional::CartesianField& originalField);
