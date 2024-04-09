@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <directional/TangentBundle.h>
+#include <directional/CartesianField.h>
 
 namespace directional
 {
