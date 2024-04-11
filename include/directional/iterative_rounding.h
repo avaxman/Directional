@@ -8,12 +8,12 @@
 #ifndef iterative_rounding_h
 #define iterative_rounding_h
 
-#include <SaddlePoint/LMSolver.h>
-#include <SaddlePoint/EigenSolverWrapper.h>
-#include <SaddlePoint/check_traits.h>
-#include <SaddlePoint/DiagonalDamping.h>
-#include <directional/SIInitialSolutionTraits.h>
-#include <directional/IterativeRoundingTraits.h>
+//#include <SaddlePoint/LMSolver.h>
+//#include <SaddlePoint/EigenSolverWrapper.h>
+//#include <SaddlePoint/check_traits.h>
+//#include <SaddlePoint/DiagonalDamping.h>
+//#include <directional/SIInitialSolutionTraits.h>
+//#include <directional/IterativeRoundingTraits.h>
 #include <iostream>
 #include <Eigen/Core>
 #include <iomanip>

@@ -122,7 +122,7 @@ namespace directional
 
         const directional::TriMesh& meshWhole = *((IntrinsicFaceTangentBundle*)(field.tb))->mesh;
         //cutting mesh and combing field.
-        cut_mesh_with_singularities(meshWhole.V, meshWhole.F, field.singLocalCycles, intData.face2cut);
+        cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
         combing(field, combedField, intData.face2cut);
 
         MatrixXi EFi,EH, FH;

@@ -20,7 +20,7 @@
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
 #include <directional/branched_gradient.h>
-#include <directional/iterative_rounding.h>
+//#include <directional/iterative_rounding.h>
 
 
 namespace directional
@@ -92,7 +92,6 @@ namespace directional
         //The variables that should be fixed in the end
         VectorXi fixedMask(numVars);
         fixedMask.setZero();
-
 
         for (int i=0;i<intData.fixedIndices.size();i++)
             fixedMask(intData.fixedIndices(i)) = 1;
@@ -289,7 +288,7 @@ namespace directional
         SparseMatrix<double> G;
         //MatrixXd FN;
         //igl::per_face_normals(cutV, meshCut, FN);
-        branched_gradient(meshCut.V,meshCut.F, intData.N, G);
+        branched_gradient(meshCut, intData.N, G);
         //cout<<"cutF.rows(): "<<cutF.rows()<<endl;
         SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
@@ -300,11 +299,11 @@ namespace directional
                 integerIndices(intData.n * i+j) = intData.n * intData.integerVars(i)+j;
 
 
-        bool success=directional::iterative_rounding(Efull, field.extField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, meshCut.faceNormals, intData.N, intData.n, meshCut.V, meshCut.F, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
+        //bool success=directional::iterative_rounding(Efull, field.extField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, meshCut.faceNormals, intData.N, intData.n, meshCut.V, meshCut.F, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
+        bool success = true;
 
-
-        if ((!success)&&(intData.verbose))
-            cout<<"Rounding has failed!"<<endl;
+        //if ((!success)&&(intData.verbose))
+        //    cout<<"Rounding has failed!"<<endl;
 
         //the results are packets of N functions for each vertex, and need to be allocated for corners
         NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;

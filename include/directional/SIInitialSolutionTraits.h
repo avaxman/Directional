@@ -8,11 +8,11 @@
 #ifndef SIInitialSolutionTraits_h
 #define SIInitialSolutionTraits_h
 
-#include <igl/local_basis.h>
-#include <igl/unique.h>
-#include <igl/setdiff.h>
-#include <igl/speye.h>
-#include <igl/slice.h>
+//#include <igl/local_basis.h>
+//#include <igl/unique.h>
+//#include <igl/setdiff.h>
+//#include <igl/speye.h>
+//#include <igl/slice.h>
 #include "sparse_block.h"
 
 
