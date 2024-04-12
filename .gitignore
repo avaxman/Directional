@@ -3588,3 +3588,7 @@ tests/gtest_bin/
 tutorial/shared/vase-11-generated.off
 tutorial/shared/vase-4-generated.off
 tutorial/shared/vase-7-generated.off
+include/directional/.idea/.gitignore
+include/directional/.idea/directional.iml
+include/directional/.idea/modules.xml
+include/directional/.idea/vcs.xml
