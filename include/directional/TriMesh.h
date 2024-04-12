@@ -120,11 +120,11 @@ namespace directional{
             EF = Eigen::MatrixXi::Constant(EHList.size(),2,-1);
             EFi.resize(EHList.size(),2);
             //VE.resize(V.size());
-            FE.resize(F.size(),3);
-            FEs.resize(F.size(),3);
-            TT.resize(F.size(),3);
+            FE.resize(F.rows(),3);
+            FEs.resize(F.rows(),3);
+            TT.resize(F.rows(),3);
             Eigen::VectorXi HEs(halfedges.rows());
-            for (int i=0;i<EH.size();i++){
+            for (int i=0;i<EH.rows();i++){
                 EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
                 EF(i,0) = HF(EH(i));
                 if (twinH(EH(i))!=-1)

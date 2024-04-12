@@ -42,43 +42,100 @@ namespace directional {
   {
 
       //doing a flood-fill to cut mesh into a topological discs
-      std::queue<int> HEQueue;
-      Eigen::VectorXi isHECut = Eigen::VectorXi::Zero(mesh.HV.rows());
+      std::queue<std::pair<int, int>> faceQueue;
+      Eigen::VectorXi isHECut = Eigen::VectorXi::Ones(mesh.HV.rows());
       Eigen::VectorXi isFaceVisited = Eigen::VectorXi::Zero(mesh.F.rows());
       std::vector<int> cutVertices;
       int currFace = 0;
-      for (int i=0;i<3;i++)
-        HEQueue.push(mesh.FH(currFace, i));
-      isFaceVisited(0)=1;
-      while (!HEQueue.empty()){
-          int currHE = HEQueue.front();
-          HEQueue.pop();
-          if ((isHECut(currHE))||(mesh.twinH(currHE)==-1))
+      faceQueue.push(std::pair<int,int>(currFace,-1));
+      while (!faceQueue.empty()){
+          std::pair<int, int> currFaceHE = faceQueue.front();
+          int currFace =currFaceHE.first;
+          int prevHE = currFaceHE.second;
+          faceQueue.pop();
+          if (isFaceVisited[currFace]==1)
               continue;
 
-          if (isFaceVisited(mesh.HF(mesh.twinH(currHE)))){ //two fronts meeting
-              isHECut(currHE)=1;
-              isHECut(mesh.twinH(currHE))=1;
-              cutVertices.push_back(mesh.HV(currHE));
-              cutVertices.push_back(mesh.HV(mesh.twinH(currHE)));
-              continue;
+          isFaceVisited[currFace]=1;
+          if (prevHE!=-1) {
+              isHECut(prevHE) = 0;
+              isHECut(mesh.twinH(prevHE)) = 0;
+          }
+          for (int i=0;i<3;i++){
+              int currHE = mesh.FH(currFace,i);
+              if (mesh.twinH(currHE)==-1){
+                  isHECut(currHE)=0;
+                  continue;
+              }
+              int nextFace = mesh.HF(mesh.twinH(currHE));
+              if (!isFaceVisited[nextFace]) //can spill into that face
+                  faceQueue.push(std::pair<int, int>(nextFace, currHE));
           }
 
-          //Otherwise flood into the next face
-          HEQueue.push(mesh.nextH(mesh.twinH(currHE)));
-          HEQueue.push(mesh.nextH(mesh.nextH(mesh.twinH(currHE))));
       }
+
+      //retract valence 1 vertices
+      Eigen::VectorXi cutValences = Eigen::VectorXi::Zero(mesh.V.rows());
+
+      //gathering cut vertices
+      Eigen::VectorXi isSingularity = Eigen::VectorXi::Zero(mesh.V.rows());
+      for (int i=0;i<singularities.size();i++)
+          isSingularity(singularities(i))=1;
+      for (int i=0;i<mesh.HV.size();i++)
+          if (isHECut(i))
+              cutValences(mesh.HV(i))++;  //the twin should already be inside
+
+      std::queue<int> cutQueue;
+      for (int i=0;i<mesh.HV.rows();i++)
+          if ((isHECut(i))&&(cutValences(mesh.HV(i))==1)&&(!isSingularity(mesh.HV(i))))
+              cutQueue.push(i);
+
+      //std::cout<<"isHECut.sum(): "<<isHECut.sum()<<std::endl;
+      int stop = 3000;
+      while (!cutQueue.empty()){
+          stop--;
+          if (stop==0)
+              break;
+          int currHE = cutQueue.front();
+          cutQueue.pop();
+          if (!isHECut(currHE))
+              continue;
+          if (cutValences(mesh.HV(currHE))!=1)
+              continue;
+          if (isSingularity(mesh.HV(currHE)))
+              continue;
+
+          isHECut(currHE)=0;
+          isHECut(mesh.twinH(currHE))=0;
+          //finding the next edge
+          int nextVertex = mesh.HV(mesh.nextH(currHE));
+          cutValences(nextVertex)--;
+          cutValences(mesh.HV(currHE))--;
+          if (cutValences(nextVertex)==1) {  //finding next edge
+              int hebegin = mesh.VH(nextVertex);
+              int hecurr=hebegin;
+              do{
+                  if (isHECut(hecurr))
+                      break;
+                  hecurr = mesh.twinH(mesh.prevH(hecurr));
+              }while (hecurr!=hebegin);
+              assert("hecurr is not cut!" && isHECut(hecurr));
+              cutQueue.push(hecurr);
+          }
+      }
+
+      //std::cout<<"isHECut.sum(): "<<isHECut.sum()<<std::endl;
 
       //Connecting all singularities to the cut graph
-      for (int i=0;i<singularities.size();i++) {
+      /*for (int i=0;i<singularities.size();i++) {
           std::vector<int> HEPath;
-          shortest_path(mesh, singularities(i), cutVertices, HEPath);
+         // shortest_path(mesh, singularities(i), cutVertices, HEPath);
           for (int j=0;j<HEPath.size();j++) {
-              isHECut[HEPath[j]] = 1;
-              if (mesh.twinH(HEPath[j]) != -1)
-                  isHECut[mesh.twinH(HEPath[j])] = 1;
+              //isHECut[HEPath[j]] = 1;
+              //if (mesh.twinH(HEPath[j]) != -1)
+              //    isHECut[mesh.twinH(HEPath[j])] = 1;
           }
-      }
+      }*/
 
       face2cut.resize(mesh.F.rows(),3);
       for (int i=0;i<mesh.F.rows();i++)

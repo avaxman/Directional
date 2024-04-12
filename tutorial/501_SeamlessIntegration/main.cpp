@@ -107,7 +107,16 @@ int main()
   directional::curl_matching(rawField, curlNorm);
   std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
 
+  //testing cutting
+
   directional::IntegrationData intData(N);
+  cut_mesh_with_singularities(meshWhole, rawField.singLocalCycles, intData.face2cut);
+  Eigen::VectorXi seams = Eigen::VectorXi::Zero(meshWhole.EV.rows());
+  for (int i=0;i<meshWhole.F.rows();i++)
+      for (int j=0;j<3;j++)
+          seams(meshWhole.HE(meshWhole.FH(i,j)))=intData.face2cut(i,j);
+
+
   std::cout<<"Setting up Integration"<<std::endl;
   directional::setup_integration(rawField, intData, meshCut, combedField);
   
@@ -115,23 +124,23 @@ int main()
   intData.integralSeamless=false;
   
   std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
-  directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
+  //directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
   //Extracting the UV from [U,V,-U, -V];
-  cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
+  //cutUVRot=cutUVRot.block(0,0,cutUVRot.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   intData.integralSeamless = true;  //do not do translational seamless.
   std::cout<<"Solving for integrally-seamless integration"<<std::endl;
-  directional::integrate(combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
-  cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
+  //directional::integrate(combedField,  intData, meshCut, cutUVFull,cornerWholeUV);
+  //cutUVFull=cutUVFull.block(0,0,cutUVFull.rows(),2);
   std::cout<<"Done!"<<std::endl;
   
   //viewer cut (texture) and whole (field) meshes
   viewer.init();
   viewer.set_mesh(meshWhole,0);
-  viewer.set_mesh(meshCut,1);
+  //viewer.set_mesh(meshCut,1);
   viewer.set_field(combedField,"", 0,0);
-  viewer.set_seams(combedField.matching, 0);
+  viewer.set_seams(seams, 0);
   //viewer.set_texture(texture_R,texture_G,texture_B,1);
   //update_viewer();
   viewer.set_callback(callbackFunc);
