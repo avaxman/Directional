@@ -364,7 +364,7 @@ namespace directional
         void inline set_uv(const Eigen::MatrixXd UV,
                                const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addParameterizationQuantity("UV" + std::to_string(meshNum), UV);
+            psSurfaceMeshList[meshNum]->addVertexParameterizationQuantity("UV" + std::to_string(meshNum), UV);
         }
 
         /*void inline set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
