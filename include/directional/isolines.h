@@ -7,19 +7,15 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 
-#ifndef IGL_ISOLINES_H
-#define IGL_ISOLINES_H
-#include <igl/igl_inline.h>
+#ifndef DIRECTIONAL_ISOLINES_H
+#define DIRECTIONAL_ISOLINES_H
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <array>
 #include <vector>
-#include <igl/remove_duplicate_vertices.h>
-#include <igl/per_face_normals.h>
 
-
-namespace igl
+namespace directional
   {
   // Constructs isolines for a function z given on a mesh (V,F)
   //
@@ -41,7 +37,7 @@ namespace igl
   typename DerivedZ,
   typename DerivedIsoV,
   typename DerivedIsoE>
-  IGL_INLINE void isolines(
+  inline void isolines(
                            const Eigen::MatrixBase<DerivedV>& V,
                            const Eigen::MatrixBase<DerivedF>& F,
                            const Eigen::MatrixBase<DerivedZ>& z,
@@ -73,10 +69,17 @@ namespace igl
     
     for (int i=roundmin;i<=roundmax;i++)
       iso(i-roundmin)=i;
-    
-    
+
     Eigen::Matrix<Scalar, Eigen::Dynamic, 3> normals;
-    igl::per_face_normals(V, F, normals);
+    normals.resize(F.rows(),3);
+    for (int i=0;i<F.rows();i++){
+        Eigen::RowVector3d v01 = V.row(F(i,1))-V.row(F(i,0));
+        Eigen::RowVector3d v02 = V.row(F(i,2))-V.row(F(i,0));
+
+        normals.row(i) = (v01).cross(v02);
+        normals.row(i).normalize();
+    }
+    //igl::per_face_normals(V, F, normals);
     
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
     std::array<Matrix,3> t{{Matrix(nFaces, np1),

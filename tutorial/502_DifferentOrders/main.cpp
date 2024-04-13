@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
@@ -15,7 +14,7 @@
 #include <directional/branched_isolines.h>
 #include <directional/directional_viewer.h>
 
-#define NUM_N 4
+#define NUM_N 1
 
 int N[NUM_N];
 int currN = 0;
@@ -25,10 +24,10 @@ directional::CartesianField rawField[NUM_N], combedField[NUM_N];
 Eigen::MatrixXd NFunction[NUM_N], NCornerFunction[NUM_N];
 directional::DirectionalViewer viewer;
 
-typedef enum {FIELD, INTEGRATION} ViewingModes;
-ViewingModes viewingMode=FIELD;
+//typedef enum {FIELD, INTEGRATION} ViewingModes;
+//ViewingModes viewingMode=FIELD;
 
-void update_viewer()
+/*void update_viewer()
 {
   for (int i=0;i<NUM_N;i++){
     viewer.toggle_field(false,i);
@@ -47,11 +46,11 @@ void update_viewer()
     viewer.toggle_seams(false,currN);
     viewer.toggle_isolines(true,currN);
   }
-}
+}*/
 
 
 // Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+/*bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -62,51 +61,47 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   }
   update_viewer();
   return true;
-}
+}*/
 
 
 int main()
 {
-  std::cout <<
-  "  1  Loaded field" << std::endl <<
-  "  2  Show isoline mesh" << std::endl <<
-  "  3  change between different N" << std::endl;
-  
-  directional::readOFF(TUTORIAL_SHARED_PATH "/vase.off", meshWhole);
+  directional::readOFF(TUTORIAL_DATA_PATH "/vase.off", meshWhole);
   ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-2.rawfield", ftb, N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", ftb, N[1], rawField[1]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", ftb, N[2], rawField[2]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", ftb, N[3], rawField[3]);
+  //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-2.rawfield", ftb, N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
+  //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[2], rawField[2]);
+  //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[3], rawField[3]);
   
   //combing and cutting
+  viewer.init();
   for (int i=0;i<NUM_N;i++){
     directional::principal_matching(rawField[i]);
-    
-    
+
     directional::IntegrationData intData(N[i]);
     std::cout<<"Setting up Integration N="<<N[i]<<std::endl;
     directional::setup_integration(rawField[i], intData, meshCut[i], combedField[i]);
     
     intData.verbose=false;
-    intData.integralSeamless=true;
+    intData.integralSeamless=false;
     intData.roundSeams=false;
   
     std::cout<<"Solving integration N=" << N[i]<<std::endl;
     directional::integrate(combedField[i],  intData, meshCut[i], NFunction[i],NCornerFunction[i]);
+
+    Eigen::MatrixXd cutUVFull=NFunction[i].block(0,0,NFunction[i].rows(),2);
     
     std::cout<<"Done!"<<std::endl;
     
-    viewer.set_mesh(meshWhole,i);
-    viewer.set_field(combedField[i], directional::DirectionalViewer::indexed_glyph_colors(combedField[i].extField), i);
-    viewer.set_seams(combedField[i].matching, i);
-    viewer.set_isolines(meshCut[i],NFunction[i],i);
+    viewer.set_mesh(meshWhole);
+    viewer.set_field(combedField[i], "", 0, i);
+    viewer.set_seams(combedField[i].matching, 0, i);
+    viewer.set_isolines(meshCut[i],NFunction[i],0, i);
 
-    
+    viewer.set_mesh(meshCut[i], 1);
+    viewer.set_uv(cutUVFull, 1);
   }
-  
-  update_viewer();
-  viewer.callback_key_down = &key_down;
+
   viewer.launch();
 }
 

@@ -15,6 +15,7 @@
 #include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
+#include <directional/bar_chain.h>
 
 /***
  This class implements the Directional viewer, as an extension of the libigl viewer (as a wrapper). This
@@ -37,6 +38,7 @@ namespace directional
         std::vector<polyscope::PointCloud*> psSingList;
         std::vector<polyscope::CurveNetwork*> psStreamlineList;
         std::vector<polyscope::CurveNetwork*> psSeamList;
+        std::vector<polyscope::SurfaceMesh*> psIsolineList;
         std::vector<directional::StreamlineData> slData;
         std::vector<directional::StreamlineState> slState;
 
@@ -329,12 +331,15 @@ namespace directional
             psStreamlineList[meshNum] = polyscope::registerCurveNetwork("streamlines" + std::to_string(meshNum), nodes, edges);
         }
 
-        /*void inline set_isolines(const directional::TriMesh& cutMesh,
+        void inline set_isolines(const directional::TriMesh& cutMesh,
                                      const Eigen::MatrixXd& vertexFunction,
                                      const int meshNum=0,
+                                     const int fieldNum=0,
                                      const double sizeRatio=0.1)
         {
 
+            if (psIsolineList.size()<fieldNum+1)
+                psIsolineList.resize(fieldNum+1);
 
             Eigen::MatrixXd isoV, isoN;
             Eigen::MatrixXi isoE, isoOrigE;
@@ -353,13 +358,10 @@ namespace directional
             for (int i=0;i<funcNum.size();i++)
                 CFunc.row(i)=funcColors.row(funcNum(i));
 
-            directional::bar_chains(cutMesh.V, cutMesh.F, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
-
-            data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].clear();
-            data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_mesh(VIso, FIso);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].set_colors(CIso);
-            data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_lines = false;
-        }*/
+            directional::bar_chains(cutMesh, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
+            psIsolineList[fieldNum]=polyscope::registerSurfaceMesh("isolines "+std::to_string(fieldNum), VIso, FIso);
+            psIsolineList[fieldNum]->addFaceColorQuantity("branches "+std::to_string(fieldNum), CIso);
+        }
 
         void inline set_uv(const Eigen::MatrixXd UV,
                                const int meshNum=0)
@@ -441,7 +443,7 @@ namespace directional
         //The selected glyph currently edited from a selected face
         static Eigen::RowVector3d inline selected_vector_glyph_color(){
             return Eigen::RowVector3d(0.0,1.0,0.5);
-        }
+        }*/
 
         //Colors by indices in each directional object.
         static Eigen::MatrixXd inline isoline_colors(){
@@ -468,7 +470,7 @@ namespace directional
 
 
         //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
-        static Eigen::MatrixXd inline indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
+        /*static Eigen::MatrixXd inline indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
 
             Eigen::Matrix<double, 15,3> glyphPrincipalColors;
             glyphPrincipalColors<< 0.0,0.5,1.0,

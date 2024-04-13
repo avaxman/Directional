@@ -10,12 +10,10 @@
 #ifndef DIRECTIONAL_BRANCHED_ISOLINES_H
 #define DIRECTIONAL_BRANCHED_ISOLINES_H
 
-#include <igl/igl_inline.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <array>
 #include <vector>
-#include <igl/remove_duplicate_vertices.h>
 #include <directional/isolines.h>
 
 namespace directional{
@@ -32,7 +30,7 @@ namespace directional{
 //isoOrigE    #E by 3 in (f,if,f) (if - index of edge in face opposite to vertex if) identity of halfedges in relevant faces
 //funcNum: identity of function (as NFunction #col) of the corresponding P1 (or P2) entry.
 
-  void branched_isolines(const Eigen::MatrixXd& V,
+  void inline branched_isolines(const Eigen::MatrixXd& V,
                          const Eigen::MatrixXi& F,
                          const Eigen::MatrixXd& NFunction,
                          Eigen::MatrixXd& isoV,
@@ -49,7 +47,7 @@ namespace directional{
     
     for (int i=0;i<NFunction.cols()/jumps;i++){
       Eigen::VectorXd currFunc = NFunction.col(i);
-      igl::isolines(V,F, currFunc, 100, isoVPart, isoEPart, isoOrigEPart, isoNPart);
+      directional::isolines(V,F, currFunc, 100, isoVPart, isoEPart, isoOrigEPart, isoNPart);
       
       int oldVSize = isoV.rows();
       int oldESize = isoE.rows();
