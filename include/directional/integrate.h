@@ -51,6 +51,18 @@ namespace directional
 
         VectorXd edgeWeights = VectorXd::Constant(meshWhole.FE.maxCoeff() + 1, 1.0);
         //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;
+        double paramLength = (meshWhole.V.colwise().maxCoeff()-meshWhole.V.colwise().minCoeff()).norm()*intData.lengthRatio;
+
+        MatrixXd rawField = field.extField;
+        double avgGradNorm=0;
+        for (int i=0;i<meshWhole.F.rows();i++)
+            for (int j=0;j<intData.N;j++)
+                avgGradNorm+=rawField.block(i,3*j,1,3).norm();
+
+        avgGradNorm/=(double)(intData.N*meshWhole.F.rows());
+
+        rawField.array()/=avgGradNorm;
+        paramLength/=avgGradNorm;
 
         int numVars = intData.linRedMat.cols();
         //constructing face differentials
@@ -66,7 +78,7 @@ namespace directional
                     d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, j) + k, -1.0);
                     d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, (j + 1) % 3) + k, 1.0);
                     Vector3d edgeVector = (meshCut.V.row(meshCut.F(i, (j + 1) % 3)) - meshCut.V.row(meshCut.F(i, j))).transpose();
-                    gamma(3 * intData.N * i + intData.N * j + k) = (field.extField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0);
+                    gamma(3 * intData.N * i + intData.N * j + k) = (rawField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0)/paramLength;
                     M1Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, 3 * intData.N * i + intData.N * j + k, edgeWeights(meshWhole.FE(i, j)));
                 }
             }
