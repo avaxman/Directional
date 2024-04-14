@@ -81,9 +81,10 @@ namespace directional {
       Eigen::VectorXi isSingularity = Eigen::VectorXi::Zero(mesh.V.rows());
       for (int i=0;i<singularities.size();i++)
           isSingularity(singularities(i))=1;
-      for (int i=0;i<mesh.HV.size();i++)
-          if (isHECut(i))
+      for (int i=0;i<mesh.HV.size();i++) {
+          if ((isHECut(i))||(mesh.twinH(i)==-1))  //if cut or a boundary
               cutValences(mesh.HV(i))++;  //the twin should already be inside
+      }
 
       std::queue<int> cutQueue;
       for (int i=0;i<mesh.HV.rows();i++)
@@ -91,11 +92,11 @@ namespace directional {
               cutQueue.push(i);
 
       //std::cout<<"isHECut.sum(): "<<isHECut.sum()<<std::endl;
-      int stop = 3000;
+      //int stop = 3000;
       while (!cutQueue.empty()){
-          stop--;
-          if (stop==0)
-              break;
+          /*stop--;
+          if (stop==2000)
+              break;*/
           int currHE = cutQueue.front();
           cutQueue.pop();
           if (!isHECut(currHE))
@@ -109,6 +110,8 @@ namespace directional {
           isHECut(mesh.twinH(currHE))=0;
           //finding the next edge
           int nextVertex = mesh.HV(mesh.nextH(currHE));
+          if (mesh.isBoundaryVertex(nextVertex))
+            continue;
           cutValences(nextVertex)--;
           cutValences(mesh.HV(currHE))--;
           if (cutValences(nextVertex)==1) {  //finding next edge
