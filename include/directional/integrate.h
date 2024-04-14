@@ -115,7 +115,7 @@ namespace directional
                     for (int j = 0; j < intData.n; j++)
                         fixedMask(intData.n * intData.integerVars(i) + j) = 1;
             }else {
-                for (int i = 0; i < intData.integerVars.size(); i++)
+                for (int i = 0; i < intData.singularIndices.size(); i++)
                     fixedMask(intData.singularIndices(i)) = 1;
             }
         }

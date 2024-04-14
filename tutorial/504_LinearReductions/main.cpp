@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
@@ -27,7 +26,7 @@ typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 
-void update_viewer()
+/*void update_viewer()
 {
   if (viewingMode==FIELD){
     viewer.toggle_seams(true);
@@ -45,10 +44,47 @@ void update_viewer()
     viewer.set_isolines(meshCut, NFunctionSign);
   if (viewingMode==TRI_SYMMETRY)
     viewer.set_isolines(meshCut, NFunctionTri);
+}*/
+
+void callbackFunc(){
+    ImGui::PushItemWidth(100);
+
+    const char* items[] = { "Original field", "Sign Symmetry", "Triangular Symmetry"};
+    static const char* current_item = NULL;
+
+    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            if (ImGui::Selectable(items[n], is_selected)) {
+                switch (n) {
+                    case 0:
+                        viewingMode = FIELD;
+                        break;
+                    case 1:
+                        viewingMode = SIGN_SYMMETRY;
+                        viewer.set_isolines(meshCut, NFunctionSign);
+                        break;
+                    case 2:
+                        viewingMode = TRI_SYMMETRY;
+                        viewer.set_isolines(meshCut, NFunctionTri);
+                        break;
+                }
+
+                current_item = items[n];
+            }// You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::PopItemWidth();
 }
 
 // Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
+/*bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
 {
   switch (key)
   {
@@ -59,49 +95,45 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   }
   update_viewer();
   return true;
-}
+}*/
 
 
 int main()
 {
-  std::cout <<
-  "  1  Loaded field" << std::endl <<
-  "  2  Show only sign-symmetric integrated functions" << std::endl <<
-  "  3  Show triangular-symmetric integrated functions" << std::endl;
-  
-  directional::readOFF(TUTORIAL_SHARED_PATH "/dome.off", meshWhole);
-  ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/dome-6.rawfield", ftb, N, rawField);
-  
-  //combing and cutting
-  directional::principal_matching(rawField);
 
-  directional::IntegrationData intData(N);
-  std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(rawField, intData,meshCut, combedField);
-  
-  intData.verbose=false;
-  intData.integralSeamless=true;
+    directional::readOFF(TUTORIAL_DATA_PATH "/dome.off", meshWhole);
+    ftb.init(meshWhole);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/dome-6.rawfield", ftb, N, rawField);
 
-  std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
-  directional::integrate(combedField, intData, meshCut, NFunctionSign, NCornerFunc);
-  std::cout<<"Done!"<<std::endl;
-  
-  
-  std::cout<<"Solving triangular-constrained integration..."<<std::endl;
-  intData.set_triangular_symmetry(N);
-  directional::setup_integration(rawField,intData, meshCut, combedField);
-  directional::integrate(combedField,  intData, meshCut, NFunctionTri, NCornerFunc);
-  std::cout<<"Done!"<<std::endl;
-  
-  viewer.set_mesh(meshWhole, 0);
-  viewer.set_field(rawField);
-  viewer.set_seams(combedField.matching);
-  
-  update_viewer();
- 
-  viewer.callback_key_down = &key_down;
-  viewer.launch();
+    //combing and cutting
+    directional::principal_matching(rawField);
+
+    directional::IntegrationData intData(N);
+    std::cout<<"Setting up Integration"<<std::endl;
+    directional::setup_integration(rawField, intData,meshCut, combedField);
+
+    intData.verbose=false;
+    intData.integralSeamless=true;
+
+    std::cout<<"Free (sign-symmetric) Integrating..."<<std::endl;
+    directional::integrate(combedField, intData, meshCut, NFunctionSign, NCornerFunc);
+    std::cout<<"Done!"<<std::endl;
+
+
+    std::cout<<"Solving triangular-constrained integration..."<<std::endl;
+    intData.set_triangular_symmetry(N);
+    directional::setup_integration(rawField,intData, meshCut, combedField);
+    directional::integrate(combedField,  intData, meshCut, NFunctionTri, NCornerFunc);
+    std::cout<<"Done!"<<std::endl;
+
+    viewer.init();
+    viewer.set_mesh(meshWhole,0);
+    viewer.set_field(rawField);
+    viewer.set_seams(combedField.matching);
+    viewer.set_isolines(meshCut, NFunctionSign);
+    viewer.set_callback(callbackFunc);
+    viewer.launch();
+
 }
 
 
