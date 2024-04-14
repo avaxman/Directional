@@ -108,10 +108,17 @@ namespace directional
         for (int i=0;i<intData.fixedIndices.size();i++)
             fixedMask(intData.fixedIndices(i)) = 1;
 
-        if(intData.integralSeamless)
-          for(int i = 0; i < intData.integerVars.size(); i++)
-            for (int j=0;j<intData.n;j++)
-              fixedMask(intData.n * intData.integerVars(i)+j) = 1;
+        bool roundedSingularities = false;  //if all singularities have been rounded (only relevant to intData.roundSeams=false)
+        if(intData.integralSeamless) {
+            if (intData.roundSeams) {
+                for (int i = 0; i < intData.integerVars.size(); i++)
+                    for (int j = 0; j < intData.n; j++)
+                        fixedMask(intData.n * intData.integerVars(i) + j) = 1;
+            }else {
+                for (int i = 0; i < intData.integerVars.size(); i++)
+                    fixedMask(intData.singularIndices(i)) = 1;
+            }
+        }
 
         //the variables that were already fixed to begin with
         VectorXi alreadyFixed(numVars);
@@ -272,6 +279,13 @@ namespace directional
                 double func = fullx(minIntDiffIndex) ;
                 double funcInteger=std::round(func);
                 fixedValues(minIntDiffIndex) = /*pinvSymm*projMat**/funcInteger;
+            }
+            //in case all singularities are rounded in the rounding-singularities mode, but there are left unrounded seams (like topological handles).
+            if ((alreadyFixed.sum()==fixedMask.sum())&&(!intData.roundSeams)&(!roundedSingularities)&&(intData.integralSeamless)) {
+                for (int i = 0; i < intData.integerVars.size(); i++)
+                    for (int j = 0; j < intData.n; j++)
+                        fixedMask(intData.n * intData.integerVars(i) + j) = 1;
+                roundedSingularities = true;
             }
 
             xprev.resize(x.rows() - 1);
