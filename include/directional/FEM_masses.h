@@ -12,12 +12,6 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/local_basis.h>
-#include <igl/edge_topology.h>
-#include <igl/doublearea.h>
-#include <igl/massmatrix.h>
-
 
 namespace directional
 {
@@ -36,11 +30,7 @@ namespace directional
   //  MfVec:    #F triangle areas
   //  FchiVec:  #3F triangle ares suitable for face-based field (3 times each triangel area)
   
-  IGL_INLINE void FEM_masses(const Eigen::MatrixXd& V,
-                             const Eigen::MatrixXi& F,
-                             const Eigen::MatrixXi& EV,
-                             const Eigen::MatrixXi& FE,
-                             const Eigen::MatrixXi& EF,
+  inline void FEM_masses(const TriMesh& mesh,
                              Eigen::VectorXd& MvVec,
                              Eigen::VectorXd& MeVec,
                              Eigen::VectorXd& MfVec,
@@ -50,18 +40,17 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    VectorXd dblA;
-    igl::doublearea(V,F,dblA);
+    VectorXd dblA = mesh.faceAreas*2.0;
     
     MfVec = dblA*0.5;
-    MchiVec.conservativeResize(F.rows()*3);
-    MvVec=VectorXd::Zero(V.rows());
-    MeVec=VectorXd::Zero(EV.rows());
-    for (int i=0;i<F.rows();i++){
+    MchiVec.conservativeResize(mesh.F.rows()*3);
+    MvVec=VectorXd::Zero(mesh.V.rows());
+    MeVec=VectorXd::Zero(mesh.EV.rows());
+    for (int i=0;i<mesh.F.rows();i++){
       for (int j=0;j<3;j++){
         MchiVec(3*i+j)=MfVec(i);
-        MvVec(F(i,j))+=MfVec(i)/3.0;
-        MeVec(FE(i,j))+=MfVec(i)/3.0;
+        MvVec(mesh.F(i,j))+=MfVec(i)/3.0;
+        MeVec(mesh.FE(i,j))+=MfVec(i)/3.0;
       }
     }
   }

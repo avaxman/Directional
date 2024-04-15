@@ -14,6 +14,8 @@
 #include <directional/CartesianField.h>
 #include <directional/sort.h>
 #include <directional/sort_vectors_ccw.h>
+#include <directional/sparse.h>
+#include <directional/slice_into.h>
 
 
 inline directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
@@ -136,16 +138,16 @@ inline void directional::PolyCurlReductionSolverData::precomputeMesh(const Intri
     E = tb.mesh->EV;
     F2E = tb.mesh->FE;
     E2F = tb.mesh->EF;
-    //igl::edge_topology(_V,_F,E,F2E,E2F);
+    //directional::edge_topology(_V,_F,E,F2E,E2F);
     numE = E.rows();
     B1 = tb.mesh->FBx;
     B2 = tb.mesh->FBy;
     FN = tb.mesh->faceNormals;
-    //igl::local_basis(_V,_F,B1,B2,FN);
+    //directional::local_basis(_V,_F,B1,B2,FN);
     computeInteriorEdges();
     K = tb.connection;
 
-    //igl::parallel_transport_angles(_V, _F, FN, E2F, F2E, K);
+    //directional::parallel_transport_angles(_V, _F, FN, E2F, F2E, K);
     EVecNorm.setZero(numE,3);
     for (int k = 0; k<numE; ++k)
         EVecNorm.row(k) = (tb.mesh->V.row(E(k,1))-tb.mesh->V.row(E(k,0))).normalized();
@@ -192,7 +194,7 @@ inline void directional::PolyCurlReductionSolverData::makeFieldCCW(Eigen::Matrix
     {
         //take all 4 vectors (including opposites) and pick two that are in ccw order
         all << sol3D.row(fi), -sol3D.row(fi);
-        igl::sort_vectors_ccw(all, FN.row(fi).eval(), order, t);
+        directional::sort_vectors_ccw(all, FN.row(fi).eval(), order, t);
         //if we are in a constrained face, we need to make sure that the first vector is always the same vector as in the constraints
         if(is_constrained_face[fi])
         {
@@ -226,7 +228,7 @@ inline void directional::PolyCurlReductionSolverData::initializeOriginalVariable
     Eigen::MatrixXd sol2D;
     Eigen::MatrixXd sol3D = original_field.cast<double>();
     makeFieldCCW(sol3D);
-    igl::global2local(B1, B2, sol3D, sol2D);
+    directional::global2local(B1, B2, sol3D, sol2D);
     xOriginal.setZero(numVariables);
     for (int i =0; i<numF; i++)
         xOriginal.segment(i*2*2, 2*2) = sol2D.row(i);
@@ -447,7 +449,7 @@ inline void directional::PolyCurlReductionSolverData::computeJacobianPattern()
                          startIndexInVectors,
                          II_Jac,
                          JJ_Jac);
-    igl::sparse(II_Jac, JJ_Jac, SS_Jac, Jac);
+    directional::sparse(II_Jac, JJ_Jac, SS_Jac, Jac);
 }
 
 
@@ -512,7 +514,7 @@ inline bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_param
     if (fieldNotCCW)
         data.makeFieldCCW(sol3D);
 
-    igl::global2local(data.B1, data.B2, sol3D, sol2D);
+    directional::global2local(data.B1, data.B2, sol3D, sol2D);
     Eigen::VectorXd x;
     x.setZero(data.numVariables);
     for (int i =0; i<data.numF; i++)
@@ -523,7 +525,7 @@ inline bool directional::PolyCurlReductionSolver::solve(polycurl_reduction_param
     //get output from x
     for (int i =0; i<data.numF; i++)
         sol2D.row(i) = x.segment(i*2*2, 2*2);
-    igl::local2global(data.B1, data.B2, sol2D, sol3D);
+    directional::local2global(data.B1, data.B2, sol2D, sol3D);
     currentField = sol3D.cast<double>();
     return true;
 }
@@ -537,13 +539,13 @@ inline void directional::PolyCurlReductionSolver::solveGaussNewton(polycurl_redu
 
     double F;
     Eigen::VectorXd xprev = x;
-    Eigen::VectorXd xc = igl::slice(x_initial, data.constrained, 1);
+    Eigen::VectorXd xc = directional::slice(x_initial, data.constrained, 1);
     //  double ESmooth, EClose, ECurl, EQuotCurl, EBarrier;
     for (int innerIter = 0; innerIter<params.numIter; ++innerIter)
     {
 
         //set constrained entries to those of the initial
-        igl::slice_into(xc, data.constrained, 1, xprev);
+        directional::slice_into(xc, data.constrained, 1, xprev);
 
 
         //get function, gradients and Hessians
@@ -1113,14 +1115,14 @@ inline void directional::PolyCurlReductionSolver::RJ_QuotCurl(const Eigen::Matri
 }
 
 
-inline void directional::polycurl_reduction_precompute(const directional::TriMesh& mesh,
+inline void directional::polycurl_reduction_precompute(const directional::IntrinsicFaceTangentBundle& ftb,
                                                            const Eigen::VectorXi& b,
                                                            const Eigen::MatrixXd& bc,
                                                            const Eigen::VectorXi& constraintLevel,
                                                            const directional::CartesianField& original_field,
                                                            directional::PolyCurlReductionSolverData &data)
 {
-    data.precomputeMesh(mesh);
+    data.precomputeMesh(ftb);
 
     data.computeJacobianPattern();
     data.computeHessianPattern();

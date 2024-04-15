@@ -12,13 +12,8 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/local_basis.h>
-#include <igl/edge_topology.h>
 #include <directional/FEM_masses.h>
-#include <igl/per_face_normals.h>
 #include <directional/FEM_suite.h>
-#include <igl/cat.h>
 
 
 namespace directional
@@ -81,7 +76,7 @@ namespace directional
 	 *					Note: if the PCVF is truly tangent to the local face, then the sum of the gamma values per face is zero.
 	 *
 	 */
-	IGL_INLINE void Gamma3_projector(const Eigen::MatrixXd& V,
+	inline void Gamma3_projector(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXi& EV,
 		const Eigen::MatrixXi& sFE,
@@ -124,25 +119,21 @@ namespace directional
 	 * P - 2|F| x 3|F| sparse matrix mapping PCVFs to gamma3 elements. PCVF is assumed to be in [x1;y1;z1;x2;y2;z2;...etc] order in Matlab notation (column vec of xyz values)
 	 *
 	 */
-	IGL_INLINE void Gamma2_projector(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	inline void Gamma2_projector(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& P)
 	{
 		// Projects FEM vector field into Gamma3 space.
-		P = Eigen::SparseMatrix<double>(2 * F.rows(), 3 * F.rows());
+		P = Eigen::SparseMatrix<double>(2 * mesh.F.rows(), 3 * mesh.F.rows());
 
 		std::vector<Eigen::Triplet<double>> trips;
-		trips.reserve(9 * F.rows());
-		for (int f = 0; f < F.rows(); f++) {
+		trips.reserve(9 * mesh.F.rows());
+		for (int f = 0; f < mesh.F.rows(); f++) {
 			// Iterate over corners
 			for (int c = 0; c < 2; c++) {
 				//Get edge opposite corner in global orientation
-				const int eI = sFE(f, c);
-				const int eS = sFE(f, c + 3);
-				Eigen::RowVector3d edge = V.row(EV(eI, 1)) - V.row(EV(eI, 0));
+				const int eI = mesh.FEs(f, c);
+				const int eS = mesh.FEs(f, c + 3);
+				Eigen::RowVector3d edge = mesh.V.row(mesh.EV(eI, 1)) - mesh.V.row(mesh.EV(eI, 0));
 				for (int i = 0; i < 3; i++) {
 					trips.emplace_back(2 * f + c, 3 * f + i, edge[i]);
 				}
@@ -165,30 +156,26 @@ namespace directional
 	 * P - 3|F| x 2|F| sparse matrix mapping PCVFs to gamma3 elements. PCVF is assumed to be in [x1;y1;z1;x2;y2;z2;...etc] order in Matlab notation (column vec of xyz values)
 	 *
 	 */
-	IGL_INLINE void Gamma2_reprojector(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	inline void Gamma2_reprojector(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& RP)
 	{
 		using namespace Eigen;
-		RP = Eigen::SparseMatrix<double>(3 * F.rows(), 2 * F.rows());
+		RP = Eigen::SparseMatrix<double>(3 * mesh.F.rows(), 2 * mesh.F.rows());
 		std::vector<Triplet<double>> trips;
-		trips.reserve(9 * F.rows());
-		Eigen::VectorXd DA;
-		Eigen::MatrixXd N;
-		igl::doublearea(V, F, DA);
-		igl::per_face_normals(V, F, N);
-		for (int f = 0; f < F.rows(); f++)
+		trips.reserve(9 * mesh.F.rows());
+		Eigen::VectorXd DA = mesh.faceAreas*2.0;
+		Eigen::MatrixXd N = mesh.faceNormals;
+		//igl::doublearea(V, F, DA);
+	//	igl::per_face_normals(V, F, N);
+		for (int f = 0; f < mesh.F.rows(); f++)
 		{
 			RowVector3d localN = N.row(f);
-			const int e0ind = sFE(f, 0), e1ind = sFE(f, 1);
+			const int e0ind = mesh.FEs(f, 0), e1ind = mesh.FEs(f, 1);
             // Compute gamma signs
-			const double s0 = 1.0 - 2.0 * sFE(f, 3), s1 = 1.0 - 2.0 * sFE(f, 4);
+			const double s0 = 1.0 - 2.0 * mesh.FEs(f, 3), s1 = 1.0 - 2.0 * mesh.FEs(f, 4);
             // Get the edges
-			RowVector3d e0 = V.row(EV(e0ind, 1)) - V.row(EV(e0ind, 0));
-			RowVector3d e1 = V.row(EV(e1ind, 1)) - V.row(EV(e1ind, 0));
+			RowVector3d e0 = mesh.V.row(mesh.EV(e0ind, 1)) - mesh.V.row(mesh.EV(e0ind, 0));
+			RowVector3d e1 = mesh.V.row(mesh.EV(e1ind, 1)) - mesh.V.row(mesh.EV(e1ind, 0));
             // Compute basis elements
 			RowVector3d vals0 = localN.cross(e0) / DA(f);
 			RowVector3d vals1 = -localN.cross(e1) / DA(f);
@@ -202,7 +189,7 @@ namespace directional
 		RP.setFromTriplets(trips.begin(), trips.end());
 	}
 
-	IGL_INLINE void Gamma2_To_Gamma3(
+	inline void Gamma2_To_Gamma3(
 		const Eigen::MatrixXi& sFE,
 		Eigen::SparseMatrix<double>& G2_To_G3)
 	{
@@ -222,7 +209,7 @@ namespace directional
 		}
 		G2_To_G3.setFromTriplets(trips.begin(), trips.end());
 	}
-	IGL_INLINE void Gamma3_To_Gamma2(
+	inline void Gamma3_To_Gamma2(
 		const Eigen::MatrixXi& sFE,
 		Eigen::SparseMatrix<double>& G3_To_G2)
 	{
@@ -243,7 +230,7 @@ namespace directional
 	/**
 	 * Averages the gamma2 form to one form representation by taking the average of adjacent halfedge forms to the edge.
 	 */
-	IGL_INLINE void Gamma3_To_Oneform(
+	inline void Gamma3_To_Oneform(
 		const Eigen::MatrixXi& EF,
 		const Eigen::MatrixXi& EI,
 		int faceCount,
@@ -271,7 +258,7 @@ namespace directional
 	/**
 	 * Averages the gamma2 form to one form representation by taking the average of adjacent halfedge forms to the edge.
 	 */
-	IGL_INLINE void Gamma2_To_Oneform(const Eigen::MatrixXd& V,
+	inline void Gamma2_To_Oneform(const Eigen::MatrixXd& V,
 		const Eigen::MatrixXi& F,
 		const Eigen::MatrixXi& EV,
 		const Eigen::MatrixXi& EI,
@@ -304,11 +291,11 @@ namespace directional
 		//G2_To_OneForm.setFromTriplets(trips.begin(), trips.end());
 	}
 	
-	inline void Gamma3_To_Decomp(const Eigen::MatrixXi& EF, const Eigen::MatrixXi& EI, int faceCount, Eigen::SparseMatrix<double>& G3ToDC)
+	inline void Gamma3_To_Decomp(const TriMesh& mesh, Eigen::SparseMatrix<double>& G3ToDC)
 	{
 		using SMat = Eigen::SparseMatrix<double>;
 		SMat G3ToOneForm, C;
-		Gamma3_To_Oneform(EF, EI , faceCount, G3ToOneForm);
+		Gamma3_To_Oneform(mesh.EF, EI , faceCount, G3ToOneForm);
 		Gamma3_Curl(EF, EI, faceCount, C);
 		assert(C.rows() == G3ToOneForm.rows());
 		igl::cat(1, G3ToOneForm, Eigen::SparseMatrix<double>(0.5 * C), G3ToDC);
@@ -366,12 +353,7 @@ namespace directional
 	  //  C:  Curl operator which is basically (JGe)^T * Mchi
 	  //  C:  Divergence operator which is basically Gv^T * Mchi
 
-	IGL_INLINE void Gamma2_suite(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	inline void Gamma2_suite(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& Gv,
 		Eigen::SparseMatrix<double>& Ge,
 		Eigen::SparseMatrix<double>& J,
@@ -386,19 +368,19 @@ namespace directional
 
 		// Construct the projector
 		SparseMatrix<double> P2;
-		Gamma2_projector(V, F, EV, sFE, EF, P2);
+		Gamma2_projector(mesh, P2);
 		// Construct the reprojector
 		SparseMatrix<double> RP2;
-		Gamma2_reprojector(V, F, EV, sFE, EF, RP2);
+		Gamma2_reprojector(mesh, RP2);
 
 		// Acquire the fem suite
-		FEM_suite(V, F, EV, sFE, EF, Gv, Ge, J, C, D);
+		FEM_suite(mesh, Gv, Ge, J, C, D);
 
 		// Build decomposition matrices
 		SparseMatrix<double> G3To1Form, G3ToDC, DCToG3;
-		directional::Gamma3_To_Decomp(EF, EI, F.rows(), G3ToDC);
-		directional::Decomp_To_Gamma3(EF, EI, F.rows(), DCToG3);
-		directional::Gamma3_To_Oneform(EF, EI, sFE.rows(), G3To1Form);
+		directional::Gamma3_To_Decomp(mesh, G3ToDC);
+		directional::Decomp_To_Gamma3(mesh, DCToG3);
+		directional::Gamma3_To_Oneform(mesh, G3To1Form);
 
 		// Augment the operators with the proper projection/reprojection
 		Gv = P2 * Gv;
@@ -410,8 +392,8 @@ namespace directional
 		SparseMatrix<double> G2_To_G3, G3_To_G2;
 
 		// Conversions between Gamma2/Gamma3 spaces.
-		Gamma2_To_Gamma3(sFE, G2_To_G3);
-		Gamma3_To_Gamma2(sFE, G3_To_G2);
+		Gamma2_To_Gamma3(mesh.FEs, G2_To_G3);
+		Gamma3_To_Gamma2(mesh.FEs, G3_To_G2);
 
 		// Make operators work with Gamma2 space.
 		C =  C *  G2_To_G3;
@@ -435,12 +417,7 @@ namespace directional
 	//  C:  Curl operator which is basically (JGe)^T * Mchi
 	//  C:  Divergence operator which is basically Gv^T * Mchi
 
-	IGL_INLINE void Gamma3_suite(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& EI,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	inline void Gamma3_suite(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& Gv,
 		Eigen::SparseMatrix<double>& Ge,
 		Eigen::SparseMatrix<double>& J,
@@ -454,9 +431,9 @@ namespace directional
 		using namespace Eigen;
 		using namespace std;
 		SparseMatrix<double> G2ToG3, G3ToG2;
-		Gamma2_To_Gamma3(sFE, G2ToG3);
-		Gamma3_To_Gamma2(sFE, G3ToG2);
-		Gamma2_suite(V, F, EV, EI, sFE, EF, Gv, Ge, J, C, D, A_G3_To_E, G3ToDC, DCToG3);
+		Gamma2_To_Gamma3(mesh.FEs, G2ToG3);
+		Gamma3_To_Gamma2(mesh.FEs, G3ToG2);
+		Gamma2_suite(mesh,Gv, Ge, J, C, D, A_G3_To_E, G3ToDC, DCToG3);
 		Gv = G2ToG3 * Gv;
 		Ge = G2ToG3 * Ge;
 		J = G2ToG3 * J * G3ToG2;
@@ -467,36 +444,28 @@ namespace directional
 		DCToG3 = G2ToG3 * DCToG3;
 	}
 
-	void DEC_d0(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	void DEC_d0(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& D0)
 	{
-		D0 = Eigen::SparseMatrix<double>(EV.rows(), V.rows());
+		D0 = Eigen::SparseMatrix<double>(mesh.EV.rows(), mesh.V.rows());
 		std::vector<Eigen::Triplet<double>> trips;
-		trips.reserve(2 * EV.rows());
-		for (int e = 0; e < EV.rows(); e++) {
-			trips.emplace_back(e, EV(e, 0), -1);
-			trips.emplace_back(e, EV(e, 1), 1);
+		trips.reserve(2 * mesh.EV.rows());
+		for (int e = 0; e < mesh.EV.rows(); e++) {
+			trips.emplace_back(e, mesh.EV(e, 0), -1);
+			trips.emplace_back(e, mesh.EV(e, 1), 1);
 		}
 		D0.setFromTriplets(trips.begin(), trips.end());
 	}
-	void DEC_d1(const Eigen::MatrixXd& V,
-		const Eigen::MatrixXi& F,
-		const Eigen::MatrixXi& EV,
-		const Eigen::MatrixXi& sFE,
-		const Eigen::MatrixXi& EF,
+	void DEC_d1(const TriMesh& mesh,
 		Eigen::SparseMatrix<double>& D1)
 	{
-		D1 = Eigen::SparseMatrix<double>(sFE.rows(), EV.rows());
+		D1 = Eigen::SparseMatrix<double>(mesh.FEs.rows(), mesh.EV.rows());
 		std::vector<Eigen::Triplet<double>> trips;
-		trips.reserve(3 * sFE.rows());
-		for (int f = 0; f < sFE.rows(); f++) {
+		trips.reserve(3 * mesh.FEs.rows());
+		for (int f = 0; f < mesh.FEs.rows(); f++) {
 			for (int j = 0; j < 3; j++)
 			{
-				trips.emplace_back(f, sFE(f, j), 1.0 - 2.0 * sFE(f, j + 3));
+				trips.emplace_back(f, mesh.FEs(f, j), 1.0 - 2.0 * mesh.FEs(f, j + 3));
 			}
 		}
 		D1.setFromTriplets(trips.begin(), trips.end());

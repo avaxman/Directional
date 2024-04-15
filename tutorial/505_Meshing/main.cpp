@@ -1,6 +1,5 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <igl/unproject_onto_mesh.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
@@ -33,59 +32,21 @@ directional::DirectionalViewer viewer;
 typedef enum {FIELD, INTEGRATION} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
-void update_viewer()
-{
-  for (int i=0;i<NUM_N;i++){
-    viewer.toggle_field(false,i);
-    viewer.toggle_singularities(false,i);
-    viewer.toggle_seams(false,i);
-    viewer.toggle_isolines(false,i);
-  }
-  if (viewingMode==FIELD){
-    viewer.toggle_field(true,currN);
-    viewer.toggle_singularities(true,currN);
-    viewer.toggle_seams(true,currN);
-    viewer.toggle_isolines(false,currN);
-  } else {
-    viewer.toggle_field(false,currN);
-    viewer.toggle_singularities(false,currN);
-    viewer.toggle_seams(false,currN);
-    viewer.toggle_isolines(true,currN);
-  }
-}
-
-
-// Handle keyboard input
-bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-      // Select vector
-    case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = INTEGRATION; break;
-    case '3': currN=(currN+1)%NUM_N; break;
-  }
-  update_viewer();
-  return true;
-}
 
 
 int main()
 {
-  std::cout <<
-  "  1  Loaded field" << std::endl <<
-  "  2  Show isoline mesh" << std::endl <<
-  "  3  change between different N" << std::endl;
-  
-  directional::readOFF(TUTORIAL_SHARED_PATH "/vase.off",meshWhole);
+
+  directional::readOFF(TUTORIAL_DATA_PATH "/vase.off",meshWhole);
   ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
-  directional::read_raw_field(TUTORIAL_SHARED_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
 
   bool verbose=true;
   
   //combing and cutting
+  viewer.init();
   for (int i=0;i<NUM_N;i++){
     directional::principal_matching(rawField[i]);
 
@@ -108,17 +69,14 @@ int main()
     
     //meshing and saving
     directional::mesh_function_isolines(meshWhole, mfiData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-    hedra::polygonal_write_OFF(TUTORIAL_SHARED_PATH "/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-    
-    
-    viewer.set_mesh(meshWhole,i);
-    viewer.set_field(combedField[i], directional::DirectionalViewer::indexed_glyph_colors(combedField[i].extField), i);
-    viewer.set_seams(combedField[i].matching, i);
-    viewer.set_isolines(meshCut[i] ,NFunction[i],i);
+    hedra::polygonal_write_OFF(TUTORIAL_DATA_PATH "/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+
+    viewer.set_mesh(meshWhole);
+    viewer.set_field(combedField[i], "", 0, i);
+    viewer.set_seams(combedField[i].matching, 0, i);
+    viewer.set_isolines(meshCut[i],NFunction[i],0, i);
+
   }
-  
-  update_viewer();
-  viewer.callback_key_down = &key_down;
   viewer.launch();
 }
 

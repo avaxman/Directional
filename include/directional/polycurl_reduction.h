@@ -41,7 +41,7 @@ namespace directional {
     // Output:
     //   data              PolyCurlReductionSolverData object that holds all intermediate
     //                     data needed by the solve routine, with correctly initialized values.
-    inline void polycurl_reduction_precompute(const directional::TriMesh& mesh,
+    inline void polycurl_reduction_precompute(const directional::IntrinsicFaceTangentBundle& ftb,
                                                   const Eigen::VectorXi& b,
                                                   const Eigen::MatrixXd& bc,
                                                   const Eigen::VectorXi& constraintLevel,

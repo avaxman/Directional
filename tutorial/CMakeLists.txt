@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 ### Choose which chapters to compile
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)
-option(DIRECTIONAL_MESHER "Directional Mesher" OFF)
+option(DIRECTIONAL_MESHER "Directional Mesher" ON)
 
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
@@ -68,7 +68,7 @@ if(DIRECTIONAL_VIEWER)
   add_subdirectory("502_DifferentOrders")
   add_subdirectory("503_SeamsSingsRounding")
   add_subdirectory("504_LinearReductions")
-  add_subdirectory("601_SubdivisionFields")
+  #add_subdirectory("601_SubdivisionFields")
 endif()
 
 if(DIRECTIONAL_MESHER)

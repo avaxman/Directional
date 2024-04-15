@@ -8,7 +8,6 @@
 #ifndef HEDRA_POLYGONAL_EDGE_TOPOLOGY_H
 #define HEDRA_POLYGONAL_EDGE_TOPOLOGY_H
 
-#include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <vector>
 
@@ -29,7 +28,7 @@ namespace hedra
     // FEs: #F by max(D): if the edge is oriented positively or negatively in the face (e.g. in the example above we get -1)
     // InnerEdges: indices into EV of which edges are internal (not boundary)
 
-    IGL_INLINE void polygonal_edge_topology(const Eigen::VectorXi& D,
+    inline void polygonal_edge_topology(const Eigen::VectorXi& D,
                                             const Eigen::MatrixXi& F,
                                             Eigen::MatrixXi& EV,
                                             Eigen::MatrixXi& FE,

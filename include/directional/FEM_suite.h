@@ -12,11 +12,7 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Core>
-#include <igl/igl_inline.h>
-#include <igl/local_basis.h>
-#include <igl/edge_topology.h>
 #include <directional/FEM_masses.h>
-#include <igl/per_face_normals.h>
 
 
 namespace directional
@@ -37,11 +33,7 @@ namespace directional
   //  C:  Curl operator which is basically (JGe)^T * Mchi
   //  C:  Divergence operator which is basically Gv^T * Mchi
   
-  IGL_INLINE void FEM_suite(const Eigen::MatrixXd& V,
-                            const Eigen::MatrixXi& F,
-                            const Eigen::MatrixXi& EV,
-                            const Eigen::MatrixXi& FE,
-                            const Eigen::MatrixXi& EF,
+  inline void FEM_suite(const TriMesh& mesh,
                             Eigen::SparseMatrix<double>& Gv,
                             Eigen::SparseMatrix<double>& Ge,
                             Eigen::SparseMatrix<double>& J,
@@ -52,32 +44,31 @@ namespace directional
     using namespace Eigen;
     using namespace std;
     
-    VectorXd dblA;
-    igl::doublearea(V,F,dblA);
+    VectorXd dblA = mesh.faceAreas*2.0;
     SparseMatrix<double> Mchi;
     VectorXd MvVec, MeVec, MfVec, MchiVec;
-    directional::FEM_masses(V, F, EV, FE, EF, MvVec, MeVec, MfVec, MchiVec);
+    directional::FEM_masses(mesh, MvVec, MeVec, MfVec, MchiVec);
     Mchi = MchiVec.asDiagonal();
-    Eigen::MatrixXd N;
-    igl::per_face_normals(V, F, N);
+    Eigen::MatrixXd N = mesh.faceNormals;
+    //igl::per_face_normals(V, F, N);
     
     vector<Triplet<double> > GvTriplets, GeTriplets, JTriplets;
-    for (int i=0;i<F.rows();i++){
+    for (int i=0;i<mesh.F.rows();i++){
       RowVector3d currNormal=N.row(i);
       for (int j=0;j<3;j++){
-        RowVector3d eVec = V.row(F(i,(j+1)%3))-V.row(F(i,j));
+        RowVector3d eVec = mesh.V.row(mesh.F(i,(j+1)%3))-mesh.V.row(mesh.F(i,j));
         RowVector3d eVecRot = currNormal.cross(eVec);
         
         //TODO: I cannot count on FE(i,j) to be the correct edge, need to search for it
         int currEdge=-1;
         for (int k=0;k<3;k++){
-          if (((F(i,j) == EV(FE(i,k),0))&&(F(i,(j+1)%3) == EV(FE(i,k),1)))||
-            ((F(i,(j+1)%3) == EV(FE(i,k),0))&&(F(i,j) == EV(FE(i,k),1))))
-            currEdge=FE(i,k);
+          if (((mesh.F(i,j) == mesh.EV(mesh.FE(i,k),0))&&(mesh.F(i,(j+1)%3) == mesh.EV(mesh.FE(i,k),1)))||
+            ((mesh.F(i,(j+1)%3) == mesh.EV(mesh.FE(i,k),0))&&(mesh.F(i,j) == mesh.EV(mesh.FE(i,k),1))))
+            currEdge=mesh.FE(i,k);
         }
         assert (currEdge!=-1 && "Something wrong with edge topology!");
         for (int k=0;k<3;k++){
-          GvTriplets.push_back(Triplet<double>(3*i+k,F(i,(j+2)%3),eVecRot(k)/dblA(i)));
+          GvTriplets.push_back(Triplet<double>(3*i+k,mesh.F(i,(j+2)%3),eVecRot(k)/dblA(i)));
           GeTriplets.push_back(Triplet<double>(3*i+k,currEdge,-2*eVecRot(k)/dblA(i)));
         }
       }
@@ -90,11 +81,11 @@ namespace directional
       JTriplets.push_back(Triplet<double>(3*i+2, 3*i+1, N(i,0)));
     }
     
-    Gv.resize(3*F.rows(), V.rows());
+    Gv.resize(3*mesh.F.rows(), mesh.V.rows());
     Gv.setFromTriplets(GvTriplets.begin(), GvTriplets.end());
-    Ge.resize(3*F.rows(), EV.rows());
+    Ge.resize(3*mesh.F.rows(), mesh.EV.rows());
     Ge.setFromTriplets(GeTriplets.begin(), GeTriplets.end());
-    J.resize(3*F.rows(), 3*F.rows());
+    J.resize(3*mesh.F.rows(), 3*mesh.F.rows());
     J.setFromTriplets(JTriplets.begin(), JTriplets.end());
     
     C = (J*Ge).transpose()*Mchi;
