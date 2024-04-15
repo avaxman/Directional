@@ -13,6 +13,7 @@
 #include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
 
 namespace directional {
     // Compute a curl-free frame field from user constraints, optionally starting
@@ -193,8 +194,7 @@ public:
     std::vector<Eigen::Triplet<double> > Hess_triplets;
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
 
-    inline void precomputeMesh(const Eigen::MatrixXd &_V,
-                                   const Eigen::MatrixXi &_F);
+    inline void precomputeMesh(const IntrinsicFaceTangentBundle& ftb);
     inline void computeInteriorEdges();
     inline void computeJacobianPattern();
     inline void computeHessianPattern();

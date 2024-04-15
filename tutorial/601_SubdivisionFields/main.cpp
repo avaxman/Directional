@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_set>
-#include <igl/readOBJ.h>
 #include <directional/readOBJ.h>
 #include <directional/writeOBJ.h>
 #include <directional/TriMesh.h>
@@ -19,8 +18,6 @@
 #include <directional/power_to_raw.h>
 #include <directional/directional_viewer.h>
 #include <directional/cut_mesh_with_singularities.h>
-#include "tutorial_shared_path.h"
-
 
 
 using namespace std;
@@ -49,7 +46,7 @@ typedef enum {COARSE_FIELD, COARSE_CURL, COARSE_PARAMETERIZATION,FINE_FIELD, FIN
 ViewingModes viewingMode=COARSE_FIELD;
 
 
-void update_viewer()
+/*void update_viewer()
 {
   viewer.toggle_mesh(viewingMode==COARSE_FIELD, 0);
   viewer.toggle_mesh(viewingMode==FINE_FIELD, 1);
@@ -82,7 +79,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
   }
   update_viewer();
   return true;
-}
+}*/
 
 // Parameterize a mesh from a field
 void parameterize_mesh(const directional::TriMesh& wholeMesh,
@@ -112,19 +109,8 @@ void parameterize_mesh(const directional::TriMesh& wholeMesh,
 
 int main(int argc, char *argv[])
 {
-  auto keyAction = [](const std::string& key, const std::string& description)
-  {
-    std::cout << "  " << key << "      " << description << std::endl;
-  };
-  //keyAction("A", "Optimize 60 batches for curl reduction.");
-  keyAction("1", "Show coarse field.");
-  keyAction("2", "Show curl of coarse field.");
-  keyAction("3", "Show coarse parameterization.");
-  keyAction("4", "Show fine field.");
-  keyAction("5", "Show curl of fine field.");
-  keyAction("6", "Show fine parameterization.");
-  
-  directional::readOBJ(TUTORIAL_SHARED_PATH "/bunny1k.obj", meshCoarse);
+
+  directional::readOBJ(TUTORIAL_DATA_PATH "/bunny1k.obj", meshCoarse);
   ftbCoarse.init(meshCoarse);
  
   //Reducing curl from coarse mesh
@@ -180,33 +166,30 @@ int main(int argc, char *argv[])
   parameterize_mesh(meshFine, rawFieldFine, meshCutFine, cutFullUVFine);
   
   cout<<"Done!"<<endl;
-  
+
+  viewer.init();
   //coarse mesh
   viewer.set_mesh(meshCoarse, 0);
-  viewer.set_field(combedFieldCoarse,Eigen::MatrixXd(),0);
+  viewer.set_field(combedFieldCoarse,"",0,0);
   viewer.set_seams(combedFieldCoarse.matching,0);
-  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(),0);
+  viewer.set_edge_data(curlCoarse, curlCoarse.minCoeff(), curlCoarse.maxCoeff(),"",0);
   
   //fine mesh
   viewer.set_mesh(meshFine, 1);
-  viewer.set_field(combedFieldFine,Eigen::MatrixXd(),1);
+  viewer.set_field(combedFieldFine,"", 1, 0);
   viewer.set_seams(combedFieldFine.matching,1);
-  viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), 1);
+  viewer.set_edge_data(curlFine, curlCoarse.minCoeff(), curlCoarse.maxCoeff(), "",1);
   
   //coarse texture mesh
   viewer.set_mesh(meshCutCoarse,2);
   viewer.set_uv(cutFullUVCoarse,2);
-  viewer.toggle_texture(true,2);
-  
+
   //coarse texture mesh
   viewer.set_mesh(meshCutFine, 3);
   viewer.set_uv(cutFullUVFine,3);
-  viewer.toggle_texture(true,3);
-  
+
   // Update view
-  update_viewer();
-  viewer.callback_key_down = &key_down;
   viewer.launch();
-  
+
   return 0;
 }

@@ -12,6 +12,8 @@
 #include <directional/polycurl_reduction.h>
 #include <directional/field_local_global_conversions.h>
 #include <directional/CartesianField.h>
+#include <directional/sort.h>
+#include <directional/sort_vectors_ccw.h>
 
 
 inline directional::polycurl_reduction_parameters::polycurl_reduction_parameters():
@@ -174,7 +176,7 @@ inline void directional::PolyCurlReductionSolverData::initializeConstraints(cons
         indInConstrained[b[k]] = k;
     }
     //sort in descending order (so removing rows will work)
-    igl::sort(constrained_unsorted, 1, false, constrained, iSorted);
+    directional::sort(constrained_unsorted, 1, false, constrained, iSorted);
     constrained_vec3 = bc.cast<double>();
 
 }
