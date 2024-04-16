@@ -3592,3 +3592,7 @@ include/directional/.idea/.gitignore
 include/directional/.idea/directional.iml
 include/directional/.idea/modules.xml
 include/directional/.idea/vcs.xml
+include/directional/Deprecated/.idea/Deprecated.iml
+include/directional/Deprecated/.idea/modules.xml
+include/directional/Deprecated/.idea/vcs.xml
+include/directional/Deprecated/.idea/workspace.xml
