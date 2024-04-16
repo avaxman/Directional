@@ -37,6 +37,52 @@ add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")
 make_directory(${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 
+if (DIRECTIONAL_MESHER)
+  #include(ExternalProject)
+
+  # Set the download and install directories
+  #set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
+
+  #et(DEFAULT_GMP_VERSION "6.3.0")
+
+  # Allow the user to specify the GMP version via command line or cache
+  #set(GMP_VERSION "${DEFAULT_GMP_VERSION}" CACHE STRING "GMP version")
+
+  # Define the URL based on the specified version
+  #set(GMP_URL "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.bz2")
+
+  # ExternalProject_Add for GMP
+  #ExternalProject_Add(
+  #        gmp
+  #        URL ${GMP_URL}
+  #        PREFIX ${EXTERNAL_INSTALL_LOCATION}/gmp
+  #        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
+  #        BUILD_COMMAND ${CMAKE_COMMAND} --build .
+  ##        INSTALL_COMMAND ${CMAKE_COMMAND} --install .
+  #        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  #)
+
+  #set(GMP_DIR /usr/local/opt/gmp)
+
+  #find_package(GMP REQUIRED)
+
+  set(GMP_INCLUDE_DIR /usr/local/opt/gmp/include)
+  set(GMP_LIBRARIES /usr/local/opt/gmp/lib/libgmp.dylib)
+
+  # Include GMP headers
+  include_directories(${GMP_INCLUDE_DIR})
+
+  # Set GMP library and include directories
+  #set(GMP_INCLUDE_DIR ${EXTERNAL_INSTALL_LOCATION}/gmp/include)
+  #set(GMP_LIB_DIR ${EXTERNAL_INSTALL_LOCATION}/gmp/lib)
+
+  # Add GMP include directory to the include paths
+  #include_directories(${GMP_INCLUDE_DIR})
+
+  # Add GMP library directory to link directories
+  link_directories(${GMP_LIB_DIR})
+endif()
+
 
 # Store location of tutorial data directory
 set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
@@ -46,8 +92,6 @@ target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POL
 target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/imgui/imgui)
 target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/glm)
 target_compile_definitions(tutorials INTERFACE GLM_ENABLE_EXPERIMENTAL)
-
-
 
 # Chapter 1
 if(DIRECTIONAL_VIEWER)
