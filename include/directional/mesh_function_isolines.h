@@ -49,7 +49,7 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   //hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
   //hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
   
-  TMesh.fromHedraDCEL(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.V, origMesh.F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
+  TMesh.init(origMesh, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
   
   if (verbose){
     std::cout<<"Generating mesh"<<std::endl;

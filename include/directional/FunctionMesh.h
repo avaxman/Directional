@@ -61,20 +61,45 @@ namespace directional{
             }
         };
 
-        typedef mpz_t EInt;
-        typedef mpq_t ENumber;
+        typedef mpz_class EInt;
+        typedef mpq_class ENumber;
         //typedef Eigen::Matrix<mpq_t, Eigen::Dynamic, Eigen::Dynamic> MatrixXed;
-        typedef std::vector<mpq_class> EVector;
+
+        template <size_t Size>
+        class EVector {
+        public:
+            EVector() : data(Size) {}
+
+            // Other methods can be added as needed
+            mpq_class& operator[](size_t index) {
+                return data[index];
+            }
+
+        private:
+            std::vector<mpq_class> data;
+        };
+
+        typedef EVector<2> EVector2;
+        typedef EVector<3> EVector3;
+
+        mpq_class squaredDistance(const EVector3& v1, const EVector3& v2){
+            mpq_class sd(0);
+            //assert("vectors are of different dimensions!" && v1.size()==v2.size());
+            for (int i=0;i<3;i++)
+                sd+=(v1[i]-v2[i])*(v1[i]-v2[i]);  //maybe it's not efficient
+
+            return sd;
+        }
 
 
         //arranging a line set on a triangle
         //triangle is represented by a 3x2 matrix of (CCW) coordinates
         //lines are Nx4 matrices of (origin, direction).
         //line data is an integer associated with data on the line that gets inherited to the halfedges
-        void arrange_on_triangle(const std::vector<EVector>& triangle,
-                                 const std::vector<std::pair<EVector, EVector>>& lines,
+        void arrange_on_triangle(const std::vector<EVector2>& triangle,
+                                 const std::vector<std::pair<EVector2, EVector2>>& lines,
                                  const Eigen::VectorXi& lineData,
-                                 std::Vector<EVector>& V,
+                                 std::vector<EVector2>& V,
                                  Eigen::MatrixXi& F,
                                  Eigen::MatrixXi& HV,
                                  Eigen::MatrixXi& VH,
@@ -90,7 +115,7 @@ namespace directional{
         public:
             int ID;
             Eigen::RowVector3d Coordinates;
-            EVector ECoordinates;
+            EVector3 ECoordinates;
             int AdjHalfedge;
 
             bool isFunction;
@@ -812,8 +837,8 @@ namespace directional{
                 vector<ENumber> minFuncs(numNFunction);
                 vector<ENumber> maxFuncs(numNFunction);
                 for (int k=0;k<numNFunction;k++){
-                    mpz_init_set_si(minFuncs[k], 327600);
-                    mpz_init_set_si(maxFuncs[k], -327600.0);
+                    minFuncs[k] = mpq_class(327600);
+                    maxFuncs[k] = mpq_class(-327600);
                 }
 
                 //Arr_2 ParamArr,TriangleArr, FullArr;
@@ -836,19 +861,21 @@ namespace directional{
                 //vector<Point2D> TriPoints;
                 //vector<RowVector2ed> ETriPoints3D;
                 //vector<EdgeData> EdgeDatas;
-                MatrixXed ETriPoints2d(3,2);
-                ETriPoints2d<<0,0,
-                1,0,
-                0,1;
+                std::vector<EVector(2)> ETriPoints2D(3);
+                std::vector<EVector(3)> ETriPoints3D(3);
+                ETriPoints2D[0][0]=0; ETriPoints2D[0][1]=0;
+                ETriPoints2D[1][0]=1; ETriPoints2D[1][1]=0;
+                ETriPoints2D[2][0]=0; ETriPoints2D[2][1]=1;
+
                 /*ETriPoints2D.push_back(RowVector2ed(0,0));
                 ETriPoints2D.push_back(RowVector2ed(1,0));
                 ETriPoints2D.push_back(RowVector2ed(0,1));*/
                 /*do{
                     //cout<<"Halfedges[eiterate].Origin: "<<Halfedges[eiterate].Origin<<endl;
                     //Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
-                    //cout<<"Location: "<<Location<<endl;
+                    //cout<<"Location: "<<Location<<endl;*/
 
-                    Point3D Position=Vertices[Halfedges[eiterate].Origin].Coordinates;
+                    RowVector3d Position=Vertices[Halfedges[eiterate].Origin].Coordinates;
                     //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
                     //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
                     ENumber x=ENumber((signed long)round((long double)(Position.x())*Resolution),Resolution);
@@ -858,319 +885,319 @@ namespace directional{
                         cout << "x.to_double(): " << x.to_double() << endl;
                         cout << "Position.x(): " << Position.x() << endl;
                     }*/
-                    //ETriPoints.push_back(EPoint2D(cx,cy));
-                    //TriPoints.push_back(Location);
-                    ETriPoints3D.push_back(EPoint3D(x,y,z));
-                    int DomEdge;
+                //ETriPoints.push_back(EPoint2D(cx,cy));
+                //TriPoints.push_back(Location);
+                EVector xyz(3); xyz[0]=x; xyz[1]=y; xyz[2]=z;
+                ETriPoints3D.push_back(xyz);
+                int DomEdge;
 
-                    if ((Halfedges[eiterate].Twin<0)||(Halfedges[eiterate].Twin>eiterate))
-                        DomEdge=eiterate;
-                    else
-                        DomEdge=Halfedges[eiterate].Twin;
-                    EdgeData ed; ed.OrigHalfedge=DomEdge;
-                    ed.isBoundary=(Halfedges[eiterate].Twin<0);
-                    EdgeDatas.push_back(ed);
-                    eiterate=Halfedges[eiterate].Next;
-                }while(ebegin!=eiterate);
+                if ((Halfedges[eiterate].Twin<0)||(Halfedges[eiterate].Twin>eiterate))
+                    DomEdge=eiterate;
+                else
+                    DomEdge=Halfedges[eiterate].Twin;
+                EdgeData ed; ed.OrigHalfedge=DomEdge;
+                ed.isBoundary=(Halfedges[eiterate].Twin<0);
+                EdgeDatas.push_back(ed);
+                eiterate=Halfedges[eiterate].Next;
+            }while(ebegin!=eiterate);
 
-                for (int i=0;i<3;i++){
-                    X_monotone_curve_2 c =ESegment2D(ETriPoints2D[i],ETriPoints2D[(i+1)%3]);
-                    Halfedge_handle he=CGAL::insert_non_intersecting_curve(TriangleArr,c);
-                    he->set_data(EdgeDatas[i]);
-                    if (EdgeDatas[i].isBoundary)
-                        he->source()->data()=he->target()->data()=0;
-                    else
-                        he->source()->data()=he->target()->data()=1;
+            for (int i=0;i<3;i++){
+                X_monotone_curve_2 c =ESegment2D(ETriPoints2D[i],ETriPoints2D[(i+1)%3]);
+                Halfedge_handle he=CGAL::insert_non_intersecting_curve(TriangleArr,c);
+                he->set_data(EdgeDatas[i]);
+                if (EdgeDatas[i].isBoundary)
+                    he->source()->data()=he->target()->data()=0;
+                else
+                    he->source()->data()=he->target()->data()=1;
 
-                    he->twin()->set_data(EdgeDatas[i]);
-                }
-
-                for (Face_iterator fi= TriangleArr.faces_begin(); fi != TriangleArr.faces_end(); fi++){
-                    if (fi->is_unbounded())
-                        fi->data()=0;
-                    else
-                        fi->data()=1;
-                }*/
-
-                //creating the primal arrangement of lines
-                vector<ELine2D> paramLines;
-                vector<EDirection2D> isoDirections(numNFunction);
-                //int jumps = (numNFunction%2==0 ? 2 : 1);
-                for (int funcIter=0;funcIter<numNFunction/*/jumps*/;funcIter++){
-
-                    vector<EInt> isoValues;
-                    //cout<<"isoValues: "<<endl;
-                    EInt q,r;
-                    CGAL::div_mod(minFuncs[funcIter].numerator(), minFuncs[funcIter].denominator(), q, r);
-                    EInt minIsoValue = q + (r<0 ? -1 : 0);
-                    CGAL::div_mod(maxFuncs[funcIter].numerator(), maxFuncs[funcIter].denominator(), q, r);
-                    EInt maxIsoValue = q + (r<0  ? 0 : -1);
-                    for (EInt isoValue=minIsoValue-2;isoValue <=maxIsoValue+2;isoValue++){
-                        //cout<<"isoValue: "<<isoValue<<endl;
-                        isoValues.push_back(isoValue);
-                    }
-
-                    //computing gradient of function in plane
-                    EVector2D e01 =ETriPoints2D[1] - ETriPoints2D[0];
-                    EVector2D e12 =ETriPoints2D[2] - ETriPoints2D[1];
-                    EVector2D e20 =ETriPoints2D[0] - ETriPoints2D[2];
-
-                    //a and b values of lines
-                    EVector2D gradVector = funcValues[2][funcIter]*EVector2D(-e01.y(), e01.x())+
-                                           funcValues[0][funcIter]*EVector2D(-e12.y(), e12.x())+
-                                           funcValues[1][funcIter]*EVector2D(-e20.y(), e20.x());
-
-                    isoDirections[funcIter]=EDirection2D(gradVector);
-
-                    //Number avgFuncValue = (funcValues[0](funcIter)+funcValues[1](funcIter)+funcValues[2](funcIter))/3.0;
-                    //TODO: find c = z1*u+z2 of ax+by+c(u) ad then use it to generate all values between floor and ceil.
-
-                    //pinv of [a 1;b 1;c 1] is [           2*a - b - c,           2*b - a - c,           2*c - b - a]
-                    //[ b^2 - a*b + c^2 - a*c, a^2 - b*a + c^2 - b*c, a^2 - c*a + b^2 - c*b]/(2*a^2 - 2*a*b - 2*a*c + 2*b^2 - 2*b*c + 2*c^2)
-
-                    ENumber a=funcValues[0][funcIter];
-                    ENumber b=funcValues[1][funcIter];
-                    ENumber c=funcValues[2][funcIter];
-                    if ((a==b)&&(b==c))
-                        continue;  //that means a degenerate function on the triangle
-
-                    //cout<<"a,b,c: "<<a.to_double()<<","<<b.to_double()<<","<<c.to_double()<<endl;
-
-                    ENumber rhs[3];
-                    rhs[0]=-gradVector[0]*ETriPoints2D[0].x()-gradVector[1]*ETriPoints2D[0].y();
-                    rhs[1]=-gradVector[0]*ETriPoints2D[1].x()-gradVector[1]*ETriPoints2D[1].y();
-                    rhs[2]=-gradVector[0]*ETriPoints2D[2].x()-gradVector[1]*ETriPoints2D[2].y();
-
-                    ENumber invM[2][3];
-                    invM[0][0]= 2*a-b-c;
-                    invM[0][1]= 2*b-a-c;
-                    invM[0][2]= 2*c-b-a;
-                    invM[1][0]=b*b - a*b + c*c - a*c;
-                    invM[1][1]=a*a - b*a + c*c - b*c;
-                    invM[1][2]=a*a - c*a + b*b - c*b;
-                    for (int row=0;row<2;row++)
-                        for (int col=0;col<3;col++)
-                            invM[row][col]/=(ENumber(2)*(a*a - a*b - a*c + b*b- b*c + c*c));
-
-                    //cout<<(ENumber(2)*(a*a - a*b - a*c + b*b- b*c + c*c)).to_double()<<endl;
-
-                    ENumber x[2];
-                    x[0] = invM[0][0]*rhs[0]+invM[0][1]*rhs[1]+invM[0][2]*rhs[2];
-                    x[1] = invM[1][0]*rhs[0]+invM[1][1]*rhs[1]+invM[1][2]*rhs[2];
-
-
-                    //RowVectorXd x = lhs.colPivHouseholderQr().solve(rhs).transpose();
-
-                    //sanity check
-                    ENumber error[3];
-                    error[0]=x[0]*a+x[1]-rhs[0];
-                    error[1]=x[0]*b+x[1]-rhs[1];
-                    error[2]=x[0]*c+x[1]-rhs[2];
-
-
-                    //cout<<"lhs*x - rhs: "<<error[0].to_double()<<","<<error[1].to_double()<<","<<error[2].to_double()<<endl;
-
-                    //full sanity check
-                    /*MatrixXd lhss(3,2);
-                     lhss<<funcValues[0][funcIter].to_double(), 1.0,
-                     funcValues[1][funcIter].to_double(), 1.0,
-                     funcValues[2][funcIter].to_double(), 1.0;
-
-                     VectorXd rhss(3);
-                     rhss<<-gradVector[0].to_double()*ETriPoints2D[0].x().to_double()-gradVector[1].to_double()*ETriPoints2D[0].y().to_double(),
-                     -gradVector[0].to_double()*ETriPoints2D[1].x().to_double()-gradVector[1].to_double()*ETriPoints2D[1].y().to_double(),
-                     -gradVector[0].to_double()*ETriPoints2D[2].x().to_double()-gradVector[1].to_double()*ETriPoints2D[2].y().to_double();
-
-                     /*cout<<"invM: "<<endl;
-                     for (int r=0;r<2;r++)
-                     for (int c=0;c<3;c++)
-                     cout<<invM[r][c].to_double()<<","<<endl;
-
-
-
-
-                     MatrixXd invlhs = (lhss.transpose()*lhss).inverse()*lhss.transpose();
-                     cout<<"invLhs: "<<invlhs<<endl;
-                     RowVectorXd xx = lhss.colPivHouseholderQr().solve(rhss).transpose();
-                     xx =invlhs*rhss;
-                     cout<<"lhss*xx - rhss"<<lhss*xx.transpose() - rhss<<endl;*/
-
-
-                    //generating all lines
-                    for (int isoIndex=0;isoIndex<isoValues.size();isoIndex++){
-                        //ENumber isoVec[2];
-                        //isoVec[0]=isoValues[isoIndex];
-                        //isoVec[1]= ENumber(1);
-                        ENumber currc = isoValues[isoIndex]*x[0]+x[1];
-                        // ENumber a=ENumber((int)(gradVector[0]*Resolution),Resolution);
-                        //ENumber b=ENumber((int)(gradVector[1]*Resolution),Resolution);
-                        //ENumber c=ENumber((int)(currc(0)*Resolution),Resolution);
-                        paramLines.push_back(ELine2D(gradVector[0],gradVector[1],currc));
-                        //cout<<"paramLine: "<<gradVector[0]<<","<<gradVector[1]<<","<<currc<<endl;
-                    }
-                }
-
-                //cout<<"paramLines.size() :"<<paramLines.size()<<endl;
-                CGAL::insert(ParamArr, paramLines.begin(), paramLines.end());
-
-                //giving edge data to curve arrangement
-                Arr_2::Edge_iterator                  eit;
-                Arr_2::Originating_curve_iterator     ocit;
-                for (eit = ParamArr.edges_begin(); eit != ParamArr.edges_end(); ++eit) {
-                    for (ocit = ParamArr.originating_curves_begin(eit);
-                         ocit != ParamArr.originating_curves_end(eit); ++ocit){
-                        EDirection2D thisDirection =  EDirection2D(ocit->supporting_line().a(), ocit->supporting_line().b());
-                        //cout<<"thisDirection: "<<thisDirection<<endl;
-                        for (int paramIter = 0;paramIter<numNFunction/*/jumps*/;paramIter++){
-                            //cout<<"isoDirections[paramIter]: "<<isoDirections[paramIter]<<endl;
-                            if ((thisDirection==isoDirections[paramIter])||(thisDirection==-isoDirections[paramIter])){
-                                eit->data().funcNum=paramIter;
-                                eit->twin()->data().funcNum=paramIter;
-                                //cout<<"assigning "<<paramIter<<endl;
-                            }
-                        }
-                    }
-                }
-
-
-                //sanity check: all edges are assigned
-                /*cout<<"paramarr edges: "<<endl;
-                 for (eit = ParamArr.edges_begin(); eit != ParamArr.edges_end(); ++eit)
-                 cout<<"paramarr eit->data().funcNum: "<<eit->data().funcNum<<endl;*/
-
-                //
-                //creating the overlay
-                Overlay_traits ot;
-                overlay (TriangleArr, ParamArr, FullArr, ot);
-
-                /*cout<<"FullArr edges: "<<endl;
-                 for (eit = FullArr.edges_begin(); eit != FullArr.edges_end(); ++eit)
-                 cout<<"FullArr eit->data().funcNum: "<<eit->data().funcNum<<endl;*/
-
-
-                for (Face_iterator fi=FullArr.faces_begin();fi!=FullArr.faces_end();fi++){
-                    if (!fi->data())
-                        continue;  //not participating
-
-                    Ccb_halfedge_circulator hebegin=fi->outer_ccb ();
-                    Ccb_halfedge_circulator heiterate=hebegin;
-                    do{
-
-                        if (heiterate->source()->data()<0){  //new vertex
-                            Vertex NewVertex;
-                            NewVertex.ID=funcMesh.Vertices.size();
-                            NewVertex.isFunction=(heiterate->source()->data()==-2);
-                            funcMesh.Vertices.push_back(NewVertex);
-                            heiterate->source()->data()=NewVertex.ID;
-                        }
-
-                        if (heiterate->data().ID<0){  //new halfedge
-                            Halfedge NewHalfedge;
-                            NewHalfedge.ID=funcMesh.Halfedges.size();
-                            NewHalfedge.isFunction=(heiterate->data().ID==-2);
-                            NewHalfedge.Origin=heiterate->source()->data();
-                            NewHalfedge.OrigHalfedge=heiterate->data().OrigHalfedge;
-                            NewHalfedge.OrigNFunctionIndex=heiterate->data().funcNum;
-                            //cout<<"NewHalfedge.OrigParamFunc :"<<NewHalfedge.OrigParamFunc<<endl;
-                            funcMesh.Vertices[heiterate->source()->data()].AdjHalfedge=NewHalfedge.ID;
-                            funcMesh.Halfedges.push_back(NewHalfedge);
-                            heiterate->data().ID=NewHalfedge.ID;
-                        }
-                        heiterate++;
-                    }while(heiterate!=hebegin);
-
-                    //now assigning nexts and prevs
-                    do{
-                        funcMesh.Halfedges[heiterate->data().ID].Next=heiterate->next()->data().ID;
-                        funcMesh.Halfedges[heiterate->data().ID].Prev=heiterate->prev()->data().ID;
-                        funcMesh.Halfedges[heiterate->data().ID].Twin=heiterate->twin()->data().ID;
-                        if (heiterate->twin()->data().ID>=0)
-                            funcMesh.Halfedges[heiterate->twin()->data().ID].Twin=heiterate->data().ID;
-
-                        heiterate++;
-                    }while (heiterate!=hebegin);
-                }
-
-                //constructing the actual vertices
-                for (Vertex_iterator vi=FullArr.vertices_begin();vi!=FullArr.vertices_end();vi++){
-                    if (vi->data()<0)
-                        continue;
-
-                    //finding out barycentric coordinates
-                    ENumber BaryValues[3];
-                    ENumber Sum=0;
-                    for (int i=0;i<3;i++){
-                        ETriangle2D t(vi->point(), ETriPoints2D[(i+1)%3], ETriPoints2D[(i+2)%3]);
-                        BaryValues[i]=t.area();
-                        Sum+=BaryValues[i];
-                    }
-                    for (int i=0;i<3;i++)
-                        BaryValues[i]/=Sum;
-
-                    EPoint3D ENewPosition(0,0,0);
-                    for (int i=0;i<3;i++)
-                        ENewPosition=ENewPosition+(ETriPoints3D[i]-CGAL::ORIGIN)*BaryValues[i];
-
-                    Point3D NewPosition(to_double(ENewPosition.x()), to_double(ENewPosition.y()), to_double(ENewPosition.z()));
-                    funcMesh.Vertices[vi->data()].Coordinates=NewPosition;
-                    funcMesh.Vertices[vi->data()].ECoordinates=ENewPosition;
-
-                    //DebugLog<<"Creating Vertex "<<vi->data()<<" with 2D coordinates ("<<vi->point().x()<<","<<vi->point().y()<<") "<<" and 3D Coordinates ("<<std::setprecision(10) <<NewPosition.x()<<","<<NewPosition.y()<<","<<NewPosition.z()<<")\n";
-                }
-
-                for (Face_iterator fi=FullArr.faces_begin();fi!=FullArr.faces_end();fi++){
-                    if (!fi->data())
-                        continue;
-
-                    int FaceSize=0;
-                    Ccb_halfedge_circulator hebegin=fi->outer_ccb ();
-                    Ccb_halfedge_circulator heiterate=hebegin;
-                    do{ FaceSize++;  heiterate++; }while(heiterate!=hebegin);
-                    int CurrPlace=0;
-
-                    Face NewFace;
-                    NewFace.ID=funcMesh.Faces.size();
-                    //NewFace.NumVertices=FaceSize;
-                    NewFace.AdjHalfedge=hebegin->data().ID;
-
-                    do{
-                        //NewFace.Vertices[CurrPlace++]=heiterate->source()->data();
-                        funcMesh.Halfedges[heiterate->data().ID].AdjFace=NewFace.ID;
-                        heiterate++;
-                    }while(heiterate!=hebegin);
-                    funcMesh.Faces.push_back(NewFace);
-                }
-
+                he->twin()->set_data(EdgeDatas[i]);
             }
 
-            //devising angles from differences in functions
-            //int ratio = (numNFunction%2==0 ? 1 : 2);
-            /*for (int hi=0;hi<funcMesh.Halfedges.size();hi++){
-              //cout<<"funcMesh.Halfedges[hi].OrigParamFunc: "<<funcMesh.Halfedges[hi].OrigParamFunc<<endl;
-              //cout<<"funcMesh.Halfedges[Halfedges[hi].Prev].OrigParamFunc: "<<funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc<<endl;
-              if ((funcMesh.Halfedges[hi].OrigNFunctionIndex==-1)||(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex==-1))
-                funcMesh.Halfedges[hi].prescribedAngle=-1.0;  //one of the edges is a triangle edge, and it will be devised later.
-              else{
-                //int func1 =(ratio*(funcMesh.Halfedges[hi].OrigParamFunc)) % (numNFunction/(3-ratio));
-                //int func2 =(ratio*(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc)) % (numNFunction/(3-ratio));
-
-                double funcOrient1 = funcOrientations(funcMesh.Halfedges[hi].OrigNFunctionIndex);
-                double funcOrient2 = funcOrientations(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex);
-                //cout<<"funcOrient1: "<<funcOrient1<<endl;
-                //cout<<"funcOrient2: "<<funcOrient2<<endl;
-                funcMesh.Halfedges[hi].prescribedAngle=funcOrient2-funcOrient1;
-                //getting difference between [-pi,pi]
-                while (funcMesh.Halfedges[hi].prescribedAngle>igl::PI)
-                  funcMesh.Halfedges[hi].prescribedAngle-=2*igl::PI;
-                while (funcMesh.Halfedges[hi].prescribedAngle<-igl::PI)
-                  funcMesh.Halfedges[hi].prescribedAngle+=2*igl::PI;
-                //cout<<"After 2pi correction: "<<funcMesh.Halfedges[hi].prescribedAngle<<endl;
-                if (funcMesh.Halfedges[hi].prescribedAngle<0)
-                  funcMesh.Halfedges[hi].prescribedAngle+=igl::PI;//+funcMesh.Halfedges[hi].prescribedAngle;
-
-              }
+            for (Face_iterator fi= TriangleArr.faces_begin(); fi != TriangleArr.faces_end(); fi++){
+                if (fi->is_unbounded())
+                    fi->data()=0;
+                else
+                    fi->data()=1;
             }*/
+
+             //creating the primal arrangement of lines
+             vector<ELine2D> paramLines;
+            vector<EDirection2D> isoDirections(numNFunction);
+            //int jumps = (numNFunction%2==0 ? 2 : 1);
+            for (int funcIter=0;funcIter<numNFunction/*/jumps*/;funcIter++){
+
+                vector<EInt> isoValues;
+                //cout<<"isoValues: "<<endl;
+                EInt q,r;
+                CGAL::div_mod(minFuncs[funcIter].numerator(), minFuncs[funcIter].denominator(), q, r);
+                EInt minIsoValue = q + (r<0 ? -1 : 0);
+                CGAL::div_mod(maxFuncs[funcIter].numerator(), maxFuncs[funcIter].denominator(), q, r);
+                EInt maxIsoValue = q + (r<0  ? 0 : -1);
+                for (EInt isoValue=minIsoValue-2;isoValue <=maxIsoValue+2;isoValue++){
+                    //cout<<"isoValue: "<<isoValue<<endl;
+                    isoValues.push_back(isoValue);
+                }
+
+                //computing gradient of function in plane
+                EVector2D e01 =ETriPoints2D[1] - ETriPoints2D[0];
+                EVector2D e12 =ETriPoints2D[2] - ETriPoints2D[1];
+                EVector2D e20 =ETriPoints2D[0] - ETriPoints2D[2];
+
+                //a and b values of lines
+                EVector2D gradVector = funcValues[2][funcIter]*EVector2D(-e01.y(), e01.x())+
+                                       funcValues[0][funcIter]*EVector2D(-e12.y(), e12.x())+
+                                       funcValues[1][funcIter]*EVector2D(-e20.y(), e20.x());
+
+                isoDirections[funcIter]=EDirection2D(gradVector);
+
+                //Number avgFuncValue = (funcValues[0](funcIter)+funcValues[1](funcIter)+funcValues[2](funcIter))/3.0;
+                //TODO: find c = z1*u+z2 of ax+by+c(u) ad then use it to generate all values between floor and ceil.
+
+                //pinv of [a 1;b 1;c 1] is [           2*a - b - c,           2*b - a - c,           2*c - b - a]
+                //[ b^2 - a*b + c^2 - a*c, a^2 - b*a + c^2 - b*c, a^2 - c*a + b^2 - c*b]/(2*a^2 - 2*a*b - 2*a*c + 2*b^2 - 2*b*c + 2*c^2)
+
+                ENumber a=funcValues[0][funcIter];
+                ENumber b=funcValues[1][funcIter];
+                ENumber c=funcValues[2][funcIter];
+                if ((a==b)&&(b==c))
+                    continue;  //that means a degenerate function on the triangle
+
+                //cout<<"a,b,c: "<<a.to_double()<<","<<b.to_double()<<","<<c.to_double()<<endl;
+
+                ENumber rhs[3];
+                rhs[0]=-gradVector[0]*ETriPoints2D[0].x()-gradVector[1]*ETriPoints2D[0].y();
+                rhs[1]=-gradVector[0]*ETriPoints2D[1].x()-gradVector[1]*ETriPoints2D[1].y();
+                rhs[2]=-gradVector[0]*ETriPoints2D[2].x()-gradVector[1]*ETriPoints2D[2].y();
+
+                ENumber invM[2][3];
+                invM[0][0]= 2*a-b-c;
+                invM[0][1]= 2*b-a-c;
+                invM[0][2]= 2*c-b-a;
+                invM[1][0]=b*b - a*b + c*c - a*c;
+                invM[1][1]=a*a - b*a + c*c - b*c;
+                invM[1][2]=a*a - c*a + b*b - c*b;
+                for (int row=0;row<2;row++)
+                    for (int col=0;col<3;col++)
+                        invM[row][col]/=(ENumber(2)*(a*a - a*b - a*c + b*b- b*c + c*c));
+
+                //cout<<(ENumber(2)*(a*a - a*b - a*c + b*b- b*c + c*c)).to_double()<<endl;
+
+                ENumber x[2];
+                x[0] = invM[0][0]*rhs[0]+invM[0][1]*rhs[1]+invM[0][2]*rhs[2];
+                x[1] = invM[1][0]*rhs[0]+invM[1][1]*rhs[1]+invM[1][2]*rhs[2];
+
+
+                //RowVectorXd x = lhs.colPivHouseholderQr().solve(rhs).transpose();
+
+                //sanity check
+                ENumber error[3];
+                error[0]=x[0]*a+x[1]-rhs[0];
+                error[1]=x[0]*b+x[1]-rhs[1];
+                error[2]=x[0]*c+x[1]-rhs[2];
+
+
+                //cout<<"lhs*x - rhs: "<<error[0].to_double()<<","<<error[1].to_double()<<","<<error[2].to_double()<<endl;
+
+                //full sanity check
+                /*MatrixXd lhss(3,2);
+                 lhss<<funcValues[0][funcIter].to_double(), 1.0,
+                 funcValues[1][funcIter].to_double(), 1.0,
+                 funcValues[2][funcIter].to_double(), 1.0;
+
+                 VectorXd rhss(3);
+                 rhss<<-gradVector[0].to_double()*ETriPoints2D[0].x().to_double()-gradVector[1].to_double()*ETriPoints2D[0].y().to_double(),
+                 -gradVector[0].to_double()*ETriPoints2D[1].x().to_double()-gradVector[1].to_double()*ETriPoints2D[1].y().to_double(),
+                 -gradVector[0].to_double()*ETriPoints2D[2].x().to_double()-gradVector[1].to_double()*ETriPoints2D[2].y().to_double();
+
+                 /*cout<<"invM: "<<endl;
+                 for (int r=0;r<2;r++)
+                 for (int c=0;c<3;c++)
+                 cout<<invM[r][c].to_double()<<","<<endl;
+
+
+
+
+                 MatrixXd invlhs = (lhss.transpose()*lhss).inverse()*lhss.transpose();
+                 cout<<"invLhs: "<<invlhs<<endl;
+                 RowVectorXd xx = lhss.colPivHouseholderQr().solve(rhss).transpose();
+                 xx =invlhs*rhss;
+                 cout<<"lhss*xx - rhss"<<lhss*xx.transpose() - rhss<<endl;*/
+
+
+                //generating all lines
+                for (int isoIndex=0;isoIndex<isoValues.size();isoIndex++){
+                    //ENumber isoVec[2];
+                    //isoVec[0]=isoValues[isoIndex];
+                    //isoVec[1]= ENumber(1);
+                    ENumber currc = isoValues[isoIndex]*x[0]+x[1];
+                    // ENumber a=ENumber((int)(gradVector[0]*Resolution),Resolution);
+                    //ENumber b=ENumber((int)(gradVector[1]*Resolution),Resolution);
+                    //ENumber c=ENumber((int)(currc(0)*Resolution),Resolution);
+                    paramLines.push_back(ELine2D(gradVector[0],gradVector[1],currc));
+                    //cout<<"paramLine: "<<gradVector[0]<<","<<gradVector[1]<<","<<currc<<endl;
+                }
+            }
+
+            //cout<<"paramLines.size() :"<<paramLines.size()<<endl;
+            CGAL::insert(ParamArr, paramLines.begin(), paramLines.end());
+
+            //giving edge data to curve arrangement
+            Arr_2::Edge_iterator                  eit;
+            Arr_2::Originating_curve_iterator     ocit;
+            for (eit = ParamArr.edges_begin(); eit != ParamArr.edges_end(); ++eit) {
+                for (ocit = ParamArr.originating_curves_begin(eit);
+                     ocit != ParamArr.originating_curves_end(eit); ++ocit){
+                    EDirection2D thisDirection =  EDirection2D(ocit->supporting_line().a(), ocit->supporting_line().b());
+                    //cout<<"thisDirection: "<<thisDirection<<endl;
+                    for (int paramIter = 0;paramIter<numNFunction/*/jumps*/;paramIter++){
+                        //cout<<"isoDirections[paramIter]: "<<isoDirections[paramIter]<<endl;
+                        if ((thisDirection==isoDirections[paramIter])||(thisDirection==-isoDirections[paramIter])){
+                            eit->data().funcNum=paramIter;
+                            eit->twin()->data().funcNum=paramIter;
+                            //cout<<"assigning "<<paramIter<<endl;
+                        }
+                    }
+                }
+            }
+
+
+            //sanity check: all edges are assigned
+            /*cout<<"paramarr edges: "<<endl;
+             for (eit = ParamArr.edges_begin(); eit != ParamArr.edges_end(); ++eit)
+             cout<<"paramarr eit->data().funcNum: "<<eit->data().funcNum<<endl;*/
+
+            //
+            //creating the overlay
+            Overlay_traits ot;
+            overlay (TriangleArr, ParamArr, FullArr, ot);
+
+            /*cout<<"FullArr edges: "<<endl;
+             for (eit = FullArr.edges_begin(); eit != FullArr.edges_end(); ++eit)
+             cout<<"FullArr eit->data().funcNum: "<<eit->data().funcNum<<endl;*/
+
+
+            for (Face_iterator fi=FullArr.faces_begin();fi!=FullArr.faces_end();fi++){
+                if (!fi->data())
+                    continue;  //not participating
+
+                Ccb_halfedge_circulator hebegin=fi->outer_ccb ();
+                Ccb_halfedge_circulator heiterate=hebegin;
+                do{
+
+                    if (heiterate->source()->data()<0){  //new vertex
+                        Vertex NewVertex;
+                        NewVertex.ID=funcMesh.Vertices.size();
+                        NewVertex.isFunction=(heiterate->source()->data()==-2);
+                        funcMesh.Vertices.push_back(NewVertex);
+                        heiterate->source()->data()=NewVertex.ID;
+                    }
+
+                    if (heiterate->data().ID<0){  //new halfedge
+                        Halfedge NewHalfedge;
+                        NewHalfedge.ID=funcMesh.Halfedges.size();
+                        NewHalfedge.isFunction=(heiterate->data().ID==-2);
+                        NewHalfedge.Origin=heiterate->source()->data();
+                        NewHalfedge.OrigHalfedge=heiterate->data().OrigHalfedge;
+                        NewHalfedge.OrigNFunctionIndex=heiterate->data().funcNum;
+                        //cout<<"NewHalfedge.OrigParamFunc :"<<NewHalfedge.OrigParamFunc<<endl;
+                        funcMesh.Vertices[heiterate->source()->data()].AdjHalfedge=NewHalfedge.ID;
+                        funcMesh.Halfedges.push_back(NewHalfedge);
+                        heiterate->data().ID=NewHalfedge.ID;
+                    }
+                    heiterate++;
+                }while(heiterate!=hebegin);
+
+                //now assigning nexts and prevs
+                do{
+                    funcMesh.Halfedges[heiterate->data().ID].Next=heiterate->next()->data().ID;
+                    funcMesh.Halfedges[heiterate->data().ID].Prev=heiterate->prev()->data().ID;
+                    funcMesh.Halfedges[heiterate->data().ID].Twin=heiterate->twin()->data().ID;
+                    if (heiterate->twin()->data().ID>=0)
+                        funcMesh.Halfedges[heiterate->twin()->data().ID].Twin=heiterate->data().ID;
+
+                    heiterate++;
+                }while (heiterate!=hebegin);
+            }
+
+            //constructing the actual vertices
+            for (Vertex_iterator vi=FullArr.vertices_begin();vi!=FullArr.vertices_end();vi++){
+                if (vi->data()<0)
+                    continue;
+
+                //finding out barycentric coordinates
+                ENumber BaryValues[3];
+                ENumber Sum=0;
+                for (int i=0;i<3;i++){
+                    ETriangle2D t(vi->point(), ETriPoints2D[(i+1)%3], ETriPoints2D[(i+2)%3]);
+                    BaryValues[i]=t.area();
+                    Sum+=BaryValues[i];
+                }
+                for (int i=0;i<3;i++)
+                    BaryValues[i]/=Sum;
+
+                EPoint3D ENewPosition(0,0,0);
+                for (int i=0;i<3;i++)
+                    ENewPosition=ENewPosition+(ETriPoints3D[i]-CGAL::ORIGIN)*BaryValues[i];
+
+                Point3D NewPosition(to_double(ENewPosition.x()), to_double(ENewPosition.y()), to_double(ENewPosition.z()));
+                funcMesh.Vertices[vi->data()].Coordinates=NewPosition;
+                funcMesh.Vertices[vi->data()].ECoordinates=ENewPosition;
+
+                //DebugLog<<"Creating Vertex "<<vi->data()<<" with 2D coordinates ("<<vi->point().x()<<","<<vi->point().y()<<") "<<" and 3D Coordinates ("<<std::setprecision(10) <<NewPosition.x()<<","<<NewPosition.y()<<","<<NewPosition.z()<<")\n";
+            }
+
+            for (Face_iterator fi=FullArr.faces_begin();fi!=FullArr.faces_end();fi++){
+                if (!fi->data())
+                    continue;
+
+                int FaceSize=0;
+                Ccb_halfedge_circulator hebegin=fi->outer_ccb ();
+                Ccb_halfedge_circulator heiterate=hebegin;
+                do{ FaceSize++;  heiterate++; }while(heiterate!=hebegin);
+                int CurrPlace=0;
+
+                Face NewFace;
+                NewFace.ID=funcMesh.Faces.size();
+                //NewFace.NumVertices=FaceSize;
+                NewFace.AdjHalfedge=hebegin->data().ID;
+
+                do{
+                    //NewFace.Vertices[CurrPlace++]=heiterate->source()->data();
+                    funcMesh.Halfedges[heiterate->data().ID].AdjFace=NewFace.ID;
+                    heiterate++;
+                }while(heiterate!=hebegin);
+                funcMesh.Faces.push_back(NewFace);
+            }
+
         }
+
+        //devising angles from differences in functions
+        //int ratio = (numNFunction%2==0 ? 1 : 2);
+        /*for (int hi=0;hi<funcMesh.Halfedges.size();hi++){
+          //cout<<"funcMesh.Halfedges[hi].OrigParamFunc: "<<funcMesh.Halfedges[hi].OrigParamFunc<<endl;
+          //cout<<"funcMesh.Halfedges[Halfedges[hi].Prev].OrigParamFunc: "<<funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc<<endl;
+          if ((funcMesh.Halfedges[hi].OrigNFunctionIndex==-1)||(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex==-1))
+            funcMesh.Halfedges[hi].prescribedAngle=-1.0;  //one of the edges is a triangle edge, and it will be devised later.
+          else{
+            //int func1 =(ratio*(funcMesh.Halfedges[hi].OrigParamFunc)) % (numNFunction/(3-ratio));
+            //int func2 =(ratio*(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigParamFunc)) % (numNFunction/(3-ratio));
+
+            double funcOrient1 = funcOrientations(funcMesh.Halfedges[hi].OrigNFunctionIndex);
+            double funcOrient2 = funcOrientations(funcMesh.Halfedges[funcMesh.Halfedges[hi].Prev].OrigNFunctionIndex);
+            //cout<<"funcOrient1: "<<funcOrient1<<endl;
+            //cout<<"funcOrient2: "<<funcOrient2<<endl;
+            funcMesh.Halfedges[hi].prescribedAngle=funcOrient2-funcOrient1;
+            //getting difference between [-pi,pi]
+            while (funcMesh.Halfedges[hi].prescribedAngle>igl::PI)
+              funcMesh.Halfedges[hi].prescribedAngle-=2*igl::PI;
+            while (funcMesh.Halfedges[hi].prescribedAngle<-igl::PI)
+              funcMesh.Halfedges[hi].prescribedAngle+=2*igl::PI;
+            //cout<<"After 2pi correction: "<<funcMesh.Halfedges[hi].prescribedAngle<<endl;
+            if (funcMesh.Halfedges[hi].prescribedAngle<0)
+              funcMesh.Halfedges[hi].prescribedAngle+=igl::PI;//+funcMesh.Halfedges[hi].prescribedAngle;
+
+          }
+        }*/
 
         struct PointPair{
             int Index1, Index2;
@@ -1194,12 +1221,12 @@ namespace directional{
             }
         };
 
-        std::vector<std::pair<int,int>> FindVertexMatch(const bool verbose, std::vector<EPoint3D>& Set1, std::vector<EPoint3D>& Set2)
+        std::vector<std::pair<int,int>> FindVertexMatch(const bool verbose, std::vector<EVector3>& Set1, std::vector<EVector3>& Set2)
         {
             std::set<PointPair> PairSet;
             for (int i=0;i<Set1.size();i++)
                 for (int j=0;j<Set2.size();j++)
-                    PairSet.insert(PointPair(i,j,squared_distance(Set1[i],Set2[j])));
+                    PairSet.insert(PointPair(i,j,squaredDistance(Set1[i],Set2[j])));
 
             if (Set1.size()!=Set2.size())  //should not happen anymore
                 std::cout<<"FindVertexMatch(): The two sets are of different sizes!! "<<std::endl;
@@ -1307,7 +1334,6 @@ namespace directional{
 
             using namespace std;
             using namespace Eigen;
-            using namespace boost;
 
             if (!CheckMesh(verbose, false, false, false))
                 return false;
@@ -1869,12 +1895,7 @@ namespace directional{
 
         NFunctionMesher(){}
         ~NFunctionMesher(){}
-
     };
-
-
-
-
 
 } //namespace directional
 
