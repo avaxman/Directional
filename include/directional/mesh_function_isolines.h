@@ -43,11 +43,11 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   
   NFunctionMesher TMesh, FMesh;
   
-  Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
-  Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
-  Eigen::MatrixXd FEsPoly;
-  hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
-  hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
+  //Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
+  //Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
+  //Eigen::MatrixXd FEsPoly;
+  //hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
+  //hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
   
   TMesh.fromHedraDCEL(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.V, origMesh.F, EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
   

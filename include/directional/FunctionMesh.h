@@ -1718,65 +1718,47 @@ namespace directional{
 
 
 
-        void fromHedraDCEL(const Eigen::VectorXi& D,
-                           const Eigen::MatrixXd& V,
-                           const Eigen::MatrixXi& F,
-                           const Eigen::MatrixXi& EV,
-                           const Eigen::MatrixXi& FE,
-                           const Eigen::MatrixXi& EF,
-                           const Eigen::MatrixXi& EFi,
-                           const Eigen::MatrixXd& FEs,
-                           const Eigen::VectorXi& innerEdges,
-                           const Eigen::VectorXi& VH,
-                           const Eigen::MatrixXi& EH,
-                           const Eigen::MatrixXi& FH,
-                           const Eigen::VectorXi& HV,
-                           const Eigen::VectorXi& HE,
-                           const Eigen::VectorXi& HF,
-                           const Eigen::VectorXi& nextH,
-                           const Eigen::VectorXi& prevH,
-                           const Eigen::VectorXi& twinH,
-                           const Eigen::MatrixXd& cutV,
-                           const Eigen::MatrixXi& cutF,
-                           const Eigen::VectorXd& vertexNFunction,
-                           const int N,
-                           const Eigen::SparseMatrix<double>& vertexToCornerMat,
-                           const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
-                           const Eigen::VectorXi& integerVars,
-                           const unsigned long resolution=1e7){
+        void init(const TriMesh& origMesh,
+                  const Eigen::MatrixXd& cutV,
+                  const Eigen::MatrixXi& cutF,
+                  const Eigen::VectorXd& vertexNFunction,
+                  const int N,
+                  const Eigen::SparseMatrix<double>& vertexToCornerMat,
+                  const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
+                  const Eigen::VectorXi& integerVars,
+                  const unsigned long resolution=1e7){
 
             using namespace std;
-            using namespace CGAL;
             using namespace Eigen;
-            Vertices.resize(V.rows());
-            Halfedges.resize(HE.rows());
-            Faces.resize(F.rows());
+            Vertices.resize(origMesh.V.rows());
+            Halfedges.resize(origMesh.HE.rows());
+            Faces.resize(origMesh.F.rows());
 
             //int NFull=(N%2==0 ? N/2: N);
 
-            for (int i=0;i<V.rows();i++){
-                Vertices[i].Coordinates=Point3D(V(i,0), V(i,1), V(i,2));
-                Vertices[i].AdjHalfedge=VH(i);
+            for (int i=0;i<origMesh.V.rows();i++){
+                Vertices[i].Coordinates=origMesh.V.row(i);
+                Vertices[i].AdjHalfedge=origMesh.VH(i);
                 Vertices[i].ID=i;
             }
 
-            for (int i=0;i<HE.rows();i++){
+            for (int i=0;i<origMesh.HE.rows();i++){
                 Halfedges[i].ID=i;
-                Halfedges[i].Origin=HV(i);
-                Halfedges[i].Next=nextH(i);
-                Halfedges[i].Prev=prevH(i);
-                Halfedges[i].Twin=twinH(i);
-                Halfedges[i].AdjFace=HF(i);
+                Halfedges[i].Origin=origMesh.HV(i);
+                Halfedges[i].Next=origMesh.nextH(i);
+                Halfedges[i].Prev=origMesh.prevH(i);
+                Halfedges[i].Twin=origMesh.twinH(i);
+                Halfedges[i].AdjFace=origMesh.HF(i);
             }
 
 
-            for (int i=0;i<FH.rows();i++)
-                for (int j=0;j<FH.cols();j++)
+            for (int i=0;i<origMesh.FH.rows();i++)
+                for (int j=0;j<origMesh.FH.cols();j++)
 
 
-                    for (int i=0;i<F.rows();i++){
+                    for (int i=0;i<origMesh.F.rows();i++){
                         Faces[i].ID=i;
-                        Faces[i].AdjHalfedge=FH(i);
+                        Faces[i].AdjHalfedge=origMesh.FH(i);
                     }
 
             //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication

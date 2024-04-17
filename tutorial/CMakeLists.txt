@@ -66,8 +66,8 @@ if (DIRECTIONAL_MESHER)
 
   #find_package(GMP REQUIRED)
 
-  set(GMP_INCLUDE_DIR /usr/local/opt/gmp/include)
-  set(GMP_LIBRARIES /usr/local/opt/gmp/lib/libgmp.dylib)
+  set(GMP_INCLUDE_DIR /opt/homebrew/opt/gmp/include)
+  set(GMP_LIBRARIES /opt/homebrew/opt/gmp/lib/libgmp.dylib)
 
   # Include GMP headers
   include_directories(${GMP_INCLUDE_DIR})
