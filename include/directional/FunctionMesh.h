@@ -24,126 +24,165 @@
 
 namespace directional{
 
-        //arranging a line set on a triangle
-        //triangle is represented by a 3x2 matrix of (CCW) coordinates
-        //lines are Nx4 matrices of (origin, direction).
-        //line data is an integer associated with data on the line that gets inherited to the halfedges
-        void arrange_on_triangle(const std::vector<EVector2>& triangle,
-                                 const std::vector<std::pair<EVector2, EVector2>>& lines,
-                                 const Eigen::VectorXi& lineData,
-                                 std::vector<EVector2>& V,
-                                 Eigen::MatrixXi& F,
-                                 Eigen::MatrixXi& HV,
-                                 Eigen::MatrixXi& VH,
-                                 Eigen::MatrixXi& FH,
-                                 Eigen::MatrixXi& HF,
-                                 Eigen::MatrixXi& nextH,
-                                 Eigen::MatrixXi& prevH,
-                                 Eigen::MatrixXi& twinH,
-                                 Eigen::VectorXi& dataH) {
+    //arranging a line set on a triangle
+    //triangle is represented by a 3x2 matrix of (CCW) coordinates
+    //lines are Nx4 matrices of (origin, direction).
+    //line data is an integer associated with data on the line that gets inherited to the halfedges
+    //output is the DCEL of the result
+    void arrange_on_triangle(const std::vector<EVector2>& triangle,
+                             const std::vector<std::pair<EVector2, EVector2>>& lines,
+                             const Eigen::VectorXi& lineData,
+                             std::vector<EVector2>& V,
+                             Eigen::MatrixXi& F,
+                             Eigen::MatrixXi& HV,
+                             Eigen::MatrixXi& VH,
+                             Eigen::MatrixXi& FH,
+                             Eigen::MatrixXi& HF,
+                             Eigen::MatrixXi& nextH,
+                             Eigen::MatrixXi& prevH,
+                             Eigen::MatrixXi& twinH,
+                             Eigen::VectorXi& dataH) {
+
+        //Initializing the DCEL with the original triangle
+        V = triangle;
+        std::vector<int> HVList, VHList, FHList, HFList, nextHList, prevHList, twinHList, dataHList;
+        std::vector<bool> aliveList;
+        FHList.push_back(0);
+
+        for (int i=0;i<3;i++){
+            HVList.push_back(i);
+            VHList.push_back(i);
+            HFList.push_back(0);
+            nextHList.push_back((i+1)%3);
+            prevHList.push_back((i+2)%3);
+            twinHList.push_back(-1);
+            dataHList.push_back(-i);
         }
 
+        for (int i=0;i<lines.size();i++){
+            //checking for intersections with the triangle
+            ENumber inParam, outParam;  //the parameters of intersection
+            bool intVertex, intEdge, intFace;
+            line_triangle_intersection(lines[i], triangle, intEdge, intFace, inParam, outParam);
+            //checking cases of intersection
+            if ((intEdge<0) && (intFace<0))
+                continue;   //no (non-measure-zero) intersection
+
+            //just updating data; no change to DCEL
+            if (intEdge>=0){
+                for (int j=0;j<dataHList.size();i++)
+                    if (dataHList[j]==-intEdge)
+                        dataHList[j]=lineData[j];
+            }
+
+            //this is intersecting within a face, so have to measure against all previous lines
+            std::vector<int> allParams
+
+
+        }
+
+    }
 
 
     void GenerateMesh(NFunctionMesher& origMesh, NFunctionMesher& funcMesh){
 
-            using namespace std;
-            using namespace Eigen;
-            //using namespace ::CGAL;
+        using namespace std;
+        using namespace Eigen;
+        //using namespace ::CGAL;
 
 
-            funcMesh.Vertices.clear();
-            funcMesh.Halfedges.clear();
-            funcMesh.Faces.clear();
+        funcMesh.Vertices.clear();
+        funcMesh.Halfedges.clear();
+        funcMesh.Faces.clear();
 
-            int numNFunction=origMesh.Halfedges[0].exactNFunction.size();
+        int numNFunction=origMesh.Halfedges[0].exactNFunction.size();
 
-            //DebugLog.open("Debugging.txt");
+        //DebugLog.open("Debugging.txt");
 
-            //resolution is set to 10e-6 of bounding box of mesh
-            vector<RowVector3d> coordList;
-            for (int i=0;i<origMesh.Vertices.size();i++)
-                coordList.push_back(origMesh.Vertices[i].Coordinates);
+        //resolution is set to 10e-6 of bounding box of mesh
+        vector<RowVector3d> coordList;
+        for (int i=0;i<origMesh.Vertices.size();i++)
+            coordList.push_back(origMesh.Vertices[i].Coordinates);
 
-            //Bbox_3 boundBox = ::CGAL::bbox_3  ( coordList.begin(), coordList.end());
+        //Bbox_3 boundBox = ::CGAL::bbox_3  ( coordList.begin(), coordList.end());
 
-            /*double minRange = 3276700.0;
-             for (int i=0;i<2;i++)
-             minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));*/
+        /*double minRange = 3276700.0;
+         for (int i=0;i<2;i++)
+         minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));*/
 
-            unsigned long Resolution=1e7; //pow(10,ceil(10/log10(minRange)));
-            //cout<<"Resolution: "<<Resolution<<endl;
+        unsigned long Resolution=1e7; //pow(10,ceil(10/log10(minRange)));
+        //cout<<"Resolution: "<<Resolution<<endl;
 
-            for (int findex=0;findex<origMesh.Faces.size();findex++){
+        for (int findex=0;findex<origMesh.Faces.size();findex++){
 
-                //building small face overlays of one triangle and a few roughly surrounding hexes to retrieve the structure in the face
+            //building small face overlays of one triangle and a few roughly surrounding hexes to retrieve the structure in the face
 
-                int ebegin=origMesh.Faces[findex].AdjHalfedge;
-                int eiterate=ebegin;
-                //vector<Point2D> TriPoints2D;
+            int ebegin=origMesh.Faces[findex].AdjHalfedge;
+            int eiterate=ebegin;
+            //vector<Point2D> TriPoints2D;
 
-                //basis for triangle
-                /*do{
-                 Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
-                 TriPoints2D.push_back(Location);
-                 eiterate=Halfedges[eiterate].Next;
-                 }while (eiterate!=ebegin);
-                 Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
+            //basis for triangle
+            /*do{
+             Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
+             TriPoints2D.push_back(Location);
+             eiterate=Halfedges[eiterate].Next;
+             }while (eiterate!=ebegin);
+             Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
-                vector<vector<ENumber> > funcValues(3);
+            vector<vector<ENumber> > funcValues(3);
 
-                //DebugLog<<"Working on triangle "<<findex<<"\n";
-                vector<ENumber> minFuncs(numNFunction);
-                vector<ENumber> maxFuncs(numNFunction);
-                for (int k=0;k<numNFunction;k++){
-                    minFuncs[k] = mpq_class(327600);
-                    maxFuncs[k] = mpq_class(-327600);
+            //DebugLog<<"Working on triangle "<<findex<<"\n";
+            vector<ENumber> minFuncs(numNFunction);
+            vector<ENumber> maxFuncs(numNFunction);
+            for (int k=0;k<numNFunction;k++){
+                minFuncs[k] = mpq_class(327600);
+                maxFuncs[k] = mpq_class(-327600);
+            }
+
+            //Arr_2 ParamArr,TriangleArr, FullArr;
+            ebegin=origMesh.Faces[findex].AdjHalfedge;
+            eiterate=ebegin;
+            int currVertex=0;
+            do{
+                for(int i=0;i<numNFunction;i++){
+                    if (origMesh.Halfedges[eiterate].exactNFunction[i]>maxFuncs[i]) maxFuncs[i]=origMesh.Halfedges[eiterate].exactNFunction[i];
+                    if (origMesh.Halfedges[eiterate].exactNFunction[i]<minFuncs[i]) minFuncs[i]=origMesh.Halfedges[eiterate].exactNFunction[i];
                 }
+                funcValues[currVertex++]=origMesh.Halfedges[eiterate].exactNFunction;
+                eiterate=origMesh.Halfedges[eiterate].Next;
+            }while (eiterate!=ebegin);
 
-                //Arr_2 ParamArr,TriangleArr, FullArr;
-                ebegin=origMesh.Faces[findex].AdjHalfedge;
-                eiterate=ebegin;
-                int currVertex=0;
-                do{
-                    for(int i=0;i<numNFunction;i++){
-                        if (origMesh.Halfedges[eiterate].exactNFunction[i]>maxFuncs[i]) maxFuncs[i]=origMesh.Halfedges[eiterate].exactNFunction[i];
-                        if (origMesh.Halfedges[eiterate].exactNFunction[i]<minFuncs[i]) minFuncs[i]=origMesh.Halfedges[eiterate].exactNFunction[i];
-                    }
-                    funcValues[currVertex++]=origMesh.Halfedges[eiterate].exactNFunction;
-                    eiterate=origMesh.Halfedges[eiterate].Next;
-                }while (eiterate!=ebegin);
+            ////////////////////////building the one-triangle arrangement
+            ebegin=origMesh.Faces[findex].AdjHalfedge;
+            eiterate=ebegin;
+            //vector<RowVector2ed> ETriPoints2D;
+            //vector<Point2D> TriPoints;
+            //vector<RowVector2ed> ETriPoints3D;
+            vector<NFunctionMesher::EdgeData> EdgeDatas;
+            std::vector<EVector(2)> ETriPoints2D(3);
+            std::vector<EVector(3)> ETriPoints3D(3);
+            ETriPoints2D[0][0]=0; ETriPoints2D[0][1]=0;
+            ETriPoints2D[1][0]=1; ETriPoints2D[1][1]=0;
+            ETriPoints2D[2][0]=0; ETriPoints2D[2][1]=1;
 
-                ////////////////////////building the one-triangle arrangement
-                ebegin=origMesh.Faces[findex].AdjHalfedge;
-                eiterate=ebegin;
-                //vector<RowVector2ed> ETriPoints2D;
-                //vector<Point2D> TriPoints;
-                //vector<RowVector2ed> ETriPoints3D;
-                vector<NFunctionMesher::EdgeData> EdgeDatas;
-                std::vector<EVector(2)> ETriPoints2D(3);
-                std::vector<EVector(3)> ETriPoints3D(3);
-                ETriPoints2D[0][0]=0; ETriPoints2D[0][1]=0;
-                ETriPoints2D[1][0]=1; ETriPoints2D[1][1]=0;
-                ETriPoints2D[2][0]=0; ETriPoints2D[2][1]=1;
+            /*ETriPoints2D.push_back(RowVector2ed(0,0));
+            ETriPoints2D.push_back(RowVector2ed(1,0));
+            ETriPoints2D.push_back(RowVector2ed(0,1));*/
+            do{
+                //cout<<"Halfedges[eiterate].Origin: "<<Halfedges[eiterate].Origin<<endl;
+                //Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
+                //cout<<"Location: "<<Location<<endl;*/
 
-                /*ETriPoints2D.push_back(RowVector2ed(0,0));
-                ETriPoints2D.push_back(RowVector2ed(1,0));
-                ETriPoints2D.push_back(RowVector2ed(0,1));*/
-                do{
-                    //cout<<"Halfedges[eiterate].Origin: "<<Halfedges[eiterate].Origin<<endl;
-                    //Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
-                    //cout<<"Location: "<<Location<<endl;*/
-
-                    RowVector3d Position=origMesh.Vertices[origMesh.Halfedges[eiterate].Origin].Coordinates;
-                    //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
-                    //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-                    ENumber x=ENumber((signed long)round((long double)(Position.x())*Resolution),Resolution);
-                    ENumber y=ENumber((signed long)round((long double)(Position.y())*Resolution),Resolution);
-                    ENumber z=ENumber((signed long)round((long double)(Position.z())*Resolution),Resolution);
-                    /*if (abs(x.to_double() - Position.x()) > 10e-7) {
-                        cout << "x.to_double(): " << x.to_double() << endl;
-                        cout << "Position.x(): " << Position.x() << endl;
-                    }*/
+                RowVector3d Position=origMesh.Vertices[origMesh.Halfedges[eiterate].Origin].Coordinates;
+                //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
+                //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
+                ENumber x=ENumber((signed long)round((long double)(Position.x())*Resolution),Resolution);
+                ENumber y=ENumber((signed long)round((long double)(Position.y())*Resolution),Resolution);
+                ENumber z=ENumber((signed long)round((long double)(Position.z())*Resolution),Resolution);
+                /*if (abs(x.to_double() - Position.x()) > 10e-7) {
+                    cout << "x.to_double(): " << x.to_double() << endl;
+                    cout << "Position.x(): " << Position.x() << endl;
+                }*/
                 //ETriPoints.push_back(EPoint2D(cx,cy));
                 //TriPoints.push_back(Location);
                 EVector xyz(3); xyz[0]=x; xyz[1]=y; xyz[2]=z;
