@@ -21,6 +21,8 @@
 #include <directional/polygonal_edge_topology.h>
 #include <directional/FunctionMesh.h>
 #include <directional/setup_mesh_function_isolines.h>
+#include <directional/generated_mesh_simplification.h>
+#include <directional/GMP_definitions.h>
 
 namespace directional{
 
@@ -53,7 +55,7 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   
   if (verbose){
     std::cout<<"Generating mesh"<<std::endl;
-    TMesh.GenerateMesh(FMesh);
+    GenerateMesh(TMesh, FMesh);
     std::cout<<"Done generating!"<<std::endl;
   }
   

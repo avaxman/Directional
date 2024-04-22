@@ -45,7 +45,7 @@ namespace directional{
 
         //Initializing the DCEL with the original triangle
         V = triangle;
-        std::vector<int> HVList, VHList, FHList, HFList, nextHList, prevHList, twinHList, dataHList;
+        std::vector<int> HVList, VHList, FHList, HFList, nextHList, prevHList, twinHList, dataHList, beginParamH, endParamH;
         std::vector<bool> aliveList;
         FHList.push_back(0);
 
@@ -59,7 +59,88 @@ namespace directional{
             dataHList.push_back(-i);
         }
 
-        for (int i=0;i<lines.size();i++){
+        std::vector<int> inLines;  //the lines that are inside
+        std::vector<std::pair<ENumber, ENumber>> triIntParams;  //parameters of the line segments inside the triangle
+
+        for (int i=0;i<lines.size();i++) {
+            //checking for intersections with the triangle
+            ENumber inParam, outParam;  //the parameters of intersection
+            bool intVertex, intEdge, intFace;
+            line_triangle_intersection(lines[i], triangle, intEdge, intFace, inParam, outParam);
+            //checking cases of intersection
+            if ((intEdge < 0) && (intFace < 0))
+                continue;   //no (non-measure-zero) intersection
+
+            inLines.push_back(i);
+            triIntParams.push_back(std::pair<ENumber, ENumber>(inParam, outParam));
+        }
+
+        //First creating a graph of segment intersection
+
+        std::vector<EVector2> arrVertices;
+        std::vector<std::vector<int>> VL;  //list of participating lines
+        std::vector<std::set<std::pair<ENumber, int>>> LV;  //set of coordinates of intersection per per line
+        for (int i=0;i<inLines.size();i++) {
+            for (int j = i + 1; j < inLines.size(); j++) {
+                ENumber t1, t2;
+                if (!segment_segment_intersection(lines[i].first + lines[i].second * triIntParams[i].first,
+                                                  lines[i].first + lines[i].second * triIntParams[i].second,
+                                                  lines[j].first + lines[j].second * triIntParams[j].first,
+                                                  lines[j].first + lines[i].second * triIntParams[j].second,
+                                                  t1, t2))
+                    continue;  //that means the lines intersect away from the triangle.
+
+                arrVertices.push_back(lines[i].first + triIntParams[i].first * t1);
+                VL[arrVertices.size() - 1].push_back(i);
+                VL[arrVertices.size() - 1].push_back(j);
+                LV[i].insert(std::pair<ENumber, int>(t1, arrVertices.size() - 1));
+                LV[i].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
+            }
+        }
+
+        //TODO: initialize data
+        //creating the arrangement edges
+        std::vector<std::pair<int, int>> arrEdges;
+        std::vector<std::vector<int>> edgeData;
+        for (int i=0;i<LV.size();i++){
+            for (std::set<std::pair<ENumber, int>>::iterator si = LV[i].begin(); si!=LV[i].end();si++){
+                std::set<std::pair<ENumber, int>>::iterator nextsi = si;
+                nextsi++;
+                if (nextsi!=LV[i].end())
+                    arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second);
+            }
+        }
+
+        //unifying vertices that have the same coordinates
+        std::set<std::pair<EVector2, int>, vertexFinder> uniqueVertices;
+        std::vector<int> uniqueVertexMap(arrVertices.size());
+        std::vector<EVector2> uniqueArrVertices;
+        int uniqueCounter=0;
+        for (int i=0;i<arrVertices.size();i++){
+            std::set<std::pair<EVector2, int>, vertexFinder>::iterator si = uniqueVertices.find(arrvertices[i]);
+            if (si==uniqueVertices.end()){
+                uniqueVertexMap[i]=uniqueCounter;
+                uniqueVertices.insert(std::pair<EVector2, int>(arrVertices[i], uniqueCounter++));
+                uniqueArrVertices.push_back(arrVertices[i]);
+            } else {
+                uniqueVertexMap[i] = si->second;
+            }
+        }
+
+        for (int i=0;i<arrEdges.size();i++){
+            arrEdges[i]=std::pair<int, int>(uniqueVertexMap[arrEdges[i].first], uniqueVertexMap[arrEdges[i].second]);
+            
+        }
+
+
+
+
+
+
+
+
+
+        /*for (int i=0;i<lines.size();i++){
             //checking for intersections with the triangle
             ENumber inParam, outParam;  //the parameters of intersection
             bool intVertex, intEdge, intFace;
@@ -75,11 +156,12 @@ namespace directional{
                         dataHList[j]=lineData[j];
             }
 
-            //this is intersecting within a face, so have to measure against all previous lines
-            std::vector<int> allParams
-
-
-        }
+            //this is intersecting within a face, so have to measure against all previous segments
+            //a bit inefficient since it's testing against segments rather than lines, but assuming O(1) relation, not so much
+            for (int j=0;j<HVList.size();j++){
+                line_segment_intersection(lines[i], V[HVList[j]], V[HVList[nextH[j]]]);
+            }
+        }*/
 
     }
 
