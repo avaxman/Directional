@@ -129,7 +129,7 @@ namespace directional{
 
         for (int i=0;i<arrEdges.size();i++){
             arrEdges[i]=std::pair<int, int>(uniqueVertexMap[arrEdges[i].first], uniqueVertexMap[arrEdges[i].second]);
-            
+
         }
 
 
