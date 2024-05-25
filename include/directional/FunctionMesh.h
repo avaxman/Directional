@@ -49,20 +49,20 @@ namespace directional{
         std::vector<bool> aliveList;
         FHList.push_back(0);
 
-        for (int i=0;i<3;i++){
+        for (int i = 0; i < 3; i++) {
             HVList.push_back(i);
             VHList.push_back(i);
             HFList.push_back(0);
-            nextHList.push_back((i+1)%3);
-            prevHList.push_back((i+2)%3);
+            nextHList.push_back((i + 1) % 3);
+            prevHList.push_back((i + 2) % 3);
             twinHList.push_back(-1);
             dataHList.push_back(-i);
         }
 
-        std::vector<int> inLines;  //the lines that are inside
-        std::vector<std::pair<ENumber, ENumber>> triIntParams;  //parameters of the line segments inside the triangle
+        std::vector<int> inData;  //the lines that are inside
+        std::vector<std::pair<EVector2, EVector2>> inSegments;  //parameters of the line segments inside the triangle
 
-        for (int i=0;i<lines.size();i++) {
+        for (int i = 0; i < lines.size(); i++) {
             //checking for intersections with the triangle
             ENumber inParam, outParam;  //the parameters of intersection
             bool intVertex, intEdge, intFace;
@@ -71,47 +71,88 @@ namespace directional{
             if ((intEdge < 0) && (intFace < 0))
                 continue;   //no (non-measure-zero) intersection
 
-            inLines.push_back(i);
-            triIntParams.push_back(std::pair<ENumber, ENumber>(inParam, outParam));
+            inData.push_back(lineData[i]);
+            EVector2 segSource = lines[i].first + lines[i].second * inParam;
+            EVector2 segTarget = lines[i].first + lines[i].second * outParam;
+            inSegments.push_back(std::pair<EVector2, EVector2>(segSource, segTarget));
         }
+
+        //pushing in triangle segments
+        for (int i = 0; i < 3; i++) {
+            inData.push_back(-1);  //no data
+            inSegments.push_back(std::pair<EVector2, EVector2>(triangle[i], triangle[(i + 1) % 3]));
+        }
+
+        segment_arrangement(inSegments, inData, V, F, HV, VH, FH, HF, nextH, prevH, twinH, dataH);
+    }
+
+    void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
+                             const std::vector<int>& data,
+                             std::vector<EVector2>& V,
+                             Eigen::MatrixXi& F,
+                             Eigen::MatrixXi& HV,
+                             Eigen::MatrixXi& VH,
+                             Eigen::MatrixXi& FH,
+                             Eigen::MatrixXi& HF,
+                             Eigen::MatrixXi& nextH,
+                             Eigen::MatrixXi& prevH,
+                             Eigen::MatrixXi& twinH,
+                             Eigen::VectorXi& dataH) {
+
+        //first creating all segment intersections
 
         //First creating a graph of segment intersection
 
+        //Creating arrangement vertices
         std::vector<EVector2> arrVertices;
-        std::vector<std::vector<int>> VL;  //list of participating lines
-        std::vector<std::set<std::pair<ENumber, int>>> LV;  //set of coordinates of intersection per per line
-        for (int i=0;i<inLines.size();i++) {
-            for (int j = i + 1; j < inLines.size(); j++) {
+        std::vector<std::vector<int>> VS;  //list of participating segments per vertex
+        std::vector<std::set<std::pair<ENumber, int>>> SV;  //set of coordinates of intersection per segment
+        for (int i=0;i<segments.size();i++) {
+            for (int j = i + 1; j < segments.size(); j++) {
                 ENumber t1, t2;
-                if (!segment_segment_intersection(lines[i].first + lines[i].second * triIntParams[i].first,
-                                                  lines[i].first + lines[i].second * triIntParams[i].second,
-                                                  lines[j].first + lines[j].second * triIntParams[j].first,
-                                                  lines[j].first + lines[i].second * triIntParams[j].second,
-                                                  t1, t2))
+                int result = segment_segment_intersection(segments[i].first, segments[i].second - segments[i].first,
+                                                  segments[j].first, segments[j].second - segments[j].first, t1, t2));
+
+                if (!result)  //no intersection
                     continue;  //that means the lines intersect away from the triangle.
 
-                arrVertices.push_back(lines[i].first + triIntParams[i].first * t1);
-                VL[arrVertices.size() - 1].push_back(i);
-                VL[arrVertices.size() - 1].push_back(j);
-                LV[i].insert(std::pair<ENumber, int>(t1, arrVertices.size() - 1));
-                LV[i].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
+                if (result==1) {  //pointwise intersection
+                    // TODO: figure out what happens if more than two lines at the same spot
+                    arrVertices.push_back(segments[i].first * (1 - t1) + segments[i].second * t1);
+                    VS[arrVertices.size() - 1].push_back(i);
+                    VS[arrVertices.size() - 1].push_back(j);
+                    SV[i].insert(std::pair<ENumber, int>(t1, arrVertices.size() - 1));
+                    SV[i].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
+                }
+
+                if (result==2) {  //subsegment; now entering two vertices, and letting the edges be entered later
+                    arrVertices.push_back(segments[i].first * (ENumber(1) - t1) + segments[i].second * t1);
+                    arrVertices.push_back(segments[j].first * (ENumber(1) - t2) + segments[j].second * t2);
+                    VS[arrVertices.size() - 2].push_back(i);
+                    VS[arrVertices.size() - 1].push_back(j);
+                    VS[arrVertices.size() - 2].push_back(i);
+                    VS[arrVertices.size() - 1].push_back(j);
+                    SV[i].insert(std::pair<ENumber, int>(t1, arrVertices.size() - 1));
+                    SV[i].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
+                }
             }
         }
 
-        //TODO: initialize data
-        //creating the arrangement edges
+        //Creating the arrangement edges
         std::vector<std::pair<int, int>> arrEdges;
-        std::vector<std::vector<int>> edgeData;
-        for (int i=0;i<LV.size();i++){
-            for (std::set<std::pair<ENumber, int>>::iterator si = LV[i].begin(); si!=LV[i].end();si++){
+        std::vector<int> edgeData;
+        for (int i=0;i<SV.size();i++){
+            for (std::set<std::pair<ENumber, int>>::iterator si = SV[i].begin(); si!=SV[i].end();si++){
                 std::set<std::pair<ENumber, int>>::iterator nextsi = si;
                 nextsi++;
-                if (nextsi!=LV[i].end())
-                    arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second);
+                if (nextsi!=SV[i].end()) {
+                    arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second));
+                    edgeData.push_back(data[i]);
+                }
             }
         }
 
-        //unifying vertices that have the same coordinates
+        //unifying vertices with the same coordinates
         std::set<std::pair<EVector2, int>, vertexFinder> uniqueVertices;
         std::vector<int> uniqueVertexMap(arrVertices.size());
         std::vector<EVector2> uniqueArrVertices;
@@ -129,8 +170,38 @@ namespace directional{
 
         for (int i=0;i<arrEdges.size();i++){
             arrEdges[i]=std::pair<int, int>(uniqueVertexMap[arrEdges[i].first], uniqueVertexMap[arrEdges[i].second]);
-
         }
+
+        //unifying edges with the same vertices (in case of segment-segment intersections; using the higher data
+        Eigen::VectorXi isDeadEdge=Eigen::VectorXi::Constant(arrEdges.size(),0);
+        for (int i=0;i<arrEdges.size();i++) {
+            for (int j = i + 1; j < arrEdges.size(); j++) {
+                if (((arrEdges[i].first == arrEdges[j].first) && (arrEdges[i].second == arrEdges[j].second)) ||
+                    ((arrEdges[i].first == arrEdges[j].first) && (arrEdges[i].second == arrEdges[j].second))) {
+                    isDeadEdge(j) = 1;
+                    edgeData[i] = (edgeData[i] > edgeData[j] ? edgeData[i] : edgeData[j]);
+                }
+            }
+        }
+        std::vector<std::pair<int, int>> newArrEdges;
+        std::vector<int> newEdgeData;
+        for (int i=0;i<arrEdges.size();i++){
+            if (isDeadEdge[i])
+                continue;
+            newArrEdges.push_back(arrEdges[i]);
+            newEdgeData.push_back(edgeData[i]);
+        }
+        arrEdges=newArrEdges;
+        edgeData=newEdgeData;
+
+        //orienting segments around each vertex by CCW order
+
+        //generating faces
+    }
+
+
+
+
 
 
 
