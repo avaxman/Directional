@@ -19,8 +19,9 @@
 #include <Eigen/Dense>
 #include <gmp.h>
 #include <gmpxx.h>
+#include <directional/DCEL.h>
 #include <directional/GMP_definitions.h>
-#include <directional/generated_mesh_simplification.h>
+#include <directional/NFunctionMesher.h>
 
 namespace directional{
 
@@ -30,28 +31,13 @@ namespace directional{
     //line data is an integer associated with data on the line that gets inherited to the halfedges
     //output is the DCEL of the result
     //Outer face is deleted in post-process
-    void arrange_on_triangle(const std::vector<EVector2>& triangle,
+    void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
                              const std::vector<std::pair<EVector2, EVector2>>& lines,
                              const Eigen::VectorXi& lineData,
                              std::vector<EVector2>& V,
-                             DCEL& dcel,
-                             Eigen::VectorXi& dataH) {
+                             DCEL<int, std::vector<int>, int, int>& triDcel) {
 
-        //Initializing the DCEL with the original triangle
         V = triangle;
-        //std::vector<int> HVList, VHList, FHList, HFList, nextHList, prevHList, twinHList, dataHList, beginParamH, endParamH;
-        //std::vector<bool> aliveList;
-        //FHList.push_back(0);
-
-        /*for (int i = 0; i < 3; i++) {
-            HVList.push_back(i);
-            VHList.push_back(i);
-            HFList.push_back(0);
-            nextHList.push_back((i + 1) % 3);
-            prevHList.push_back((i + 2) % 3);
-            twinHList.push_back(-1);
-            dataHList.push_back(-i);
-        }*/
 
         std::vector<int> inData;  //the lines that are inside
         std::vector<std::pair<EVector2, EVector2>> inSegments;  //parameters of the line segments inside the triangle
@@ -77,14 +63,13 @@ namespace directional{
             inSegments.push_back(std::pair<EVector2, EVector2>(triangle[i], triangle[(i + 1) % 3]));
         }
 
-        segment_arrangement(inSegments, inData, V, dcel, dataH);
+        segment_arrangement(inSegments, inData, V, triDcel);
     }
 
-    void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
+    void NFunctionMesher::segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
                              const std::vector<int>& data,
                              std::vector<EVector2>& V,
-                             DCEL& dcel,
-                             Eigen::VectorXi& dataH) {
+                             DCEL<int, std::vector<int>, int, int>& triDcel) {
 
         //first creating all segment intersections
 
@@ -112,6 +97,7 @@ namespace directional{
                     SV[i].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
                 }
 
+                //Should make this aware of the double and put both into the edge data
                 if (result==2) {  //subsegment; now entering two vertices, and letting the edges be entered later
                     arrVertices.push_back(segments[i].first * (ENumber(1) - t1) + segments[i].second * t1);
                     arrVertices.push_back(segments[j].first * (ENumber(1) - t2) + segments[j].second * t2);
@@ -182,6 +168,7 @@ namespace directional{
         arrEdges=newArrEdges;
         edgeData=newEdgeData;
 
+        //TODO:
         //generating the halfedge structure
         //Everything will be twinned at this point
         dcel.VH.resize(arrVertices.size());
@@ -304,7 +291,7 @@ namespace directional{
     }
 
 
-    void generate_mesh(NFunctionMesher& mesher) {
+    void NFunctionMesher::generate_mesh() {
 
         using namespace std;
         using namespace Eigen;

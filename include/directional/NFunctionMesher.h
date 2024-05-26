@@ -17,6 +17,7 @@
 #include <gmpxx.h>
 #include <directional/GMP_definitions.h>
 #include <directional/dcel.h>
+#include <directional/setup_mesh_function_isolines.h>
 
 namespace directional{
 
@@ -24,8 +25,8 @@ namespace directional{
     public:
 
         const TriMesh& origMesh;
-
-        DCEL dcel;
+        const MeshFunctionIsolinesData& mfiData;
+        DCEL<int, std::vector<int>, int, int> genDcel;
 
         //vertex quantities
         Eigen::MatrixXd coordinates;
@@ -44,7 +45,7 @@ namespace directional{
         //face quantities
         std::vector<int> origFace;  //in triangle mesh
 
-        struct EdgeData{
+        /*struct EdgeData{
             int ID;
             bool isFunction;
             int OrigHalfedge;
@@ -53,7 +54,21 @@ namespace directional{
 
             EdgeData():ID(-1), isFunction(false), OrigHalfedge(-1), isBoundary(false), funcNum(-1){}
             ~EdgeData(){};
-        };
+        };*/
+
+        //mesh generation functions found in generate_mesh.h
+        void arrange_on_triangle(const std::vector<EVector2>& triangle,
+                                 const std::vector<std::pair<EVector2, EVector2>>& lines,
+                                 const Eigen::VectorXi& lineData,
+                                 std::vector<EVector2>& V,
+                                 DCEL<int, std::vector<int>, int, int>& triDcel);
+
+        void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
+                                 const std::vector<int>& data,
+                                 std::vector<EVector2>& V,
+                                 DCEL<int, std::vector<int>, int, int>& triDcel);
+        void generate_mesh();
+
 
         /*class Vertex{
         public:
@@ -692,34 +707,6 @@ namespace directional{
 
         }*/
 
-        void ComputeTwins() {
-            //twinning up edges
-            std::set <TwinFinder> Twinning;
-            for (int i = 0; i < Halfedges.size(); i++) {
-                if (Halfedges[i].Twin >= 0)
-                    continue;
-
-                std::set<TwinFinder>::iterator Twinit = Twinning.find(
-                        TwinFinder(0, Halfedges[Halfedges[i].Next].Origin, Halfedges[i].Origin));
-                if (Twinit != Twinning.end()) {
-                    Halfedges[Twinit->index].Twin = i;
-                    Halfedges[i].Twin = Twinit->index;
-                    Twinning.erase(*Twinit);
-                } else {
-                    Twinning.insert(TwinFinder(i, Halfedges[i].Origin, Halfedges[Halfedges[i].Next].Origin));
-                }
-            }
-        }
-
-        void WalkBoundary(int &CurrEdge) {
-            do {
-                CurrEdge = Halfedges[CurrEdge].Next;
-                if (Halfedges[CurrEdge].Twin < 0)
-                    break;  //next boundary over a 2-valence vertex
-                CurrEdge = Halfedges[CurrEdge].Twin;
-            } while (Halfedges[CurrEdge].Twin >= 0);
-        }
-
         void RemoveVertex(int vindex, std::deque<int> &removeVertexQueue) {
             int hebegin = Vertices[vindex].AdjHalfedge;
             int heiterate = hebegin;
@@ -889,29 +876,6 @@ namespace directional{
             return Result;
 
         }
-
-
-        struct TwinFinder{
-            int index;
-            int v1,v2;
-
-            TwinFinder(int i, int vv1, int vv2):index(i), v1(vv1), v2(vv2){}
-            ~TwinFinder(){}
-
-            const bool operator<(const TwinFinder& tf) const
-            {
-                if (v1<tf.v1) return false;
-                if (v1>tf.v1) return true;
-
-                if (v2<tf.v2) return false;
-                if (v2>tf.v2) return true;
-
-                return false;
-            }
-
-
-        };
-
 
         bool simplify_mesh(const bool verbose, int N){
             //unifying vertices which are similar
@@ -1296,12 +1260,12 @@ namespace directional{
 
         void RemoveDegree2Faces();
 
-        void Allocate(int NumofVertices, int NumofFaces, int NumofHEdges)
+        /*void Allocate(int NumofVertices, int NumofFaces, int NumofHEdges)
         {
             Vertices.resize(NumofVertices);
             Faces.resize(NumofFaces);
             Halfedges.resize(NumofHEdges);
-        }
+        }*/
 
         void init(const TriMesh& origMesh,
                   const Eigen::MatrixXd& cutV,
@@ -1399,7 +1363,7 @@ namespace directional{
 
 
         //corner angles is per vertex in each F
-        void toHedra(Eigen::MatrixXd& generatedV,
+        void to_polygonal(Eigen::MatrixXd& generatedV,
                      Eigen::VectorXi& generatedD,
                      Eigen::MatrixXi& generatedF){
             generatedV.resize(Vertices.size(),3);
@@ -1454,6 +1418,21 @@ namespace directional{
 
         NFunctionMesher(const TriMesh& _origMesh):origMesh(_origMesh){}
         ~NFunctionMesher(){}
+
+    private:
+        void arrange_on_triangle(const std::vector<EVector2>& triangle,
+                                                  const std::vector<std::pair<EVector2, EVector2>>& lines,
+                                                  const Eigen::VectorXi& lineData,
+                                                  std::vector<EVector2>& V,
+                                                  DCEL& dcel,
+                                                  Eigen::VectorXi& dataH);
+
+        void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
+                                 const std::vector<int>& data,
+                                 std::vector<EVector2>& V,
+                                 DCEL& dcel,
+                                 Eigen::VectorXi& dataH);
+
     };
 
 }
