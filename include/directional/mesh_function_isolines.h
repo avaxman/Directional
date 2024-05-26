@@ -19,10 +19,11 @@
 #include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/polygonal_edge_topology.h>
-#include <directional/FunctionMesh.h>
-#include <directional/setup_mesh_function_isolines.h>
-#include <directional/generated_mesh_simplification.h>
 #include <directional/GMP_definitions.h>
+#include <directional/setup_mesh_function_isolines.h>
+#include <directional/NFunctionMesher.h>
+#include <directional/generate_mesh.h>
+
 
 namespace directional{
 
@@ -43,19 +44,19 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
                             Eigen::MatrixXi& FOutput){
   
   
-  NFunctionMesher TMesh, FMesh;
+  NFunctionMesher mesher; //TMesh, FMesh;
   
   //Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
   //Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
   //Eigen::MatrixXd FEsPoly;
   //hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
   //hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
-  
-  TMesh.init(origMesh, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
+
+  mesher.init(origMesh, mfiData.cutV, mfiData.cutF, mfiData.vertexNFunction,  mfiData.N, mfiData.orig2CutMat, mfiData.exactOrig2CutMat, mfiData.integerVars);
   
   if (verbose){
     std::cout<<"Generating mesh"<<std::endl;
-    GenerateMesh(TMesh, FMesh);
+    generate_mesh(mesher);
     std::cout<<"Done generating!"<<std::endl;
   }
   
@@ -66,13 +67,13 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   if (verbose)
     std::cout<<"Cleaning Mesh"<<std::endl;
   
-  bool success = FMesh.SimplifyMesh(verbose, mfiData.N);
+  bool success = mesher.simplify_mesh(verbose, mfiData.N);
   
   if (success){
     if (verbose)
       std::cout<<"Cleaning succeeded!"<<std::endl;
     
-    FMesh.toHedra(VOutput,DOutput, FOutput);
+    mesher.toHedra(VOutput,DOutput, FOutput);
   } else if (verbose) std::cout<<"Cleaning failed!"<<std::endl;
   
   return success;

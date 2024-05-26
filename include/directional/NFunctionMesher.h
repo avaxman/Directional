@@ -2,8 +2,8 @@
 // Created by Amir Vaxman on 20.04.24.
 //
 
-#ifndef DIRECTIONAL_GENERATED_MESH_SIMPLIFICATION_H
-#define DIRECTIONAL_GENERATED_MESH_SIMPLIFICATION_H
+#ifndef DIRECTIONAL_N_FUNCTION_MESHER
+#define DIRECTIONAL_N_FUNCTION_MESHER
 
 #include <set>
 #include <math.h>
@@ -16,11 +16,33 @@
 #include <gmp.h>
 #include <gmpxx.h>
 #include <directional/GMP_definitions.h>
+#include <directional/dcel.h>
 
 namespace directional{
 
     class NFunctionMesher {
     public:
+
+        const TriMesh& origMesh;
+
+        DCEL dcel;
+
+        //vertex quantities
+        Eigen::MatrixXd coordinates;
+        std::vector<EVector3> ECoordinates;
+        std::vector<bool> isVertexFunction;
+
+        //halfedge quantities
+        Eigen::MatrixXd NFunction;
+        std::vector<std::vector<ENumber>> exactNFunction;
+        std::vector<bool> isHalfedgeFunction;
+        std::vector<int> origHalfedge;
+        std::vector<int> origNFunctionIndex;  //the original parameteric function assoicated with this edge
+        //int prescribedAngleDiff;
+        std::vector<double> prescribedAngle;  //the actual prescribed angle
+
+        //face quantities
+        std::vector<int> origFace;  //in triangle mesh
 
         struct EdgeData{
             int ID;
@@ -33,7 +55,7 @@ namespace directional{
             ~EdgeData(){};
         };
 
-        class Vertex{
+        /*class Vertex{
         public:
             int ID;
             Eigen::RowVector3d Coordinates;
@@ -87,19 +109,18 @@ namespace directional{
 
         std::vector<Vertex> Vertices;
         std::vector<Halfedge> Halfedges;
-        std::vector<Face> Faces;
+        std::vector<Face> Faces;*/
 
         std::vector<int> TransVertices;
         std::vector<int> InStrip;
         std::vector<std::set<int> > VertexChains;
 
 
-
         struct MergeData {
             const bool operator()(const int &v1, const int &v2) const { return v1; }
         };
 
-        bool JoinFace(constint heindex) {
+        /*bool JoinFace(const int heindex) {
             if (Halfedges[heindex].Twin < 0)
                 return true;  //there is no joining of boundary faces
 
@@ -199,11 +220,9 @@ namespace directional{
             } while (heiterate != hebegin);
 
             return true;
+        }*/
 
-
-        }
-
-        void UnifyEdges(int heindex) {
+        /*void UnifyEdges(int heindex) {
             //if (Halfedges[heindex].Twin<0)
             //  return;
             //adjusting source
@@ -432,7 +451,7 @@ namespace directional{
                     return false;
                   }
                 }*/
-            }
+            /*}/*
 
             //checking if all halfedges that relate to a face are part of its recognized chain (so no floaters)
             for (int i = 0; i < Halfedges.size(); i++) {
@@ -589,9 +608,9 @@ namespace directional{
             if (verbose) std::cout << "Mesh is clear according to given checks" << std::endl;
             return true;  //most likely the mesh is solid
 
-        }
+        }*/
 
-        void CleanMesh() {
+        /*void CleanMesh() {
             //removing nonvalid vertices
             std::vector<int> TransVertices(Vertices.size());
             std::vector <Vertex> NewVertices;
@@ -620,7 +639,7 @@ namespace directional{
                 Faces[i].Vertices[j]=TransVertices[Faces[i].Vertices[j]];
               }
             }*/
-
+/*
 
 
             //removing nonvalid faces
@@ -671,7 +690,7 @@ namespace directional{
                 Halfedges[i].Prev = TransHalfedges[Halfedges[i].Prev];
             }
 
-        }
+        }*/
 
         void ComputeTwins() {
             //twinning up edges
@@ -894,7 +913,7 @@ namespace directional{
         };
 
 
-        bool SimplifyMesh(const bool verbose, int N){
+        bool simplify_mesh(const bool verbose, int N){
             //unifying vertices which are similar
 
             using namespace std;
@@ -1284,10 +1303,159 @@ namespace directional{
             Halfedges.resize(NumofHEdges);
         }
 
+        void init(const TriMesh& origMesh,
+                  const Eigen::MatrixXd& cutV,
+                  const Eigen::MatrixXi& cutF,
+                  const Eigen::VectorXd& vertexNFunction,
+                  const int N,
+                  const Eigen::SparseMatrix<double>& vertexToCornerMat,
+                  const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
+                  const Eigen::VectorXi& integerVars,
+                  const unsigned long resolution=1e7){
 
+            using namespace std;
+            using namespace Eigen;
+            Vertices.resize(origMesh.V.rows());
+            Halfedges.resize(origMesh.HE.rows());
+            Faces.resize(origMesh.F.rows());
+
+            //int NFull=(N%2==0 ? N/2: N);
+
+            for (int i=0;i<origMesh.V.rows();i++){
+                Vertices[i].Coordinates=origMesh.V.row(i);
+                Vertices[i].AdjHalfedge=origMesh.VH(i);
+                Vertices[i].ID=i;
+            }
+
+            for (int i=0;i<origMesh.HE.rows();i++){
+                Halfedges[i].ID=i;
+                Halfedges[i].Origin=origMesh.HV(i);
+                Halfedges[i].Next=origMesh.nextH(i);
+                Halfedges[i].Prev=origMesh.prevH(i);
+                Halfedges[i].Twin=origMesh.twinH(i);
+                Halfedges[i].AdjFace=origMesh.HF(i);
+            }
+
+
+            for (int i=0;i<origMesh.FH.rows();i++)
+                for (int j=0;j<origMesh.FH.cols();j++)
+                    for (int i=0;i<origMesh.F.rows();i++){
+                        Faces[i].ID=i;
+                        Faces[i].AdjHalfedge=origMesh.FH(i);
+                    }
+
+            //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
+            vector<ENumber> exactVertexNFunction(vertexNFunction.size());
+            for (int i=0;i<vertexNFunction.size();i++){
+                exactVertexNFunction[i]=ENumber((signed long)round((long double)(vertexNFunction(i)*resolution)),(unsigned long)resolution);
+                /*if (abs(exactVertexNFunction[i].to_double() - vertexNFunction(i))>10e-8) {
+                    cout << "exactVertexNFunction[i].to_double(): " << exactVertexNFunction[i].to_double() << endl;
+                    cout << "vertexNFunction(i): " << vertexNFunction(i) << endl;
+                    cout << "(long double)(vertexNFunction(i)*resolution): " << (long double)(vertexNFunction(i) * resolution) << endl;
+                }*/
+            }
+
+            for (int i=0;i<integerVars.size();i++){
+                exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
+                //cout<<"rounding diff of integer var "<<integerVars(i)<<" is "<<exactVertexNFunction[integerVars(i)].to_double()-vertexNFunction(integerVars(i))<<endl;
+            }
+
+            VectorXd cutNFunctionVec = vertexToCornerMat*vertexNFunction;
+            vector<ENumber> exactCutNFunctionVec;
+            exactSparseMult(exactVertexToCornerMat, exactVertexNFunction,exactCutNFunctionVec);
+
+            //sanity check - comparing exact to double
+            double maxError2 = -32767000.0;
+            for (int i=0;i<exactCutNFunctionVec.size();i++){
+                double fromExact = exactCutNFunctionVec[i].to_double();
+                if (abs(fromExact-cutNFunctionVec[i])>maxError2)
+                    maxError2 =abs(fromExact-cutNFunctionVec[i]);
+            }
+
+            //cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
+
+            for (int i=0;i<FH.rows();i++)
+                for (int j=0;j<FH.cols();j++){
+                    Halfedges[FH(i,j)].exactNFunction.resize(N);
+                    Halfedges[FH(i,j)].NFunction = cutNFunctionVec.segment(N*cutF(i,j), N).transpose();
+                    for (int k=0;k<N;k++)
+                        Halfedges[FH(i,j)].exactNFunction[k] = exactCutNFunctionVec[N*cutF(i,j)+k];
+                }
+
+            //sanity check
+            double maxError = -32767000.0;
+            for (int i=0;i<Halfedges.size();i++){
+                for (int j=0;j<N;j++){
+                    double fromExact = Halfedges[i].exactNFunction[j].to_double();
+                    //cout<<"fromExact: "<<fromExact<<endl;
+                    //cout<<"Halfedges[i].NFunction[j]: "<<Halfedges[i].NFunction[j]<<endl;
+                    if (abs(fromExact-Halfedges[i].NFunction[j])>maxError)
+                        maxError =abs(fromExact-Halfedges[i].NFunction[j]);
+                }
+
+            }
+            //cout<<"double from exact in halfedges maxError: "<<maxError<<endl;
+        }
+
+
+        //corner angles is per vertex in each F
+        void toHedra(Eigen::MatrixXd& generatedV,
+                     Eigen::VectorXi& generatedD,
+                     Eigen::MatrixXi& generatedF){
+            generatedV.resize(Vertices.size(),3);
+
+            generatedD.resize(Faces.size());
+
+            for (int i=0;i<Vertices.size();i++)
+                generatedV.row(i)<<Vertices[i].Coordinates.x(), Vertices[i].Coordinates.y(),Vertices[i].Coordinates.z();
+
+            for (int i=0;i<Faces.size();i++){
+                int hebegin = Faces[i].AdjHalfedge;
+                //reseting to first vertex
+                int vCount=0;
+                int heiterate=hebegin;
+                do{
+                    vCount++;
+                    heiterate=Halfedges[heiterate].Next;
+                }while (heiterate!=hebegin);
+                generatedD(i)=vCount;
+            }
+
+            generatedF.resize(Faces.size(),generatedD.maxCoeff());
+            for (int i=0;i<Faces.size();i++){
+                int hebegin = Faces[i].AdjHalfedge;
+                int vCount=0;
+                int heiterate=hebegin;
+                do{
+                    generatedF(i,vCount++)=Halfedges[heiterate].Origin;
+                    heiterate=Halfedges[heiterate].Next;
+                }while (heiterate!=hebegin);
+
+            }
+
+            /*generatedFfuncNum.resize(Faces.size(),generatedD.maxCoeff());
+            cornerAngles=Eigen::MatrixXd::Constant(Faces.size(),generatedD.maxCoeff(),-1.0);
+            //prescribedAnglesInt.resize(Faces.size(),generatedD.maxCoeff());
+            for (int i=0;i<Faces.size();i++){
+              int hebegin = Faces[i].AdjHalfedge;
+              int vCount=0;
+              int heiterate=hebegin;
+              do{
+                generatedFfuncNum(i,vCount)=Halfedges[heiterate].OrigNFunctionIndex;
+                cornerAngles(i,vCount++)=Halfedges[heiterate].prescribedAngle;
+                //prescribedAnglesInt(i,vCount++)=Halfedges[heiterate].prescribedAngleDiff;
+                //cout<<"Halfedges[heiterate].prescribedAngleDiff: "<<Halfedges[heiterate].prescribedAngleDiff<<endl;
+                heiterate=Halfedges[heiterate].Next;
+              }while (heiterate!=hebegin);
+            }*/
+
+
+        }
+
+        NFunctionMesher(const TriMesh& _origMesh):origMesh(_origMesh){}
+        ~NFunctionMesher(){}
     };
-
 
 }
 
-#endif //DIRECTIONAL_GENERATED_MESH_SIMPLIFICATION_H
+#endif //DIRECTIONAL_N_FUNCTION_MESHER
