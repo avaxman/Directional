@@ -35,7 +35,7 @@ namespace directional{
                              const std::vector<std::pair<EVector2, EVector2>>& lines,
                              const Eigen::VectorXi& lineData,
                              std::vector<EVector2>& V,
-                             DCEL<int, std::vector<int>, int, int>& triDcel) {
+                             DCEL<bool,  void, std::vector<int>, void>& triDcel) {
 
         V = triangle;
 
@@ -69,9 +69,7 @@ namespace directional{
     void NFunctionMesher::segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
                              const std::vector<int>& data,
                              std::vector<EVector2>& V,
-                             DCEL<int, std::vector<int>, int, int>& triDcel) {
-
-        //first creating all segment intersections
+                             DCEL<bool,  void, std::vector<int>, void>& triDcel) {
 
         //First creating a graph of segment intersection
 
@@ -171,27 +169,29 @@ namespace directional{
         //TODO:
         //generating the halfedge structure
         //Everything will be twinned at this point
-        dcel.VH.resize(arrVertices.size());
-        dcel.HV.resize(2*arrEdges.size());
-        dcel.EH.resize(arrEdges.size());
-        dcel.HE.resize(2*arrEdges.size());
-        dcel.HF = Eigen::VectorXi::Constant(2*arrEdges.size(), -1);
-        dcel.twinH.resize(2*arrEdges.size());
-        dcel.nextH.resize(2*arrEdges.size());
-        dcel.prevH.resize(2*arrEdges.size());
-        dataH.resize(2*arrEdges.size());
+        triDcel.vertices.resize(arrVertices.size());
+        triDcel.edges.resize(arrEdges.size());
+        triDcel.halfedges.resize(2*arrEdges.size());
+
+        for (int i=0;i<arrVertices.size();i++){
+            triDcel.vertices[i].ID = i;
+        }
 
         for (int i=0;i<arrEdges.size();i++) {
-            dcel.HV[2*i]=arrEdges[i].first;
-            dcel.HV[2*i+1]=arrEdges[i].second;
-            dcel.VH[arrEdges[i].first]=2*i;
-            dcel.VH[arrEdges[i].second]=2*i+1;
-            dcel.EH[i]=2*i;
-            dcel.HE[2*i]=dcel.EH[2*i+1]=i;
-            dcel.twinH[2*i]=2*i+1;
-            dcel.twinH[2*i+1]=2*i;
-            dataH[2*i] = edgeData[i];
-            dataH[2*i+1] = edgeData[i];
+            triDcel.edges[i].ID = i;
+            triDcel.edges[i].data = edgeData[i];
+            triDcel.edges[i].halfedge=2*i;
+
+            triDcel.halfedges[2*i].ID=2*i;
+            triDcel.halfedges[2*i+1].ID=2*i+1;
+            triDcel.halfedges[2*i].vertex=arrEdges[i].first;
+            triDcel.halfedges[2*i+1].vertex=arrEdges[i].second;
+            triDcel.vertices[arrEdges[i].first].halfedge=2*i;
+            triDcel.vertices[arrEdges[i].second].halfedge=2*i+1;
+            triDcel.halfedges[2*i].edge=triDcel.halfedges[2*i+1].edge = i;
+            triDcel.halfedges[2*i].twin=2*i+1;
+            triDcel.halfedges[2*i+1].twin=2*i;
+
         }
 
         //orienting segments around each vertex by CCW order
@@ -215,51 +215,53 @@ namespace directional{
             int currHE = -1;
             for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++) {
                 bool outgoing = adjArrEdges[si->second].second;
-                int outCurrHE = (outgoing ? dcel.EH[adjArrEdges[si->second].second]  : dcel.twinH(dcel.EH[adjArrEdges[si->second].second]));
+                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[si->second].second].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[si->second].second].halfedge].twin);
                 std::set<std::pair<ENumber, int>>::iterator nextsi = si; nextsi++;
                 if (nextsi==CCWSegments.end())
                     nextsi = CCWSegments.begin();
 
                 outgoing = adjArrEdges[nextsi->second].second;
-                int outNextHE = (outgoing ? dcel.EH[adjArrEdges[nextsi->second].second]  : dcel.twinH(dcel.EH[adjArrEdges[nextsi->second].second]));
-                dcel.nextH(dcel.twinH(outCurrHE))=outNextHE;
-                dcel.prevH(outNextHE) = dcel.twinH(outCurrHE);
+                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nextsi->second].second].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nextsi->second].second].halfedge].twin);
+                triDcel.halfedges[triDcel.halfedges[outCurrHE].twin].next=outNextHE;
+                triDcel.halfedges[outNextHE].prev = triDcel.halfedges[outCurrHE].twin;
             }
         }
 
         //generating faces (at this stage, there is also an outer face
         int currFace=0;
-        for (int i=0;i<dcel.HF.size();i++) {
-            if (dcel.HF[i] != -1)
+        for (int i=0;i<triDcel.halfedges.size();i++) {
+            if (triDcel.halfedges[i].face != -1)
                 continue;  //already been assigned
 
+            DCEL<bool,  void, std::vector<int>, void>::Face newFace;
+            newFace.ID = currFace++;
             int beginHE = i;
-            dcel.FH[currFace]=beginHE;
+            newFace.halfedge=beginHE;
             int currHE = beginHE;
             int counter=0;
             do {
-                dcel.HF[currHE]=currFace;
-                currHE=dcel.nextH[currHE];
+                triDcel.halfedges[currHE]=newFace.ID;
+                currHE=triDcel.halfedges[currHE].next;
                 counter++;
                 assert ("something wrong with the face" && counter<1000);
             }while (currHE!=beginHE);
-            currFace++;
+            triDcel.faces.push_back(newFace);
         }
         int numFaces=currFace;
 
         //EXPENSIVE! comment out after being sure
-        dcel.check_consistency(true, true, true, false);
+        triDcel.check_consistency(true, true, true, false);
 
         //Removing the outer face and deleting all associated halfedges
         //identifying it by the only polygon with negative signed area (expensive?)
         int outerFace=-1;
         for (int f = 0;f<numFaces;f++){
             std::vector<EVector2> faceVectors;
-            int beginHE = dcel.FH[f];
+            int beginHE = triDcel.faces[f].halfedge;
             int currHE = beginHE;
             do{
-                faceVectors.push_back(V[ dcel.nextH( dcel.HV(currHE))] - V[ dcel.HV(currHE)]);
-                currHE= dcel.nextH[currHE];
+                faceVectors.push_back(V[triDcel.halfedges[triDcel.halfedges[currHE].next].vertex] - V[triDcel.halfedges[currHE].vertex]);
+                currHE= triDcel.halfedges[currHE].next;
             }while(currHE!=beginHE);
             ENumber sfa = signed_face_area(faceVectors);
             if (sfa<0.0){
@@ -269,25 +271,24 @@ namespace directional{
         }
         assert("Didn't find outer face!" && outerFace!=-1);
 
-        //deleting outer face
-        dcel.HValid = Eigen::VectorXi::Constant( dcel.HV.size(),1);
-        dcel.VValid = Eigen::VectorXi::Constant( dcel.VH.size(),1);
-        dcel.FValid = Eigen::VectorXi::Constant( dcel.FH.size(),1);
-        dcel.FValid(outerFace)=0;
-        for (int i=0;i< dcel.HE.size();i++) {
-            if ( dcel.HF[i] != outerFace)
+        //invalidating outer face
+        triDcel.faces[outerFace].valid=false;
+        for (int i=0;i< triDcel.halfedges.size();i++) {
+            if (triDcel.halfedges[i].face != outerFace)
                 continue;
 
-            dcel.HValid(i)=0;
-            dcel.twinH( dcel.twinH(i))=-1;
-            dcel.VH( dcel.HV( dcel.nextH(i)))= dcel.twinH(i);
-            dcel.VH( dcel.HV(i))= dcel.nextH( dcel.twinH(i));
+            triDcel.halfedges[i].valid=false;
+            triDcel.halfedges[triDcel.halfedges[i].twin].twin = -1;
+            triDcel.edges[triDcel.halfedges[i].edge].halfedge=triDcel.halfedges[i].twin;
+            triDcel.vertices[triDcel.halfedges[i].vertex].halfedge = triDcel.halfedges[triDcel.halfedges[i].twin].next
+            //dcel.VH( dcel.HV( dcel.nextH(i)))= dcel.twinH(i);
+            //dcel.VH( dcel.HV(i))= dcel.nextH( dcel.twinH(i));
         }
 
         //removing dead edges
-        dcel.clean_mesh();
+        triDcel.clean_mesh();
         //EXPENSIVE! comment out after being sure
-        dcel.check_consistency(true, true, true, false);
+        triDcel.check_consistency(true, true, true, false);
     }
 
 

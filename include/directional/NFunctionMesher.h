@@ -26,12 +26,11 @@ namespace directional{
 
         const TriMesh& origMesh;
         const MeshFunctionIsolinesData& mfiData;
-        DCEL<int, std::vector<int>, int, int> genDcel;
+        DCEL<bool,  void, std::vector<int>, void> genDcel;
 
         //vertex quantities
         Eigen::MatrixXd coordinates;
         std::vector<EVector3> ECoordinates;
-        std::vector<bool> isVertexFunction;
 
         //halfedge quantities
         Eigen::MatrixXd NFunction;
@@ -61,13 +60,15 @@ namespace directional{
                                  const std::vector<std::pair<EVector2, EVector2>>& lines,
                                  const Eigen::VectorXi& lineData,
                                  std::vector<EVector2>& V,
-                                 DCEL<int, std::vector<int>, int, int>& triDcel);
+                                 DCEL<bool,  void, std::vector<int>, void>& triDcel);
 
         void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
                                  const std::vector<int>& data,
                                  std::vector<EVector2>& V,
-                                 DCEL<int, std::vector<int>, int, int>& triDcel);
+                                 DCEL<bool,  void, std::vector<int>, void>& triDcel);
         void generate_mesh();
+
+
 
 
         /*class Vertex{

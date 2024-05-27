@@ -23,6 +23,8 @@ namespace directional
             bool valid;
             int halfedge;
             VertexData data;
+
+            Vertex():valid(true), halfedge(-1), ID(-1){};
         };
 
         struct Halfedge{
@@ -31,6 +33,8 @@ namespace directional
             int vertex, face, edge;
             int next, prev, twin;
             HalfedgeData data;
+
+            Halfedge():valid(true), vertex(-1), face(-1), edge(-1), next(-1), prev(-1), twin(-1){}
         };
 
         struct Edge{
@@ -38,6 +42,8 @@ namespace directional
             bool valid;
             int halfedge;
             EdgeData data;
+
+            Edge():valid(true), halfedge(-1){}
         };
 
         struct Face{
@@ -45,6 +51,8 @@ namespace directional
             bool valid;
             int halfedge;
             FaceData data;
+
+            Face():valid(true), halfedge(-1){}
         };
 
         std::vector<Vertex> vertices;
