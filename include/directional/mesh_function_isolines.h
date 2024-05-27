@@ -44,7 +44,7 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
                             Eigen::MatrixXi& FOutput){
   
   
-  NFunctionMesher mesher; //TMesh, FMesh;
+  NFunctionMesher mesher(origMesh, mfiData); //TMesh, FMesh;
   
   //Eigen::VectorXi VHPoly, HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly, HVPoly,innerEdgesPoly;
   //Eigen::MatrixXi EHPoly,EFiPoly, FHPoly, EFPoly,EVPoly,FEPoly;
@@ -52,7 +52,7 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   //hedra::polygonal_edge_topology(Eigen::VectorXi::Constant(origMesh.F.rows(),3), origMesh.F,EVPoly,FEPoly,EFPoly, EFiPoly, FEsPoly, innerEdgesPoly);
   //hedra::dcel(Eigen::VectorXi::Constant(origMesh.F.rows(),3),origMesh.F,EVPoly,EFPoly, EFiPoly,innerEdgesPoly,VHPoly, EHPoly, FHPoly,  HVPoly,  HEPoly, HFPoly, nextHPoly, prevHPoly, twinHPoly);
 
-  mesher.init(origMesh, mfiData);
+  mesher.init();
   
   if (verbose){
     std::cout<<"Generating mesh"<<std::endl;

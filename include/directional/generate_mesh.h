@@ -292,22 +292,19 @@ namespace directional{
     }
 
 
-    void NFunctionMesher::generate_mesh() {
+    void NFunctionMesher::generate_mesh(const unsigned long Resolution = 1e7) {
 
         using namespace std;
         using namespace Eigen;
-        //using namespace ::CGAL;
 
-        mesher.clear();
-
-        int numNFunction = mesher.exactNFunctions[0].size();
+        //int numNFunction = mesher.exactNFunctions[0].size();
 
         //DebugLog.open("Debugging.txt");
 
         //resolution is set to 10e-6 of bounding box of mesh
-        vector<RowVector3d> coordList;
-        for (int i = 0; i < origMesh.Vertices.size(); i++)
-            coordList.push_back(origMesh.Vertices[i].Coordinates);
+        /*vector<RowVector3d> coordList;
+        for (int i = 0; i < origMesh.V.rows(); i++)
+            coordList.push_back(origMesh.Vertices[i].Coordinates);*/
 
         //Bbox_3 boundBox = ::CGAL::bbox_3  ( coordList.begin(), coordList.end());
 
@@ -315,15 +312,16 @@ namespace directional{
          for (int i=0;i<2;i++)
          minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));*/
 
-        unsigned long Resolution = 1e7; //pow(10,ceil(10/log10(minRange)));
+        ; //pow(10,ceil(10/log10(minRange)));
         //cout<<"Resolution: "<<Resolution<<endl;
 
-        for (int findex = 0; findex < origMesh.Faces.size(); findex++) {
+        //Looping over all triangles, and arranging parametric lines for each
+        for (int findex = 0; findex < origMesh.F.rows(); findex++) {
 
             //building small face overlays of one triangle and a few roughly surrounding hexes to retrieve the structure in the face
 
-            int ebegin = origMesh.Faces[findex].AdjHalfedge;
-            int eiterate = ebegin;
+            //int ebegin = origMesh.Faces[findex].AdjHalfedge;
+            //int eiterate = ebegin;
             //vector<Point2D> TriPoints2D;
 
             //basis for triangle
@@ -334,38 +332,34 @@ namespace directional{
              }while (eiterate!=ebegin);
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
-            vector<vector<ENumber> > funcValues(3);
+            vector<ENumber> triExactNFunction = exactNFunction[findex];
+
+            //vector<vector<ENumber> > funcValues(3);
 
             //DebugLog<<"Working on triangle "<<findex<<"\n";
-            vector<ENumber> minFuncs(numNFunction);
-            vector<ENumber> maxFuncs(numNFunction);
-            for (int k = 0; k < numNFunction; k++) {
+            vector<ENumber> minFuncs(mfiData.N);
+            vector<ENumber> maxFuncs(mfiData.N);
+            for (int k = 0; k < mfiData.N; k++) {
                 minFuncs[k] = mpq_class(327600);
                 maxFuncs[k] = mpq_class(-327600);
             }
 
-            //Arr_2 ParamArr,TriangleArr, FullArr;
-            ebegin = origMesh.Faces[findex].AdjHalfedge;
-            eiterate = ebegin;
-            int currVertex = 0;
-            do {
-                for (int i = 0; i < numNFunction; i++) {
-                    if (origMesh.Halfedges[eiterate].exactNFunction[i] > maxFuncs[i])
-                        maxFuncs[i] = origMesh.Halfedges[eiterate].exactNFunction[i];
-                    if (origMesh.Halfedges[eiterate].exactNFunction[i] < minFuncs[i])
-                        minFuncs[i] = origMesh.Halfedges[eiterate].exactNFunction[i];
+            for (int i=0;i<3;i++){
+                for (int j = 0; j < mfiData.N; j++) {
+                    if (triExactNFunction[3*i+j] > maxFuncs[j])
+                        maxFuncs[j] = triExactNFunction[3*i+j];
+                    if (triExactNFunction[3*i+j] < minFuncs[j])
+                        minFuncs[j] = triExactNFunction[3*i+j];
                 }
-                funcValues[currVertex++] = origMesh.Halfedges[eiterate].exactNFunction;
-                eiterate = origMesh.Halfedges[eiterate].Next;
-            } while (eiterate != ebegin);
+            }
 
             ////////////////////////building the one-triangle arrangement
-            ebegin = origMesh.Faces[findex].AdjHalfedge;
-            eiterate = ebegin;
+            //ebegin = origMesh.Faces[findex].AdjHalfedge;
+            //eiterate = ebegin;
             //vector<RowVector2ed> ETriPoints2D;
             //vector<Point2D> TriPoints;
             //vector<RowVector2ed> ETriPoints3D;
-            vector<NFunctionMesher::EdgeData> EdgeDatas;
+            //vector<NFunctionMesher::EdgeData> EdgeDatas;
             std::vector<EVector2> ETriPoints2D(3);
             std::vector<EVector3> ETriPoints3D(3);
             ETriPoints2D[0][0] = 0;
@@ -375,32 +369,38 @@ namespace directional{
             ETriPoints2D[2][0] = 0;
             ETriPoints2D[2][1] = 1;
 
+            for (int i=0;i<3;i++){
+                RowVector3d position = origMesh.V.row(origMesh.F(findex,i));
+                //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
+                //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
+                ENumber x = ENumber((signed long) round((long double) (position(0)) * Resolution), Resolution);
+                ENumber y = ENumber((signed long) round((long double) (position(1)) * Resolution), Resolution);
+                ENumber z = ENumber((signed long) round((long double) (position(2)) * Resolution), Resolution);
+
+                EVector xyz(3);
+                xyz[0] = x;
+                xyz[1] = y;
+                xyz[2] = z;
+                ETriPoints3D.push_back(xyz);
+            }
+
             /*ETriPoints2D.push_back(RowVector2ed(0,0));
             ETriPoints2D.push_back(RowVector2ed(1,0));
             ETriPoints2D.push_back(RowVector2ed(0,1));*/
-            do {
+            //do {
                 //cout<<"Halfedges[eiterate].Origin: "<<Halfedges[eiterate].Origin<<endl;
                 //Point2D Location((Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis1,(Vertices[Halfedges[eiterate].Origin].Coordinates-Faces[findex].Centroid)*Faces[findex].Basis2);
                 //cout<<"Location: "<<Location<<endl;*/
 
-                RowVector3d Position = origMesh.Vertices[origMesh.Halfedges[eiterate].Origin].Coordinates;
-                //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
-                //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-                ENumber x = ENumber((signed long) round((long double) (Position.x()) * Resolution), Resolution);
-                ENumber y = ENumber((signed long) round((long double) (Position.y()) * Resolution), Resolution);
-                ENumber z = ENumber((signed long) round((long double) (Position.z()) * Resolution), Resolution);
+
                 /*if (abs(x.to_double() - Position.x()) > 10e-7) {
                     cout << "x.to_double(): " << x.to_double() << endl;
                     cout << "Position.x(): " << Position.x() << endl;
                 }*/
                 //ETriPoints.push_back(EPoint2D(cx,cy));
                 //TriPoints.push_back(Location);
-                EVector xyz(3);
-                xyz[0] = x;
-                xyz[1] = y;
-                xyz[2] = z;
-                ETriPoints3D.push_back(xyz);
-                int DomEdge;
+
+                /*int DomEdge;
 
                 if ((origMesh.Halfedges[eiterate].Twin < 0) || (origMesh.Halfedges[eiterate].Twin > eiterate))
                     DomEdge = eiterate;
@@ -410,10 +410,10 @@ namespace directional{
                 ed.OrigHalfedge = DomEdge;
                 ed.isBoundary = (origMesh.Halfedges[eiterate].Twin < 0);
                 EdgeDatas.push_back(ed);
-                eiterate = origMesh.Halfedges[eiterate].Next;
-            } while (ebegin != eiterate);
+                eiterate = origMesh.Halfedges[eiterate].Next;*/
+            //} while (ebegin != eiterate);
 
-            for (int i = 0; i < 3; i++) {
+            /*for (int i = 0; i < 3; i++) {
                 X_monotone_curve_2 c = ESegment2D(ETriPoints2D[i], ETriPoints2D[(i + 1) % 3]);
                 Halfedge_handle he = CGAL::insert_non_intersecting_curve(TriangleArr, c);
                 he->set_data(EdgeDatas[i]);
@@ -430,22 +430,23 @@ namespace directional{
                     fi->data() = 0;
                 else
                     fi->data() = 1;
-            }
-            * /
+            }*/
 
-            //creating the primal arrangement of lines
-            vector<ELine2>
-            paramLines;
-            vector<EDirection2> isoDirections(numNFunction);
+            //Generating the parametric lines for the canonical triangle
+            vector<std::pair<EVector2, EVector2>> paramLines;
+            vector<int> lineData;
+            //VectorXi lineData;
+            //vector<ELine2> paramLines;
+            vector<EVector2> isoDirections(mfiData.N);
             //int jumps = (numNFunction%2==0 ? 2 : 1);
-            for (int funcIter = 0; funcIter < numNFunction/*/jumps*/; funcIter++) {
+            for (int funcIter = 0; funcIter < mfiData.N/*/jumps*/; funcIter++) {
 
                 vector<EInt> isoValues;
                 //cout<<"isoValues: "<<endl;
                 EInt q, r;
-                CGAL::div_mod(minFuncs[funcIter].numerator(), minFuncs[funcIter].denominator(), q, r);
+                div_mod(minFuncs[funcIter].numerator(), minFuncs[funcIter].denominator(), q, r);
                 EInt minIsoValue = q + (r < 0 ? -1 : 0);
-                CGAL::div_mod(maxFuncs[funcIter].numerator(), maxFuncs[funcIter].denominator(), q, r);
+                div_mod(maxFuncs[funcIter].numerator(), maxFuncs[funcIter].denominator(), q, r);
                 EInt maxIsoValue = q + (r < 0 ? 0 : -1);
                 for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue++) {
                     //cout<<"isoValue: "<<isoValue<<endl;
@@ -453,16 +454,16 @@ namespace directional{
                 }
 
                 //computing gradient of function in plane
-                EVector2D e01 = ETriPoints2D[1] - ETriPoints2D[0];
-                EVector2D e12 = ETriPoints2D[2] - ETriPoints2D[1];
-                EVector2D e20 = ETriPoints2D[0] - ETriPoints2D[2];
+                EVector2 e01 = ETriPoints2D[1] - ETriPoints2D[0];
+                EVector2 e12 = ETriPoints2D[2] - ETriPoints2D[1];
+                EVector2 e20 = ETriPoints2D[0] - ETriPoints2D[2];
 
                 //a and b values of lines
-                EVector2D gradVector = funcValues[2][funcIter] * EVector2D(-e01.y(), e01.x()) +
-                                       funcValues[0][funcIter] * EVector2D(-e12.y(), e12.x()) +
-                                       funcValues[1][funcIter] * EVector2D(-e20.y(), e20.x());
+                EVector2 gradVector = triExactNFunction[2*mfiData.N+funcIter] * EVector2(-e01[1], e01[0]) +
+                        triExactNFunction[0*mfiData.N+funcIter] * EVector2(-e12[1], e12[0]) +
+                        triExactNFunction[1*mfiData.N+funcIter] * EVector2(-e20[1], e20[0]);
 
-                isoDirections[funcIter] = EDirection2D(gradVector);
+                isoDirections[funcIter] = gradVector;
 
                 //Number avgFuncValue = (funcValues[0](funcIter)+funcValues[1](funcIter)+funcValues[2](funcIter))/3.0;
                 //TODO: find c = z1*u+z2 of ax+by+c(u) ad then use it to generate all values between floor and ceil.
@@ -470,18 +471,18 @@ namespace directional{
                 //pinv of [a 1;b 1;c 1] is [           2*a - b - c,           2*b - a - c,           2*c - b - a]
                 //[ b^2 - a*b + c^2 - a*c, a^2 - b*a + c^2 - b*c, a^2 - c*a + b^2 - c*b]/(2*a^2 - 2*a*b - 2*a*c + 2*b^2 - 2*b*c + 2*c^2)
 
-                ENumber a = funcValues[0][funcIter];
-                ENumber b = funcValues[1][funcIter];
-                ENumber c = funcValues[2][funcIter];
+                ENumber a = triExactNFunction[0*mfiData.N+funcIter];
+                ENumber b = triExactNFunction[1*mfiData.N+funcIter];
+                ENumber c = triExactNFunction[2*mfiData.N+funcIter];
                 if ((a == b) && (b == c))
                     continue;  //that means a degenerate function on the triangle
 
                 //cout<<"a,b,c: "<<a.to_double()<<","<<b.to_double()<<","<<c.to_double()<<endl;
 
                 ENumber rhs[3];
-                rhs[0] = -gradVector[0] * ETriPoints2D[0].x() - gradVector[1] * ETriPoints2D[0].y();
-                rhs[1] = -gradVector[0] * ETriPoints2D[1].x() - gradVector[1] * ETriPoints2D[1].y();
-                rhs[2] = -gradVector[0] * ETriPoints2D[2].x() - gradVector[1] * ETriPoints2D[2].y();
+                rhs[0] = -gradVector[0] * ETriPoints2D[0][0] - gradVector[1] * ETriPoints2D[0][1];
+                rhs[1] = -gradVector[0] * ETriPoints2D[1][0] - gradVector[1] * ETriPoints2D[1][1];
+                rhs[2] = -gradVector[0] * ETriPoints2D[2][0] - gradVector[1] * ETriPoints2D[2][1];
 
                 ENumber invM[2][3];
                 invM[0][0] = 2 * a - b - c;
@@ -547,13 +548,27 @@ namespace directional{
                     // ENumber a=ENumber((int)(gradVector[0]*Resolution),Resolution);
                     //ENumber b=ENumber((int)(gradVector[1]*Resolution),Resolution);
                     //ENumber c=ENumber((int)(currc(0)*Resolution),Resolution);
-                    paramLines.push_back(ELine2D(gradVector[0], gradVector[1], currc));
+                    EVector2 lineVector; lineVector[0]=-gradVector[1]; lineVector[1]=gradVector[0];
+                    EVector2 linePoint;
+                    if (gradVector[1]!=ENumber(0)){
+                        linePoint[0]=ENumber(0);
+                        linePoint[1]=-currc/gradVector[1];
+                    } else {
+                        linePoint[1] = ENumber(0);
+                        linePoint[0] = -currc/gradVector[0];
+                    }
+
+                    paramLines.push_back(std::pair<EVector2, EVector2>(linePoint,lineVector));
                     //cout<<"paramLine: "<<gradVector[0]<<","<<gradVector[1]<<","<<currc<<endl;
                 }
             }
 
+            //
+
             //cout<<"paramLines.size() :"<<paramLines.size()<<endl;
-            CGAL::insert(ParamArr, paramLines.begin(), paramLines.end());
+            //CGAL::insert(ParamArr, paramLines.begin(), paramLines.end());
+
+            //STOPPED HERE
 
             //giving edge data to curve arrangement
             Arr_2::Edge_iterator eit;

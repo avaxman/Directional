@@ -35,14 +35,14 @@ namespace directional{
         //halfedge quantities
         Eigen::MatrixXd NFunction;
         std::vector<std::vector<ENumber>> exactNFunction;
-        std::vector<bool> isHalfedgeFunction;
+        /*std::vector<bool> isHalfedgeFunction;
         std::vector<int> origHalfedge;
         std::vector<int> origNFunctionIndex;  //the original parameteric function assoicated with this edge
         //int prescribedAngleDiff;
         std::vector<double> prescribedAngle;  //the actual prescribed angle
 
         //face quantities
-        std::vector<int> origFace;  //in triangle mesh
+        std::vector<int> origFace;  //in triangle mesh*/
 
         /*struct EdgeData{
             int ID;
@@ -1268,7 +1268,7 @@ namespace directional{
             Halfedges.resize(NumofHEdges);
         }*/
 
-        void init(const TriMesh& origMesh,
+        /*void init(const TriMesh& origMesh,
                   const Eigen::MatrixXd& cutV,
                   const Eigen::MatrixXi& cutF,
                   const Eigen::VectorXd& vertexNFunction,
@@ -1276,43 +1276,16 @@ namespace directional{
                   const Eigen::SparseMatrix<double>& vertexToCornerMat,
                   const Eigen::SparseMatrix<int>& exactVertexToCornerMat,
                   const Eigen::VectorXi& integerVars,
-                  const unsigned long resolution=1e7){
+                  const unsigned long resolution=1e7)*/
+        void init(const unsigned long resolution=1e7){
 
             using namespace std;
             using namespace Eigen;
-            Vertices.resize(origMesh.V.rows());
-            Halfedges.resize(origMesh.HE.rows());
-            Faces.resize(origMesh.F.rows());
-
-            //int NFull=(N%2==0 ? N/2: N);
-
-            for (int i=0;i<origMesh.V.rows();i++){
-                Vertices[i].Coordinates=origMesh.V.row(i);
-                Vertices[i].AdjHalfedge=origMesh.VH(i);
-                Vertices[i].ID=i;
-            }
-
-            for (int i=0;i<origMesh.HE.rows();i++){
-                Halfedges[i].ID=i;
-                Halfedges[i].Origin=origMesh.HV(i);
-                Halfedges[i].Next=origMesh.nextH(i);
-                Halfedges[i].Prev=origMesh.prevH(i);
-                Halfedges[i].Twin=origMesh.twinH(i);
-                Halfedges[i].AdjFace=origMesh.HF(i);
-            }
-
-
-            for (int i=0;i<origMesh.FH.rows();i++)
-                for (int j=0;j<origMesh.FH.cols();j++)
-                    for (int i=0;i<origMesh.F.rows();i++){
-                        Faces[i].ID=i;
-                        Faces[i].AdjHalfedge=origMesh.FH(i);
-                    }
 
             //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
-            vector<ENumber> exactVertexNFunction(vertexNFunction.size());
-            for (int i=0;i<vertexNFunction.size();i++){
-                exactVertexNFunction[i]=ENumber((signed long)round((long double)(vertexNFunction(i)*resolution)),(unsigned long)resolution);
+            vector<ENumber> exactVertexNFunction(mfiData.vertexNFunction.size());
+            for (int i=0;i<(mfiData.vertexNFunction.size();i++){
+                exactVertexNFunction[i]=ENumber((signed long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(unsigned long)resolution);
                 /*if (abs(exactVertexNFunction[i].to_double() - vertexNFunction(i))>10e-8) {
                     cout << "exactVertexNFunction[i].to_double(): " << exactVertexNFunction[i].to_double() << endl;
                     cout << "vertexNFunction(i): " << vertexNFunction(i) << endl;
@@ -1320,14 +1293,14 @@ namespace directional{
                 }*/
             }
 
-            for (int i=0;i<integerVars.size();i++){
-                exactVertexNFunction[integerVars(i)]=ENumber((long)round(vertexNFunction(integerVars(i))));
+            for (int i=0;i<mfiData.integerVars.size();i++){
+                exactVertexNFunction[mfiData.integerVars(i)]=ENumber((long)round(mfiData.vertexNFunction(mfiData.integerVars(i))));
                 //cout<<"rounding diff of integer var "<<integerVars(i)<<" is "<<exactVertexNFunction[integerVars(i)].to_double()-vertexNFunction(integerVars(i))<<endl;
             }
 
-            VectorXd cutNFunctionVec = vertexToCornerMat*vertexNFunction;
+            VectorXd cutNFunctionVec = mfiData.orig2CutMat*mfiData.vertexNFunction;
             vector<ENumber> exactCutNFunctionVec;
-            exactSparseMult(exactVertexToCornerMat, exactVertexNFunction,exactCutNFunctionVec);
+            exactSparseMult(mfiData.exactOrig2CutMat, exactVertexNFunction,exactCutNFunctionVec);
 
             //sanity check - comparing exact to double
             double maxError2 = -32767000.0;
@@ -1337,18 +1310,23 @@ namespace directional{
                     maxError2 =abs(fromExact-cutNFunctionVec[i]);
             }
 
-            //cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
+            cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;
 
-            for (int i=0;i<FH.rows();i++)
-                for (int j=0;j<FH.cols();j++){
-                    Halfedges[FH(i,j)].exactNFunction.resize(N);
-                    Halfedges[FH(i,j)].NFunction = cutNFunctionVec.segment(N*cutF(i,j), N).transpose();
-                    for (int k=0;k<N;k++)
-                        Halfedges[FH(i,j)].exactNFunction[k] = exactCutNFunctionVec[N*cutF(i,j)+k];
+            exactNFunction.resize(origMesh.F.size());
+            NFunction.resize(origMesh.F.size(), 3*mfiData.N);
+
+            for (int i=0;i<origMesh.F.rows();i++){
+                exactNFunction[i].resize(3*mfiData.N);
+                for (int j=0;j<3;j++){
+                    //Halfedges[FH(i,j)].exactNFunction.resize(N);
+                    NFunction.block(i, mfiData.N*j, 1, mfiData.N) = cutNFunctionVec.segment(mfiData.N*mfiData.cutF(i,j), mfiData.N).transpose();
+                    for (int k=0;k<mfiData.N;k++)
+                        exactNFunction[i][j*mfiData.N+k] = exactCutNFunctionVec[mfiData.N*mfiData.cutF(i,j)+k];
                 }
+            }
 
             //sanity check
-            double maxError = -32767000.0;
+            /*double maxError = -32767000.0;
             for (int i=0;i<Halfedges.size();i++){
                 for (int j=0;j<N;j++){
                     double fromExact = Halfedges[i].exactNFunction[j].to_double();
@@ -1358,7 +1336,7 @@ namespace directional{
                         maxError =abs(fromExact-Halfedges[i].NFunction[j]);
                 }
 
-            }
+            }*/
             //cout<<"double from exact in halfedges maxError: "<<maxError<<endl;
         }
 
@@ -1417,7 +1395,7 @@ namespace directional{
 
         }
 
-        NFunctionMesher(const TriMesh& _origMesh):origMesh(_origMesh){}
+        NFunctionMesher(const TriMesh& _origMesh, const MeshFunctionIsolinesData& _mfiData ):origMesh(_origMesh), mfiData(_mfiData){}
         ~NFunctionMesher(){}
 
     private:
