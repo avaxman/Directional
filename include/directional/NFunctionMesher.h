@@ -26,7 +26,9 @@ namespace directional{
 
         const TriMesh& origMesh;
         const MeshFunctionIsolinesData& mfiData;
-        DCEL<bool,  void, std::vector<int>, void> genDcel;
+
+        typedef DCEL<bool,  bool, std::vector<int>, bool> FunctionDCEL;
+        FunctionDCEL genDcel;
 
         //vertex quantities
         Eigen::MatrixXd coordinates;
@@ -55,17 +57,21 @@ namespace directional{
             ~EdgeData(){};
         };*/
 
+        /*struct VertexCompare{
+            const bool operator<(const std::pair<EVector2, int>& v1, const std::pair<EVector2,int> & v2) const {return (v1.first < v2.first);}
+        };*/
+
         //mesh generation functions found in generate_mesh.h
         void arrange_on_triangle(const std::vector<EVector2>& triangle,
                                  const std::vector<std::pair<EVector2, EVector2>>& lines,
                                  const Eigen::VectorXi& lineData,
                                  std::vector<EVector2>& V,
-                                 DCEL<bool,  void, std::vector<int>, void>& triDcel);
+                                 FunctionDCEL& triDcel);
 
         void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
                                  const std::vector<int>& data,
                                  std::vector<EVector2>& V,
-                                 DCEL<bool,  void, std::vector<int>, void>& triDcel);
+                                 FunctionDCEL& triDcel);
         void generate_mesh();
 
 
