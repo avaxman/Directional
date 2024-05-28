@@ -72,7 +72,8 @@ namespace directional{
                                  const std::vector<int>& data,
                                  std::vector<EVector2>& V,
                                  FunctionDCEL& triDcel);
-        void generate_mesh();
+
+        void generate_mesh(const unsigned long Resolution);
 
 
 

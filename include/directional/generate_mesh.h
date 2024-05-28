@@ -81,19 +81,17 @@ namespace directional{
         std::vector<std::set<std::pair<ENumber, int>>> SV;  //set of coordinates of intersection per segment
         for (int i=0;i<segments.size();i++) {
             for (int j = i + 1; j < segments.size(); j++) {
-                ENumber t1, t2;
-                std::vector<std::pair<ENumber, ENumber>> result = segment_segment_intersection(segments[i].first, segments[i].second - segments[i].first,
-                                                  segments[j].first, segments[j].second - segments[j].first, t1, t2));
+                std::vector<std::pair<ENumber, ENumber>> result = segment_segment_intersection(segments[i], segments[j]);
 
                 if (result.empty())  //no intersection
-                    continue;  //that means the lines intersect away from the triangle.
+                    continue;  //that means the segments intersect away from the triangle.
 
-                for (int i=0;i<result.size();i++){
+                for (int r=0;r<result.size();r++){
                     arrVertices.push_back(segments[i].first * (1 - result[i].first) + segments[i].second * result[i].first);
                     VS[arrVertices.size() - 1].push_back(i);
                     VS[arrVertices.size() - 1].push_back(j);
-                    SV[i].insert(std::pair<ENumber, int>(t1, arrVertices.size() - 1));
-                    SV[j].insert(std::pair<ENumber, int>(t2, arrVertices.size() - 1));
+                    SV[i].insert(std::pair<ENumber, int>(result[i].first, arrVertices.size() - 1));
+                    SV[j].insert(std::pair<ENumber, int>(result[i].second, arrVertices.size() - 1));
 
                 }
                 /*if (result.size) {  //pointwise intersection
@@ -248,14 +246,14 @@ namespace directional{
             if (triDcel.halfedges[i].face != -1)
                 continue;  //already been assigned
 
-            DCEL<bool,  bool, std::vector<int>, void>::Face newFace;
+            FunctionDCEL::Face newFace;
             newFace.ID = currFace++;
             int beginHE = i;
             newFace.halfedge=beginHE;
             int currHE = beginHE;
             int counter=0;
             do {
-                triDcel.halfedges[currHE]=newFace.ID;
+                triDcel.halfedges[currHE].face = newFace.ID;
                 currHE=triDcel.halfedges[currHE].next;
                 counter++;
                 assert ("something wrong with the face" && counter<1000);
@@ -295,7 +293,7 @@ namespace directional{
             triDcel.halfedges[i].valid=false;
             triDcel.halfedges[triDcel.halfedges[i].twin].twin = -1;
             triDcel.edges[triDcel.halfedges[i].edge].halfedge=triDcel.halfedges[i].twin;
-            triDcel.vertices[triDcel.halfedges[i].vertex].halfedge = triDcel.halfedges[triDcel.halfedges[i].twin].next
+            triDcel.vertices[triDcel.halfedges[i].vertex].halfedge = triDcel.halfedges[triDcel.halfedges[i].twin].next;
             //dcel.VH( dcel.HV( dcel.nextH(i)))= dcel.twinH(i);
             //dcel.VH( dcel.HV(i))= dcel.nextH( dcel.twinH(i));
         }
@@ -307,7 +305,7 @@ namespace directional{
     }
 
 
-    void NFunctionMesher::generate_mesh(const unsigned long Resolution = 1e7) {
+    void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
 
         using namespace std;
         using namespace Eigen;
@@ -388,9 +386,9 @@ namespace directional{
                 RowVector3d position = origMesh.V.row(origMesh.F(findex, i));
                 //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
                 //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-                ENumber x = ENumber((signed long) round((long double) (position(0)) * Resolution), Resolution);
-                ENumber y = ENumber((signed long) round((long double) (position(1)) * Resolution), Resolution);
-                ENumber z = ENumber((signed long) round((long double) (position(2)) * Resolution), Resolution);
+                ENumber x = ENumber((signed long) round((long double) (position(0)) * resolution), resolution);
+                ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution);
+                ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution);
 
                 EVector xyz(3);
                 xyz[0] = x;
@@ -614,7 +612,7 @@ namespace directional{
                     inTri[1] = ETriPoints2D[(j + 1) % 3];
                     inTri[2] = ETriPoints2D[(j + 2) % 3];
 
-                    BaryValues[j] = triangle_area(ETriPoints2D)
+                    BaryValues[j] = signed_triangle_area(ETriPoints2D);
                     Sum += BaryValues[j];
                 }
                 for (int j = 0; j < 3; j++)

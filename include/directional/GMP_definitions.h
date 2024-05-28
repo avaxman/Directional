@@ -37,13 +37,59 @@ namespace directional{
         EVector() : data(Size) {}
 
         // Other methods can be added as needed
-        mpq_class& operator[](size_t index) {
+        const ENumber& operator[](const size_t index) const {
             return data[index];
         }
 
-    private:
-        std::vector<mpq_class> data;
+        ENumber& operator[](const size_t index) {
+            return data[index];
+        }
+
+        EVector<Size> operator+(const EVector<Size>& ev) const{
+            EVector<Size> newVec;
+            for (int i=0;i<Size;i++)
+                newVec.data[i]=data[i]+ev.data[i];
+        }
+        EVector<Size> operator-() const{
+            EVector<Size> newVec;
+            for (int i=0;i<Size;i++)
+                newVec.data[i]=-data[i];
+        }
+        EVector<Size> operator-(const EVector<Size>& ev) const{
+            EVector<Size> newVec;
+            for (int i=0;i<Size;i++)
+                newVec.data[i]=data[i]+ev.data[i];
+        }
+
+        EVector<Size> operator*(const ENumber s) const{
+            EVector<Size> newVec;
+            for (int i=0;i<Size;i++)
+                newVec.data[i]=data[i]*s;
+        }
+
+        bool operator==(const EVector<Size>& ev) const{
+            bool equal=true;
+            for (int i=0;i<Size;i++)
+                equal = equal & (ev.data[i]==data[i]);
+            return equal;
+        }
+
+        //for the sake of sorting
+        bool operator<(const EVector<Size>& ev) const{
+            for (int i=0;i<Size;i++)
+                if (data[i]>=ev.data[i])
+                    return false;
+            return true;
+        }
+
+    protected:
+        std::vector<ENumber> data;
     };
+
+    template<size_t Size>
+    EVector<Size> operator*(ENumber scalar, const EVector<Size>& vec) {
+        return vec * scalar; // Leverage the previous operator*
+    }
 
     typedef EVector<2> EVector2;
     typedef EVector<3> EVector3;
@@ -52,9 +98,9 @@ namespace directional{
         ENumber sd(0);
         //assert("vectors are of different dimensions!" && v1.size()==v2.size());
         for (int i=0;i<3;i++)
-            ENumber+=(v1[i]-v2[i])*(v1[i]-v2[i]);  //maybe it's not efficient
+            sd+=(v1[i]-v2[i])*(v1[i]-v2[i]);  //maybe it's not efficient
 
-        return ENumber;
+        return sd;
     }
 
     //produces y = M*x
@@ -112,6 +158,116 @@ namespace directional{
             }
         }
         return numComponents-1;
+    }
+
+    int line_line_intersection(const std::pair<EVector2, EVector2>& line1,
+                               const std::pair<EVector2, EVector2>& line2,
+                               ENumber t1,
+                               ENumber t2){
+        ENumber denom = line1.second[0]*line2.second[1]-line1.second[0]*line2.second[0];
+        if (denom==0)
+            return (line1.first==line2.first ? 2 : 0);
+
+        t1 = ((line2.first[0]-line1.first[0])*(line2.second[1])-(line2.first[1]-line1.first[1])*(line2.second[0]))/denom;
+        t2 = ((line2.first[0]-line1.first[0])*(line1.second[1])-(line2.first[1]-line1.first[1])*(line1.second[0]))/denom;
+        assert("line_line_intersection is wrong!" && line1.first+t1*line1.second == line2.first+t2*line2.second);
+
+    }
+
+    std::vector<std::pair<ENumber, ENumber>> segment_segment_intersection(const std::pair<EVector2, EVector2>& seg1,
+                               const std::pair<EVector2, EVector2>& seg2){
+
+        ENumber t1, t2;
+        int result = line_line_intersection(std::pair<EVector2, EVector2>(seg1.first, seg1.second-seg1.first),
+                                            std::pair<EVector2, EVector2>(seg2.first, seg2.second-seg2.first),t1, t2);
+
+        if (result==0)
+            return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
+
+        if (result==1) {  //a single intersection at most; should check t1 and t2
+            if ((t1>=ENumber(0))&&(t1<=ENumber(1))&&(t2>=ENumber(0))&&(t2<=ENumber(1))){
+                std::vector<std::pair<ENumber, ENumber>> result(1);
+                result[0]=std::pair<ENumber, ENumber>(t1,t2);
+                return result;
+            }
+        }
+
+        if (result==2){  //lines overlap; should check the segments overlap and then return both overlap points (order not important)
+            EVector2 vec = seg1.second-seg1.first;
+            int axis = (vec[0]!=ENumber(0) ? 0 : 1);
+            std::pair<EVector2, EVector2> sortSeg1, sortSeg2;
+            if (seg1.first[axis]<seg1.second[axis]) sortSeg1=seg1; else sortSeg1=std::pair<EVector2, EVector2>(seg1.second,seg1.first);
+            if (seg2.first[axis]<seg2.second[axis]) sortSeg2=seg2; else sortSeg2=std::pair<EVector2, EVector2>(seg2.second,seg2.first);
+            EVector2 startPoint = (sortSeg1.first[axis]>sortSeg2.first[axis] ? sortSeg1.first : sortSeg2.first);
+            EVector2 endPoint = (sortSeg1.second[axis]>sortSeg2.second[axis] ? sortSeg2.second : sortSeg1.second);
+
+            //TODO: what is the policy with segment-vertex tangency?
+            if (startPoint[axis]<endPoint[axis]) { //there is a (non-zero) intersection
+                ENumber startAtSeg1 = (startPoint[axis]-seg1.first[axis])/(seg1.second[axis]-seg1.first[axis]);
+                ENumber startAtSeg2 = (startPoint[axis]-seg2.first[axis])/(seg2.second[axis]-seg2.first[axis]);
+                ENumber endAtSeg1 = (endPoint[axis]-seg1.first[axis])/(seg1.second[axis]-seg1.first[axis]);
+                ENumber endAtSeg2 = (endPoint[axis]-seg2.first[axis])/(seg2.second[axis]-seg2.first[axis]);
+                std::vector<std::pair<ENumber, ENumber>> result(2);
+                result[0] = std::pair<ENumber, ENumber>(startAtSeg1, startAtSeg2);
+                result[1] = std::pair<ENumber, ENumber>(endAtSeg1, endAtSeg2);
+                return result;
+            }
+
+        }
+
+
+    }
+
+
+
+    std::vector<ENumber> line_segment_intersection(const std::pair<EVector2, EVector2>& line,
+                                   const std::pair<EVector2, EVector2>& segment){
+
+        std::pair<EVector2, EVector2> segLine(segment.first, segment.second-segment.first);
+        ENumber t1, t2;
+        int intersectType=line_line_intersection(line, segLine, t1, t2);
+        if (intersectType==0)   //no intersection
+            return std::vector<ENumber>();
+        if (intersectType==2) { //the entire segment is contained in the line
+            std::vector<ENumber> result(2); result[0]=ENumber(0); result[1]=ENumber(1);
+            return result;
+        }
+        if (intersectType==1){
+            std::vector<ENumber> result(1); result[0]=t2;
+            return result;
+        }
+    }
+
+    void line_triangle_intersection(const std::pair<EVector2, EVector2>& line,
+                                    const std::vector<EVector2> triangle,
+                                    bool intEdge,
+                                    bool intFace,
+                                    ENumber inParam,
+                                    ENumber outParam){
+
+        inParam = ENumber(3276700);
+        outParam = ENumber(-3276700);
+        intFace=intEdge=false;
+        for (int i=0;i<3;i++){
+            std::pair<EVector2, EVector2> edgeSegment(triangle[0], triangle[1]);
+            std::vector<ENumber> result = line_segment_intersection(line, edgeSegment);
+            for (int j=0;j<result.size();j++){
+                inParam = (inParam < result[j] ? inParam : result[j]);
+                outParam = (outParam > result[j] ? outParam : result[j]);
+            }
+            if (result.size()==2){
+                intEdge=true;
+                intFace=false;
+                return;
+            }
+            if (result.size()==1)
+                intFace=true;
+        }
+
+    }
+
+    ENumber slope_function(const EVector2& vec){
+
     }
 }
 
