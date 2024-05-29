@@ -49,22 +49,30 @@ namespace directional{
             EVector<Size> newVec;
             for (int i=0;i<Size;i++)
                 newVec.data[i]=data[i]+ev.data[i];
+
+            return newVec;
         }
         EVector<Size> operator-() const{
             EVector<Size> newVec;
             for (int i=0;i<Size;i++)
                 newVec.data[i]=-data[i];
+
+            return newVec;
         }
         EVector<Size> operator-(const EVector<Size>& ev) const{
             EVector<Size> newVec;
             for (int i=0;i<Size;i++)
                 newVec.data[i]=data[i]+ev.data[i];
+
+            return newVec;
         }
 
         EVector<Size> operator*(const ENumber s) const{
             EVector<Size> newVec;
             for (int i=0;i<Size;i++)
                 newVec.data[i]=data[i]*s;
+
+            return newVec;
         }
 
         bool operator==(const EVector<Size>& ev) const{
@@ -80,6 +88,15 @@ namespace directional{
                 if (data[i]>=ev.data[i])
                     return false;
             return true;
+        }
+
+        EVector(const std::initializer_list<ENumber>& args){
+            data.insert(data.end(), args.begin(), args.end());
+        }
+
+        EVector operator=(const EVector<Size>& evec){
+            data=evec.data;
+            return *this;
         }
 
     protected:
@@ -171,6 +188,7 @@ namespace directional{
         t1 = ((line2.first[0]-line1.first[0])*(line2.second[1])-(line2.first[1]-line1.first[1])*(line2.second[0]))/denom;
         t2 = ((line2.first[0]-line1.first[0])*(line1.second[1])-(line2.first[1]-line1.first[1])*(line1.second[0]))/denom;
         assert("line_line_intersection is wrong!" && line1.first+t1*line1.second == line2.first+t2*line2.second);
+        return 1;
 
     }
 
@@ -186,9 +204,9 @@ namespace directional{
 
         if (result==1) {  //a single intersection at most; should check t1 and t2
             if ((t1>=ENumber(0))&&(t1<=ENumber(1))&&(t2>=ENumber(0))&&(t2<=ENumber(1))){
-                std::vector<std::pair<ENumber, ENumber>> result(1);
-                result[0]=std::pair<ENumber, ENumber>(t1,t2);
-                return result;
+                std::vector<std::pair<ENumber, ENumber>> point(1);
+                point[0]=std::pair<ENumber, ENumber>(t1,t2);
+                return point;
             }
         }
 
@@ -207,10 +225,10 @@ namespace directional{
                 ENumber startAtSeg2 = (startPoint[axis]-seg2.first[axis])/(seg2.second[axis]-seg2.first[axis]);
                 ENumber endAtSeg1 = (endPoint[axis]-seg1.first[axis])/(seg1.second[axis]-seg1.first[axis]);
                 ENumber endAtSeg2 = (endPoint[axis]-seg2.first[axis])/(seg2.second[axis]-seg2.first[axis]);
-                std::vector<std::pair<ENumber, ENumber>> result(2);
-                result[0] = std::pair<ENumber, ENumber>(startAtSeg1, startAtSeg2);
-                result[1] = std::pair<ENumber, ENumber>(endAtSeg1, endAtSeg2);
-                return result;
+                std::vector<std::pair<ENumber, ENumber>> points(2);
+                points[0] = std::pair<ENumber, ENumber>(startAtSeg1, startAtSeg2);
+                points[1] = std::pair<ENumber, ENumber>(endAtSeg1, endAtSeg2);
+                return points;
             }
 
         }
@@ -240,8 +258,8 @@ namespace directional{
 
     void line_triangle_intersection(const std::pair<EVector2, EVector2>& line,
                                     const std::vector<EVector2> triangle,
-                                    bool intEdge,
-                                    bool intFace,
+                                    bool& intEdge,
+                                    bool& intFace,
                                     ENumber inParam,
                                     ENumber outParam){
 
@@ -266,8 +284,48 @@ namespace directional{
 
     }
 
+    //according to this: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
     ENumber slope_function(const EVector2& vec){
+        //predicates might be expensive, so precomputing
+        bool x0 = vec[0]>0;
+        bool y0 = vec[1]>0;
+        bool xy = (y0 && vec[1]>vec[0])||(!y0 && vec[1]>vec[0]);
 
+        if (xy){
+            if (y0) return (vec[1]-vec[0])/(vec[1]); // case 1
+            else return (vec[1]-vec[0])/(vec[1])+ENumber(4);  //case 3
+        } else {
+            if (x0){
+                if (y0) return (vec[1]-vec[0])/(vec[0]);  //case 0
+                else return (vec[1]-vec[0])/(vec[0])+ENumber(8); //case 4
+            }else{
+                return (vec[1]-vec[0])/(vec[0])+ENumber(4); //case 2
+            }
+        }
+    }
+
+
+    ENumber signed_face_area(const std::vector<EVector2>& faceVectors)
+    {
+        EVector2 currVertex; currVertex[0]=currVertex[1]=ENumber(0);
+        ENumber sfa(0);
+        for (int i=0;i<faceVectors.size();i++){
+            EVector2 nextVector = faceVectors[(i!=faceVectors.size()-1) ? i : 0];
+            EVector2 nextVertex = currVertex+nextVector;
+            sfa = sfa + currVertex[0]*nextVertex[1]-currVertex[1]*nextVertex[0];
+            currVertex=nextVertex;
+        }
+        return sfa;
+    }
+
+    ENumber triangle_area(const std::vector<EVector2>& tri){
+       EVector e12 = tri[1]-tri[0];
+       EVector e13 = tri[2]-tri[0];
+       return (e12[0]*e13[1]-e13[0]*e12[1])/ENumber(2);
+    }
+
+    void div_mod(const EInt& a, const EInt& b, EInt& q, EInt& r){
+        mpz_tdiv_qr(q.get_mpz_t(),r.get_mpz_t(),a.get_mpz_t(),b.get_mpz_t());
     }
 }
 

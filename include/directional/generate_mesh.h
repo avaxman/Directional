@@ -17,8 +17,6 @@
 #include <utility>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include <gmp.h>
-#include <gmpxx.h>
 #include <directional/DCEL.h>
 #include <directional/GMP_definitions.h>
 #include <directional/NFunctionMesher.h>
@@ -33,7 +31,7 @@ namespace directional{
     //Outer face is deleted in post-process
     void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
                              const std::vector<std::pair<EVector2, EVector2>>& lines,
-                             const Eigen::VectorXi& lineData,
+                             const std::vector<int>& lineData,
                              std::vector<EVector2>& V,
                              FunctionDCEL& triDcel) {
 
@@ -48,7 +46,7 @@ namespace directional{
             bool intVertex, intEdge, intFace;
             line_triangle_intersection(lines[i], triangle, intEdge, intFace, inParam, outParam);
             //checking cases of intersection
-            if ((intEdge < 0) && (intFace < 0))
+            if (!intEdge && !intFace)
                 continue;   //no (non-measure-zero) intersection
 
             inData.push_back(lineData[i]);
@@ -277,7 +275,7 @@ namespace directional{
                 currHE= triDcel.halfedges[currHE].next;
             }while(currHE!=beginHE);
             ENumber sfa = signed_face_area(faceVectors);
-            if (sfa<0.0){
+            if (sfa<ENumber(0)){
                 outerFace=f;
                 break;
             }
@@ -325,7 +323,7 @@ namespace directional{
          for (int i=0;i<2;i++)
          minRange=std::min(minRange, boundBox.max(i)-boundBox.min(i));*/
 
-        ; //pow(10,ceil(10/log10(minRange)));
+        //pow(10,ceil(10/log10(minRange)));
         //cout<<"Resolution: "<<Resolution<<endl;
 
         //Looping over all triangles, and arranging parametric lines for each
@@ -390,7 +388,7 @@ namespace directional{
                 ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution);
                 ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution);
 
-                EVector xyz(3);
+                EVector3 xyz;
                 xyz[0] = x;
                 xyz[1] = y;
                 xyz[2] = z;
@@ -457,9 +455,9 @@ namespace directional{
                 vector<EInt> isoValues;
                 //cout<<"isoValues: "<<endl;
                 EInt q, r;
-                div_mod(minFuncs[funcIter].numerator(), minFuncs[funcIter].denominator(), q, r);
+                div_mod(minFuncs[funcIter].get_num_mpz_t(), minFuncs[funcIter].get_den_mpz_t(), q, r);
                 EInt minIsoValue = q + (r < 0 ? -1 : 0);
-                div_mod(maxFuncs[funcIter].numerator(), maxFuncs[funcIter].denominator(), q, r);
+                div_mod(maxFuncs[funcIter].get_num_mpz_t(), maxFuncs[funcIter].get_den_mpz_t(), q, r);
                 EInt maxIsoValue = q + (r < 0 ? 0 : -1);
                 for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue++) {
                     //cout<<"isoValue: "<<isoValue<<endl;
@@ -472,9 +470,9 @@ namespace directional{
                 EVector2 e20 = ETriPoints2D[0] - ETriPoints2D[2];
 
                 //a and b values of lines
-                EVector2 gradVector = triExactNFunction[2 * mfiData.N + funcIter] * EVector2(-e01[1], e01[0]) +
-                                      triExactNFunction[0 * mfiData.N + funcIter] * EVector2(-e12[1], e12[0]) +
-                                      triExactNFunction[1 * mfiData.N + funcIter] * EVector2(-e20[1], e20[0]);
+                EVector2 gradVector = triExactNFunction[2 * mfiData.N + funcIter] * EVector2({-e01[1], e01[0]}) +
+                                      triExactNFunction[0 * mfiData.N + funcIter] * EVector2({-e12[1], e12[0]}) +
+                                      triExactNFunction[1 * mfiData.N + funcIter] * EVector2({-e20[1], e20[0]});
 
                 isoDirections[funcIter] = gradVector;
 
@@ -579,7 +577,7 @@ namespace directional{
                 }
             }
 
-            DCEL<bool, void, std::vector<int>, void> localArrDcel;
+            FunctionDCEL localArrDcel;
             vector<EVector2> localV;
             arrange_on_triangle(ETriPoints2D, paramLines, lineData, localV, localArrDcel);
 
@@ -603,26 +601,26 @@ namespace directional{
                     continue;    //this is probably not needed but covered by barycentric coordinates but w/e
 
                 //finding out barycentric coordinates
-                ENumber BaryValues[3];
-                ENumber Sum = 0;
+                ENumber baryValues[3];
+                ENumber sum = 0;
                 for (int j = 0; j < 3; j++) {
                     //ETriangle2D t(vi->point(), ETriPoints2D[(i + 1) % 3], ETriPoints2D[(i + 2) % 3]);
                     vector<EVector2> inTri[3];
-                    inTri[0] = ELocalV3D[i];
+                    inTri[0] = localV[i];
                     inTri[1] = ETriPoints2D[(j + 1) % 3];
                     inTri[2] = ETriPoints2D[(j + 2) % 3];
 
-                    BaryValues[j] = signed_triangle_area(ETriPoints2D);
-                    Sum += BaryValues[j];
+                    baryValues[j] = triangle_area(inTri);
+                    sum += baryValues[j];
                 }
                 for (int j = 0; j < 3; j++)
-                    BaryValues[j] /= Sum;
+                    baryValues[j] /= sum;
 
-                ELocalV3D[i] = EVector3(0, 0, 0);
+                ELocalV3D[i] = EVector3({0, 0, 0});
                 for (int j = 0; j < 3; j++)
-                    ELocalV3D[i] = ELocalV3D[i] + ETriPoints3D[i] * BaryValues[i];
+                    ELocalV3D[i] = ELocalV3D[i] + ETriPoints3D[i] * baryValues[i];
 
-                localV3D.row(i) << ELocalV3D.to_double();
+                localV3D.row(i) << ELocalV3D[i][0].get_d(), ELocalV3D[i][1].get_d(),ELocalV3D[i][2].get_d();
             }
 
             //adding values to the coordinates and ECoordinates

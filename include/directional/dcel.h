@@ -712,6 +712,12 @@ namespace directional
             }
         }
 
+
+        void aggregage_dcel(DCEL<VertexData, HalfedgeData, EdgeData, FaceData>)
+        {
+            //TODO: aggregate new elements and reindex where necessary
+        }
+
         // Created a Double-Connected Edge-List (a.k.a. "halfedge structure") from the usual
         // libhedra mesh representation. This data structure is very convenient for mesh editing
         // and traversing, and the data structure is again only Eigen vectors and matrices.
