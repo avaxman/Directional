@@ -14,6 +14,7 @@
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <directional/gaussian_curvature.h>
+#include <directional/dcel.h>
 
 /***
  This class stores a general-purpose triangle mesh. The triangle mesh can be used to implement a tangent bundle in several ways
@@ -36,8 +37,10 @@ namespace directional{
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
 
         //DCEL quantities
-        Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
-        Eigen::MatrixXi EH,FH, VE, VF;
+        /*Eigen::VectorXi VH,HV,HE,HF,nextH,prevH,twinH;
+        Eigen::MatrixXi EH,FH, VE, VF;*/
+        typedef DCEL<int,int,int,int> TriMeshDCEL;
+        TriMeshDCEL dcel;
 
         //Geometric quantities
         Eigen::MatrixXd faceNormals;
@@ -74,6 +77,7 @@ namespace directional{
             };
 
             //This is done in the polyscope compatible fashion
+            dcel.init(F);
             HE.resize(3*F.rows());
             nextH.resize(3*F.rows());
             prevH.resize(3*F.rows());
