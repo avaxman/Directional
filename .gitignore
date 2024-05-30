@@ -1,3 +1,7 @@
+cmake-build-debug/
+cmake-build-release/
+build/
+.idea/
 examples/sampling/build/CMakeCache.txt
 examples/sampling/build/CMakeFiles/3.5.2/CMakeCCompiler.cmake
 examples/sampling/build/CMakeFiles/3.5.2/CMakeCXXCompiler.cmake
