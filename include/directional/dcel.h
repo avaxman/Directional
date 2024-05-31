@@ -752,18 +752,26 @@ namespace directional
         //Initializing DCEL from faces, assuming this is a triangle mesh
         void init(const Eigen::MatrixXd& V,
                   const Eigen::MatrixXi& F){
+
             halfedges.resize(3*F.rows());
             vertices.resize(V.rows());
             faces.resize(F.rows());
 
             for (int i=0;i<F.rows();i++) {
+                faces[i].ID=i;
+                faces[i].halfedge=3*i;
                 for (int j=0;j<3;j++){
+                    halfedges[3*i+j].ID = 3*i+j;
                     halfedges[3*i+j].vertex=F(i,j);
+                    vertices[halfedges[3*i+j].vertex].halfedge=3*i+j;
                     halfedges[3*i+j].next=halfedges[3*i+(j+1)%3];
                     halfedges[3*i+j].prev=halfedges[3*i+(j+2)%3];
                     halfedges[3*i+j].face=i;
                 }
             }
+
+            for (int i=0;i<vertices.size();i++)
+                vertices[i].ID=i;
 
             struct ComparePairs {
                 bool operator()(const std::pair<std::pair<int, int>, int>& a, const std::pair<std::pair<int, int>, int>& b) const {
@@ -780,59 +788,30 @@ namespace directional
             std::set<pairPlusOne, ComparePairs> edgeSet;
             std::vector<int> EHList;
             for (int i=0;i<halfedges.rows();i++){
-                VH(HV(i))=i;
-                std::pair<int,int> oppEdge(halfedges(i,1), halfedges(i,0));
+                std::pair<int,int> oppEdge(halfedges[halfedges[i].next].vertex, halfedges[i].vertex);
                 pairPlusOne oppEdgePlus(oppEdge, -1);
                 std::set<pairPlusOne>::iterator si = edgeSet.find(oppEdgePlus);
                 if (si == edgeSet.end()) {
-                    edgeSet.insert(pairPlusOne(std::pair<int, int>(halfedges(i, 0), halfedges(i, 1)), i));
+                    edgeSet.insert(pairPlusOne(std::pair<int, int>( halfedges[i].vertex, halfedges[halfedges[i].next].vertex), i));
                     EHList.push_back(i);
                 } else {  //found matching twin
-                    twinH[si->second] = i;
-                    twinH[i] = si->second;
+                    halfedges[si->second].twin = i;
+                    halfedges[i].twin = si->second;
                 }
             }
 
-            //std::cout<<"twinH: "<<twinH<<std::endl;
-            //creating the edge quantities from the halfedge quantities
-            EH = Eigen::Map<Eigen::VectorXi>(EHList.data(), EHList.size());
-            HE.resize(halfedges.rows());
-            EV.resize(EHList.size(),2);
-            EF = Eigen::MatrixXi::Constant(EHList.size(),2,-1);
-            EFi.resize(EHList.size(),2);
-            //VE.resize(V.size());
-            FE.resize(F.rows(),3);
-            FEs.resize(F.rows(),3);
-            TT.resize(F.rows(),3);
-            Eigen::VectorXi HEs(halfedges.rows());
-            for (int i=0;i<EH.rows();i++){
-                EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
-                EF(i,0) = HF(EH(i));
-                if (twinH(EH(i))!=-1)
-                    EF(i,1) = HF(twinH(EH(i)));
+            //creating edges
+            for (int i=0;i<halfedges.size();i++) {
+                if (halfedges[i].edge!=-1)
+                    continue;
 
-                HE(EH(i))=i;
-                HEs(EH(i))=1;
-                if (twinH((EH(i)))!=-1) {
-                    HE(twinH(EH(i))) = i;
-                    HEs(twinH(EH(i))) = -1;
-                }
+                edges.push_back(Edge());
+                edges[edges.size()-1].ID=edges.size()-1;
+                edges[edges.size()-1].halfedge=i;
+                halfedges[i].edge=edges.size()-1;
+                if (halfedges[i].twin!=-1)
+                    halfedges[halfedges[i].twin].edge=edges.size()-1;
 
-                EFi(i,0) = (EH(i) + 0) % 3;
-                if (twinH((EH(i)))!=-1)
-                    EFi(i,1) = (twinH(EH(i)) + 0) % 3;
-            }
-            for (int i=0;i<FH.rows();i++){
-                for (int j=0;j<3;j++){
-                    FE(i,j) = HE(FH(i,j));
-                    //checking the orientation of the edge vs. the halfedge
-                    FEs(i,j) = HEs(FH(i,j));
-
-                    if (twinH(FH(i,j)) == -1)
-                        TT(i, j) = -1;
-                    else
-                        TT(i, j) = HF(twinH(FH(i,j)));
-                }
             }
         }
 

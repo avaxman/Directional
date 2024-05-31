@@ -324,8 +324,8 @@ namespace directional{
        return (e12[0]*e13[1]-e13[0]*e12[1])/ENumber(2);
     }
 
-    void div_mod(const EInt& a, const EInt& b, EInt& q, EInt& r){
-        mpz_tdiv_qr(q.get_mpz_t(),r.get_mpz_t(),a.get_mpz_t(),b.get_mpz_t());
+    void div_mod(const mpz_ptr a, mpz_ptr b, EInt& q, EInt& r){
+        mpz_tdiv_qr(q.get_mpz_t(),r.get_mpz_t(),a,b);
     }
 }
 
