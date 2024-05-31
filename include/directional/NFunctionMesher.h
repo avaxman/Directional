@@ -27,12 +27,26 @@ namespace directional{
         const TriMesh& origMesh;
         const MeshFunctionIsolinesData& mfiData;
 
-        typedef DCEL<bool,  bool, std::vector<int>, bool> FunctionDCEL;
+        struct HEData{
+            bool isFunction;
+            int origHalfedge;
+            int origNFunctionIndex;  //the original parameteric function assoicated with this edge
+            double prescribedAngle;  //the actual prescribed angle
+
+            HEData():isFunction(false), origHalfedge(-1), origNFunctionIndex(-1),  prescribedAngle(-1.0){}
+        };
+
+        struct VData{
+            Eigen::RowVector3d coords;
+            std::vector<ENumber> exactCoords;
+        };
+
+        typedef DCEL<VData,  HEData, bool, bool> FunctionDCEL;
         FunctionDCEL genDcel;
 
         //vertex quantities
-        Eigen::MatrixXd coordinates;
-        std::vector<EVector3> ECoordinates;
+        //Eigen::MatrixXd coordinates;
+        //std::vector<EVector3> ECoordinates;
 
         //halfedge quantities
         Eigen::MatrixXd NFunction;
@@ -144,56 +158,56 @@ namespace directional{
         };
 
         /*bool JoinFace(const int heindex) {
-            if (Halfedges[heindex].Twin < 0)
+            if (Halfedges[heindex].twin < 0)
                 return true;  //there is no joining of boundary faces
 
             int Face1 = Halfedges[heindex].AdjFace;
-            int Face2 = Halfedges[Halfedges[heindex].Twin].AdjFace;
+            int Face2 = Halfedges[Halfedges[heindex].twin].AdjFace;
 
-            int hebegin = Faces[Face1].AdjHalfedge;
+            int hebegin = faces[Face1].halfedge;
             int heiterate = hebegin;
             do {
-                heiterate = Halfedges[heiterate].Next;
+                heiterate = Halfedges[heiterate].next;
             } while (heiterate != hebegin);
 
-            hebegin = Faces[Face1].AdjHalfedge;
+            hebegin = faces[Face1].halfedge;
             heiterate = hebegin;
             do {
-                heiterate = Halfedges[heiterate].Next;
+                heiterate = Halfedges[heiterate].next;
             } while (heiterate != hebegin);
 
             //check if spike edge
-            if ((Halfedges[heindex].Prev == Halfedges[heindex].Twin) ||
-                (Halfedges[heindex].Next == Halfedges[heindex].Twin)) {
+            if ((Halfedges[heindex].prev == Halfedges[heindex].twin) ||
+                (Halfedges[heindex].next == Halfedges[heindex].twin)) {
 
 
                 int CloseEdge = heindex;
-                if (Halfedges[heindex].Prev == Halfedges[heindex].Twin)
-                    CloseEdge = Halfedges[heindex].Twin;
+                if (Halfedges[heindex].prev == Halfedges[heindex].twin)
+                    CloseEdge = Halfedges[heindex].twin;
 
-                Halfedges[CloseEdge].Valid = Halfedges[Halfedges[CloseEdge].Twin].Valid = false;
+                Halfedges[CloseEdge].valid = Halfedges[Halfedges[CloseEdge].twin].valid = false;
 
-                Vertices[Halfedges[CloseEdge].Origin].AdjHalfedge = Halfedges[Halfedges[CloseEdge].Twin].Next;
-                Faces[Face1].AdjHalfedge = Halfedges[CloseEdge].Prev;
+                Vertices[Halfedges[CloseEdge].vertex].halfedge = Halfedges[Halfedges[CloseEdge].twin].next;
+                faces[Face1].halfedge = Halfedges[CloseEdge].prev;
 
-                Halfedges[Halfedges[CloseEdge].Prev].Next = Halfedges[Halfedges[CloseEdge].Twin].Next;
-                Halfedges[Halfedges[Halfedges[CloseEdge].Twin].Next].Prev = Halfedges[CloseEdge].Prev;
+                Halfedges[Halfedges[CloseEdge].prev].next = Halfedges[Halfedges[CloseEdge].twin].next;
+                Halfedges[Halfedges[Halfedges[CloseEdge].twin].next].prev = Halfedges[CloseEdge].prev;
 
-                Vertices[Halfedges[Halfedges[CloseEdge].Twin].Origin].Valid = false;
-                //Faces[Face1].NumVertices-=2;  //although one vertex should appear twice
+                Vertices[Halfedges[Halfedges[CloseEdge].twin].vertex].valid = false;
+                //faces[Face1].NumVertices-=2;  //although one vertex should appear twice
 
 
-                int hebegin = Faces[Face1].AdjHalfedge;
+                int hebegin = faces[Face1].halfedge;
                 int heiterate = hebegin;
                 do {
 
-                    heiterate = Halfedges[heiterate].Next;
+                    heiterate = Halfedges[heiterate].next;
                 } while (heiterate != hebegin);
 
-                hebegin = Faces[Face1].AdjHalfedge;
+                hebegin = faces[Face1].halfedge;
                 heiterate = hebegin;
                 do {
-                    heiterate = Halfedges[heiterate].Next;
+                    heiterate = Halfedges[heiterate].next;
                 } while (heiterate != hebegin);
 
 
@@ -203,102 +217,102 @@ namespace directional{
             if (Face1 == Face2)
                 return false;  //we don't remove non-spike edges with the same faces to not disconnect a chain
 
-            hebegin = Faces[Face2].AdjHalfedge;
+            hebegin = faces[Face2].halfedge;
             heiterate = hebegin;
             do {
-                heiterate = Halfedges[heiterate].Next;
+                heiterate = Halfedges[heiterate].next;
             } while (heiterate != hebegin);
 
-            Faces[Face1].AdjHalfedge = Halfedges[heindex].Next;
-            Faces[Face2].Valid = false;
+            faces[Face1].halfedge = Halfedges[heindex].next;
+            faces[Face2].valid = false;
 
-            //Faces[Face2].AdjHalfedge=Halfedges[Halfedges[heindex].Twin].Next;
+            //faces[Face2].halfedge=Halfedges[Halfedges[heindex].twin].next;
 
-            Halfedges[heindex].Valid = Halfedges[Halfedges[heindex].Twin].Valid = false;
+            Halfedges[heindex].valid = Halfedges[Halfedges[heindex].twin].valid = false;
 
-            Halfedges[Halfedges[heindex].Next].Prev = Halfedges[Halfedges[heindex].Twin].Prev;
-            Halfedges[Halfedges[Halfedges[heindex].Twin].Prev].Next = Halfedges[heindex].Next;
+            Halfedges[Halfedges[heindex].next].prev = Halfedges[Halfedges[heindex].twin].prev;
+            Halfedges[Halfedges[Halfedges[heindex].twin].prev].next = Halfedges[heindex].next;
 
-            Halfedges[Halfedges[Halfedges[heindex].Twin].Next].Prev = Halfedges[heindex].Prev;
-            Halfedges[Halfedges[heindex].Prev].Next = Halfedges[Halfedges[heindex].Twin].Next;
+            Halfedges[Halfedges[Halfedges[heindex].twin].next].prev = Halfedges[heindex].prev;
+            Halfedges[Halfedges[heindex].prev].next = Halfedges[Halfedges[heindex].twin].next;
 
-            Vertices[Halfedges[heindex].Origin].AdjHalfedge = Halfedges[Halfedges[heindex].Twin].Next;
-            Vertices[Halfedges[Halfedges[heindex].Next].Origin].AdjHalfedge = Halfedges[heindex].Next;
+            Vertices[Halfedges[heindex].vertex].halfedge = Halfedges[Halfedges[heindex].twin].next;
+            Vertices[Halfedges[Halfedges[heindex].next].vertex].halfedge = Halfedges[heindex].next;
 
             //all other floating halfedges should renounce this one
             for (int i = 0; i < Halfedges.size(); i++)
                 if (Halfedges[i].AdjFace == Face2)
                     Halfedges[i].AdjFace = Face1;
 
-            //Faces[Face1].NumVertices+=Faces[Face2].NumVertices-2;
+            //faces[Face1].NumVertices+=faces[Face2].NumVertices-2;
 
-            //DebugLog<<"Official number of vertices: "<<Faces[Face1].NumVertices;
+            //DebugLog<<"Official number of vertices: "<<faces[Face1].NumVertices;
 
-            hebegin = Faces[Face1].AdjHalfedge;
+            hebegin = faces[Face1].halfedge;
             heiterate = hebegin;
             int currVertex = 0;
             do {
-                //Faces[Face1].Vertices[currVertex++]=Halfedges[heiterate].Origin;
-                heiterate = Halfedges[heiterate].Next;
+                //faces[Face1].Vertices[currVertex++]=Halfedges[heiterate].vertex;
+                heiterate = Halfedges[heiterate].next;
             } while (heiterate != hebegin);
 
             return true;
         }*/
 
         /*void UnifyEdges(int heindex) {
-            //if (Halfedges[heindex].Twin<0)
+            //if (Halfedges[heindex].twin<0)
             //  return;
             //adjusting source
-            Vertices[Halfedges[heindex].Origin].Valid = false;
-            Halfedges[heindex].Origin = Halfedges[Halfedges[heindex].Prev].Origin;
+            Vertices[Halfedges[heindex].vertex].valid = false;
+            Halfedges[heindex].vertex = Halfedges[Halfedges[heindex].prev].vertex;
             if (Halfedges[heindex].prescribedAngle < 0.0)
-                Halfedges[heindex].prescribedAngle = Halfedges[Halfedges[heindex].Prev].prescribedAngle;
-            Vertices[Halfedges[heindex].Origin].AdjHalfedge = heindex;
+                Halfedges[heindex].prescribedAngle = Halfedges[Halfedges[heindex].prev].prescribedAngle;
+            Vertices[Halfedges[heindex].vertex].halfedge = heindex;
 
-            Faces[Halfedges[heindex].AdjFace].AdjHalfedge = Halfedges[heindex].Next;
-            //Faces[Halfedges[heindex].AdjFace].NumVertices--;
+            faces[Halfedges[heindex].AdjFace].halfedge = Halfedges[heindex].next;
+            //faces[Halfedges[heindex].AdjFace].NumVertices--;
 
 
 
             //adjusting halfedges
-            Halfedges[Halfedges[heindex].Prev].Valid = false;
-            Halfedges[heindex].Prev = Halfedges[Halfedges[heindex].Prev].Prev;
-            Halfedges[Halfedges[heindex].Prev].Next = heindex;
+            Halfedges[Halfedges[heindex].prev].valid = false;
+            Halfedges[heindex].prev = Halfedges[Halfedges[heindex].prev].prev;
+            Halfedges[Halfedges[heindex].prev].next = heindex;
 
             //adjusting twin, if exists
-            if (Halfedges[heindex].Twin >= 0) {
-                if (Halfedges[Halfedges[heindex].Twin].prescribedAngle < 0.0)
-                    Halfedges[Halfedges[heindex].Twin].prescribedAngle = Halfedges[Halfedges[Halfedges[heindex].Twin].Next].prescribedAngle;
-                Halfedges[Halfedges[Halfedges[heindex].Twin].Next].Valid = false;
-                Halfedges[Halfedges[heindex].Twin].Next = Halfedges[Halfedges[Halfedges[heindex].Twin].Next].Next;
-                Halfedges[Halfedges[Halfedges[heindex].Twin].Next].Prev = Halfedges[heindex].Twin;
-                Faces[Halfedges[Halfedges[heindex].Twin].AdjFace].AdjHalfedge = Halfedges[Halfedges[heindex].Twin].Next;
-                //Faces[Halfedges[Halfedges[heindex].Twin].AdjFace].NumVertices--;
+            if (Halfedges[heindex].twin >= 0) {
+                if (Halfedges[Halfedges[heindex].twin].prescribedAngle < 0.0)
+                    Halfedges[Halfedges[heindex].twin].prescribedAngle = Halfedges[Halfedges[Halfedges[heindex].twin].next].prescribedAngle;
+                Halfedges[Halfedges[Halfedges[heindex].twin].next].valid = false;
+                Halfedges[Halfedges[heindex].twin].next = Halfedges[Halfedges[Halfedges[heindex].twin].next].next;
+                Halfedges[Halfedges[Halfedges[heindex].twin].next].prev = Halfedges[heindex].twin;
+                faces[Halfedges[Halfedges[heindex].twin].AdjFace].halfedge = Halfedges[Halfedges[heindex].twin].next;
+                //faces[Halfedges[Halfedges[heindex].twin].AdjFace].NumVertices--;
             }
         }
 
         bool CheckMesh(const bool verbose, const bool checkHalfedgeRepetition, const bool CheckTwinGaps,
                        const bool checkPureBoundary) {
             for (int i = 0; i < Vertices.size(); i++) {
-                if (!Vertices[i].Valid)
+                if (!Vertices[i].valid)
                     continue;
 
-                if (Vertices[i].AdjHalfedge == -1) {
+                if (Vertices[i].halfedge == -1) {
                     if (verbose) std::cout << "Valid Vertex " << i << " points to non-valid value -1 " << std::endl;
                     return false;
                 }
 
-                if (!Halfedges[Vertices[i].AdjHalfedge].Valid) {
+                if (!Halfedges[Vertices[i].halfedge].valid) {
                     if (verbose)
-                        std::cout << "Valid Vertex " << i << " points to non-valid AdjHalfedge "
-                                  << Vertices[i].AdjHalfedge << std::endl;
+                        std::cout << "Valid Vertex " << i << " points to non-valid halfedge "
+                                  << Vertices[i].halfedge << std::endl;
                     return false;
                 }
 
 
-                if (Halfedges[Vertices[i].AdjHalfedge].Origin != i) {
+                if (Halfedges[Vertices[i].halfedge].vertex != i) {
                     if (verbose)
-                        std::cout << "Adjacent Halfedge " << Vertices[i].AdjHalfedge << " of vertex " << i
+                        std::cout << "Adjacent Halfedge " << Vertices[i].halfedge << " of vertex " << i
                                   << "does not point back" << std::endl;
                     return false;
                 }
@@ -306,24 +320,24 @@ namespace directional{
             }
 
             for (int i = 0; i < Halfedges.size(); i++) {
-                if (!Halfedges[i].Valid)
+                if (!Halfedges[i].valid)
                     continue;
 
 
-                if (Halfedges[i].Next == -1) {
+                if (Halfedges[i].next == -1) {
                     if (verbose)
                         std::cout << "Valid Halfedge " << i << "points to Next non-valid value -1" << std::endl;
                     return false;
                 }
 
-                if (Halfedges[i].Prev == -1) {
+                if (Halfedges[i].prev == -1) {
                     if (verbose)
                         std::cout << "Valid Halfedge " << i << "points to Prev non-valid value -1" << std::endl;
                     return false;
                 }
 
 
-                if (Halfedges[i].Origin == -1) {
+                if (Halfedges[i].vertex == -1) {
                     if (verbose)
                         std::cout << "Valid Halfedge " << i << "points to Origin non-valid value -1" << std::endl;
                     return false;
@@ -335,111 +349,111 @@ namespace directional{
                     return false;
                 }
 
-                if (Halfedges[Halfedges[i].Next].Prev != i) {
+                if (Halfedges[Halfedges[i].next].prev != i) {
                     if (verbose)
-                        std::cout << "Halfedge " << i << "Next is " << Halfedges[i].Next
+                        std::cout << "Halfedge " << i << "Next is " << Halfedges[i].next
                                   << " which doesn't point back as Prev" << std::endl;
                     return false;
                 }
 
 
-                if (Halfedges[Halfedges[i].Prev].Next != i) {
+                if (Halfedges[Halfedges[i].prev].next != i) {
                     if (verbose)
-                        std::cout << "Halfedge " << i << "Prev is " << Halfedges[i].Prev
+                        std::cout << "Halfedge " << i << "Prev is " << Halfedges[i].prev
                                   << " which doesn't point back as Next" << std::endl;
                     return false;
                 }
 
-                if (!Vertices[Halfedges[i].Origin].Valid) {
+                if (!Vertices[Halfedges[i].vertex].valid) {
                     if (verbose)
-                        std::cout << "The Origin of halfedges " << i << ", vertex " << Halfedges[i].Origin
+                        std::cout << "The Origin of halfedges " << i << ", vertex " << Halfedges[i].vertex
                                   << " is not valid" << std::endl;
                     return false;
                 }
 
-                if (!Faces[Halfedges[i].AdjFace].Valid) {
+                if (!faces[Halfedges[i].AdjFace].valid) {
                     if (verbose)
                         std::cout << "The face of halfedges " << i << ", face " << Halfedges[i].AdjFace
                                   << " is not valid" << std::endl;
                     return false;
                 }
 
-                if (Halfedges[Halfedges[i].Next].Origin == Halfedges[i].Origin) {  //a degenerate edge{
+                if (Halfedges[Halfedges[i].next].vertex == Halfedges[i].vertex) {  //a degenerate edge{
                     if (verbose)
-                        std::cout << "Halfedge " << i << " with twin" << Halfedges[i].Twin
-                                  << " is degenerate with vertex " << Halfedges[i].Origin << std::endl;
+                        std::cout << "Halfedge " << i << " with twin" << Halfedges[i].twin
+                                  << " is degenerate with vertex " << Halfedges[i].vertex << std::endl;
                     return false;
                 }
 
-                if (Halfedges[i].Twin >= 0) {
-                    if (Halfedges[Halfedges[i].Twin].Twin != i) {
+                if (Halfedges[i].twin >= 0) {
+                    if (Halfedges[Halfedges[i].twin].twin != i) {
                         if (verbose)
-                            std::cout << "Halfedge " << i << "twin is " << Halfedges[i].Twin
+                            std::cout << "Halfedge " << i << "twin is " << Halfedges[i].twin
                                       << " which doesn't point back" << std::endl;
                         return false;
                     }
 
-                    if (!Halfedges[Halfedges[i].Twin].Valid) {
+                    if (!Halfedges[Halfedges[i].twin].valid) {
                         if (verbose)
-                            std::cout << "halfedge " << i << " is twin with invalid halfedge" << Halfedges[i].Twin
+                            std::cout << "halfedge " << i << " is twin with invalid halfedge" << Halfedges[i].twin
                                       << std::endl;
                         return false;
                     }
                 }
 
-                if (!Halfedges[Halfedges[i].Next].Valid) {
+                if (!Halfedges[Halfedges[i].next].valid) {
                     if (verbose)
-                        std::cout << "halfedge " << i << " has next invalid halfedge" << Halfedges[i].Next << std::endl;
+                        std::cout << "halfedge " << i << " has next invalid halfedge" << Halfedges[i].next << std::endl;
                     return false;
                 }
 
-                if (!Halfedges[Halfedges[i].Prev].Valid) {
+                if (!Halfedges[Halfedges[i].prev].valid) {
                     if (verbose)
-                        std::cout << "halfedge " << i << " has prev invalid halfedge" << Halfedges[i].Prev << std::endl;
+                        std::cout << "halfedge " << i << " has prev invalid halfedge" << Halfedges[i].prev << std::endl;
                     return false;
                 }
 
                 if (Halfedges[i].isFunction) {  //checking that it is not left alone
-                    if (Halfedges[i].Prev == Halfedges[i].Twin) {
+                    if (Halfedges[i].prev == Halfedges[i].twin) {
                         if (verbose)
-                            std::cout << "Hex halfedge " << i << " has Halfedge " << Halfedges[i].Prev
+                            std::cout << "Hex halfedge " << i << " has Halfedge " << Halfedges[i].prev
                                       << " and both prev and twin" << std::endl;
                         return false;
                     }
 
 
-                    if (Halfedges[i].Next == Halfedges[i].Twin) {
+                    if (Halfedges[i].next == Halfedges[i].twin) {
                         if (verbose)
-                            std::cout << "Hex halfedge " << i << " has Halfedge " << Halfedges[i].Next
+                            std::cout << "Hex halfedge " << i << " has Halfedge " << Halfedges[i].next
                                       << " and both next and twin" << std::endl;
                         return false;
                     }
                 }
             }
 
-            std::vector <std::set<int>> halfedgesinFace(Faces.size());
-            std::vector <std::set<int>> verticesinFace(Faces.size());
-            for (int i = 0; i < Faces.size(); i++) {
-                if (!Faces[i].Valid)
+            std::vector <std::set<int>> halfedgesinFace(faces.size());
+            std::vector <std::set<int>> verticesinFace(faces.size());
+            for (int i = 0; i < faces.size(); i++) {
+                if (!faces[i].valid)
                     continue;
 
-                //if (Faces[i].NumVertices<3)  //we never allow this
+                //if (faces[i].NumVertices<3)  //we never allow this
                 //  return false;
-                int hebegin = Faces[i].AdjHalfedge;
+                int hebegin = faces[i].halfedge;
                 int heiterate = hebegin;
                 int NumEdges = 0;
                 int actualNumVertices = 0;
 
                 do {
-                    if (verticesinFace[i].find(Halfedges[heiterate].Origin) != verticesinFace[i].end())
+                    if (verticesinFace[i].find(Halfedges[heiterate].vertex) != verticesinFace[i].end())
                         if (verbose)
-                            std::cout << "Warning: Vertex " << Halfedges[heiterate].Origin
+                            std::cout << "Warning: Vertex " << Halfedges[heiterate].vertex
                                       << " appears more than once in face " << i << std::endl;
 
-                    verticesinFace[i].insert(Halfedges[heiterate].Origin);
+                    verticesinFace[i].insert(Halfedges[heiterate].vertex);
                     halfedgesinFace[i].insert(heiterate);
                     actualNumVertices++;
-                    if (!Halfedges[heiterate].Valid)
+                    if (!Halfedges[heiterate].valid)
                         return false;
 
                     if (Halfedges[heiterate].AdjFace != i) {
@@ -449,7 +463,7 @@ namespace directional{
                         return false;
                     }
 
-                    heiterate = Halfedges[heiterate].Next;
+                    heiterate = Halfedges[heiterate].next;
                     NumEdges++;
                     if (NumEdges > Halfedges.size()) {
                         if (verbose) std::cout << "Infinity loop!" << std::endl;
@@ -459,18 +473,18 @@ namespace directional{
 
                 } while (heiterate != hebegin);
 
-                /*if (actualNumVertices!=Faces[i].NumVertices){
-                  DebugLog<<"Faces "<<i<<" lists "<<Faces[i].NumVertices<<" vertices but has a chain of "<<actualNumVertices<<endl;
+                /*if (actualNumVertices!=faces[i].NumVertices){
+                  DebugLog<<"faces "<<i<<" lists "<<faces[i].NumVertices<<" vertices but has a chain of "<<actualNumVertices<<endl;
                   return false;
                 }
 
-                for (int j=0;j<Faces[i].NumVertices;j++){
-                  if (Faces[i].Vertices[j]<0){
-                    DebugLog<<"Faces "<<i<<".vertices "<<j<<"is undefined"<<endl;
+                for (int j=0;j<faces[i].NumVertices;j++){
+                  if (faces[i].Vertices[j]<0){
+                    DebugLog<<"faces "<<i<<".vertices "<<j<<"is undefined"<<endl;
                     return false;
                   }
-                  if (!Vertices[Faces[i].Vertices[j]].Valid){
-                    DebugLog<<"Faces "<<i<<".vertices "<<j<<"is not valid"<<endl;
+                  if (!Vertices[faces[i].Vertices[j]].valid){
+                    DebugLog<<"faces "<<i<<".vertices "<<j<<"is not valid"<<endl;
                     return false;
                   }
                 }*/
@@ -478,7 +492,7 @@ namespace directional{
 
             //checking if all halfedges that relate to a face are part of its recognized chain (so no floaters)
             for (int i = 0; i < Halfedges.size(); i++) {
-                if (!Halfedges[i].Valid)
+                if (!Halfedges[i].valid)
                     continue;
                 int currFace = Halfedges[i].AdjFace;
                 if (halfedgesinFace[currFace].find(i) == halfedgesinFace[currFace].end()) {
@@ -491,22 +505,22 @@ namespace directional{
             if (checkHalfedgeRepetition) {
                 std::set <TwinFinder> HESet;
                 for (int i = 0; i < Halfedges.size(); i++) {
-                    if (!Halfedges[i].Valid)
+                    if (!Halfedges[i].valid)
                         continue;
                     std::set<TwinFinder>::iterator HESetIterator = HESet.find(
-                            TwinFinder(i, Halfedges[i].Origin, Halfedges[Halfedges[i].Next].Origin));
+                            TwinFinder(i, Halfedges[i].vertex, Halfedges[Halfedges[i].next].vertex));
                     if (HESetIterator != HESet.end()) {
                         if (verbose)
-                            std::cout << "Warning: the halfedge (" << Halfedges[i].Origin << ","
-                                      << Halfedges[Halfedges[i].Next].Origin << ") appears at least twice in the mesh"
+                            std::cout << "Warning: the halfedge (" << Halfedges[i].vertex << ","
+                                      << Halfedges[Halfedges[i].next].vertex << ") appears at least twice in the mesh"
                                       << std::endl;
                         if (verbose)
                             std::cout << "for instance halfedges " << i << " and " << HESetIterator->index << std::endl;
                         return false;
                         //return false;
                     } else {
-                        HESet.insert(TwinFinder(i, Halfedges[i].Origin, Halfedges[Halfedges[i].Next].Origin));
-                        //if (verbose) std::cout<<"inserting halfedge "<<i<<" which is "<<Halfedges[i].Origin<<", "<<Halfedges[Halfedges[i].Next].Origin<<endl;
+                        HESet.insert(TwinFinder(i, Halfedges[i].vertex, Halfedges[Halfedges[i].next].vertex));
+                        //if (verbose) std::cout<<"inserting halfedge "<<i<<" which is "<<Halfedges[i].vertex<<", "<<Halfedges[Halfedges[i].next].vertex<<endl;
                     }
                 }
             }
@@ -515,26 +529,26 @@ namespace directional{
                 std::set <TwinFinder> HESet;
                 //checking if there is a gap: two halfedges that share the same opposite vertices but do not have twins
                 for (int i = 0; i < Halfedges.size(); i++) {
-                    if (!Halfedges[i].Valid)
+                    if (!Halfedges[i].valid)
                         continue;
 
                     std::set<TwinFinder>::iterator HESetIterator = HESet.find(
-                            TwinFinder(i, Halfedges[i].Origin, Halfedges[Halfedges[i].Next].Origin));
+                            TwinFinder(i, Halfedges[i].vertex, Halfedges[Halfedges[i].next].vertex));
                     if (HESetIterator == HESet.end()) {
-                        HESet.insert(TwinFinder(i, Halfedges[i].Origin, Halfedges[Halfedges[i].Next].Origin));
+                        HESet.insert(TwinFinder(i, Halfedges[i].vertex, Halfedges[Halfedges[i].next].vertex));
                         continue;
                     }
 
-                    HESetIterator = HESet.find(TwinFinder(i, Halfedges[Halfedges[i].Next].Origin, Halfedges[i].Origin));
+                    HESetIterator = HESet.find(TwinFinder(i, Halfedges[Halfedges[i].next].vertex, Halfedges[i].vertex));
                     if (HESetIterator != HESet.end()) {
 
-                        if (Halfedges[i].Twin == -1) {
+                        if (Halfedges[i].twin == -1) {
                             if (verbose)
                                 std::cout << "Halfedge " << i << "has no twin although halfedge "
                                           << HESetIterator->index << " can be a twin" << std::endl;
                             return false;
                         }
-                        if (Halfedges[HESetIterator->index].Twin == -1) {
+                        if (Halfedges[HESetIterator->index].twin == -1) {
                             if (verbose)
                                 std::cout << "Halfedge " << HESetIterator->index << "has no twin although halfedge "
                                           << i << " can be a twin" << std::endl;
@@ -547,24 +561,24 @@ namespace directional{
             //checking if there are pure boundary faces (there shouldn't be)
             if (checkPureBoundary) {
                 for (int i = 0; i < Halfedges.size(); i++) {
-                    if (!Halfedges[i].Valid)
+                    if (!Halfedges[i].valid)
                         continue;
-                    if ((Halfedges[i].Twin < 0) && (Halfedges[i].isFunction))
+                    if ((Halfedges[i].twin < 0) && (Halfedges[i].isFunction))
                         if (verbose)
                             std::cout << "WARNING: Halfedge " << i << " is a hex edge without twin!" << std::endl;
 
-                    if (Halfedges[i].Twin > 0)
+                    if (Halfedges[i].twin > 0)
                         continue;
 
                     bool pureBoundary = true;
                     int hebegin = i;
                     int heiterate = hebegin;
                     do {
-                        if (Halfedges[heiterate].Twin > 0) {
+                        if (Halfedges[heiterate].twin > 0) {
                             pureBoundary = false;
                             break;
                         }
-                        heiterate = Halfedges[heiterate].Next;
+                        heiterate = Halfedges[heiterate].next;
                     } while (heiterate != hebegin);
                     if (pureBoundary) {
                         if (verbose)
@@ -579,26 +593,26 @@ namespace directional{
                     Valences[i] = 0;
 
                 for (int i = 0; i < Halfedges.size(); i++) {
-                    if (Halfedges[i].Valid) {
-                        Valences[Halfedges[i].Origin]++;
-                        //Valences[Halfedges[Halfedges[i].Next].Origin]++;
-                        if (Halfedges[i].Twin < 0)  //should account for the target as well
-                            Valences[Halfedges[Halfedges[i].Next].Origin]++;
+                    if (Halfedges[i].valid) {
+                        Valences[Halfedges[i].vertex]++;
+                        //Valences[Halfedges[Halfedges[i].next].vertex]++;
+                        if (Halfedges[i].twin < 0)  //should account for the target as well
+                            Valences[Halfedges[Halfedges[i].next].vertex]++;
                     }
                 }
 
                 int countThree;
-                for (int i = 0; i < Faces.size(); i++) {
-                    if (!Faces[i].Valid)
+                for (int i = 0; i < faces.size(); i++) {
+                    if (!faces[i].valid)
                         continue;
                     countThree = 0;
-                    int hebegin = Faces[i].AdjHalfedge;
+                    int hebegin = faces[i].halfedge;
                     int heiterate = hebegin;
                     int numEdges = 0;
                     do {
-                        if (Valences[Halfedges[heiterate].Origin] > 2)
+                        if (Valences[Halfedges[heiterate].vertex] > 2)
                             countThree++;
-                        heiterate = Halfedges[heiterate].Next;
+                        heiterate = Halfedges[heiterate].next;
                         numEdges++;
                         if (numEdges > Halfedges.size()) {
                             if (verbose) std::cout << "Infinity loop in face " << i << "!" << std::endl;
@@ -610,12 +624,12 @@ namespace directional{
                         if (verbose) std::cout << "Its vertices are " << std::endl;
                         do {
                             if (verbose)
-                                std::cout << "Vertex " << Halfedges[heiterate].Origin << " halfedge " << heiterate
-                                          << " valence " << Valences[Halfedges[heiterate].Origin] << std::endl;
+                                std::cout << "Vertex " << Halfedges[heiterate].vertex << " halfedge " << heiterate
+                                          << " valence " << Valences[Halfedges[heiterate].vertex] << std::endl;
 
-                            if (Valences[Halfedges[heiterate].Origin] > 2)
+                            if (Valences[Halfedges[heiterate].vertex] > 2)
                                 countThree++;
-                            heiterate = Halfedges[heiterate].Next;
+                            heiterate = Halfedges[heiterate].next;
                             numEdges++;
                             if (numEdges > Halfedges.size()) {
                                 if (verbose) std::cout << "Infinity loop in face " << i << "!" << std::endl;
@@ -638,7 +652,7 @@ namespace directional{
             std::vector<int> TransVertices(Vertices.size());
             std::vector <Vertex> NewVertices;
             for (int i = 0; i < Vertices.size(); i++) {
-                if (!Vertices[i].Valid)
+                if (!Vertices[i].valid)
                     continue;
 
                 Vertex NewVertex = Vertices[i];
@@ -650,16 +664,16 @@ namespace directional{
 
             Vertices = NewVertices;
             for (int i = 0; i < Halfedges.size(); i++)
-                Halfedges[i].Origin = TransVertices[Halfedges[i].Origin];
+                Halfedges[i].vertex = TransVertices[Halfedges[i].vertex];
 
 
 
-            /*for (int i=0;i<Faces.size();i++){
-              if (!Faces[i].Valid)
+            /*for (int i=0;i<faces.size();i++){
+              if (!faces[i].valid)
                 continue;
-              for (int j=0;j<Faces[i].NumVertices;j++){
-                DebugLog<<"i is "<<i<<", j is "<<j<<", Faces[i].Vertices[j] is "<<Faces[i].Vertices[j]<<endl;
-                Faces[i].Vertices[j]=TransVertices[Faces[i].Vertices[j]];
+              for (int j=0;j<faces[i].NumVertices;j++){
+                DebugLog<<"i is "<<i<<", j is "<<j<<", faces[i].Vertices[j] is "<<faces[i].Vertices[j]<<endl;
+                faces[i].Vertices[j]=TransVertices[faces[i].Vertices[j]];
               }
             }*/
 /*
@@ -667,17 +681,17 @@ namespace directional{
 
             //removing nonvalid faces
             std::vector <Face> NewFaces;
-            std::vector<int> TransFaces(Faces.size());
-            for (int i = 0; i < Faces.size(); i++) {
-                if (!Faces[i].Valid)
+            std::vector<int> TransFaces(faces.size());
+            for (int i = 0; i < faces.size(); i++) {
+                if (!faces[i].valid)
                     continue;
 
-                Face NewFace = Faces[i];
+                Face NewFace = faces[i];
                 NewFace.ID = NewFaces.size();
                 NewFaces.push_back(NewFace);
                 TransFaces[i] = NewFace.ID;
             }
-            Faces = NewFaces;
+            faces = NewFaces;
             for (int i = 0; i < Halfedges.size(); i++)
                 Halfedges[i].AdjFace = TransFaces[Halfedges[i].AdjFace];
 
@@ -687,7 +701,7 @@ namespace directional{
             std::vector <Halfedge> NewHalfedges;
             std::vector<int> TransHalfedges(Halfedges.size());
             for (int i = 0; i < Halfedges.size(); i++) {
-                if (!Halfedges[i].Valid)
+                if (!Halfedges[i].valid)
                     continue;
 
                 Halfedge NewHalfedge = Halfedges[i];
@@ -698,82 +712,22 @@ namespace directional{
 
 
             Halfedges = NewHalfedges;
-            for (int i = 0; i < Faces.size(); i++)
-                Faces[i].AdjHalfedge = TransHalfedges[Faces[i].AdjHalfedge];
+            for (int i = 0; i < faces.size(); i++)
+                faces[i].halfedge = TransHalfedges[faces[i].halfedge];
 
 
             for (int i = 0; i < Vertices.size(); i++)
-                Vertices[i].AdjHalfedge = TransHalfedges[Vertices[i].AdjHalfedge];
+                Vertices[i].halfedge = TransHalfedges[Vertices[i].halfedge];
 
 
             for (int i = 0; i < Halfedges.size(); i++) {
-                if (Halfedges[i].Twin != -1)
-                    Halfedges[i].Twin = TransHalfedges[Halfedges[i].Twin];
-                Halfedges[i].Next = TransHalfedges[Halfedges[i].Next];
-                Halfedges[i].Prev = TransHalfedges[Halfedges[i].Prev];
+                if (Halfedges[i].twin != -1)
+                    Halfedges[i].twin = TransHalfedges[Halfedges[i].twin];
+                Halfedges[i].next = TransHalfedges[Halfedges[i].next];
+                Halfedges[i].prev = TransHalfedges[Halfedges[i].prev];
             }
 
         }*/
-
-        void RemoveVertex(int vindex, std::deque<int> &removeVertexQueue) {
-            int hebegin = Vertices[vindex].AdjHalfedge;
-            int heiterate = hebegin;
-            do {
-                if (heiterate == -1) {  //boundary vertex
-                    return;
-                }
-                heiterate = Halfedges[Halfedges[heiterate].Prev].Twin;
-            } while (heiterate != hebegin);
-
-            Vertices[vindex].Valid = false;
-
-            int remainingFace = Halfedges[hebegin].AdjFace;
-
-
-            Faces[remainingFace].AdjHalfedge = Halfedges[hebegin].Next;
-            heiterate = hebegin;
-            int infinityCounter = 0;
-            do {
-
-                int NextEdge = Halfedges[heiterate].Next;
-                int PrevEdge = Halfedges[Halfedges[heiterate].Twin].Prev;
-
-                Halfedges[NextEdge].Prev = PrevEdge;
-                Halfedges[PrevEdge].Next = NextEdge;
-                if (Halfedges[NextEdge].AdjFace != remainingFace)
-                    Faces[Halfedges[NextEdge].AdjFace].Valid = false;
-
-                if (Halfedges[PrevEdge].AdjFace != remainingFace)
-                    Faces[Halfedges[PrevEdge].AdjFace].Valid = false;
-
-
-                Halfedges[PrevEdge].AdjFace = Halfedges[NextEdge].AdjFace = remainingFace;
-                Halfedges[heiterate].Valid = false;
-                Halfedges[Halfedges[heiterate].Twin].Valid = false;
-                heiterate = Halfedges[Halfedges[heiterate].Prev].Twin;
-                infinityCounter++;
-                if (infinityCounter > Halfedges.size())
-                    return;
-
-            } while (heiterate != hebegin);
-
-            //cleaning new face
-            hebegin = Faces[remainingFace].AdjHalfedge;
-            //Faces[remainingFace].NumVertices=0;
-            heiterate = hebegin;
-            infinityCounter = 0;
-            do {
-                //Faces[remainingFace].NumVertices++;
-                Halfedges[heiterate].AdjFace = remainingFace;
-                Vertices[Halfedges[heiterate].Origin].AdjHalfedge = heiterate;
-                removeVertexQueue.push_front(Halfedges[heiterate].Origin);
-                infinityCounter++;
-                if (infinityCounter > Halfedges.size())
-                    return;
-
-                heiterate = Halfedges[heiterate].Next;
-            } while (heiterate != hebegin);
-        }
 
 
         void TestUnmatchedTwins();
@@ -891,54 +845,54 @@ namespace directional{
             using namespace std;
             using namespace Eigen;
 
-            if (!CheckMesh(verbose, false, false, false))
+            if (!genDcel.check_consistency(verbose, false, false, false))
                 return false;
 
             int MaxOrigHE=-3276700.0;
-            for (int i=0;i<Halfedges.size();i++)
-                MaxOrigHE=std::max(MaxOrigHE, Halfedges[i].OrigHalfedge);
+            for (int i=0;i<genDcel.halfedges.size();i++)
+                MaxOrigHE=std::max(MaxOrigHE, genDcel.halfedges[i].data.origHalfedge);
 
             vector<bool> visitedOrig(MaxOrigHE+1);
             for (int i=0;i<MaxOrigHE+1;i++) visitedOrig[i]=false;
-            for (int i=0;i<Halfedges.size();i++){
-                if (Halfedges[i].OrigHalfedge<0)
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if (genDcel.halfedges[i].data.origHalfedge<0)
                     continue;
-                if (visitedOrig[Halfedges[i].OrigHalfedge])
+                if (visitedOrig[genDcel.halfedges[i].data.origHalfedge])
                     continue;
 
                 int hebegin = i;
                 int heiterate = hebegin;
                 do{
-                    visitedOrig[Halfedges[heiterate].OrigHalfedge]=true;
-                    WalkBoundary(heiterate);
+                    visitedOrig[genDcel.halfedges[heiterate].data.origHalfedge]=true;
+                    genDcel.walk_boundary(heiterate);
                 }while (heiterate!=hebegin);
 
             }
 
             vector< vector<int> > BoundEdgeCollect1(MaxOrigHE+1);
             vector< vector<int> > BoundEdgeCollect2(MaxOrigHE+1);
-            vector<bool> Marked(Halfedges.size());
-            for (int i=0;i<Halfedges.size();i++) Marked[i]=false;
+            vector<bool> Marked(genDcel.halfedges.size());
+            for (int i=0;i<genDcel.halfedges.size();i++) Marked[i]=false;
             //finding out vertex correspondence along twin edges of the original mesh by walking on boundaries
-            for (int i=0;i<Halfedges.size();i++){
-                if ((Halfedges[i].OrigHalfedge<0)||(Marked[i]))
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if ((genDcel.halfedges[i].data.origHalfedge<0)||(Marked[i]))
                     continue;
 
                 //find the next beginning of a boundary
                 int PrevOrig;
                 int CurrEdge=i;
                 do{
-                    PrevOrig=Halfedges[CurrEdge].OrigHalfedge;
-                    WalkBoundary(CurrEdge);
-                }while(PrevOrig==Halfedges[CurrEdge].OrigHalfedge);
+                    PrevOrig=genDcel.halfedges[CurrEdge].data.origHalfedge;
+                    genDcel.walk_boundary(CurrEdge);
+                }while(PrevOrig==genDcel.halfedges[CurrEdge].data.origHalfedge);
 
                 //filling out strips of boundary with the respective attached original halfedges
                 int BeginEdge=CurrEdge;
                 vector<pair<int,int> > CurrEdgeCollect;
                 do{
-                    CurrEdgeCollect.push_back(pair<int, int> (Halfedges[CurrEdge].OrigHalfedge, CurrEdge));
+                    CurrEdgeCollect.push_back(pair<int, int> (genDcel.halfedges[CurrEdge].data.origHalfedge, CurrEdge));
                     Marked[CurrEdge]=true;
-                    WalkBoundary(CurrEdge);
+                    genDcel.walk_boundary(CurrEdge);
                 }while (CurrEdge!=BeginEdge);
 
                 PrevOrig=-1000;
@@ -959,16 +913,16 @@ namespace directional{
             vector< vector<int> > VertexSets1(MaxOrigHE+1), VertexSets2(MaxOrigHE+1);
             for (int i=0;i<MaxOrigHE+1;i++){
                 for (int j=0;j<BoundEdgeCollect1[i].size();j++)
-                    VertexSets1[i].push_back(Halfedges[BoundEdgeCollect1[i][j]].Origin);
+                    VertexSets1[i].push_back(genDcel.halfedges[BoundEdgeCollect1[i][j]].vertex);
 
                 if (BoundEdgeCollect1[i].size()>0)
-                    VertexSets1[i].push_back(Halfedges[Halfedges[BoundEdgeCollect1[i][BoundEdgeCollect1[i].size()-1]].Next].Origin);
+                    VertexSets1[i].push_back(genDcel.halfedges[genDcel.halfedges[BoundEdgeCollect1[i][BoundEdgeCollect1[i].size()-1]].next].vertex);
 
                 for (int j=0;j<BoundEdgeCollect2[i].size();j++)
-                    VertexSets2[i].push_back(Halfedges[BoundEdgeCollect2[i][j]].Origin);
+                    VertexSets2[i].push_back(genDcel.halfedges[BoundEdgeCollect2[i][j]].vertex);
 
                 if (BoundEdgeCollect2[i].size()>0)
-                    VertexSets2[i].push_back(Halfedges[Halfedges[BoundEdgeCollect2[i][BoundEdgeCollect2[i].size()-1]].Next].Origin);
+                    VertexSets2[i].push_back(genDcel.halfedges[genDcel.halfedges[BoundEdgeCollect2[i][BoundEdgeCollect2[i].size()-1]].next].vertex);
 
                 std::reverse(VertexSets2[i].begin(),VertexSets2[i].end());
             }
@@ -979,10 +933,10 @@ namespace directional{
                 vector<EVector3> PointSet1(VertexSets1[i].size());
                 vector<EVector3> PointSet2(VertexSets2[i].size());
                 for (int j=0;j<PointSet1.size();j++)
-                    PointSet1[j]=Vertices[VertexSets1[i][j]].ECoordinates;
+                    PointSet1[j]=ECoordinates[VertexSets1[i][j]];
 
                 for (int j=0;j<PointSet2.size();j++)
-                    PointSet2[j]=Vertices[VertexSets2[i][j]].ECoordinates;
+                    PointSet2[j]=ECoordinates[VertexSets2[i][j]];
 
                 vector<pair<int, int> > CurrMatches;
                 if ((!PointSet1.empty())&&(!PointSet2.empty()))
@@ -998,34 +952,34 @@ namespace directional{
 
             //finding connected components, and uniting every component into a random single vertex in it (it comes out the last mentioned)
             /*Graph MatchGraph;
-            for (int i=0;i<Vertices.size();i++)
+            for (int i=0;i<vertices.size();i++)
                 add_vertex(MatchGraph);
             for (int i=0;i<VertexMatches.size();i++)
                 add_edge(VertexMatches[i].first, VertexMatches[i].second, MatchGraph);*/
 
             double MaxDist=-327670000.0;
             for (int i=0;i<VertexMatches.size();i++)
-                MaxDist=std::max(MaxDist, (Vertices[VertexMatches[i].first].Coordinates-Vertices[VertexMatches[i].second].Coordinates).squared_length());
+                MaxDist=std::max(MaxDist, (coordinates.row(VertexMatches[i].first)-coordinates.row(VertexMatches[i].second)).squaredNorm());
 
             if (verbose)
                 std::cout<<"Max matching distance: "<<MaxDist<<endl;
 
-            //vector<int> TransVertices(Vertices.size());
-            TransVertices.resize(Vertices.size());
+            //vector<int> Transvertices(vertices.size());
+            TransVertices.resize(genDcel.vertices.size());
             int NumNewVertices = connectedComponents(VertexMatches, TransVertices);
 
-            if (!CheckMesh(verbose, false, false, false))
+            if (!genDcel.check_consistency(verbose, false, false, false))
                 return false;
 
             vector<bool> transClaimed(NumNewVertices);
             for (int i=0;i<NumNewVertices;i++)
                 transClaimed[i]=false;
             //unifying all vertices into the TransVertices
-            vector<Vertex> NewVertices(NumNewVertices);
-            for (int i=0;i<Vertices.size();i++){  //redundant, but not terrible
-                if (!Vertices[i].Valid)
+            vector<FunctionDCEL::Vertex> NewVertices(NumNewVertices);
+            for (int i=0;i<genDcel.vertices.size();i++){  //redundant, but not terrible
+                if (!genDcel.vertices[i].valid)
                     continue;
-                Vertex NewVertex=Vertices[i];
+                FunctionDCEL::Vertex NewVertex=genDcel.vertices[i];
                 NewVertex.ID=TransVertices[i];
                 transClaimed[TransVertices[i]]=true;
                 NewVertices[TransVertices[i]]=NewVertex;
@@ -1033,233 +987,233 @@ namespace directional{
 
             for (int i=0;i<NumNewVertices;i++)
                 if (!transClaimed[i])
-                    NewVertices[i].Valid=false;  //this vertex is dead to begin with
+                    NewVertices[i].valid=false;  //this vertex is dead to begin with
 
-            Vertices=NewVertices;
+            genDcel.vertices=NewVertices;
 
-            for (int i=0;i<Halfedges.size();i++){
-                if (!Halfedges[i].Valid)
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if (!genDcel.halfedges[i].valid)
                     continue;
-                Halfedges[i].Origin=TransVertices[Halfedges[i].Origin];
-                Vertices[Halfedges[i].Origin].AdjHalfedge=i;
+                genDcel.halfedges[i].vertex=TransVertices[genDcel.halfedges[i].vertex];
+                genDcel.vertices[genDcel.halfedges[i].vertex].halfedge=i;
             }
 
 
-            if (!CheckMesh(verbose, true, false, false))
+            if (!genDcel.check_consistency(verbose, true, false, false))
                 return false;
 
             //twinning up edges
             set<TwinFinder> Twinning;
-            for (int i=0;i<Halfedges.size();i++){
-                if ((Halfedges[i].Twin>=0)||(!Halfedges[i].Valid))
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if ((genDcel.halfedges[i].twin>=0)||(!genDcel.halfedges[i].valid))
                     continue;
 
-                set<TwinFinder>::iterator Twinit=Twinning.find(TwinFinder(0,Halfedges[Halfedges[i].Next].Origin, Halfedges[i].Origin));
+                set<TwinFinder>::iterator Twinit=Twinning.find(TwinFinder(0,genDcel.halfedges[genDcel.halfedges[i].next].vertex, genDcel.halfedges[i].vertex));
                 if (Twinit!=Twinning.end()){
-                    if ((Halfedges[Twinit->index].Twin!=-1)&&(verbose))
-                        std::cout<<"warning: halfedge "<<Twinit->index<<" is already twinned to halfedge "<<Halfedges[Twinit->index].Twin<<std::endl;
-                    if ((Halfedges[i].Twin!=-1)&&(verbose))
-                        std::cout<<"warning: halfedge "<<i<<" is already twinned to halfedge "<<Halfedges[Twinit->index].Twin<<std::endl;
-                    Halfedges[Twinit->index].Twin=i;
-                    Halfedges[i].Twin=Twinit->index;
+                    if ((genDcel.halfedges[Twinit->index].twin!=-1)&&(verbose))
+                        std::cout<<"warning: halfedge "<<Twinit->index<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
+                    if ((genDcel.halfedges[i].twin!=-1)&&(verbose))
+                        std::cout<<"warning: halfedge "<<i<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
+                    genDcel.halfedges[Twinit->index].twin=i;
+                    genDcel.halfedges[i].twin=Twinit->index;
 
-                    if (Halfedges[i].isFunction){
-                        Halfedges[Twinit->index].isFunction = true;
-                    } else if (Halfedges[Twinit->index].isFunction){
-                        Halfedges[i].isFunction = true;
+                    if (genDcel.halfedges[i].data.isFunction){
+                        genDcel.halfedges[Twinit->index].isFunction = true;
+                    } else if (genDcel.halfedges[Twinit->index].isFunction){
+                        genDcel.halfedges[i].data.isFunction = true;
                     }
                     Twinning.erase(*Twinit);
                 } else {
-                    Twinning.insert(TwinFinder(i,Halfedges[i].Origin,Halfedges[Halfedges[i].Next].Origin));
+                    Twinning.insert(TwinFinder(i,genDcel.halfedges[i].vertex,genDcel.halfedges[genDcel.halfedges[i].next].vertex));
                 }
             }
 
             //check if there are any non-twinned edge which shouldn't be in a closed mesh
             /*if (verbose){
              for (int i=0;i<Halfedges.size();i++){
-               if (Halfedges[i].Twin==-1)
+               if (Halfedges[i].twin==-1)
                  std::cout<<"Halfedge "<<i<<" does not have a twin!"<<std::endl;
              }
             }*/
 
 
-            if (!CheckMesh(verbose, true, true, true))
+            if (!genDcel.check_consistency(verbose, true, true, true))
                 return false;
 
             //removing triangle components
 
             //starting with pure triangle vertices
-            std::vector<bool> isPureTriangle(Vertices.size());
-            std::vector<bool> isBoundary(Vertices.size());
-            for (int i=0;i<Vertices.size();i++){
+            std::vector<bool> isPureTriangle(genDcel.vertices.size());
+            std::vector<bool> isBoundary(genDcel.vertices.size());
+            for (int i=0;i<genDcel.vertices.size();i++){
                 isPureTriangle[i]=true;
                 isBoundary[i]=false;
             }
-            for (int i=0;i<Halfedges.size();i++){
-                if ((Halfedges[i].isFunction)&&(Halfedges[i].Valid)){
-                    isPureTriangle[Halfedges[i].Origin]=isPureTriangle[Halfedges[Halfedges[i].Next].Origin]=false;  //adjacent to at least one hex edge
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if ((genDcel.halfedges[i].data.isFunction)&&(genDcel.halfedges[i].valid)){
+                    isPureTriangle[genDcel.halfedges[i].vertex]=isPureTriangle[genDcel.halfedges[genDcel.halfedges[i].next].vertex]=false;  //adjacent to at least one hex edge
                 }
-                if (Halfedges[i].Twin==-1){
-                    isBoundary[Halfedges[i].Origin]=true;
-                    isPureTriangle[Halfedges[i].Origin]=false;  //this shouldn't be removed
+                if (genDcel.halfedges[i].twin==-1){
+                    isBoundary[genDcel.halfedges[i].vertex]=true;
+                    isPureTriangle[genDcel.halfedges[i].vertex]=false;  //this shouldn't be removed
                 }
             }
 
-            std::vector<bool> isEar(Vertices.size());
-            for (int i=0;i<Vertices.size();i++){
-                isEar[i] = (Halfedges[Vertices[i].AdjHalfedge].Twin==-1)&&(Halfedges[Halfedges[Vertices[i].AdjHalfedge].Prev].Twin==-1);
+            std::vector<bool> isEar(genDcel.vertices.size());
+            for (int i=0;i<genDcel.vertices.size();i++){
+                isEar[i] = (genDcel.halfedges[genDcel.vertices[i].halfedge].twin==-1)&&(genDcel.halfedges[genDcel.halfedges[genDcel.vertices[i].halfedge].prev].twin==-1);
                 if (isEar[i]) isPureTriangle[i]=false;
             }
 
             //realigning halfedges in hex vertices to only follow other hex edges
-            for (int i=0;i<Vertices.size();i++){
-                if ((isPureTriangle[i])||(!Vertices[i].Valid))
+            for (int i=0;i<genDcel.vertices.size();i++){
+                if ((isPureTriangle[i])||(!genDcel.vertices[i].valid))
                     continue;
 
                 vector<int> hexHEorder;
-                int hebegin = Vertices[i].AdjHalfedge;
+                int hebegin = genDcel.vertices[i].halfedge;
                 if (isBoundary[i]){
                     //finding the first hex halfedge
-                    while (Halfedges[Halfedges[hebegin].Prev].Twin!=-1)
-                        hebegin =Halfedges[Halfedges[hebegin].Prev].Twin;
+                    while (genDcel.halfedges[genDcel.halfedges[hebegin].prev].twin!=-1)
+                        hebegin =genDcel.halfedges[genDcel.halfedges[hebegin].prev].twin;
                 }
 
                 int heiterate=hebegin;
                 do{
-                    if ((Halfedges[heiterate].isFunction)||(Halfedges[heiterate].Twin==-1))
+                    if ((genDcel.halfedges[heiterate].data.isFunction)||(genDcel.halfedges[heiterate].twin==-1))
                         hexHEorder.push_back(heiterate);
-                    if (Halfedges[heiterate].Twin==-1)
+                    if (genDcel.halfedges[heiterate].twin==-1)
                         break;
-                    heiterate = Halfedges[Halfedges[heiterate].Twin].Next;
+                    heiterate = genDcel.halfedges[genDcel.halfedges[heiterate].twin].next;
                 }while(heiterate!=hebegin);
 
 
                 for (int j=0;j<hexHEorder.size();j++){
                     if ((isBoundary[i])&&(j==hexHEorder.size()-1))
                         continue;
-                    Halfedges[hexHEorder[(j+1)%hexHEorder.size()]].Prev =Halfedges[hexHEorder[j]].Twin;
-                    Halfedges[Halfedges[hexHEorder[j]].Twin].Next =hexHEorder[(j+1)%hexHEorder.size()];
-                    Vertices[Halfedges[hexHEorder[j]].Origin].AdjHalfedge=hexHEorder[j];
+                    genDcel.halfedges[hexHEorder[(j+1)%hexHEorder.size()]].prev =genDcel.halfedges[hexHEorder[j]].twin;
+                    genDcel.halfedges[genDcel.halfedges[hexHEorder[j]].twin].next =hexHEorder[(j+1)%hexHEorder.size()];
+                    genDcel.vertices[genDcel.halfedges[hexHEorder[j]].vertex].halfedge=hexHEorder[j];
                 }
 
                 if (isBoundary[i]){ //connect first to the prev
-                    Halfedges[hexHEorder[0]].Prev = Halfedges[hebegin].Prev;
-                    Halfedges[Halfedges[hebegin].Prev].Next =hexHEorder[0];
-                    Vertices[Halfedges[hexHEorder[0]].Origin].AdjHalfedge=hexHEorder[0];
+                    genDcel.halfedges[hexHEorder[0]].prev = genDcel.halfedges[hebegin].prev;
+                    genDcel.halfedges[genDcel.halfedges[hebegin].prev].next =hexHEorder[0];
+                    genDcel.vertices[genDcel.halfedges[hexHEorder[0]].vertex].halfedge=hexHEorder[0];
                 }
             }
 
             //invalidating all triangle vertices and edges
-            for (int i=0;i<Vertices.size();i++)
+            for (int i=0;i<genDcel.vertices.size();i++)
                 if (isPureTriangle[i])
-                    Vertices[i].Valid=false;
+                    genDcel.vertices[i].valid=false;
 
-            for (int i=0;i<Halfedges.size();i++)
-                if ((!Halfedges[i].isFunction)&&(Halfedges[i].Twin!=-1))
-                    Halfedges[i].Valid=false;
+            for (int i=0;i<genDcel.halfedges.size();i++)
+                if ((!genDcel.halfedges[i].data.isFunction)&&(genDcel.halfedges[i].twin!=-1))
+                    genDcel.halfedges[i].valid=false;
 
             //realigning faces
-            VectorXi visitedHE=VectorXi::Zero(Halfedges.size());
-            VectorXi usedFace=VectorXi::Zero(Faces.size());
-            for (int i=0;i<Halfedges.size();i++){
-                if ((!Halfedges[i].Valid)||(visitedHE[i]!=0))
+            VectorXi visitedHE=VectorXi::Zero(genDcel.halfedges.size());
+            VectorXi usedFace=VectorXi::Zero(genDcel.faces.size());
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if ((!genDcel.halfedges[i].valid)||(visitedHE[i]!=0))
                     continue;
 
                 //following the loop and reassigning face
-                int currFace=Halfedges[i].AdjFace;
-                Faces[currFace].AdjHalfedge=i;
+                int currFace=genDcel.halfedges[i].face;
+                genDcel.faces[currFace].halfedge=i;
                 usedFace[currFace]=1;
                 int hebegin=i;
                 int heiterate=hebegin;
                 int infinityCounter=0;
                 do{
                     infinityCounter++;
-                    if (infinityCounter>Halfedges.size()){
+                    if (infinityCounter>genDcel.halfedges.size()){
                         std::cout<<"Infinity loop in realigning faces on halfedge "<<i<<std::endl;
                         return false;
                     }
-                    Halfedges[heiterate].AdjFace=currFace;
-                    heiterate=Halfedges[heiterate].Next;
+                    genDcel.halfedges[heiterate].face=currFace;
+                    heiterate=genDcel.halfedges[heiterate].next;
                 }while (heiterate!=hebegin);
             }
 
             int countThree=0;
-            for (int i=0;i<Faces.size();i++)
+            for (int i=0;i<genDcel.faces.size();i++)
                 if (!usedFace[i])
-                    Faces[i].Valid=false;
+                    genDcel.faces[i].valid=false;
 
 
             //killing perfect ear faces (not doing corners atm)
             //counting valences
-            vector<int> Valences(Vertices.size());
-            for (int i=0;i<Vertices.size();i++)
+            vector<int> Valences(genDcel.vertices.size());
+            for (int i=0;i<genDcel.vertices.size();i++)
                 Valences[i]=0;
 
-            for (int i=0;i<Halfedges.size();i++){
-                if (Halfedges[i].Valid){
-                    Valences[Halfedges[i].Origin]++;
-                    //Valences[Halfedges[Halfedges[i].Next].Origin]++;
-                    if (Halfedges[i].Twin<0)  //should account for the target as well
-                        Valences[Halfedges[Halfedges[i].Next].Origin]++;
+            for (int i=0;i<genDcel.halfedges.size();i++){
+                if (genDcel.halfedges[i].valid){
+                    Valences[genDcel.halfedges[i].vertex]++;
+                    //Valences[Halfedges[Halfedges[i].next].vertex]++;
+                    if (genDcel.halfedges[i].twin<0)  //should account for the target as well
+                        Valences[genDcel.halfedges[genDcel.halfedges[i].next].vertex]++;
                 }
             }
 
-            for (int i=0;i<Faces.size();i++){
-                if (!Faces[i].Valid)
+            for (int i=0;i<genDcel.faces.size();i++){
+                if (!genDcel.faces[i].valid)
                     continue;
                 countThree=0;
-                int hebegin = Faces[i].AdjHalfedge;
+                int hebegin = genDcel.faces[i].halfedge;
                 int heiterate=hebegin;
                 do{
-                    if (Valences[Halfedges[heiterate].Origin]>2)
+                    if (Valences[genDcel.halfedges[heiterate].vertex]>2)
                         countThree++;
-                    heiterate=Halfedges[heiterate].Next;
+                    heiterate=genDcel.halfedges[heiterate].next;
                 }while (heiterate!=hebegin);
                 if (countThree<3){
                     do{
-                        /*DebugLog<<"Invalidating Vertex "<<Halfedges[heiterate].Origin<<"and  halfedge "<<heiterate<<" of valence "<<Valences[Halfedges[heiterate].Origin]<<endl;*/
+                        /*DebugLog<<"Invalidating Vertex "<<Halfedges[heiterate].vertex<<"and  halfedge "<<heiterate<<" of valence "<<Valences[Halfedges[heiterate].vertex]<<endl;*/
 
-                        Halfedges[heiterate].Valid=false;
-                        if (Halfedges[heiterate].Twin!=-1)
-                            Halfedges[Halfedges[heiterate].Twin].Twin=-1;
-                        if ((Halfedges[heiterate].Twin==-1)&&(Halfedges[Halfedges[heiterate].Prev].Twin==-1))  //origin is a boundary vertex
-                            Vertices[Halfedges[heiterate].Origin].Valid=false;
+                        genDcel.halfedges[heiterate].valid=false;
+                        if (genDcel.halfedges[heiterate].twin!=-1)
+                            genDcel.halfedges[genDcel.halfedges[heiterate].twin].twin=-1;
+                        if ((genDcel.halfedges[heiterate].twin==-1)&&(genDcel.halfedges[genDcel.halfedges[heiterate].prev].twin==-1))  //origin is a boundary vertex
+                            genDcel.vertices[genDcel.halfedges[heiterate].vertex].valid=false;
 
-                        heiterate=Halfedges[heiterate].Next;
+                        heiterate=genDcel.halfedges[heiterate].next;
 
 
                     }while (heiterate!=hebegin);
-                    Faces[i].Valid=false;
+                    genDcel.faces[i].valid=false;
                     //return false;
                 }
             }
 
             //need to realign all vertices pointing
-            for (int i=0;i<Halfedges.size();i++)
-                if (Halfedges[i].Valid)
-                    Vertices[Halfedges[i].Origin].AdjHalfedge=i;
+            for (int i=0;i<genDcel.halfedges.size();i++)
+                if (genDcel.halfedges[i].valid)
+                    genDcel.vertices[genDcel.halfedges[i].vertex].halfedge=i;
 
 
-            if (!CheckMesh(verbose, true, true, true))
+            if (!genDcel.check_consistency(verbose, true, true, true))
                 return false;
 
             for (int i=0;i<Valences.size();i++)
-                if ((Vertices[i].Valid)&&(Valences[i]<2))
-                    Vertices[i].Valid=false;
+                if ((genDcel.vertices[i].valid)&&(Valences[i]<2))
+                    genDcel.vertices[i].valid=false;
 
-            for (int i=0;i<Vertices.size();i++){
-                if ((Vertices[i].Valid)&&(Valences[i]<=2)&&(!isEar[i]))
-                    UnifyEdges(Vertices[i].AdjHalfedge);
+            for (int i=0;i<genDcel.vertices.size();i++){
+                if ((genDcel.vertices[i].valid)&&(Valences[i]<=2)&&(!isEar[i]))
+                    genDcel.unify_edges(genDcel.vertices[i].halfedge);
             }
 
-            if (!CheckMesh(verbose, true, true, true))
+            if (!genDcel.check_consistency(verbose, true, true, true))
                 return false;
 
             //remove non-valid components
-            CleanMesh();
+            genDcel.clean_mesh();
 
             //checking if mesh is valid
-            if (!CheckMesh(verbose, true, true, true))
+            if (!genDcel.check_consistency(verbose, true, true, true))
                 return false;
 
             return true;
@@ -1271,7 +1225,7 @@ namespace directional{
         /*void Allocate(int NumofVertices, int NumofFaces, int NumofHEdges)
         {
             Vertices.resize(NumofVertices);
-            Faces.resize(NumofFaces);
+            faces.resize(NumofFaces);
             Halfedges.resize(NumofHEdges);
         }*/
 
@@ -1291,7 +1245,7 @@ namespace directional{
 
             //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
             vector<ENumber> exactVertexNFunction(mfiData.vertexNFunction.size());
-            for (int i=0;i<(mfiData.vertexNFunction.size();i++){
+            for (int i=0;i<mfiData.vertexNFunction.size();i++){
                 exactVertexNFunction[i]=ENumber((signed long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(unsigned long)resolution);
                 /*if (abs(exactVertexNFunction[i].to_double() - vertexNFunction(i))>10e-8) {
                     cout << "exactVertexNFunction[i].to_double(): " << exactVertexNFunction[i].to_double() << endl;
@@ -1312,7 +1266,7 @@ namespace directional{
             //sanity check - comparing exact to double
             double maxError2 = -32767000.0;
             for (int i=0;i<exactCutNFunctionVec.size();i++){
-                double fromExact = exactCutNFunctionVec[i].to_double();
+                double fromExact = exactCutNFunctionVec[i].get_d();
                 if (abs(fromExact-cutNFunctionVec[i])>maxError2)
                     maxError2 =abs(fromExact-cutNFunctionVec[i]);
             }
@@ -1352,50 +1306,51 @@ namespace directional{
         void to_polygonal(Eigen::MatrixXd& generatedV,
                      Eigen::VectorXi& generatedD,
                      Eigen::MatrixXi& generatedF){
-            generatedV.resize(Vertices.size(),3);
+            generatedV.resize(genDcel.vertices.size(),3);
 
-            generatedD.resize(Faces.size());
+            generatedD.resize(genDcel.faces.size());
 
-            for (int i=0;i<Vertices.size();i++)
-                generatedV.row(i)<<Vertices[i].Coordinates.x(), Vertices[i].Coordinates.y(),Vertices[i].Coordinates.z();
+            for (int i=0;i<genDcel.vertices.size();i++)
+                generatedV.row(i)<<genDcel.vertices[i].Coordinates.x(), genDcel.vertices[i].Coordinates.y(),genDcel.vertices[i].Coordinates.z();
 
-            for (int i=0;i<Faces.size();i++){
-                int hebegin = Faces[i].AdjHalfedge;
+
+            for (int i=0;i<genDcel.faces.size();i++){
+                int hebegin = genDcel.faces[i].halfedge;
                 //reseting to first vertex
                 int vCount=0;
                 int heiterate=hebegin;
                 do{
                     vCount++;
-                    heiterate=Halfedges[heiterate].Next;
+                    heiterate=genDcel.halfedges[heiterate].next;
                 }while (heiterate!=hebegin);
                 generatedD(i)=vCount;
             }
 
-            generatedF.resize(Faces.size(),generatedD.maxCoeff());
-            for (int i=0;i<Faces.size();i++){
-                int hebegin = Faces[i].AdjHalfedge;
+            generatedF.resize(genDcel.faces.size(),generatedD.maxCoeff());
+            for (int i=0;i<genDcel.faces.size();i++){
+                int hebegin = genDcel.faces[i].halfedge;
                 int vCount=0;
                 int heiterate=hebegin;
                 do{
-                    generatedF(i,vCount++)=Halfedges[heiterate].Origin;
-                    heiterate=Halfedges[heiterate].Next;
+                    generatedF(i,vCount++)=genDcel.halfedges[heiterate].vertex;
+                    heiterate=genDcel.halfedges[heiterate].next;
                 }while (heiterate!=hebegin);
 
             }
 
-            /*generatedFfuncNum.resize(Faces.size(),generatedD.maxCoeff());
-            cornerAngles=Eigen::MatrixXd::Constant(Faces.size(),generatedD.maxCoeff(),-1.0);
-            //prescribedAnglesInt.resize(Faces.size(),generatedD.maxCoeff());
-            for (int i=0;i<Faces.size();i++){
-              int hebegin = Faces[i].AdjHalfedge;
+            /*generatedFfuncNum.resize(faces.size(),generatedD.maxCoeff());
+            cornerAngles=Eigen::MatrixXd::Constant(faces.size(),generatedD.maxCoeff(),-1.0);
+            //prescribedAnglesInt.resize(faces.size(),generatedD.maxCoeff());
+            for (int i=0;i<faces.size();i++){
+              int hebegin = faces[i].halfedge;
               int vCount=0;
               int heiterate=hebegin;
               do{
-                generatedFfuncNum(i,vCount)=Halfedges[heiterate].OrigNFunctionIndex;
-                cornerAngles(i,vCount++)=Halfedges[heiterate].prescribedAngle;
-                //prescribedAnglesInt(i,vCount++)=Halfedges[heiterate].prescribedAngleDiff;
-                //cout<<"Halfedges[heiterate].prescribedAngleDiff: "<<Halfedges[heiterate].prescribedAngleDiff<<endl;
-                heiterate=Halfedges[heiterate].Next;
+                generatedFfuncNum(i,vCount)=halfedges[heiterate].OrigNFunctionIndex;
+                cornerAngles(i,vCount++)=halfedges[heiterate].prescribedAngle;
+                //prescribedAnglesInt(i,vCount++)=halfedges[heiterate].prescribedAngleDiff;
+                //cout<<"halfedges[heiterate].prescribedAngleDiff: "<<halfedges[heiterate].prescribedAngleDiff<<endl;
+                heiterate=halfedges[heiterate].next;
               }while (heiterate!=hebegin);
             }*/
 
@@ -1410,13 +1365,13 @@ namespace directional{
                                                   const std::vector<std::pair<EVector2, EVector2>>& lines,
                                                   const Eigen::VectorXi& lineData,
                                                   std::vector<EVector2>& V,
-                                                  DCEL& dcel,
+                                                  FunctionDCEL & dcel,
                                                   Eigen::VectorXi& dataH);
 
         void segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
                                  const std::vector<int>& data,
                                  std::vector<EVector2>& V,
-                                 DCEL& dcel,
+                                 FunctionDCEL& dcel,
                                  Eigen::VectorXi& dataH);
 
     };

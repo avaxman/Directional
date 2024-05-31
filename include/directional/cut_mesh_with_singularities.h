@@ -43,7 +43,7 @@ namespace directional {
 
       //doing a flood-fill to cut mesh into a topological discs
       std::queue<std::pair<int, int>> faceQueue;
-      Eigen::VectorXi isHECut = Eigen::VectorXi::Ones(mesh.HV.rows());
+      Eigen::VectorXi isHECut = Eigen::VectorXi::Ones(mesh.dcel.halfedges.size());
       Eigen::VectorXi isFaceVisited = Eigen::VectorXi::Zero(mesh.F.rows());
       std::vector<int> cutVertices;
       int currFace = 0;
@@ -59,17 +59,20 @@ namespace directional {
           isFaceVisited[currFace]=1;
           if (prevHE!=-1) {
               isHECut(prevHE) = 0;
-              isHECut(mesh.twinH(prevHE)) = 0;
+              isHECut(mesh.dcel.halfedges[prevHE].twin);
           }
+          int hebegin = mesh.dcel.faces[currFace].halfedge;
+          int heiterate = hebegin;
           for (int i=0;i<3;i++){
-              int currHE = mesh.FH(currFace,i);
-              if (mesh.twinH(currHE)==-1){
+              int currHE = heiterate; //mesh.FH(currFace,i);
+              if (mesh.dcel.halfedges[currHE].twin==-1){
                   isHECut(currHE)=0;
                   continue;
               }
-              int nextFace = mesh.HF(mesh.twinH(currHE));
+              int nextFace = mesh.dcel.halfedges[mesh.dcel.halfedges[currHE].twin].face;
               if (!isFaceVisited[nextFace]) //can spill into that face
                   faceQueue.push(std::pair<int, int>(nextFace, currHE));
+              heiterate = mesh.dcel.halfedges[heiterate].next;
           }
 
       }
@@ -81,14 +84,14 @@ namespace directional {
       Eigen::VectorXi isSingularity = Eigen::VectorXi::Zero(mesh.V.rows());
       for (int i=0;i<singularities.size();i++)
           isSingularity(singularities(i))=1;
-      for (int i=0;i<mesh.HV.size();i++) {
-          if ((isHECut(i))||(mesh.twinH(i)==-1))  //if cut or a boundary
-              cutValences(mesh.HV(i))++;  //the twin should already be inside
+      for (int i=0;i<mesh.dcel.halfedges.size();i++) {
+          if ((isHECut(i))||(mesh.dcel.halfedges[i].twin==-1))  //if cut or a boundary
+              cutValences(mesh.dcel.halfedges[i].vertex)++;  //the twin should already be inside
       }
 
       std::queue<int> cutQueue;
-      for (int i=0;i<mesh.HV.rows();i++)
-          if ((isHECut(i))&&(cutValences(mesh.HV(i))==1)&&(!isSingularity(mesh.HV(i))))
+      for (int i=0;i<mesh.dcel.halfedges.size();i++)
+          if ((isHECut(i))&&(cutValences(mesh.dcel.halfedges[i].vertex)==1)&&(!isSingularity(mesh.dcel.halfedges[i].vertex)))
               cutQueue.push(i);
 
       //std::cout<<"isHECut.sum(): "<<isHECut.sum()<<std::endl;
@@ -101,26 +104,27 @@ namespace directional {
           cutQueue.pop();
           if (!isHECut(currHE))
               continue;
-          if (cutValences(mesh.HV(currHE))!=1)
+          if (cutValences(mesh.dcel.halfedges[currHE].vertex)!=1)
               continue;
-          if (isSingularity(mesh.HV(currHE)))
+          if (isSingularity(mesh.dcel.halfedges[currHE].vertex))
               continue;
 
           isHECut(currHE)=0;
-          isHECut(mesh.twinH(currHE))=0;
+          isHECut(mesh.dcel.halfedges[currHE].twin)=0;
           //finding the next edge
-          int nextVertex = mesh.HV(mesh.nextH(currHE));
+          int nextVertex = mesh.dcel.halfedges[mesh.dcel.halfedges[currHE].next].vertex;
           if (mesh.isBoundaryVertex(nextVertex))
             continue;
           cutValences(nextVertex)--;
-          cutValences(mesh.HV(currHE))--;
+          cutValences(mesh.dcel.halfedges[currHE].vertex)--;
           if (cutValences(nextVertex)==1) {  //finding next edge
-              int hebegin = mesh.VH(nextVertex);
+              int hebegin = mesh.dcel.vertices[nextVertex].halfedge;
               int hecurr=hebegin;
               do{
                   if (isHECut(hecurr))
                       break;
-                  hecurr = mesh.twinH(mesh.prevH(hecurr));
+                  hecurr = mesh.dcel.halfedges[mesh.dcel.halfedges[hecurr].prev].twin;
+                  //hecurr = mesh.twinH(mesh.prevH(hecurr));
               }while (hecurr!=hebegin);
               assert("hecurr is not cut!" && isHECut(hecurr));
               cutQueue.push(hecurr);
@@ -141,9 +145,14 @@ namespace directional {
       }*/
 
       face2cut.resize(mesh.F.rows(),3);
-      for (int i=0;i<mesh.F.rows();i++)
-          for (int j=0;j<3;j++)
-              face2cut(i,j)=isHECut(mesh.FH(i,j));
+      for (int i=0;i<mesh.F.rows();i++) {
+          int hebegin = mesh.dcel.faces[i].halfedge;
+          int heiterate = hebegin;
+          for (int j = 0; j < 3; j++) {
+              face2cut(i, j) = isHECut(heiterate);
+              heiterate = mesh.dcel.halfedges[heiterate].next;
+          }
+      }
 
   }
 

@@ -31,7 +31,7 @@ namespace directional{
         Eigen::MatrixXi F;
 
         //combinatorial quantities
-        Eigen::MatrixXi EF, FE, EV,TT, EFi;
+        Eigen::MatrixXi EF, FE, EV,TT, EFi, VE, VF;
         Eigen::MatrixXd FEs;
         Eigen::VectorXi innerEdges, boundEdges, vertexValence;  //vertexValence is #(outgoing edges) (if boundary, then #faces+1 = vertexvalence)
         Eigen::VectorXi isBoundaryVertex, isBoundaryEdge;
@@ -41,6 +41,17 @@ namespace directional{
         Eigen::MatrixXi EH,FH, VE, VF;*/
         typedef DCEL<int,int,int,int> TriMeshDCEL;
         TriMeshDCEL dcel;
+
+        //writing functions that shorten code
+        inline int VH(const int index) const {return dcel.vertices[index].halfedge;}
+        inline int twinH(const int index) const {return dcel.halfedges[index].twin;}
+        inline int nextH(const int index) const {return dcel.halfedges[index].next;}
+        inline int prevH(const int index) const {return dcel.halfedges[index].prev;}
+        inline int HV(const int index) const {return dcel.halfedges[index].vertex;}
+        inline int HF(const int index) const {return dcel.halfedges[index].face;}
+        inline int HE(const int index) const {return dcel.halfedges[index].edge;}
+        inline int EH(const int index, const int side) const {return (side==0 ? dcel.edges[index].halfedge : dcel.halfedges[dcel.edges[index].halfedge].twin);}
+        inline int FH(const int index) const {return dcel.faces[index].halfedge;}
 
         //Geometric quantities
         Eigen::MatrixXd faceNormals;
@@ -77,108 +88,59 @@ namespace directional{
             };
 
             //This is done in the polyscope compatible fashion
-            dcel.init(F);
-            HE.resize(3*F.rows());
-            nextH.resize(3*F.rows());
-            prevH.resize(3*F.rows());
-            HV.resize(3*F.rows());
-            VH.resize(V.rows());
-            HF.resize(3*F.rows());
-            FH.resize(F.rows(), 3);
-            twinH = Eigen::VectorXi::Constant(3*F.rows(),-1);
-            Eigen::MatrixXi halfedges(3*F.rows(),2);
-            for (int i=0;i<F.rows();i++) {
-                halfedges.block(3 * i, 0, 3, 2) << F(i, 0), F(i, 1),
-                        F(i, 1), F(i, 2),
-                        F(i, 2), F(i, 0);
-                nextH.segment(3*i,3)<<3*i+1, 3*i+2, 3*i;
-                prevH.segment(3*i,3)<<3*i+2, 3*i, 3*i+1;
-                HV.segment(3*i,3)<<F.row(i).transpose();
-                HF.segment(3*i,3)<<i,i,i;
-                FH.row(i)<<3*i, 3*i+1, 3*i+2;
-            }
+            dcel.init(V, F);
 
-            //finding twins
-            typedef std::pair<std::pair<int, int>, int> pairPlusOne;
-            std::set<pairPlusOne, ComparePairs> edgeSet;
-            std::vector<int> EHList;
-            for (int i=0;i<halfedges.rows();i++){
-                VH(HV(i))=i;
-                std::pair<int,int> oppEdge(halfedges(i,1), halfedges(i,0));
-                pairPlusOne oppEdgePlus(oppEdge, -1);
-                std::set<pairPlusOne>::iterator si = edgeSet.find(oppEdgePlus);
-                if (si == edgeSet.end()) {
-                    edgeSet.insert(pairPlusOne(std::pair<int, int>(halfedges(i, 0), halfedges(i, 1)), i));
-                    EHList.push_back(i);
-                } else {  //found matching twin
-                    twinH[si->second] = i;
-                    twinH[i] = si->second;
-                }
-            }
-
-            //std::cout<<"twinH: "<<twinH<<std::endl;
-            //creating the edge quantities from the halfedge quantities
-            EH = Eigen::Map<Eigen::VectorXi>(EHList.data(), EHList.size());
-            HE.resize(halfedges.rows());
-            EV.resize(EHList.size(),2);
-            EF = Eigen::MatrixXi::Constant(EHList.size(),2,-1);
-            EFi.resize(EHList.size(),2);
-            //VE.resize(V.size());
+            EV.resize(dcel.edges.size(),2);
+            EF = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);
+            EFi.resize(dcel.edges.size(),2);
             FE.resize(F.rows(),3);
             FEs.resize(F.rows(),3);
             TT.resize(F.rows(),3);
-            Eigen::VectorXi HEs(halfedges.rows());
-            for (int i=0;i<EH.rows();i++){
-                EV.row(i)<<halfedges(EH(i)),halfedges(nextH(EH(i)));
-                EF(i,0) = HF(EH(i));
-                if (twinH(EH(i))!=-1)
-                    EF(i,1) = HF(twinH(EH(i)));
+            for (int i=0;i<dcel.edges.size();i++){
+                EV.row(i)<<dcel.halfedges[dcel.edges[i].halfedge].vertex,
+                        dcel.halfedges[dcel.halfedges[dcel.edges[i].halfedge].next].vertex;
+                EF(i,0) = dcel.halfedges[dcel.edges[i].halfedge].face;
+                if (dcel.halfedges[dcel.edges[i].halfedge].twin!=-1)
+                    EF(i,1) = dcel.halfedges[dcel.halfedges[dcel.edges[i].halfedge].twin].vertex;
 
-                HE(EH(i))=i;
-                HEs(EH(i))=1;
-                if (twinH((EH(i)))!=-1) {
-                    HE(twinH(EH(i))) = i;
-                    HEs(twinH(EH(i))) = -1;
-                }
-
-                EFi(i,0) = (EH(i) + 0) % 3;
-                if (twinH((EH(i)))!=-1)
-                    EFi(i,1) = (twinH(EH(i)) + 0) % 3;
+                EFi(i,0) = (dcel.edges[i].halfedge + 0) % 3;
+                if (dcel.halfedges[dcel.edges[i].halfedge].twin !=-1)
+                    EFi(i,1) = (dcel.halfedges[dcel.edges[i].halfedge].twin + 0) % 3;
             }
-            for (int i=0;i<FH.rows();i++){
-                for (int j=0;j<3;j++){
-                    FE(i,j) = HE(FH(i,j));
-                    //checking the orientation of the edge vs. the halfedge
-                    FEs(i,j) = HEs(FH(i,j));
-
-                    if (twinH(FH(i,j)) == -1)
-                        TT(i, j) = -1;
-                    else
-                        TT(i, j) = HF(twinH(FH(i,j)));
-                }
+            for (int i=0;i<dcel.faces.size();i++){
+                int hebegin = dcel.faces[i].halfedge;
+                int heiterate = hebegin;
+                int inFaceCounter=0;
+                do{
+                    FE(i,inFaceCounter) = dcel.halfedges[heiterate].edge;
+                    FEs(i,inFaceCounter) = (dcel.edges[dcel.halfedges[heiterate].edge].halfedge==heiterate ? 1 : -1);
+                    if (dcel.halfedges[heiterate].twin!=-1)
+                        TT(i, inFaceCounter) = dcel.halfedges[dcel.halfedges[heiterate].twin].face;
+                    inFaceCounter++;
+                    heiterate = dcel.halfedges[heiterate].next;
+                }while (heiterate!=hebegin);
             }
 
             //gathering all boundary halfedges
             std::vector<int> innerEdgesList, boundEdgesList, boundHalfedgesList;
             isBoundaryVertex=Eigen::VectorXi::Zero(V.size());
             isBoundaryEdge=Eigen::VectorXi::Zero(EV.size());
-            for (int i = 0; i < halfedges.rows(); i++) {
-                if (twinH(i) == -1){
-                    boundEdgesList.push_back(HE(i));
+            for (int i = 0; i < dcel.halfedges.size(); i++) {
+                if (dcel.halfedges[i].twin == -1){
+                    boundEdgesList.push_back(dcel.halfedges[i].edge);
                     boundHalfedgesList.push_back(i);
-                    isBoundaryEdge(HE(i))=1;
-                    isBoundaryVertex(EV(HE(i),0))=1;
-                    isBoundaryVertex(EV(HE(i),1))=1;
+                    isBoundaryEdge(dcel.halfedges[i].edge)=1;
+                    isBoundaryVertex(EV(dcel.halfedges[i].edge,0))=1;
+                    isBoundaryVertex(EV(dcel.halfedges[i].edge,1))=1;
                 }else
                     innerEdgesList.push_back(i);
             }
-
 
             innerEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(innerEdgesList.data(), innerEdgesList.size());
             boundEdges = Eigen::Map<Eigen::VectorXi, Eigen::Unaligned>(boundEdgesList.data(), boundEdgesList.size());
 
             //creating boundary loops
-            Eigen::VectorXi isVisited = Eigen::VectorXi::Constant(halfedges.size(),0);
+            Eigen::VectorXi isVisited = Eigen::VectorXi::Constant(dcel.halfedges.size(),0);
             while (isVisited.sum()!=boundHalfedgesList.size()){
                 //choose a first one
                 int beginHE;
@@ -190,12 +152,12 @@ namespace directional{
                 int currHE = beginHE;
                 std::vector<int> currBoundaryLoop;
                 do{
-                    currBoundaryLoop.push_back(HV(currHE));
+                    currBoundaryLoop.push_back(dcel.halfedges[currHE].vertex);
                     isVisited(currHE) = 1;
                     //finding the next boundary halfedge
-                    currHE =nextH(currHE);
-                    while (twinH(currHE)!=-1)
-                        currHE = nextH(twinH(currHE));
+                    currHE = dcel.halfedges[currHE].next;
+                    while (dcel.halfedges[currHE].twin!=-1)
+                        currHE = dcel.halfedges[dcel.halfedges[currHE].twin].next;
                 }while(currHE!=beginHE);
                 boundaryLoops.push_back(currBoundaryLoop);
             }
@@ -234,10 +196,10 @@ namespace directional{
         }
 
         void inline set_mesh(const Eigen::MatrixXd& _V,
-                                 const Eigen::MatrixXi& _F,
-                                 const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
-                                 const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
-                                 const Eigen::MatrixXi& _EF=Eigen::MatrixXi()) {
+                             const Eigen::MatrixXi& _F,
+                             const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
+                             const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
+                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi()) {
 
             V = _V;
             F = _F;
@@ -248,34 +210,6 @@ namespace directional{
                 FE = _FE;
                 EF = _EF;
             }
-
-
-            //computing extra combinatorial information
-            //Relative location of edges within faces
-            /*EFi = Eigen::MatrixXi::Constant(EF.rows(), 2, -1); // number of an edge inside the face
-            for(int i = 0; i < EF.rows(); i++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    if (EF(i, k) == -1)
-                        continue;
-                    for (int j = 0; j < 3; j++)
-                        if (FE(EF(i, k), j) == i)
-                            EFi(i, k) = j;
-                }
-            }
-
-            //sign of edge within face
-            FEs = Eigen::MatrixXd::Zero(FE.rows(), FE.cols());
-
-            for(int i = 0; i < EF.rows(); i++)
-            {
-                if(EFi(i, 0) != -1)
-                    FEs(EF(i, 0), EFi(i, 0)) = 1.0;
-                if(EFi(i,1) != -1)
-                    FEs(EF(i, 1), EFi(i, 1)) = -1.0;
-            }*/
-
 
             compute_geometric_quantities();
 
@@ -296,22 +230,23 @@ namespace directional{
             VF.resize(V.rows(),vertexValence.maxCoeff());
             for (int i=0;i<V.rows();i++){
                 int counter=0;
-                int hebegin = VH(i);
+                int hebegin = dcel.vertices[i].halfedge;
                 if (isBoundaryVertex(i)) //winding up hebegin to the first boundary edge
-                    while (twinH(hebegin)!=-1)
-                        hebegin = nextH(twinH(hebegin));
+                    while (dcel.halfedges[hebegin].twin!=-1)
+                        hebegin = dcel.halfedges[dcel.halfedges[hebegin].twin].next;
 
-                //resetting VH for future reference
-                VH(i)=hebegin;
+                //TODO: this rest inside the init function
+                //resetting dcel pointer for future reference
+                dcel.vertices[i].halfedge=hebegin;
                 int heiterate = hebegin;
                 do {
-                    VE(i, counter) = HE(heiterate);
-                    VF(i, counter++) = HF(heiterate);
-                    if (twinH(prevH(heiterate))==-1) { //last edge before end, adding the next edge
-                        VE(i, counter) = HE(prevH(heiterate));  //note counter is already ahead
+                    VE(i, counter) = dcel.halfedges[heiterate].edge;
+                    VF(i, counter++) = dcel.halfedges[heiterate].face;
+                    if (dcel.halfedges[dcel.halfedges[heiterate].prev].twin==-1){
+                        VE(i, counter) =  dcel.halfedges[dcel.halfedges[heiterate].prev].edge;  //note counter is already ahead
                         break;
                     }
-                    heiterate = twinH(prevH(heiterate));
+                    heiterate = dcel.halfedges[dcel.halfedges[heiterate].prev].twin ;
                 }while(hebegin!=heiterate);
             }
 
@@ -327,7 +262,7 @@ namespace directional{
             VBx.resize(V.rows(),3);
             VBy.resize(V.rows(),3);
             for (int i=0;i<V.rows();i++){
-                Eigen::RowVector3d firstEdge = V.row(HV(nextH(VH(i))))-V.row(i);
+                Eigen::RowVector3d firstEdge = V.row(dcel.halfedges[dcel.halfedges[dcel.vertices[i].halfedge].next].vertex)-V.row(i);
                 VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals.row(i)))*vertexNormals.row(i);
                 VBx.row(i).normalize();
                 Eigen::RowVector3d currx=VBx.row(i);

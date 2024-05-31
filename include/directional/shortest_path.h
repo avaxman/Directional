@@ -19,7 +19,7 @@ namespace directional{
 
         using namespace std;
         using namespace Eigen;
-        double infWeight = mesh.avgEdgeLength*(double)mesh.HV.size()*10000.0;
+        double infWeight = mesh.avgEdgeLength*(double)mesh.dcel.halfedges.size()*10000.0;
         Eigen::VectorXd distances = Eigen::VectorXd::Constant(mesh.V.rows(), infWeight);
         int currVertex = 0;
         distances(currVertex)=0.0;
@@ -40,10 +40,10 @@ namespace directional{
         while ((sumVisited<=mesh.V.rows())&&(targetNodeMask[currVertex]==0)){
             //calculating distance to all neighbors
             assert("Trying an already visited vertex!" && (!isVisited[currVertex]));
-            int hebegin = mesh.VH(currVertex);
+            int hebegin = mesh.dcel.vertices[currVertex].halfedge;
             int hecurr = hebegin;
             do{
-                int nextVertex = mesh.HV(mesh.nextH(hecurr));
+                int nextVertex =  mesh.dcel.halfedges[mesh.dcel.halfedges[hecurr].next].vertex;
                 if (!isVisited(nextVertex)) {
                     double length = (mesh.V.row(nextVertex) - mesh.V.row(currVertex)).norm();
                     if (distances(nextVertex)>distances(currVertex)+length)
@@ -51,9 +51,9 @@ namespace directional{
 
                     distVertices.insert(pair<double, pair<int, int>>(distances(nextVertex),pair<int,int>(nextVertex, hecurr)));
                 }
-                if (mesh.twinH(hecurr)==-1)
+                if (mesh.dcel.halfedges[hecurr].twin==-1)
                     break;
-                hecurr = mesh.twinH(mesh.prevH(hecurr));
+                hecurr = mesh.dcel.halfedges[mesh.dcel.halfedges[hecurr].prev].twin;
             }while (hecurr!=hebegin);
             isVisited[currVertex]=1;
             sumVisited++;
@@ -73,7 +73,7 @@ namespace directional{
         assert("Haven't reached any target node!" && targetNodeMask[currVertex]==1);
         while (currVertex!=initialVertex){
             shortestPath.push_back(predHEList[currVertex]);
-            currVertex = mesh.HV(predHEList[currVertex]);
+            currVertex = mesh.dcel.halfedges[predHEList[currVertex]].vertex;
         }
 
     }

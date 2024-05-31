@@ -125,9 +125,9 @@ namespace directional
         cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
         combing(field, combedField, intData.face2cut);
 
-        MatrixXi EFi,EH, FH;
-        MatrixXd FEs;
-        VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
+        //MatrixXi EFi,EH, FH;
+        //MatrixXd FEs;
+        //VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
 
         // it stores number of edges per face, for now only tirangular
         VectorXi D = VectorXi::Constant(meshWhole.F.rows(), 3);
@@ -142,14 +142,14 @@ namespace directional
         intData.constrainedVertices = VectorXi::Zero(meshWhole.V.rows());
 
         // compute the half-edge representation
-        hedra::dcel(D, meshWhole.F, meshWhole.EV, meshWhole.EF, meshWhole.EFi, meshWhole.innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
+        //hedra::dcel(D, meshWhole.F, meshWhole.EV, meshWhole.EF, meshWhole.EFi, meshWhole.innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
 
         // find boundary vertices and mark them
         VectorXi isBoundary = VectorXi::Zero(meshWhole.V.rows());
-        for (int i = 0; i < HV.rows(); i++)
-            if (twinH(i) == -1){
-                isBoundary(HV(i)) = 1;
-                isSingular(HV(i)) = 0; //boundary vertices cannot be singular
+        for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
+            if (meshWhole.dcel.halfedges[i].twin == -1){
+                isBoundary(meshWhole.dcel.halfedges[i].vertex) = 1;
+                isSingular(meshWhole.dcel.halfedges[i].vertex) = 0; //boundary vertices cannot be singular
             }
 
         // here we compute a permutation matrix
@@ -173,12 +173,16 @@ namespace directional
         }
 
         // do the same for the half-edges, mark edges which correspond to the cut seam
-        VectorXi isHEcut = VectorXi::Zero(HE.rows());
+        VectorXi isHEcut = VectorXi::Zero(meshWhole.dcel.halfedges.size());
         for(int i = 0; i < meshWhole.F.rows(); i++)
         {
-            for (int j = 0; j < 3; j++)
+            int hebegin = meshWhole.FH(i);
+            int heiterate = hebegin;
+            for (int j = 0; j < 3; j++) {
                 if (intData.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
-                    isHEcut(FH(i, j)) = 1; // FH is face to half-edge mapping
+                    isHEcut(heiterate) = 1; // FH is face to half-edge mapping
+                heiterate = meshWhole.nextH(heiterate);
+            }
         }
 
         // calculate valency of the vertices which lay on the seam
@@ -192,18 +196,17 @@ namespace directional
             }
         }
 
-
         //establishing transition variables by tracing cut curves
-        VectorXi Halfedge2TransitionIndices = VectorXi::Constant(HE.rows(), 32767);
-        VectorXi Halfedge2Matching(HE.rows());
-        VectorXi isHEClaimed = VectorXi::Zero(HE.rows());
+        VectorXi Halfedge2TransitionIndices = VectorXi::Constant(meshWhole.dcel.halfedges.size(), 32767);
+        VectorXi Halfedge2Matching(meshWhole.dcel.halfedges.size());
+        VectorXi isHEClaimed = VectorXi::Zero(meshWhole.dcel.halfedges.size());
 
         // here we convert the matching that was calculated for the vector field over edges to half-edges
-        for (int i = 0; i < HE.rows(); i++)
+        for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
         {
             // HE is a map between half-edges to edges, but it does not carry the direction
             // EH edge to half-edge mapping
-            Halfedge2Matching(i) = (EH(HE(i), 0) == i ? -combedField.matching(HE(i)) : combedField.matching(HE(i)));
+            Halfedge2Matching(i) = (meshWhole.EH(meshWhole.HE(i), 0) == i ? -combedField.matching(meshWhole.HE(i)) : combedField.matching(meshWhole.HE(i)));
             if(Halfedge2Matching(i) < 0)
                 Halfedge2Matching(i) = (intData.N + (Halfedge2Matching(i) % intData.N)) % intData.N;
         }
@@ -220,10 +223,10 @@ namespace directional
         MatrixXi cutF;
         MatrixXd cutV;
         cutF.resize(meshWhole.F.rows(),3);
-        for (int i = 0; i < VH.rows(); i++)
+        for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
         {
             //creating corners whereever we have non-trivial matching
-            int beginH = VH(i);
+            int beginH = meshWhole.VH(i);
             int currH = beginH;
 
             //reseting to first cut or first boundary, if exists
@@ -233,17 +236,17 @@ namespace directional
                 {
                     if (isHEcut(currH)!=0)
                         break;
-                    currH=nextH(twinH(currH));
+                    currH=meshWhole.nextH(meshWhole.twinH(currH));
                 } while (beginH!=currH);
             }
             else
             {
                 do
                 {
-                    if (twinH(currH)==-1)
+                    if (meshWhole.twinH(currH)==-1)
                         break;
-                    currH=nextH(twinH(currH));
-                } while(twinH(currH)!=-1);
+                    currH=meshWhole.nextH(meshWhole.twinH(currH));
+                } while(meshWhole.twinH(currH)!=-1);
             }
 
             beginH = currH;
@@ -257,9 +260,9 @@ namespace directional
                 }
 
                 for (int j = 0; j < 3; j++)
-                    if (meshWhole.F(HF(currH), j) == i)
-                        cutF(HF(currH), j) = cut2whole.size() - 1;
-                currH = twinH(prevH(currH));
+                    if (meshWhole.F(meshWhole.HF(currH), j) == i)
+                        cutF(meshWhole.HF(currH), j) = cut2whole.size() - 1;
+                currH = meshWhole.twinH(meshWhole.prevH(currH));
             } while((beginH != currH) && (currH != -1));
         }
 
@@ -274,7 +277,7 @@ namespace directional
                 continue;  //either mid-cut curve or non at all
 
             //tracing curves until next node, if not already filled
-            int beginH = VH(i);
+            int beginH = meshWhole.VH(i);
 
             //reseting to first boundary
             int currH = beginH;
@@ -283,10 +286,10 @@ namespace directional
             {
                 do
                 {
-                    if (twinH(currH) == -1)
+                    if (meshWhole.twinH(currH) == -1)
                         break;
-                    currH = nextH(twinH(currH));
-                } while(twinH(currH) != -1);
+                    currH = meshWhole.nextH(meshWhole.twinH(currH));
+                } while(meshWhole.twinH(currH) != -1);
             }
 
             beginH = currH;
@@ -295,18 +298,18 @@ namespace directional
             do
             {
                 //unclaimed inner halfedge
-                if ((isHEcut(currH) != 0) && (isHEClaimed(currH) == 0) && (twinH(currH) != -1))
+                if ((isHEcut(currH) != 0) && (isHEClaimed(currH) == 0) && (meshWhole.twinH(currH) != -1))
                 {
                     nextHalfedgeInCut = currH;
                     Halfedge2TransitionIndices(nextHalfedgeInCut) = currTransition;
-                    Halfedge2TransitionIndices(twinH(nextHalfedgeInCut)) = -currTransition;
+                    Halfedge2TransitionIndices(meshWhole.twinH(nextHalfedgeInCut)) = -currTransition;
                     isHEClaimed(nextHalfedgeInCut) = 1;
-                    isHEClaimed(twinH(nextHalfedgeInCut)) = 1;
-                    int nextCutVertex=HV(nextH(nextHalfedgeInCut));
+                    isHEClaimed(meshWhole.twinH(nextHalfedgeInCut)) = 1;
+                    int nextCutVertex=meshWhole.HV(meshWhole.nextH(nextHalfedgeInCut));
                     //advancing on the cut until next node
                     while ((cutValence(nextCutVertex) == 2) && (!isSingular(nextCutVertex)) && (!isBoundary(nextCutVertex)))
                     {
-                        int beginH = VH(nextCutVertex);
+                        int beginH = meshWhole.VH(nextCutVertex);
                         int currH = beginH;
                         int nextHalfedgeInCut = -1;
                         do
@@ -317,17 +320,17 @@ namespace directional
                                 nextHalfedgeInCut = currH;
                                 break;
                             }
-                            currH=twinH(prevH(currH));
+                            currH=meshWhole.twinH(meshWhole.prevH(currH));
                         } while (beginH != currH);
                         Halfedge2TransitionIndices(nextHalfedgeInCut) = currTransition;
-                        Halfedge2TransitionIndices(twinH(nextHalfedgeInCut)) = -currTransition;
+                        Halfedge2TransitionIndices(meshWhole.twinH(nextHalfedgeInCut)) = -currTransition;
                         isHEClaimed(nextHalfedgeInCut) = 1;
-                        isHEClaimed(twinH(nextHalfedgeInCut)) = 1;
-                        nextCutVertex = HV(nextH(nextHalfedgeInCut));
+                        isHEClaimed(meshWhole.twinH(nextHalfedgeInCut)) = 1;
+                        nextCutVertex = meshWhole.HV(meshWhole.nextH(nextHalfedgeInCut));
                     }
                     currTransition++;
                 }
-                currH = twinH(prevH(currH));
+                currH = meshWhole.twinH(meshWhole.prevH(currH));
             } while((beginH != currH) && (currH != -1));
         }
         // end of cutting
@@ -339,7 +342,7 @@ namespace directional
         //forming the constraints and the singularity positions
         int currConst = 0;
         // this loop set up the transtions (vector field matching) across the cuts
-        for (int i = 0; i < VH.rows(); i++)
+        for (int i = 0; i < meshWhole.V.rows(); i++)
         {
             std::vector<MatrixXi> permMatrices;
             std::vector<int> permIndices;  //in the space #V + #transitions
@@ -347,7 +350,7 @@ namespace directional
             permMatrices.push_back(MatrixXi::Identity(intData.N, intData.N));
             permIndices.push_back(i);
 
-            int beginH = VH(i);
+            int beginH = meshWhole.VH(i);
             int currH = beginH;
 
             //reseting to first cut or boundary, if exists
@@ -358,7 +361,7 @@ namespace directional
                 {
                     if (isHEcut(currH) != 0)
                         break;
-                    currH = nextH(twinH(currH));
+                    currH = meshWhole.nextH(meshWhole.twinH(currH));
                 } while(beginH != currH);
             }
             else
@@ -366,10 +369,10 @@ namespace directional
                 do
                 {
                     // travel until an edge without a twin is found, i.e., boundary
-                    if (twinH(currH) == -1)
+                    if (meshWhole.twinH(currH) == -1)
                         break;
-                    currH = nextH(twinH(currH));
-                } while(twinH(currH) != -1);
+                    currH = meshWhole.nextH(meshWhole.twinH(currH));
+                } while(meshWhole.twinH(currH) != -1);
             }
 
             // set the beginning to the edge on the cut or on the boundary
@@ -378,7 +381,7 @@ namespace directional
             int currCutVertex = -1;
             do
             {
-                int currFace = HF(currH); // face containing the half-edge
+                int currFace = meshWhole.HF(currH); // face containing the half-edge
                 int newCutVertex = -1;
                 //find position of the vertex i in the face of the initial mesh
                 for (int j = 0; j < 3; j++)
@@ -403,7 +406,7 @@ namespace directional
                 }
 
                 //updating the matrices for the next corner
-                int nextHalfedge = twinH(prevH(currH));
+                int nextHalfedge = meshWhole.twinH(meshWhole.prevH(currH));
                 //reached a boundary
                 if(nextHalfedge == -1)
                 {

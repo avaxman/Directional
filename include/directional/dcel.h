@@ -10,6 +10,7 @@
 
 #include <Eigen/Core>
 #include <vector>
+#include <deque>
 
 
 namespace directional
@@ -680,7 +681,7 @@ namespace directional
 
         }
 
-        void UnifyEdges(int heindex) {
+        void unify_edges(int heindex) {
             //if (halfedges[heindex].twin<0)
             //  return;
             //adjusting source
@@ -748,6 +749,68 @@ namespace directional
                 faces[faces.size()-1].halfedge += currHEOffset;
             }
         }
+
+        void RemoveVertex(int vindex, std::deque<int> &removeVertexQueue) {
+            int hebegin = vertices[vindex].AdjHalfedge;
+            int heiterate = hebegin;
+            do {
+                if (heiterate == -1) {  //boundary vertex
+                    return;
+                }
+                heiterate = halfedges[halfedges[heiterate].prev].Twin;
+            } while (heiterate != hebegin);
+
+            vertices[vindex].Valid = false;
+
+            int remainingFace = halfedges[hebegin].AdjFace;
+
+
+            faces[remainingFace].AdjHalfedge = halfedges[hebegin].next;
+            heiterate = hebegin;
+            int infinityCounter = 0;
+            do {
+
+                int NextEdge = halfedges[heiterate].next;
+                int PrevEdge = halfedges[halfedges[heiterate].Twin].prev;
+
+                halfedges[NextEdge].prev = PrevEdge;
+                halfedges[PrevEdge].next = NextEdge;
+                if (halfedges[NextEdge].AdjFace != remainingFace)
+                    faces[halfedges[NextEdge].AdjFace].Valid = false;
+
+                if (halfedges[PrevEdge].AdjFace != remainingFace)
+                    faces[halfedges[PrevEdge].AdjFace].Valid = false;
+
+
+                halfedges[PrevEdge].AdjFace = halfedges[NextEdge].AdjFace = remainingFace;
+                halfedges[heiterate].Valid = false;
+                halfedges[halfedges[heiterate].Twin].Valid = false;
+                heiterate = halfedges[halfedges[heiterate].prev].Twin;
+                infinityCounter++;
+                if (infinityCounter > halfedges.size())
+                    return;
+
+            } while (heiterate != hebegin);
+
+            //cleaning new face
+            hebegin = faces[remainingFace].AdjHalfedge;
+            //faces[remainingFace].Numvertices=0;
+            heiterate = hebegin;
+            infinityCounter = 0;
+            do {
+                //faces[remainingFace].Numvertices++;
+                halfedges[heiterate].AdjFace = remainingFace;
+                vertices[halfedges[heiterate].Origin].AdjHalfedge = heiterate;
+                removeVertexQueue.push_front(halfedges[heiterate].Origin);
+                infinityCounter++;
+                if (infinityCounter > halfedges.size())
+                    return;
+
+                heiterate = halfedges[heiterate].next;
+            } while (heiterate != hebegin);
+        }
+
+
 
         //Initializing DCEL from faces, assuming this is a triangle mesh
         void init(const Eigen::MatrixXd& V,
