@@ -89,10 +89,13 @@ namespace directional{
 
             //This is done in the polyscope compatible fashion
             dcel.init(V, F);
+            bool consistency = dcel.check_consistency(true,true,true,true);
+            if (!consistency)
+                std::cout<<"Something is wrong with the DCEL!!"<<std::endl;
 
             EV.resize(dcel.edges.size(),2);
             EF = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);
-            EFi.resize(dcel.edges.size(),2);
+            EFi = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);
             FE.resize(F.rows(),3);
             FEs.resize(F.rows(),3);
             TT.resize(F.rows(),3);
@@ -101,7 +104,7 @@ namespace directional{
                         dcel.halfedges[dcel.halfedges[dcel.edges[i].halfedge].next].vertex;
                 EF(i,0) = dcel.halfedges[dcel.edges[i].halfedge].face;
                 if (dcel.halfedges[dcel.edges[i].halfedge].twin!=-1)
-                    EF(i,1) = dcel.halfedges[dcel.halfedges[dcel.edges[i].halfedge].twin].vertex;
+                    EF(i,1) = dcel.halfedges[dcel.halfedges[dcel.edges[i].halfedge].twin].face;
 
                 EFi(i,0) = (dcel.edges[i].halfedge + 0) % 3;
                 if (dcel.halfedges[dcel.edges[i].halfedge].twin !=-1)
@@ -125,13 +128,13 @@ namespace directional{
             std::vector<int> innerEdgesList, boundEdgesList, boundHalfedgesList;
             isBoundaryVertex=Eigen::VectorXi::Zero(V.size());
             isBoundaryEdge=Eigen::VectorXi::Zero(EV.size());
-            for (int i = 0; i < dcel.halfedges.size(); i++) {
-                if (dcel.halfedges[i].twin == -1){
-                    boundEdgesList.push_back(dcel.halfedges[i].edge);
+            for (int i = 0; i < dcel.edges.size(); i++) {
+                if (dcel.halfedges[dcel.edges[i].halfedge].twin == -1){
+                    boundEdgesList.push_back(i);
                     boundHalfedgesList.push_back(i);
-                    isBoundaryEdge(dcel.halfedges[i].edge)=1;
-                    isBoundaryVertex(EV(dcel.halfedges[i].edge,0))=1;
-                    isBoundaryVertex(EV(dcel.halfedges[i].edge,1))=1;
+                    isBoundaryEdge(i)=1;
+                    isBoundaryVertex(EV(i,0))=1;
+                    isBoundaryVertex(EV(i,1))=1;
                 }else
                     innerEdgesList.push_back(i);
             }

@@ -38,7 +38,7 @@ namespace directional{
 
         struct VData{
             Eigen::RowVector3d coords;
-            std::vector<ENumber> exactCoords;
+            EVector3 eCoords;
         };
 
         typedef DCEL<VData,  HEData, bool, bool> FunctionDCEL;
@@ -933,10 +933,10 @@ namespace directional{
                 vector<EVector3> PointSet1(VertexSets1[i].size());
                 vector<EVector3> PointSet2(VertexSets2[i].size());
                 for (int j=0;j<PointSet1.size();j++)
-                    PointSet1[j]=ECoordinates[VertexSets1[i][j]];
+                    PointSet1[j]=genDcel.vertices[VertexSets1[i][j]].data.eCoords;
 
                 for (int j=0;j<PointSet2.size();j++)
-                    PointSet2[j]=ECoordinates[VertexSets2[i][j]];
+                    PointSet2[j]=genDcel.vertices[VertexSets2[i][j]].data.eCoords;
 
                 vector<pair<int, int> > CurrMatches;
                 if ((!PointSet1.empty())&&(!PointSet2.empty()))
@@ -959,7 +959,7 @@ namespace directional{
 
             double MaxDist=-327670000.0;
             for (int i=0;i<VertexMatches.size();i++)
-                MaxDist=std::max(MaxDist, (coordinates.row(VertexMatches[i].first)-coordinates.row(VertexMatches[i].second)).squaredNorm());
+                MaxDist=std::max(MaxDist, (genDcel.vertices[VertexMatches[i].first].data.coords-genDcel.vertices[VertexMatches[i].second].data.coords).squaredNorm());
 
             if (verbose)
                 std::cout<<"Max matching distance: "<<MaxDist<<endl;
@@ -1003,12 +1003,13 @@ namespace directional{
                 return false;
 
             //twinning up edges
-            set<TwinFinder> Twinning;
+            set<FunctionDCEL::TwinFinder> Twinning;
             for (int i=0;i<genDcel.halfedges.size();i++){
                 if ((genDcel.halfedges[i].twin>=0)||(!genDcel.halfedges[i].valid))
                     continue;
 
-                set<TwinFinder>::iterator Twinit=Twinning.find(TwinFinder(0,genDcel.halfedges[genDcel.halfedges[i].next].vertex, genDcel.halfedges[i].vertex));
+                set<FunctionDCEL::TwinFinder>::iterator Twinit=Twinning.find(FunctionDCEL::TwinFinder(0,genDcel.halfedges[genDcel.halfedges[i].next].vertex,
+                                                                                                      genDcel.halfedges[i].vertex));
                 if (Twinit!=Twinning.end()){
                     if ((genDcel.halfedges[Twinit->index].twin!=-1)&&(verbose))
                         std::cout<<"warning: halfedge "<<Twinit->index<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
@@ -1018,13 +1019,13 @@ namespace directional{
                     genDcel.halfedges[i].twin=Twinit->index;
 
                     if (genDcel.halfedges[i].data.isFunction){
-                        genDcel.halfedges[Twinit->index].isFunction = true;
-                    } else if (genDcel.halfedges[Twinit->index].isFunction){
+                        genDcel.halfedges[Twinit->index].data.isFunction = true;
+                    } else if (genDcel.halfedges[Twinit->index].data.isFunction){
                         genDcel.halfedges[i].data.isFunction = true;
                     }
                     Twinning.erase(*Twinit);
                 } else {
-                    Twinning.insert(TwinFinder(i,genDcel.halfedges[i].vertex,genDcel.halfedges[genDcel.halfedges[i].next].vertex));
+                    Twinning.insert(FunctionDCEL::TwinFinder(i,genDcel.halfedges[i].vertex,genDcel.halfedges[genDcel.halfedges[i].next].vertex));
                 }
             }
 
@@ -1311,7 +1312,7 @@ namespace directional{
             generatedD.resize(genDcel.faces.size());
 
             for (int i=0;i<genDcel.vertices.size();i++)
-                generatedV.row(i)<<genDcel.vertices[i].Coordinates.x(), genDcel.vertices[i].Coordinates.y(),genDcel.vertices[i].Coordinates.z();
+                generatedV.row(i)=genDcel.vertices[i].data.coords;
 
 
             for (int i=0;i<genDcel.faces.size();i++){

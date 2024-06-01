@@ -107,9 +107,15 @@ int main()
     std::cout<<"Setting up Integration"<<std::endl;
     directional::setup_integration(rawField, intData, meshCut, combedField);
     Eigen::VectorXi seams = Eigen::VectorXi::Zero(meshWhole.EV.rows());
-    for (int i=0;i<meshWhole.F.rows();i++)
-        for (int j=0;j<3;j++)
-            seams(meshWhole.HE(meshWhole.FH(i,j)))=intData.face2cut(i,j);
+    for (int i=0;i<meshWhole.F.rows();i++){
+        int hebegin = meshWhole.FH(i);
+        int heiterate = hebegin;
+        for (int j=0;j<3;j++) {
+            seams(meshWhole.HE(heiterate)) = intData.face2cut(i, j);
+            heiterate = meshWhole.nextH(heiterate);
+        }
+    }
+
 
     intData.verbose=true;
     intData.integralSeamless=false;

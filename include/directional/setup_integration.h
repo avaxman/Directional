@@ -125,6 +125,9 @@ namespace directional
         cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
         combing(field, combedField, intData.face2cut);
 
+        std::cout<<"intData.face2cut: "<<intData.face2cut<<endl;
+        std::cout<<"combedField.matching: "<<combedField.matching<<endl;
+
         //MatrixXi EFi,EH, FH;
         //MatrixXd FEs;
         //VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
@@ -147,9 +150,9 @@ namespace directional
         // find boundary vertices and mark them
         VectorXi isBoundary = VectorXi::Zero(meshWhole.V.rows());
         for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
-            if (meshWhole.dcel.halfedges[i].twin == -1){
-                isBoundary(meshWhole.dcel.halfedges[i].vertex) = 1;
-                isSingular(meshWhole.dcel.halfedges[i].vertex) = 0; //boundary vertices cannot be singular
+            if (meshWhole.twinH(i) == -1){
+                isBoundary(meshWhole.HV(i)) = 1;
+                isSingular(meshWhole.HV(i)) = 0; //boundary vertices cannot be singular
             }
 
         // here we compute a permutation matrix
@@ -178,6 +181,8 @@ namespace directional
         {
             int hebegin = meshWhole.FH(i);
             int heiterate = hebegin;
+            while (meshWhole.HV(hebegin)!=meshWhole.F(i,0))
+                hebegin = meshWhole.nextH(hebegin);
             for (int j = 0; j < 3; j++) {
                 if (intData.face2cut(i, j)) // face2cut is initalized by directional::cut_mesh_with_singularities
                     isHEcut(heiterate) = 1; // FH is face to half-edge mapping
@@ -223,7 +228,7 @@ namespace directional
         MatrixXi cutF;
         MatrixXd cutV;
         cutF.resize(meshWhole.F.rows(),3);
-        for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
+        for (int i = 0; i < meshWhole.dcel.vertices.size(); i++)
         {
             //creating corners whereever we have non-trivial matching
             int beginH = meshWhole.VH(i);

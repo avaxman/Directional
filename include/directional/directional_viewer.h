@@ -16,6 +16,7 @@
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 #include <directional/bar_chain.h>
+#include <directional/branched_isolines.h>
 
 /***
  This class implements the Directional viewer, as an extension of the libigl viewer (as a wrapper). This

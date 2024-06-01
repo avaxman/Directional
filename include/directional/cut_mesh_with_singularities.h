@@ -59,7 +59,7 @@ namespace directional {
           isFaceVisited[currFace]=1;
           if (prevHE!=-1) {
               isHECut(prevHE) = 0;
-              isHECut(mesh.dcel.halfedges[prevHE].twin);
+              isHECut(mesh.dcel.halfedges[prevHE].twin) = 0;
           }
           int hebegin = mesh.dcel.faces[currFace].halfedge;
           int heiterate = hebegin;
@@ -144,9 +144,15 @@ namespace directional {
           }
       }*/
 
+      std::cout<<"isHECut: "<<isHECut<<std::endl;
+
       face2cut.resize(mesh.F.rows(),3);
       for (int i=0;i<mesh.F.rows();i++) {
           int hebegin = mesh.dcel.faces[i].halfedge;
+          //resetting to the first halfedges
+          while (mesh.HV(hebegin)!=mesh.F(i,0))
+              hebegin=mesh.nextH(hebegin);
+
           int heiterate = hebegin;
           for (int j = 0; j < 3; j++) {
               face2cut(i, j) = isHECut(heiterate);

@@ -7,7 +7,6 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #ifndef HEDRA_POLYGONAL_WRITE_OFF_H
 #define HEDRA_POLYGONAL_WRITE_OFF_H
-#include <igl/igl_inline.h>
 #include <Eigen/Core>
 #include <string>
 #include <vector>
@@ -21,7 +20,7 @@ namespace hedra
   //  V  eigen double matrix  #V by 3 - vertex coordinates
   //  D  eigen int vector     #F by 1 - face degrees
   //  F  eigen int matrix     #F by max(D) - vertex indices in face
-  IGL_INLINE bool polygonal_write_OFF(const std::string& str,
+  inline bool polygonal_write_OFF(const std::string& str,
                                       const Eigen::MatrixXd& V,
                                       const Eigen::VectorXi& D,
                                       const Eigen::MatrixXi& F)

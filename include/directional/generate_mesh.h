@@ -190,7 +190,7 @@ namespace directional{
 
         for (int i=0;i<arrEdges.size();i++) {
             triDcel.edges[i].ID = i;
-            triDcel.edges[i].data = edgeData[i];
+            //triDcel.edges[i].data = edgeData[i];   //TODO: halfedges (and edges) don't get any data!
             triDcel.edges[i].halfedge=2*i;
 
             triDcel.halfedges[2*i].ID=2*i;
@@ -581,19 +581,16 @@ namespace directional{
             vector<EVector2> localV;
             arrange_on_triangle(ETriPoints2D, paramLines, lineData, localV, localArrDcel);
 
-            //aggregating to the general DCEL
-            genDcel.aggregage_dcel(localArrDcel);
-
-            vector<EVector3> ELocalV3D(localV.size());
-            MatrixXd localV3D(localV.size(), 3);
+            //vector<EVector3> ELocalV3D(localV.size());
+           // MatrixXd localV3D(localV.size(), 3);
             //converting the vertices to 3D
             for (int i = 0; i < localV.size(); i++) {
                 //checking if this is an original vertex
                 bool isOrigTriangle = false;
                 for (int j = 0; j < 3; j++) {
                     if (localV[i] == ETriPoints2D[j]) {
-                        ELocalV3D[i] = ETriPoints3D[j];
-                        isOrigTriangle = false;
+                        localArrDcel.vertices[i].data.eCoords = ETriPoints3D[j];
+                        isOrigTriangle = true;
                     }
                 }
 
@@ -605,7 +602,7 @@ namespace directional{
                 ENumber sum = 0;
                 for (int j = 0; j < 3; j++) {
                     //ETriangle2D t(vi->point(), ETriPoints2D[(i + 1) % 3], ETriPoints2D[(i + 2) % 3]);
-                    vector<EVector2> inTri[3];
+                    vector<EVector2> inTri(3);
                     inTri[0] = localV[i];
                     inTri[1] = ETriPoints2D[(j + 1) % 3];
                     inTri[2] = ETriPoints2D[(j + 2) % 3];
@@ -616,19 +613,18 @@ namespace directional{
                 for (int j = 0; j < 3; j++)
                     baryValues[j] /= sum;
 
-                ELocalV3D[i] = EVector3({0, 0, 0});
+                localArrDcel.vertices[i].data.eCoords = EVector3({0, 0, 0});
                 for (int j = 0; j < 3; j++)
-                    ELocalV3D[i] = ELocalV3D[i] + ETriPoints3D[i] * baryValues[i];
+                    localArrDcel.vertices[i].data.eCoords = localArrDcel.vertices[i].data.eCoords + ETriPoints3D[i] * baryValues[i];
 
-                localV3D.row(i) << ELocalV3D[i][0].get_d(), ELocalV3D[i][1].get_d(),ELocalV3D[i][2].get_d();
+                localArrDcel.vertices[i].data.coords << localArrDcel.vertices[i].data.eCoords[0].get_d(),
+                        localArrDcel.vertices[i].data.eCoords[1].get_d(),
+                        localArrDcel.vertices[i].data.eCoords[2].get_d();
+
             }
 
-            //adding values to the coordinates and ECoordinates
-            int oldSize = coordinates.rows();
-            coordinates.conservativeResize(oldSize + localV3D.rows(),3);
-            coordinates.block(oldSize, 0, localV3D.rows(),3)=localV3D;
-
-            ECoordinates.insert(ECoordinates.end(), ELocalV3D.begin(), ELocalV3D.end());
+            //aggregating to the general DCEL
+            genDcel.aggregage_dcel(localArrDcel);
         }
     }
     
