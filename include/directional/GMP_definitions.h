@@ -181,7 +181,7 @@ namespace directional{
                                const std::pair<EVector2, EVector2>& line2,
                                ENumber t1,
                                ENumber t2){
-        ENumber denom = line1.second[0]*line2.second[1]-line1.second[0]*line2.second[0];
+        ENumber denom = line1.second[0]*line2.second[1]-line1.second[1]*line2.second[0];
         if (denom==0)
             return (line1.first==line2.first ? 2 : 0);
 
@@ -289,7 +289,10 @@ namespace directional{
         //predicates might be expensive, so precomputing
         bool x0 = vec[0]>0;
         bool y0 = vec[1]>0;
-        bool xy = (y0 && vec[1]>vec[0])||(!y0 && vec[1]>vec[0]);
+        //bool xy = (y0 && vec[1]>vec[0])||(!y0 && vec[1]<=vec[0]);
+        bool xy = abs(vec[1])>abs(vec[0]);
+
+        std::cout<<"vec: "<<vec[0].get_d()<<","<<vec[1].get_d()<<std::endl;
 
         if (xy){
             if (y0) return (vec[1]-vec[0])/(vec[1]); // case 1

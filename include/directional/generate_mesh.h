@@ -75,8 +75,8 @@ namespace directional{
 
         //Creating arrangement vertices
         std::vector<EVector2> arrVertices;
-        std::vector<std::vector<int>> VS;  //list of participating segments per vertex
-        std::vector<std::set<std::pair<ENumber, int>>> SV;  //set of coordinates of intersection per segment
+        //std::vector<std::vector<int>> VS;  //list of participating segments per vertex
+        std::vector<std::set<std::pair<ENumber, int>>> SV(segments.size());  //set of coordinates of intersection per segment
         for (int i=0;i<segments.size();i++) {
             for (int j = i + 1; j < segments.size(); j++) {
                 std::vector<std::pair<ENumber, ENumber>> result = segment_segment_intersection(segments[i], segments[j]);
@@ -85,11 +85,12 @@ namespace directional{
                     continue;  //that means the segments intersect away from the triangle.
 
                 for (int r=0;r<result.size();r++){
-                    arrVertices.push_back(segments[i].first * (1 - result[i].first) + segments[i].second * result[i].first);
+                    arrVertices.push_back(segments[i].first * (1 - result[r].first) + segments[i].second * result[r].first);
+                    /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
-                    VS[arrVertices.size() - 1].push_back(j);
-                    SV[i].insert(std::pair<ENumber, int>(result[i].first, arrVertices.size() - 1));
-                    SV[j].insert(std::pair<ENumber, int>(result[i].second, arrVertices.size() - 1));
+                    VS[arrVertices.size() - 1].push_back(j);*/
+                    SV[i].insert(std::pair<ENumber, int>(result[r].first, arrVertices.size() - 1));
+                    SV[j].insert(std::pair<ENumber, int>(result[r].second, arrVertices.size() - 1));
 
                 }
                 /*if (result.size) {  //pointwise intersection
@@ -238,7 +239,7 @@ namespace directional{
             }
         }
 
-        //generating faces (at this stage, there is also an outer face
+        //generating faces (at this stage, there is also an outer face)
         int currFace=0;
         for (int i=0;i<triDcel.halfedges.size();i++) {
             if (triDcel.halfedges[i].face != -1)
@@ -254,7 +255,7 @@ namespace directional{
                 triDcel.halfedges[currHE].face = newFace.ID;
                 currHE=triDcel.halfedges[currHE].next;
                 counter++;
-                assert ("something wrong with the face" && counter<1000);
+                assert ("something wrong with the face" && counter<10000);
             }while (currHE!=beginHE);
             triDcel.faces.push_back(newFace);
         }
@@ -344,6 +345,9 @@ namespace directional{
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
             vector<ENumber> triExactNFunction = exactNFunction[findex];
+            std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
+            for (int i=0;i<triExactNFunction.size();i++)
+                std::cout<<triExactNFunction[i].get_d()<<std::endl;
 
             //vector<vector<ENumber> > funcValues(3);
 
@@ -357,11 +361,16 @@ namespace directional{
 
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < mfiData.N; j++) {
-                    if (triExactNFunction[3 * i + j] > maxFuncs[j])
-                        maxFuncs[j] = triExactNFunction[3 * i + j];
-                    if (triExactNFunction[3 * i + j] < minFuncs[j])
-                        minFuncs[j] = triExactNFunction[3 * i + j];
+                    if (triExactNFunction[mfiData.N * i +  j] > maxFuncs[j])
+                        maxFuncs[j] = triExactNFunction[mfiData.N * i + j];
+                    if (triExactNFunction[mfiData.N * i + j] < minFuncs[j])
+                        minFuncs[j] = triExactNFunction[mfiData.N * i + j];
                 }
+            }
+
+            for (int i=0;i<mfiData.N;i++){
+                std::cout<<"maxFuncs["<<i<<"]: "<<maxFuncs[i].get_d()<<std::endl;
+                std::cout<<"minFuncs["<<i<<"]: "<<minFuncs[i].get_d()<<std::endl;
             }
 
             ////////////////////////building the one-triangle arrangement

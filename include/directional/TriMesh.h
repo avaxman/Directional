@@ -131,7 +131,7 @@ namespace directional{
             for (int i = 0; i < dcel.edges.size(); i++) {
                 if (dcel.halfedges[dcel.edges[i].halfedge].twin == -1){
                     boundEdgesList.push_back(i);
-                    boundHalfedgesList.push_back(i);
+                    boundHalfedgesList.push_back(dcel.edges[i].halfedge);
                     isBoundaryEdge(i)=1;
                     isBoundaryVertex(EV(i,0))=1;
                     isBoundaryVertex(EV(i,1))=1;
