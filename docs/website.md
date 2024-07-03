@@ -37,5 +37,5 @@ linkchecker http://127.0.0.1:8000
 
 ## References
 
-- [MkDocs](http://www.mkdocs.org/)
+- [MkDocs](https://www.mkdocs.org/)
 - [Material Theme](https://squidfunk.github.io/mkdocs-material/)

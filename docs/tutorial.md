@@ -15,8 +15,8 @@ functions can be written polymorphically and consequently algorithms can be appl
 
 Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal,
 and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces).
-The structure of these standalone functions follows the general philosophy of [libigl](http://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
-The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](http://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
+The structure of these standalone functions follows the general philosophy of [libigl](https://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
+The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](https://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
 
 The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
 
@@ -255,7 +255,7 @@ With the function ```polyvector_field()``` one can solve the linear Polyvector p
 
 $$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\left|X_{n,f}e_f^{N-n} - X_{n,g}e_g^{N-n}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{f}{A_f\left|X_{n,f}\right|^2}}\right)+\left(\lambda_C\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
 
-So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Mekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
+So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Meekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
 
 ![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right).</em></p>
 
@@ -429,26 +429,25 @@ Directional is a budding project, and there are many algorithms in the state-of-
 5. Advanced and better visualization techniques.
 
 ## References
-[^azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](http://www.cs.technion.ac.il/~mirela/publications/cfc.pdf), 2017.
+[^azencot_2017]: Omri Azencot, Etienne Corman, Mirela Ben-Chen, Maks Ovsjanikov, [Consistent Functional Cross Field Design for Mesh Quadrangulation](https://mirelabc.github.io/publications/cfc.pdf), 2017.
 [^Bommes_2009]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Mixed-integer quadrangulation](http://www-sop.inria.fr/members/David.Bommes/publications/miq.pdf), 2009.
 [^Bommes_2012]: David Bommes, Henrik Zimmer, Leif Kobbelt, [Practical Mixed-Integer Optimization for Geometry Processing](https://www.graphics.rwth-aachen.de/publication/0319/), 2012.
-[^bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly, [Shape-Up: Shaping Discrete Geometry with Projections](http://lgg.epfl.ch/publications/2012/shapeup.pdf), 2012.
+[^bouaziz_2012]: Sofien Bouaziz, Mario Deuss, Yuliy Schwartzburg, Thibaut Weise, Mark Pauly, [Shape-Up: Shaping Discrete Geometry with Projections](https://infoscience.epfl.ch/record/183433), 2012.
 [^brandt_2018]: Christopher Brandt, Leonardo Scandolo, Elmar Eisemann, and Klaus Hildebrandt, [Modeling n-Symmetry Vector Fields using Higher-Order Energies](https://graphics.tudelft.nl/~klaus/papers/nFields.pdf), 2018.
 [^crane_2010]: Keenan Crane, Mathieu Desbrun, Peter Schr&ouml;der, [Trivial Connections on Discrete Surfaces](https://www.cs.cmu.edu/~kmcrane/Projects/TrivialConnections/), 2010.
-[^diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Designing N-PolyVector Fields with Complex Polynomials](http://igl.ethz.ch/projects/complex-roots/), 2014.
-[^diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Integrable PolyVector Fields](http://igl.ethz.ch/projects/integrable/), 2015.
+[^diamanti_2014]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Designing N-PolyVector Fields with Complex Polynomials](https://igl.ethz.ch/projects/complex-roots/), 2014.
+[^diamanti_2015]: Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, [Integrable PolyVector Fields](https://igl.ethz.ch/projects/integrable/), 2015.
 [^degoes_2016]: Fernando de Goes, Mathieu Desbrun, Yiying Tong, [Vector Field Processing on Triangle Meshes](http://geometry.caltech.edu/pubs/dGDT16.pdf), 2016.
-[^Kaelberer_2007]: Felix K&auml;lberer, Matthias Nieser, Konrad Polthier, [QuadCover - Surface Parameterization using Branched Coverings](http://www.mi.fu-berlin.de/en/math/groups/ag-geom/publications/ressources/db/KNP07-QuadCover.pdf), 2007
-[^knoppel_2013]: Felix Kn&ouml;ppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](http://www.cs.columbia.edu/~keenan/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
-[^ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy, [N-Symmetry Direction Field Design](http://alice.loria.fr/publications/papers/2008/DGF/NSDFD-TOG.pdf), 2008.
-[^liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, [General Planar Quadrilateral Mesh Design Using Conjugate Direction Field](http://research.microsoft.com/en-us/um/people/yangliu/publication/cdf.pdf), 2008.
-[^Mekes_2021]: Merel Meekes, Amir Vaxman, [Unconventional Patterns on Surfaces](https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
+[^Kaelberer_2007]: Felix K&auml;lberer, Matthias Nieser, Konrad Polthier, [QuadCover - Surface Parameterization using Branched Coverings](http://konrad-polthier.de/articles/quadCover/KNP07-QuadCover.pdf), 2007
+[^knoppel_2013]: Felix Kn&ouml;ppel, Keenan Crane, Ulrich Pinkall, and Peter Schr&ouml;der, [Globally Optimal Direction Fields](https://www.cs.cmu.edu/~kmcrane/Projects/GloballyOptimalDirectionFields/paper.pdf), 2013.
+[^ray_2008]: Nicolas Ray, Bruno Vallet, Wan Chiu Li, Bruno Lévy, [N-Symmetry Direction Field Design](https://inria.hal.science/inria-00331900/file/NSDFD-TOG.pdf), 2008.
+[^liu_2011]: Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, [General Planar Quadrilateral Mesh Design Using Conjugate Direction Field](https://www.microsoft.com/en-us/research/publication/general-planar-quadrilateral-mesh-design-using-conjugate-direction-field/), 2008.
 [^Myles_2014]: Ashish Myles, Nico Pietroni, Denis Zorin, [Robust Field-aligned Global Parametrization](http://vcg.isti.cnr.it/Publications/2014/MPZ14/), 2014.
-[^solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](http://www.staff.science.uu.nl/~vaxma001/frames3d.pdf), 2017.
-[^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](http://cs.nyu.edu/~panozzo/papers/frame-fields-2014.pdf), 2014.
+[^solomon_2017]: Justin Solomon, Amir Vaxman, David Bommes, [Boundary Element Octahedral Fields in Volumes](https://people.csail.mit.edu/jsolomon/assets/frames.pdf), 2017.
+[^panozzo_2014]: Daniele Panozzo, Enrico Puppo, Marco Tarini, Olga Sorkine-Hornung,  [Frame Fields: Anisotropic and Non-Orthogonal Cross Fields](https://cims.nyu.edu/gcl/papers/frame-fields-2014.pdf), 2014.
 [^vaxman_2016]: Amir Vaxman, Marcel Campen, Olga Diamanti, Daniele Panozzo, David Bommes, Klaus Hildebrandt, Mirela Ben-Chen, [Directional Field Synthesis, Design, and Processing](https://github.com/avaxman/DirectionalFieldSynthesis), 2016.
-[^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://webspace.science.uu.nl/~vaxma001/Subdivision_Directional_Fields.pdf), 2020.
+[^Custers_2020]: Bram Custers, Amir Vaxman, [Subdivision Directional Fields](https://arxiv.org/abs/1810.06884), 2020.
 [^Vaxman_2021]: Amir Vaxman  [Directional Technical Reports: Seamless Integration](https://osf.io/s5ack/), 2021.
-[^Meekes_2021]: Merel Meekes, Amir Vaxman, [Unconventional Patterns on Surfaces] (https://webspace.science.uu.nl/~vaxma001/Unconventional_Patterns_on_Surfaces.pdf), 2021.
+[^Meekes_2021]: Merel Meekes, Amir Vaxman, [Unconventional Patterns on Surfaces] (https://dspace.library.uu.nl/handle/1874/412731), 2021.
 [^Meshlab]: Paolo Cignoni, Marco Callieri, Massimiliano Corsini, Matteo Dellepiane, Fabio Ganovelli, Guido Ranzuglia, , [MeshLab: an Open-Source Mesh Processing Tool](https://www.meshlab.net/).
 [^libhedra]: Amir Vaxman and others, [libhedra: geometric processing and optimization of polygonal meshes](https://github.com/avaxman/libhedra).

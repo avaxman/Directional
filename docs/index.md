@@ -31,7 +31,7 @@ The current version is 2.0, which represents a big paradigm shift from previous 
 Directional is **a header-only library**. You do not need to compile anything to use,
 just include directional headers (e.g. `#include <directional/index_prescription.h>`) and run.  Each
 header file contains a single function (e.g. `igl/index_prescription.h` contains
-`igl::index_prescription()`). The library needs [libigl](https://www.github.com/libigl/libigl) as a prerequisite which is automatically downloaded. Furthermore, the meshing packages requires [CGAL](https://www.cgal.org/) which is used through libigl.
+`igl::index_prescription()`). The library needs [libigl](https://github.com/libigl/libigl) as a prerequisite which is automatically downloaded. Furthermore, the meshing packages requires [CGAL](https://www.cgal.org/) which is used through libigl.
 
 
 ## Tutorial
@@ -50,7 +50,7 @@ This should properly set up the tutorial project, with the individual chapters a
 If you are interested in joining development, please fork the repository and submit a [pull request](https://help.github.com/articles/using-pull-requests/) with your changes.
 
 ## License
-Directional is primarily [MPL2](http://www.mozilla.org/MPL/2.0/) licensed ([FAQ](http://www.mozilla.org/MPL/2.0/FAQ.html)). Some files contain third-party code under other licenses.
+Directional is primarily [MPL2](https://www.mozilla.org/MPL/2.0/) licensed ([FAQ](https://www.mozilla.org/MPL/2.0/FAQ/)). Some files contain third-party code under other licenses.
 
 ## Attribution
 
