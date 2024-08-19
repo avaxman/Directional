@@ -181,6 +181,7 @@ namespace directional{
                                const std::pair<EVector2, EVector2>& line2,
                                ENumber t1,
                                ENumber t2){
+        std::cout<<"Computing intersection between line: ("<<line1.first[0].get_d()<<","<<line1.first[1].get_d()<<","<<line1.second[0].get_d()<<","<<line1.second[1].get_d()<<") and line ("<<line2.first[0].get_d()<<","<<line2.first[1].get_d()<<","<<line2.second[0].get_d()<<","<<line2.second[1].get_d()<<")"<<std::endl;
         ENumber denom = line1.second[0]*line2.second[1]-line1.second[1]*line2.second[0];
         if (denom==0)
             return (line1.first==line2.first ? 2 : 0);
@@ -252,6 +253,7 @@ namespace directional{
         }
         if (intersectType==1){
             std::vector<ENumber> result(1); result[0]=t2;
+            std::cout<<"t2: "<<t2.get_d()<<std::endl;
             return result;
         }
     }
@@ -260,8 +262,8 @@ namespace directional{
                                     const std::vector<EVector2> triangle,
                                     bool& intEdge,
                                     bool& intFace,
-                                    ENumber inParam,
-                                    ENumber outParam){
+                                    ENumber& inParam,
+                                    ENumber& outParam){
 
         inParam = ENumber(3276700);
         outParam = ENumber(-3276700);

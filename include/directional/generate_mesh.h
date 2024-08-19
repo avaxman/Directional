@@ -40,6 +40,9 @@ namespace directional{
         std::vector<int> inData;  //the lines that are inside
         std::vector<std::pair<EVector2, EVector2>> inSegments;  //parameters of the line segments inside the triangle
 
+        std::cout<<"Triangle coordinates: "<<std::endl;
+        for (int i=0;i<triangle.size();i++)
+            std::cout<<triangle[i][0].get_d()<<" "<<triangle[i][1].get_d()<<std::endl;
         for (int i = 0; i < lines.size(); i++) {
             //checking for intersections with the triangle
             ENumber inParam, outParam;  //the parameters of intersection
@@ -53,6 +56,10 @@ namespace directional{
             EVector2 segSource = lines[i].first + lines[i].second * inParam;
             EVector2 segTarget = lines[i].first + lines[i].second * outParam;
             inSegments.push_back(std::pair<EVector2, EVector2>(segSource, segTarget));
+
+            std::cout<<"inParam: "<<inParam.get_d()<<std::endl;
+            std::cout<<"outParam: "<<outParam.get_d()<<std::endl;
+            std::cout<<"intersecting segment: ("<<segSource[0].get_d()<<","<<segSource[1].get_d()<<")->("<<segTarget[0].get_d()<<","<<segTarget[1].get_d()<<")"<<std::endl;
         }
 
         //pushing in triangle segments
