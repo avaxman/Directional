@@ -30,7 +30,7 @@ namespace directional{
     //output is the DCEL of the result
     //Outer face is deleted in post-process
     void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
-                             const std::vector<std::pair<EVector2, EVector2>>& lines,
+                             const std::vector<Line2>& lines,
                              const std::vector<int>& lineData,
                              std::vector<EVector2>& V,
                              FunctionDCEL& triDcel) {
@@ -38,7 +38,7 @@ namespace directional{
         V = triangle;
 
         std::vector<int> inData;  //the lines that are inside
-        std::vector<std::pair<EVector2, EVector2>> inSegments;  //parameters of the line segments inside the triangle
+        std::vector<Segment2> inSegments;  //parameters of the line segments inside the triangle
 
         std::cout<<"Triangle coordinates: "<<std::endl;
         for (int i=0;i<triangle.size();i++)
@@ -53,9 +53,9 @@ namespace directional{
                 continue;   //no (non-measure-zero) intersection
 
             inData.push_back(lineData[i]);
-            EVector2 segSource = lines[i].first + lines[i].second * inParam;
-            EVector2 segTarget = lines[i].first + lines[i].second * outParam;
-            inSegments.push_back(std::pair<EVector2, EVector2>(segSource, segTarget));
+            EVector2 segSource = lines[i].point + lines[i].direction * inParam;
+            EVector2 segTarget = lines[i].point + lines[i].direction * outParam;
+            inSegments.push_back(Segment2(segSource, segTarget));
 
             std::cout<<"inParam: "<<inParam.get_d()<<std::endl;
             std::cout<<"outParam: "<<outParam.get_d()<<std::endl;
@@ -65,7 +65,7 @@ namespace directional{
         //pushing in triangle segments
         for (int i = 0; i < 3; i++) {
             inData.push_back(-1);  //no data
-            inSegments.push_back(std::pair<EVector2, EVector2>(triangle[i], triangle[(i + 1) % 3]));
+            inSegments.push_back(Segment2(triangle[i], triangle[(i + 1) % 3]));
         }
 
         segment_arrangement(inSegments, inData, V, triDcel);
@@ -73,7 +73,7 @@ namespace directional{
 
 
 
-    void NFunctionMesher::segment_arrangement(const std::vector<std::pair<EVector2, EVector2>>& segments,
+    void NFunctionMesher::segment_arrangement(const std::vector<Segment2>& segments,
                              const std::vector<int>& data,
                              std::vector<EVector2>& V,
                              FunctionDCEL& triDcel) {
@@ -92,7 +92,7 @@ namespace directional{
                     continue;  //that means the segments intersect away from the triangle.
 
                 for (int r=0;r<result.size();r++){
-                    arrVertices.push_back(segments[i].first * (1 - result[r].first) + segments[i].second * result[r].first);
+                    arrVertices.push_back(segments[i].source * (1 - result[r].first) + segments[i].target * result[r].first);
                     /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
                     VS[arrVertices.size() - 1].push_back(j);*/
@@ -460,7 +460,7 @@ namespace directional{
             }*/
 
             //Generating the parametric lines for the canonical triangle
-            vector<std::pair<EVector2, EVector2>> paramLines;
+            vector<Line2> paramLines;
             vector<int> lineData;
             //VectorXi lineData;
             //vector<ELine2> paramLines;
@@ -587,7 +587,7 @@ namespace directional{
                         linePoint[0] = -currc / gradVector[0];
                     }
 
-                    paramLines.push_back(std::pair<EVector2, EVector2>(linePoint, lineVector));
+                    paramLines.push_back(Line2(linePoint, lineVector));
                     lineData.push_back(funcIter);
                     //cout<<"paramLine: "<<gradVector[0]<<","<<gradVector[1]<<","<<currc<<endl;
                 }
