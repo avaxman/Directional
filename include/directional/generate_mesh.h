@@ -80,6 +80,10 @@ namespace directional{
 
         //First creating a graph of segment intersection
 
+        std::cout<<"************Computing segment arrangement*************"<<std::endl;
+        std::cout<<"list of segments: "<<std::endl;
+        for (int i=0;i<segments.size();i++)
+            std::cout<<segments[i]<<std::endl;
         //Creating arrangement vertices
         std::vector<EVector2> arrVertices;
         //std::vector<std::vector<int>> VS;  //list of participating segments per vertex
@@ -93,6 +97,7 @@ namespace directional{
 
                 for (int r=0;r<result.size();r++){
                     arrVertices.push_back(segments[i].source * (1 - result[r].first) + segments[i].target * result[r].first);
+                    std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at"<<arrVertices[arrVertices.size()-1]<<std::endl;
                     /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
                     VS[arrVertices.size() - 1].push_back(j);*/
@@ -134,11 +139,14 @@ namespace directional{
                 nextsi++;
                 if (nextsi!=SV[i].end()) {
                     arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second));
+                    std::cout<<"Creating an edge ("<<si->second<<", "<<nextsi->second<<")"<<std::endl;
                     std::vector<int> newEdgeData(1); newEdgeData[0]=data[i];
                     edgeData.push_back(newEdgeData);
                 }
             }
         }
+
+        //STOPPED HERE
 
         //unifying vertices with the same coordinates (necessary because some segments may intersect at the same point and segment overlaps
         auto VertexCompare = [](const std::pair<EVector2, int>& a, const std::pair<EVector2, int>& b) { return a.first < b.first; };

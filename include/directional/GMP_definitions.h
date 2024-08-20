@@ -62,7 +62,7 @@ namespace directional{
         EVector<Size> operator-(const EVector<Size>& ev) const{
             EVector<Size> newVec;
             for (int i=0;i<Size;i++)
-                newVec.data[i]=data[i]+ev.data[i];
+                newVec.data[i]=data[i]-ev.data[i];
 
             return newVec;
         }
@@ -235,12 +235,15 @@ namespace directional{
         ENumber denom = line1.direction[0]*line2.direction[1]-line1.direction[1]*line2.direction[0];
         if (denom==0){
             EVector2 pointVec = line1.point-line2.point;
+            std::cout<<"lines are parallel"<<std::endl;
             return  (pointVec[0]*line1.direction[1]-pointVec[1]*line1.direction[0]==0 ? 2 : 0);
         }
 
         t1 = ((line2.point[0]-line1.point[0])*(line2.direction[1])-(line2.point[1]-line1.point[1])*(line2.direction[0]))/denom;
         t2 = ((line2.point[0]-line1.point[0])*(line1.direction[1])-(line2.point[1]-line1.point[1])*(line1.direction[0]))/denom;
         assert("line_line_intersection is wrong!" && line1.point+t1*line1.direction == line2.point+t2*line2.direction);
+        std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
+        std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
         return 1;
 
     }
@@ -249,21 +252,30 @@ namespace directional{
                                                              const Segment2& seg2){
 
         ENumber t1, t2;
+        std::cout<<"Computing intersection of "<<seg1<<" and "<<seg2<<std::endl;
         int result = line_line_intersection(Line2(seg1.source, seg1.target-seg1.source),
                                             Line2(seg2.source, seg2.target-seg2.source),t1, t2);
 
-        if (result==0)
+        if (result==0) {
+            std::cout<<"supporting lines don't intersect"<<std::endl;
             return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
+        }
 
         if (result==1) {  //a single intersection at most; should check t1 and t2
+            std::cout<<"single intersection"<<std::endl;
             if ((t1>=ENumber(0))&&(t1<=ENumber(1))&&(t2>=ENumber(0))&&(t2<=ENumber(1))){
                 std::vector<std::pair<ENumber, ENumber>> point(1);
                 point[0]=std::pair<ENumber, ENumber>(t1,t2);
+                std::cout<<"Intersecting at parameters "<<point[0].first.get_d()<<","<<point[0].second.get_d()<<std::endl;
                 return point;
+            } else{
+                std::cout<<"Intersecting out of parameter bounds"<<std::endl;
+                return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
             }
         }
 
         if (result==2){  //lines overlap; should check the segments overlap and then return both overlap points (order not important)
+            std::cout<<"Supporting lines overlap"<<std::endl;
             EVector2 vec = seg1.target-seg1.source;
             int axis = (vec[0]!=ENumber(0) ? 0 : 1);
             Segment2 sortSeg1, sortSeg2;
@@ -281,7 +293,11 @@ namespace directional{
                 std::vector<std::pair<ENumber, ENumber>> points(2);
                 points[0] = std::pair<ENumber, ENumber>(startAtSeg1, startAtSeg2);
                 points[1] = std::pair<ENumber, ENumber>(endAtSeg1, endAtSeg2);
+                std::cout<<"Intersecting at parameters "<<points[0].first.get_d()<<","<<points[0].second.get_d()<<" and "<<points[1].first.get_d()<<","<<points[1].second.get_d()<<std::endl;
                 return points;
+            } else{
+                std::cout<<"parameters don't overlap"<<std::endl;
+                return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
             }
 
         }
@@ -298,16 +314,22 @@ namespace directional{
         Line2 segLine(segment.source, segment.target-segment.source);
         ENumber t1, t2;
         int intersectType=line_line_intersection(line, segLine, t1, t2);
-        if (intersectType==0)   //no intersection
+        if (intersectType==0) {  //no intersection
+            std::cout<<"No intersection (lines parallel)"<<std::endl;
             return std::vector<ENumber>();
-        if (intersectType==2) { //the entire segment is contained in the line
+        } else if (intersectType==2) { //the entire segment is contained in the line
             std::vector<ENumber> result(2); result[0]=ENumber(0); result[1]=ENumber(1);
+            std::cout<<"Entire segment is contained in line"<<std::endl;
             return result;
-        }
-        if (intersectType==1){
-            std::vector<ENumber> result(1); result[0]=t2;
-            std::cout<<"t2: "<<t2.get_d()<<std::endl;
-            return result;
+        } else { //(intersectType==1)
+            if ((t2>=ENumber(0)) && (t2<=ENumber(1))){
+                std::vector<ENumber> result(1); result[0]=t1;
+                std::cout<<"Intersecting at line parameter t1:"<<t1.get_d()<<std::endl;
+                return result;
+            } else {
+                std::cout<<"No intersection  (out of segment parameter)"<<std::endl;
+                return std::vector<ENumber>();
+            }
         }
     }
 
@@ -336,6 +358,12 @@ namespace directional{
             if (result.size()==1)
                 intFace=true;
         }
+        if (intFace){
+            std::cout<<"Intersecting within the face with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
+        }
+        else if (intEdge){
+            std::cout<<"Intersecting an edge with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
+        } else std::cout<<"Line doesn't intersect triangle"<<std::endl;
 
     }
 
