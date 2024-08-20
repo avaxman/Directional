@@ -146,11 +146,9 @@ namespace directional{
             }
         }
 
-        //STOPPED HERE
-
         //unifying vertices with the same coordinates (necessary because some segments may intersect at the same point and segment overlaps
-        auto VertexCompare = [](const std::pair<EVector2, int>& a, const std::pair<EVector2, int>& b) { return a.first < b.first; };
-        std::set<std::pair<EVector2, int>, decltype(VertexCompare)> uniqueVertices(VertexCompare);
+        auto VertexCompare = [](const std::pair<EVector2, int> a, const std::pair<EVector2, int> b) { return a.first < b.first; };
+        std::set<std::pair<EVector2, int>, std::function<bool(const std::pair<EVector2, int>, const std::pair<EVector2, int>)>> uniqueVertices(VertexCompare);
         std::vector<int> uniqueVertexMap(arrVertices.size());
         std::vector<EVector2> uniqueArrVertices;
         int uniqueCounter=0;
@@ -222,6 +220,9 @@ namespace directional{
         }
 
         //Orienting segments around each vertex by CCW order
+        for (int i=0;i<arrVertices.size();i++)
+            std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
+
         for (int i=0;i<arrVertices.size();i++) {
             std::vector<std::pair<int,bool>> adjArrEdges;  //second is direction
             for (int j=0;j<arrEdges.size();j++) {
@@ -231,26 +232,39 @@ namespace directional{
                     adjArrEdges.push_back(std::pair<int,bool>(j,false));
             }//not very efficient but probably not that bad
 
+            std::cout<<"Orienting vertex "<<i<<std::endl;
+            for (int k=0;k<adjArrEdges.size();k++)
+                std::cout<<"Adjacent edge "<<adjArrEdges[k].first<<" with vertices "<<arrEdges[adjArrEdges[k].first].first<<","<<arrEdges[adjArrEdges[k].first].second<<std::endl;
+
             std::set<std::pair<ENumber, int>> CCWSegments;
             //using this slope function: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
             for (int j=0;j<adjArrEdges.size();j++) {
                 EVector2 edgeVec = arrVertices[arrEdges[adjArrEdges[j].first].second] - arrVertices[arrEdges[adjArrEdges[j].first].first];
                 edgeVec = (adjArrEdges[j].second ? edgeVec : -edgeVec);
                 ENumber slopeFunc = slope_function(edgeVec);
+                std::cout<<"slope: "<<slopeFunc.get_d()<<" for edgeVec "<<edgeVec<<std::endl;
                 CCWSegments.insert(std::pair<ENumber, int>(slopeFunc, j));
             }
+            std::cout<<"Ordering of edges"<<std::endl;
+            for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++)
+                std::cout<<si->second<<",";
+            std::cout<<std::endl;
+
             int currHE = -1;
             for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++) {
                 bool outgoing = adjArrEdges[si->second].second;
-                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[si->second].second].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[si->second].second].halfedge].twin);
+                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[si->second].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[si->second].first].halfedge].twin);
                 std::set<std::pair<ENumber, int>>::iterator nextsi = si; nextsi++;
                 if (nextsi==CCWSegments.end())
                     nextsi = CCWSegments.begin();
 
                 outgoing = adjArrEdges[nextsi->second].second;
-                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nextsi->second].second].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nextsi->second].second].halfedge].twin);
-                triDcel.halfedges[triDcel.halfedges[outCurrHE].twin].next=outNextHE;
-                triDcel.halfedges[outNextHE].prev = triDcel.halfedges[outCurrHE].twin;
+                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nextsi->second].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nextsi->second].first].halfedge].twin);
+                triDcel.halfedges[outCurrHE].prev = triDcel.halfedges[outNextHE].twin;
+                triDcel.halfedges[triDcel.halfedges[outNextHE].twin].next = outCurrHE;
+
+                //triDcel.halfedges[triDcel.halfedges[outCurrHE].twin].next=outNextHE;
+                //triDcel.halfedges[outNextHE].prev = triDcel.halfedges[outCurrHE].twin;
             }
         }
 
@@ -260,18 +274,23 @@ namespace directional{
             if (triDcel.halfedges[i].face != -1)
                 continue;  //already been assigned
 
+
             FunctionDCEL::Face newFace;
             newFace.ID = currFace++;
+            std::cout<<"New face "<<newFace.ID<<std::endl;
+            std::cout<<"edges: ";
             int beginHE = i;
             newFace.halfedge=beginHE;
             int currHE = beginHE;
             int counter=0;
             do {
+                std::cout<<currHE<<",";
                 triDcel.halfedges[currHE].face = newFace.ID;
                 currHE=triDcel.halfedges[currHE].next;
                 counter++;
                 assert ("something wrong with the face" && counter<10000);
             }while (currHE!=beginHE);
+            std::cout<<std::endl;
             triDcel.faces.push_back(newFace);
         }
         int numFaces=currFace;

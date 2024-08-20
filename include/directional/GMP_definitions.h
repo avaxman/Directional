@@ -85,9 +85,9 @@ namespace directional{
         //for the sake of sorting
         bool operator<(const EVector<Size>& ev) const{
             for (int i=0;i<Size;i++)
-                if (data[i]>=ev.data[i])
-                    return false;
-            return true;
+                if (data[i]!=ev.data[i])
+                    return data[i]<ev.data[i];
+            return false;
         }
 
         EVector(const std::initializer_list<ENumber>& args){
