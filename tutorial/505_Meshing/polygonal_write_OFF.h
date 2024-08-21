@@ -32,8 +32,11 @@ namespace hedra
     FileHandle.open(str);
     if (!FileHandle.is_open())
       return false;
+
+    int precision = 9; // Set precision to 5 decimal places
+    Eigen::IOFormat resFormat(precision, 0, " ", "\n");
     FileHandle<<"OFF"<<endl<<V.rows()<<" "<<F.rows()<<" 0"<<endl;
-    FileHandle<<V<<endl;
+    FileHandle<<V.format(resFormat)<<endl;
     MatrixXi FD(D.rows(), D.cols()+F.cols());
     FD<<D, F;
     for (int i=0;i<F.rows();i++)

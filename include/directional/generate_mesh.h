@@ -305,7 +305,7 @@ namespace directional{
         int numFaces=currFace;
 
         //EXPENSIVE! comment out after being sure
-        triDcel.check_consistency(true, true, true, false);
+        assert("DCEL not consistent!" && triDcel.check_consistency(true, true, true, false));
 
         //Removing the outer face and deleting all associated halfedges
         //identifying it by the only polygon with negative signed area (expensive?)
@@ -345,7 +345,7 @@ namespace directional{
         //removing dead edges
         triDcel.clean_mesh();
         //EXPENSIVE! comment out after being sure
-        triDcel.check_consistency(true, true, true, false);
+        assert("DCEL not consistent!" && triDcel.check_consistency(true, true, true, false));
     }
 
 
@@ -677,6 +677,7 @@ namespace directional{
                     localArrDcel.vertices[i].data.eCoords =
                             localArrDcel.vertices[i].data.eCoords + ETriPoints3D[j] * baryValues[j];
                 }
+                //localArrDcel.vertices[i].data.eCoords = EVector3({localV[i][0], localV[i][1], 0});
 
                 std::cout<<"localArrDcel.vertices[i].data.eCoords: "<<localArrDcel.vertices[i].data.eCoords<<std::endl;
 

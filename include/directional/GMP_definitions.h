@@ -238,12 +238,12 @@ namespace directional{
                                const Line2& line2,
                                ENumber& t1,
                                ENumber& t2){
-        std::cout<<"Computing intersection between line: "<<line1<<" and line "<<line2<<std::endl;
+        //std::cout<<"Computing intersection between line: "<<line1<<" and line "<<line2<<std::endl;
         ENumber denom = (line1.direction[0]*line2.direction[1]-line1.direction[1]*line2.direction[0]);
         denom.canonicalize();
         if (denom==0){
             EVector2 pointVec = line1.point-line2.point;
-            std::cout<<"lines are parallel"<<std::endl;
+            //std::cout<<"lines are parallel"<<std::endl;
             return  (pointVec[0]*line1.direction[1]-pointVec[1]*line1.direction[0]==0 ? 2 : 0);
         }
 
@@ -328,7 +328,7 @@ namespace directional{
         ENumber t1, t2;
         int intersectType=line_line_intersection(line, segLine, t1, t2);
         if (intersectType==0) {  //no intersection
-            std::cout<<"No intersection (lines parallel)"<<std::endl;
+            //std::cout<<"No intersection (lines parallel)"<<std::endl;
             return std::vector<ENumber>();
         } else if (intersectType==2) { //the entire segment is contained in the line
             std::vector<ENumber> result(2); result[0]=ENumber(0); result[1]=ENumber(1);
@@ -337,10 +337,10 @@ namespace directional{
         } else { //(intersectType==1)
             if ((t2>=ENumber(0)) && (t2<=ENumber(1))){
                 std::vector<ENumber> result(1); result[0]=t1;
-                std::cout<<"Intersecting at line parameter t1:"<<t1.get_d()<<std::endl;
+                //std::cout<<"Intersecting at line parameter t1:"<<t1.get_d()<<std::endl;
                 return result;
             } else {
-                std::cout<<"No intersection  (out of segment parameter)"<<std::endl;
+                //std::cout<<"No intersection  (out of segment parameter)"<<std::endl;
                 return std::vector<ENumber>();
             }
         }
@@ -364,6 +364,7 @@ namespace directional{
                 outParam = (outParam > result[j] ? outParam : result[j]);
             }
             if (result.size()==2){
+                std::cout<<"line triangle overlap!!!"<<std::endl;
                 intEdge=true;
                 intFace=false;
                 return;
