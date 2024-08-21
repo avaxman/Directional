@@ -97,7 +97,7 @@ namespace directional{
 
                 for (int r=0;r<result.size();r++){
                     arrVertices.push_back(segments[i].source * (1 - result[r].first) + segments[i].target * result[r].first);
-                    std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at"<<arrVertices[arrVertices.size()-1]<<std::endl;
+                    std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
                     /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
                     VS[arrVertices.size() - 1].push_back(j);*/
@@ -170,9 +170,14 @@ namespace directional{
         for (int i=0;i<arrEdges.size();i++)
             arrEdges[i]=std::pair<int, int>(uniqueVertexMap[arrEdges[i].first], uniqueVertexMap[arrEdges[i].second]);
 
-        //unifying edges with the same vertices (aggregating data)
+        std::cout<<"Edges after unifying vertices "<<std::endl;
+
+        //unifying edges with the same vertices (aggregating data) or degenerated
         Eigen::VectorXi isDeadEdge=Eigen::VectorXi::Constant(arrEdges.size(),0);
         for (int i=0;i<arrEdges.size();i++) {
+            std::cout<<"("<<arrEdges[i].first<<", "<<arrEdges[i].second<<")"<<std::endl;
+            if (arrEdges[i].first==arrEdges[i].second)
+                isDeadEdge[i]=1;
             for (int j = i + 1; j < arrEdges.size(); j++) {
                 if (((arrEdges[i].first == arrEdges[j].first) && (arrEdges[i].second == arrEdges[j].second)) ||
                     ((arrEdges[i].first == arrEdges[j].first) && (arrEdges[i].second == arrEdges[j].second))) {
@@ -220,8 +225,12 @@ namespace directional{
         }
 
         //Orienting segments around each vertex by CCW order
+        std::cout<<"Clean vertices and edges: "<<std::endl;
         for (int i=0;i<arrVertices.size();i++)
             std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
+
+        for (int i=0;i<arrVertices.size();i++)
+            std::cout<<"arrEdge "<<i<<": "<<arrEdges[i].first<<","<<arrEdges[i].second<<std::endl;
 
         for (int i=0;i<arrVertices.size();i++) {
             std::vector<std::pair<int,bool>> adjArrEdges;  //second is direction
@@ -307,9 +316,11 @@ namespace directional{
             int currHE = beginHE;
             do{
                 faceVectors.push_back(V[triDcel.halfedges[triDcel.halfedges[currHE].next].vertex] - V[triDcel.halfedges[currHE].vertex]);
+                //std::cout<<"face vector :"<<faceVectors[faceVectors.size()-1]<<std::endl;
                 currHE= triDcel.halfedges[currHE].next;
             }while(currHE!=beginHE);
             ENumber sfa = signed_face_area(faceVectors);
+            std::cout<<"Signed area of face "<<f<<": "<<sfa.get_d()<<std::endl;
             if (sfa<ENumber(0)){
                 outerFace=f;
                 break;
@@ -435,7 +446,8 @@ namespace directional{
                 xyz[0] = x;
                 xyz[1] = y;
                 xyz[2] = z;
-                ETriPoints3D.push_back(xyz);
+                //std::cout<<"xyz: "<<xyz<<std::endl;
+                ETriPoints3D[i]=xyz;
             }
 
             /*ETriPoints2D.push_back(RowVector2ed(0,0));
@@ -629,6 +641,7 @@ namespace directional{
             //converting the vertices to 3D
             for (int i = 0; i < localV.size(); i++) {
                 //checking if this is an original vertex
+                std::cout<<"Converting vertex "<<i<<" to 3D "<<std::endl;
                 bool isOrigTriangle = false;
                 for (int j = 0; j < 3; j++) {
                     if (localV[i] == ETriPoints2D[j]) {
@@ -637,8 +650,8 @@ namespace directional{
                     }
                 }
 
-                if (isOrigTriangle)
-                    continue;    //this is probably not needed but covered by barycentric coordinates but w/e
+                /*if (isOrigTriangle)
+                    continue;    //this is probably not needed but covered by barycentric coordinates but w/e*/
 
                 //finding out barycentric coordinates
                 ENumber baryValues[3];
@@ -656,9 +669,16 @@ namespace directional{
                 for (int j = 0; j < 3; j++)
                     baryValues[j] /= sum;
 
+                std::cout<<"baryValues vertex "<< baryValues[0].get_d()<<","<< baryValues[1].get_d()<<","<< baryValues[2].get_d()<<std::endl;
+
                 localArrDcel.vertices[i].data.eCoords = EVector3({0, 0, 0});
-                for (int j = 0; j < 3; j++)
-                    localArrDcel.vertices[i].data.eCoords = localArrDcel.vertices[i].data.eCoords + ETriPoints3D[i] * baryValues[i];
+                for (int j = 0; j < 3; j++) {
+                    std::cout<<"ETriPoints3D["<<j<<"]: "<<ETriPoints3D[j]<<std::endl;
+                    localArrDcel.vertices[i].data.eCoords =
+                            localArrDcel.vertices[i].data.eCoords + ETriPoints3D[j] * baryValues[j];
+                }
+
+                std::cout<<"localArrDcel.vertices[i].data.eCoords: "<<localArrDcel.vertices[i].data.eCoords<<std::endl;
 
                 localArrDcel.vertices[i].data.coords << localArrDcel.vertices[i].data.eCoords[0].get_d(),
                         localArrDcel.vertices[i].data.eCoords[1].get_d(),

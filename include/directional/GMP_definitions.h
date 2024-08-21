@@ -102,7 +102,12 @@ namespace directional{
         template<size_t _Size>
         friend std::ostream& operator<<(std::ostream& os, const EVector<_Size>& evec);
 
-    protected:
+        void canonicalize(){
+            for (int i=0;i<Size;i++)
+                data[i].canonicalize();
+        }
+
+    //protected:
         std::vector<ENumber> data;
     };
 
@@ -119,6 +124,8 @@ namespace directional{
         os<<evec[Size-1].get_d()<<")";
         return os;
     }
+
+
 
     typedef EVector<2> EVector2;
     typedef EVector<3> EVector3;
@@ -232,7 +239,8 @@ namespace directional{
                                ENumber& t1,
                                ENumber& t2){
         std::cout<<"Computing intersection between line: "<<line1<<" and line "<<line2<<std::endl;
-        ENumber denom = line1.direction[0]*line2.direction[1]-line1.direction[1]*line2.direction[0];
+        ENumber denom = (line1.direction[0]*line2.direction[1]-line1.direction[1]*line2.direction[0]);
+        denom.canonicalize();
         if (denom==0){
             EVector2 pointVec = line1.point-line2.point;
             std::cout<<"lines are parallel"<<std::endl;
@@ -241,9 +249,14 @@ namespace directional{
 
         t1 = ((line2.point[0]-line1.point[0])*(line2.direction[1])-(line2.point[1]-line1.point[1])*(line2.direction[0]))/denom;
         t2 = ((line2.point[0]-line1.point[0])*(line1.direction[1])-(line2.point[1]-line1.point[1])*(line1.direction[0]))/denom;
-        assert("line_line_intersection is wrong!" && line1.point+t1*line1.direction == line2.point+t2*line2.direction);
-        std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
-        std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
+        //std::cout<<"t1, t2: "<<t1.get_d()<<","<<t2.get_d()<<std::endl;
+        //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
+        //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
+        EVector2 diff = (line1.point+t1*line1.direction) - (line2.point+t2*line2.direction);
+        diff.canonicalize();
+        assert("line_line_intersection is wrong!" && diff == EVector2());
+        //std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
+        //std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
         return 1;
 
     }
@@ -358,6 +371,8 @@ namespace directional{
             if (result.size()==1)
                 intFace=true;
         }
+        if (inParam==outParam)  //intersecting the triangle only by a vertex; ignored
+            intFace=intEdge=false;
         if (intFace){
             std::cout<<"Intersecting within the face with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
         }
@@ -396,9 +411,10 @@ namespace directional{
         EVector2 currVertex; currVertex[0]=currVertex[1]=ENumber(0);
         ENumber sfa(0);
         for (int i=0;i<faceVectors.size();i++){
-            EVector2 nextVector = faceVectors[(i!=faceVectors.size()-1) ? i : 0];
+            EVector2 nextVector = faceVectors[i];
             EVector2 nextVertex = currVertex+nextVector;
             sfa = sfa + currVertex[0]*nextVertex[1]-currVertex[1]*nextVertex[0];
+            //std::cout<<"curr sfa: "<<sfa.get_d()<<std::endl;
             currVertex=nextVertex;
         }
         return sfa;
