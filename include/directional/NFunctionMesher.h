@@ -77,6 +77,7 @@ namespace directional{
 
         //mesh generation functions found in generate_mesh.h
         void arrange_on_triangle(const std::vector<EVector2>& triangle,
+                                 const std::vector<std::pair<int, bool>>& triangleData,
                                  const std::vector<Line2>& lines,
                                  const std::vector<int>& lineData,
                                  std::vector<EVector2>& V,
@@ -828,7 +829,7 @@ namespace directional{
             if (verbose){
                 for (int i=0;i<Result.size();i++){
                     if (squaredDistance(Set1[Result[i].first],Set2[Result[i].second])>0){
-                        std::cout<<"("<<Result[i].first<<","<<Result[i].second<<") with dist "<<squaredDistance(Set1[Result[i].first],Set2[Result[i].second])<<std::endl;
+                        std::cout<<"("<<Result[i].first<<","<<Result[i].second<<") with dist "<<squaredDistance(Set1[Result[i].first],Set2[Result[i].second]).get_d()<<std::endl;
                         std::cout<<"Distance is abnormally not zero!"<<std::endl;
                     }
                 }

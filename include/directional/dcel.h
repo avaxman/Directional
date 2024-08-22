@@ -735,7 +735,7 @@ namespace directional
         }
 
 
-        void aggregage_dcel(const DCEL<VertexData, HalfedgeData, EdgeData, FaceData>& aggDcel)
+        void aggregate_dcel(const DCEL<VertexData, HalfedgeData, EdgeData, FaceData>& aggDcel)
         {
             //TODO: aggregate new elements and reindex where necessary
             int currVOffset = vertices.size();
@@ -754,7 +754,8 @@ namespace directional
                 halfedges[halfedges.size()-1].vertex += currVOffset;
                 halfedges[halfedges.size()-1].next += currHEOffset;
                 halfedges[halfedges.size()-1].prev += currHEOffset;
-                halfedges[halfedges.size()-1].twin += currHEOffset;
+                if (halfedges[halfedges.size()-1].twin!=-1)
+                    halfedges[halfedges.size()-1].twin+= currHEOffset;
                 halfedges[halfedges.size()-1].face += currFOffset;
                 halfedges[halfedges.size()-1].edge += currEOffset;
             }

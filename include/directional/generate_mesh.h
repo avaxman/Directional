@@ -30,14 +30,15 @@ namespace directional{
     //output is the DCEL of the result
     //Outer face is deleted in post-process
     void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
-                             const std::vector<Line2>& lines,
-                             const std::vector<int>& lineData,
-                             std::vector<EVector2>& V,
-                             FunctionDCEL& triDcel) {
+                                              const std::vector<std::pair<int, bool>>& triangleData,
+                                              const std::vector<Line2>& lines,
+                                              const std::vector<int>& lineData,
+                                              std::vector<EVector2>& V,
+                                              FunctionDCEL& triDcel){
 
         V = triangle;
 
-        std::vector<int> inData;  //the lines that are inside
+        std::vector<HEData> inData;  //the lines that are inside
         std::vector<Segment2> inSegments;  //parameters of the line segments inside the triangle
 
         std::cout<<"Triangle coordinates: "<<std::endl;
@@ -52,7 +53,9 @@ namespace directional{
             if (!intEdge && !intFace)
                 continue;   //no (non-measure-zero) intersection
 
-            inData.push_back(lineData[i]);
+            HEData newData; newData.isFunction=true;
+            newData.origNFunctionIndex=lineData[i];
+            inData.push_back(newData);
             EVector2 segSource = lines[i].point + lines[i].direction * inParam;
             EVector2 segTarget = lines[i].point + lines[i].direction * outParam;
             inSegments.push_back(Segment2(segSource, segTarget));
@@ -64,6 +67,9 @@ namespace directional{
 
         //pushing in triangle segments
         for (int i = 0; i < 3; i++) {
+            HEData newData;
+            newData.isFunction=false;
+            newData.
             inData.push_back(-1);  //no data
             inSegments.push_back(Segment2(triangle[i], triangle[(i + 1) % 3]));
         }
@@ -209,11 +215,20 @@ namespace directional{
 
         for (int i=0;i<arrEdges.size();i++) {
             triDcel.edges[i].ID = i;
-            //triDcel.edges[i].data = edgeData[i];   //TODO: halfedges (and edges) don't get any data!
-            triDcel.edges[i].halfedge=2*i;
 
             triDcel.halfedges[2*i].ID=2*i;
             triDcel.halfedges[2*i+1].ID=2*i+1;
+
+            triDcel.halfedges[2*i].data.isFunction = false;
+            triDcel.halfedges[2*i+1].data.isFunction = false;
+            for (int j=0;j<edgeData[i].size();j++) {
+                if (edgeData[i][j] != -1) {
+                    triDcel.halfedges[2*i].data.isFunction =  triDcel.halfedges[2*i+1].data.isFunction = true;
+                    triDcel.halfedges[2*i].data.origNFunctionIndex =  triDcel.halfedges[2*i+1].data.origNFunctionIndex = edgeData[i][j];
+                }
+            }
+
+            triDcel.edges[i].halfedge = 2 * i;
             triDcel.halfedges[2*i].vertex=arrEdges[i].first;
             triDcel.halfedges[2*i+1].vertex=arrEdges[i].second;
             triDcel.vertices[arrEdges[i].first].halfedge=2*i;
@@ -466,17 +481,21 @@ namespace directional{
             //ETriPoints.push_back(EPoint2D(cx,cy));
             //TriPoints.push_back(Location);
 
-            /*int DomEdge;
+            int DomEdge;
+            std::vector<std::pair<int, bool>> triangleData;  triangleData.resize(3); //of the triangles, to be put into arrangement data
+            int eiterate = origMesh.dcel.faces[findex].halfedge;
+            for (int i=0;i<3;i++){
+                if ((origMesh.dcel.halfedges[eiterate].twin < 0) || (origMesh.dcel.halfedges[eiterate].twin > eiterate))
+                    triangleData[i].first  = eiterate;
+                else
+                    triangleData[i].first = origMesh.dcel.halfedges[eiterate].twin;
 
-            if ((origMesh.Halfedges[eiterate].Twin < 0) || (origMesh.Halfedges[eiterate].Twin > eiterate))
-                DomEdge = eiterate;
-            else
-                DomEdge = origMesh.Halfedges[eiterate].Twin;
-            NFunctionMesher::EdgeData ed;
-            ed.OrigHalfedge = DomEdge;
-            ed.isBoundary = (origMesh.Halfedges[eiterate].Twin < 0);
-            EdgeDatas.push_back(ed);
-            eiterate = origMesh.Halfedges[eiterate].Next;*/
+                triangleData[i].second = (origMesh.dcel.halfedges[eiterate].twin < 0);  //is it a boundary
+
+                eiterate = origMesh.dcel.halfedges[eiterate].next;
+            }
+
+
             //} while (ebegin != eiterate);
 
             /*for (int i = 0; i < 3; i++) {
@@ -634,7 +653,7 @@ namespace directional{
 
             FunctionDCEL localArrDcel;
             vector<EVector2> localV;
-            arrange_on_triangle(ETriPoints2D, paramLines, lineData, localV, localArrDcel);
+            arrange_on_triangle(ETriPoints2D, triangleData, paramLines, lineData, localV, localArrDcel);
 
             //vector<EVector3> ELocalV3D(localV.size());
            // MatrixXd localV3D(localV.size(), 3);
@@ -688,7 +707,9 @@ namespace directional{
             }
 
             //aggregating to the general DCEL
-            genDcel.aggregage_dcel(localArrDcel);
+            genDcel.aggregate_dcel(localArrDcel);
+            //localArrDcel.check_consistency(true, false, false, false);
+            //genDcel.check_consistency(true, false, false, false);
         }
     }
     

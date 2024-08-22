@@ -67,7 +67,7 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
   if (verbose)
     std::cout<<"Cleaning Mesh"<<std::endl;
   
-  bool success = true; //mesher.simplify_mesh(verbose);
+  bool success = mesher.simplify_mesh(verbose, mfiData.N);
   
   if (success){
     if (verbose)
