@@ -69,8 +69,8 @@ namespace directional{
         for (int i = 0; i < 3; i++) {
             HEData newData;
             newData.isFunction=false;
-            newData.
-            inData.push_back(-1);  //no data
+            newData.origHalfedge=triangleData[i].first;
+            inData.push_back(newData);  //no data
             inSegments.push_back(Segment2(triangle[i], triangle[(i + 1) % 3]));
         }
 
@@ -80,16 +80,16 @@ namespace directional{
 
 
     void NFunctionMesher::segment_arrangement(const std::vector<Segment2>& segments,
-                             const std::vector<int>& data,
-                             std::vector<EVector2>& V,
-                             FunctionDCEL& triDcel) {
+                                              const std::vector<HEData>& data,
+                                              std::vector<EVector2>& V,
+                                              FunctionDCEL& triDcel) {
 
         //First creating a graph of segment intersection
 
         std::cout<<"************Computing segment arrangement*************"<<std::endl;
         std::cout<<"list of segments: "<<std::endl;
         for (int i=0;i<segments.size();i++)
-            std::cout<<segments[i]<<std::endl;
+            std::cout<<segments[i]<<" isFunction: "<<data[i].isFunction<<" origHalfedge:  "<<data[i].origHalfedge<<" function index: "<<data[i].origNFunctionIndex<<std::endl;
         //Creating arrangement vertices
         std::vector<EVector2> arrVertices;
         //std::vector<std::vector<int>> VS;  //list of participating segments per vertex
@@ -138,7 +138,7 @@ namespace directional{
 
         //Creating the arrangement edges
         std::vector<std::pair<int, int>> arrEdges;
-        std::vector<std::vector<int>> edgeData;
+        std::vector<std::vector<HEData>> edgeData;
         for (int i=0;i<SV.size();i++){
             for (std::set<std::pair<ENumber, int>>::iterator si = SV[i].begin(); si!=SV[i].end();si++){
                 std::set<std::pair<ENumber, int>>::iterator nextsi = si;
@@ -146,7 +146,7 @@ namespace directional{
                 if (nextsi!=SV[i].end()) {
                     arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second));
                     std::cout<<"Creating an edge ("<<si->second<<", "<<nextsi->second<<")"<<std::endl;
-                    std::vector<int> newEdgeData(1); newEdgeData[0]=data[i];
+                    std::vector<HEData> newEdgeData(1); newEdgeData[0]=data[i];
                     edgeData.push_back(newEdgeData);
                 }
             }
@@ -194,7 +194,7 @@ namespace directional{
         }
         //cleaning dead edges
         std::vector<std::pair<int, int>> newArrEdges;
-        std::vector<std::vector<int>> newEdgeData;
+        std::vector<std::vector<HEData>> newEdgeData;
         for (int i=0;i<arrEdges.size();i++){
             if (isDeadEdge[i])
                 continue;
@@ -219,13 +219,16 @@ namespace directional{
             triDcel.halfedges[2*i].ID=2*i;
             triDcel.halfedges[2*i+1].ID=2*i+1;
 
+            //Consolidating the edge data
             triDcel.halfedges[2*i].data.isFunction = false;
             triDcel.halfedges[2*i+1].data.isFunction = false;
             for (int j=0;j<edgeData[i].size();j++) {
-                if (edgeData[i][j] != -1) {
+                if (edgeData[i][j].isFunction) {
                     triDcel.halfedges[2*i].data.isFunction =  triDcel.halfedges[2*i+1].data.isFunction = true;
-                    triDcel.halfedges[2*i].data.origNFunctionIndex =  triDcel.halfedges[2*i+1].data.origNFunctionIndex = edgeData[i][j];
+                    triDcel.halfedges[2*i].data.origNFunctionIndex =  triDcel.halfedges[2*i+1].data.origNFunctionIndex = edgeData[i][j].origNFunctionIndex;
                 }
+                if (edgeData[i][j].origHalfedge>=0)
+                    triDcel.halfedges[2*i].data.origHalfedge =  triDcel.halfedges[2*i+1].data.origHalfedge = edgeData[i][j].origHalfedge;
             }
 
             triDcel.edges[i].halfedge = 2 * i;
@@ -239,14 +242,25 @@ namespace directional{
 
         }
 
-        //Orienting segments around each vertex by CCW order
         std::cout<<"Clean vertices and edges: "<<std::endl;
         for (int i=0;i<arrVertices.size();i++)
             std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
 
-        for (int i=0;i<arrVertices.size();i++)
-            std::cout<<"arrEdge "<<i<<": "<<arrEdges[i].first<<","<<arrEdges[i].second<<std::endl;
+        for (int i=0;i<arrEdges.size();i++) {
+            std::cout << "arrEdge " << i << ": " << arrEdges[i].first << "," << arrEdges[i].second << std::endl;
+            std::cout <<" edge data" <<std::endl;
+            for (int j=0;j<edgeData[i].size();j++)
+                std::cout<<"isFunction: "<<edgeData[i][j].isFunction<<" origHalfedge: "<<edgeData[i][j].origHalfedge<<" function index :"<<edgeData[i][j].origNFunctionIndex<<std::endl;
+        }
 
+        for (int i=0;i<triDcel.halfedges.size();i++) {
+            std::cout << "halfedge " << i << " of edge " << triDcel.halfedges[i].edge << " isFunction: " <<
+                      triDcel.halfedges[i].data.isFunction << " origHalfEdge :" <<
+                      triDcel.halfedges[i].data.origHalfedge << " origNFunctionIndex: " <<
+                      triDcel.halfedges[i].data.origNFunctionIndex << std::endl;
+        }
+
+        //Orienting segments around each vertex by CCW order
         for (int i=0;i<arrVertices.size();i++) {
             std::vector<std::pair<int,bool>> adjArrEdges;  //second is direction
             for (int j=0;j<arrEdges.size();j++) {

@@ -84,7 +84,7 @@ namespace directional{
                                  FunctionDCEL& triDcel);
 
         void segment_arrangement(const std::vector<Segment2>& segments,
-                                 const std::vector<int>& data,
+                                 const std::vector<HEData>& data,
                                  std::vector<EVector2>& V,
                                  FunctionDCEL& triDcel);
 
