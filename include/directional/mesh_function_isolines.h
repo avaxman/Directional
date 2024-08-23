@@ -54,11 +54,13 @@ bool mesh_function_isolines(const directional::TriMesh& origMesh,
 
   mesher.init();
   
-  if (verbose){
+  if (verbose)
     std::cout<<"Generating mesh"<<std::endl;
-    mesher.generate_mesh();
+
+  mesher.generate_mesh();
+  if (verbose)
     std::cout<<"Done generating!"<<std::endl;
-  }
+
   
   Eigen::VectorXi genInnerEdges,genTF;
   Eigen::MatrixXi genEV,genEFi, genEF,genFE, genTEdges;

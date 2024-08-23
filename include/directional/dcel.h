@@ -714,7 +714,7 @@ namespace directional
             //  return;
             //adjusting source
 
-            std::cout<<"Unifying halfedge "<<halfedges[heindex].prev<<" into halfedge "<<heindex<<" killing edge "<<halfedges[halfedges[heindex].prev].edge<<std::endl;
+            //std::cout<<"Unifying halfedge "<<halfedges[heindex].prev<<" into halfedge "<<heindex<<" killing edge "<<halfedges[halfedges[heindex].prev].edge<<std::endl;
             vertices[halfedges[heindex].vertex].valid = false;
             halfedges[heindex].vertex = halfedges[halfedges[heindex].prev].vertex;
             if (halfedges[heindex].data.prescribedAngle < 0.0)
@@ -736,7 +736,7 @@ namespace directional
             if (halfedges[heindex].twin >= 0) {
                 //if (halfedges[halfedges[heindex].twin].data.prescribedAngle < 0.0)
                 //    halfedges[halfedges[heindex].twin].data.prescribedAngle = halfedges[halfedges[halfedges[heindex].twin].next].data.prescribedAngle;
-                std::cout<<"Unifying halfedge "<<halfedges[halfedges[heindex].twin].next<<" into halfedge "<<halfedges[heindex].twin<<" killing edge "<<halfedges[halfedges[halfedges[heindex].twin].next].edge<<std::endl;
+                //std::cout<<"Unifying halfedge "<<halfedges[halfedges[heindex].twin].next<<" into halfedge "<<halfedges[heindex].twin<<" killing edge "<<halfedges[halfedges[halfedges[heindex].twin].next].edge<<std::endl;
                 halfedges[halfedges[halfedges[heindex].twin].next].valid = false;
                 edges[halfedges[halfedges[halfedges[heindex].twin].next].edge].valid = false;
                 halfedges[halfedges[heindex].twin].next = halfedges[halfedges[halfedges[heindex].twin].next].next;

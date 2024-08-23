@@ -5,18 +5,15 @@
 #include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
-#include <directional/write_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
-#include <directional/branched_isolines.h>
 #include <directional/mesh_function_isolines.h>
-#include <directional/setup_mesh_function_isolines.h>
 #include <directional/directional_viewer.h>
 #include "polygonal_write_OFF.h"
 
-#define NUM_N 1
+#define NUM_N 3
 
 int N[NUM_N];
 int currN = 0;
@@ -39,11 +36,11 @@ int main()
 
   directional::readOFF(TUTORIAL_DATA_PATH "/vase.off",meshWhole);
   ftb.init(meshWhole);
-  //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[0], rawField[0]);
-  //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
 
-  bool verbose=true;
+  bool verbose=false;
   
   //combing and cutting
   viewer.init();
@@ -69,12 +66,23 @@ int main()
     
     //meshing and saving
     directional::mesh_function_isolines(meshWhole, mfiData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
-    hedra::polygonal_write_OFF(TUTORIAL_DATA_PATH "/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
 
     viewer.set_mesh(meshWhole);
     viewer.set_field(combedField[i], "", 0, i);
     viewer.set_seams(combedField[i].matching, 0, i);
     viewer.set_isolines(meshCut[i],NFunction[i],0, i);
+
+    //Viewing polygonal mesh by direct call to Polyscope (Directional Viewer doesn't natively support polygonal meshes)
+    std::vector<std::vector<int>> psF; psF.resize(DPolyMesh[i].size());
+    for (int j=0;j<DPolyMesh[i].size();j++){
+        psF[j].resize(DPolyMesh[i](j));
+        for (int k=0;k<DPolyMesh[i](j);k++)
+            psF[j][k]=FPolyMesh[i](j,k);
+    }
+    polyscope::registerSurfaceMesh("/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], psF);
+
+    //Also saving file
+    hedra::polygonal_write_OFF(TUTORIAL_DATA_PATH "/vase-"+std::to_string(N[i])+"-generated.off", VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
 
   }
   viewer.launch();

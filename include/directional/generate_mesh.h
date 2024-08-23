@@ -42,8 +42,8 @@ namespace directional{
         std::vector<Segment2> inSegments;  //parameters of the line segments inside the triangle
 
         //std::cout<<"Triangle coordinates: "<<std::endl;
-        for (int i=0;i<triangle.size();i++)
-            std::cout<<triangle[i][0].get_d()<<" "<<triangle[i][1].get_d()<<std::endl;
+        /*for (int i=0;i<triangle.size();i++)
+            std::cout<<triangle[i][0].get_d()<<" "<<triangle[i][1].get_d()<<std::endl;*/
         for (int i = 0; i < lines.size(); i++) {
             //checking for intersections with the triangle
             ENumber inParam, outParam;  //the parameters of intersection
@@ -181,7 +181,7 @@ namespace directional{
         //unifying edges with the same vertices (aggregating data) or degenerated
         Eigen::VectorXi isDeadEdge=Eigen::VectorXi::Constant(arrEdges.size(),0);
         for (int i=0;i<arrEdges.size();i++) {
-            std::cout<<"("<<arrEdges[i].first<<", "<<arrEdges[i].second<<")"<<std::endl;
+            //std::cout<<"("<<arrEdges[i].first<<", "<<arrEdges[i].second<<")"<<std::endl;
             if (arrEdges[i].first==arrEdges[i].second)
                 isDeadEdge[i]=1;
             for (int j = i + 1; j < arrEdges.size(); j++) {
@@ -284,9 +284,9 @@ namespace directional{
                 CCWSegments.insert(std::pair<ENumber, int>(slopeFunc, j));
             }
             //std::cout<<"Ordering of edges"<<std::endl;
-            for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++)
+            /*for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++)
                 std::cout<<si->second<<",";
-            std::cout<<std::endl;
+            std::cout<<std::endl;*/
 
             int currHE = -1;
             for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++) {
@@ -322,19 +322,19 @@ namespace directional{
             int currHE = beginHE;
             int counter=0;
             do {
-                std::cout<<currHE<<",";
+                //std::cout<<currHE<<",";
                 triDcel.halfedges[currHE].face = newFace.ID;
                 currHE=triDcel.halfedges[currHE].next;
                 counter++;
                 assert ("something wrong with the face" && counter<10000);
             }while (currHE!=beginHE);
-            std::cout<<std::endl;
+            //std::cout<<std::endl;
             triDcel.faces.push_back(newFace);
         }
         int numFaces=currFace;
 
         //EXPENSIVE! comment out after being sure
-        assert("DCEL not consistent!" && triDcel.check_consistency(true, true, true, false));
+        assert("DCEL not consistent!" && triDcel.check_consistency(false, true, true, false));
 
         //Removing the outer face and deleting all associated halfedges
         //identifying it by the only polygon with negative signed area (expensive?)
@@ -374,7 +374,7 @@ namespace directional{
         //removing dead edges
         triDcel.clean_mesh();
         //EXPENSIVE! comment out after being sure
-        assert("DCEL not consistent!" && triDcel.check_consistency(true, true, true, false));
+        assert("DCEL not consistent!" && triDcel.check_consistency(false, true, true, false));
     }
 
 
@@ -422,9 +422,9 @@ namespace directional{
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
             vector<ENumber> triExactNFunction = exactNFunction[findex];
-            std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
-            for (int i=0;i<triExactNFunction.size();i++)
-                std::cout<<triExactNFunction[i].get_d()<<std::endl;
+            //std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
+            /*for (int i=0;i<triExactNFunction.size();i++)
+                std::cout<<triExactNFunction[i].get_d()<<std::endl;*/
 
             //vector<vector<ENumber> > funcValues(3);
 
@@ -445,10 +445,10 @@ namespace directional{
                 }
             }
 
-            for (int i=0;i<mfiData.N;i++){
+            /*for (int i=0;i<mfiData.N;i++){
                 std::cout<<"maxFuncs["<<i<<"]: "<<maxFuncs[i].get_d()<<std::endl;
                 std::cout<<"minFuncs["<<i<<"]: "<<minFuncs[i].get_d()<<std::endl;
-            }
+            }*/
 
             ////////////////////////building the one-triangle arrangement
             //ebegin = origMesh.Faces[findex].AdjHalfedge;
@@ -725,9 +725,10 @@ namespace directional{
 
             //aggregating to the general DCEL
             genDcel.aggregate_dcel(localArrDcel);
-            localArrDcel.check_consistency(true, false, false, false);
-            genDcel.check_consistency(true, false, false, false);
+            //localArrDcel.check_consistency(true, false, false, false);
+            //genDcel.check_consistency(true, false, false, false);
         }
+        genDcel.check_consistency(true, false, false, false);
     }
     
 } //namespace directional

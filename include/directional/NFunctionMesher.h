@@ -1023,7 +1023,7 @@ namespace directional{
                     genDcel.edges[genDcel.halfedges[Twinit->index].edge].valid=false;
                     genDcel.halfedges[Twinit->index].edge = genDcel.halfedges[i].edge;
 
-                    std::cout<<"Twinning halfedge "<<i<<" to halfedge "<<Twinit->index<<std::endl;
+                    //std::cout<<"Twinning halfedge "<<i<<" to halfedge "<<Twinit->index<<std::endl;
 
                     if (genDcel.halfedges[i].data.isFunction){
                         genDcel.halfedges[Twinit->index].data.isFunction = true;
@@ -1179,7 +1179,7 @@ namespace directional{
                 }while (heiterate!=hebegin);
                 if (countThree<3){
                     do{
-                        std::cout<<"Invalidating Vertex "<<genDcel.halfedges[heiterate].vertex<<" and  halfedge "<<heiterate<<" of valence "<<Valences[genDcel.halfedges[heiterate].vertex]<<std::endl;
+                        //std::cout<<"Invalidating Vertex "<<genDcel.halfedges[heiterate].vertex<<" and  halfedge "<<heiterate<<" of valence "<<Valences[genDcel.halfedges[heiterate].vertex]<<std::endl;
 
                         genDcel.halfedges[heiterate].valid=false;
 
