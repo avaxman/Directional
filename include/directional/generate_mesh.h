@@ -41,7 +41,7 @@ namespace directional{
         std::vector<HEData> inData;  //the lines that are inside
         std::vector<Segment2> inSegments;  //parameters of the line segments inside the triangle
 
-        std::cout<<"Triangle coordinates: "<<std::endl;
+        //std::cout<<"Triangle coordinates: "<<std::endl;
         for (int i=0;i<triangle.size();i++)
             std::cout<<triangle[i][0].get_d()<<" "<<triangle[i][1].get_d()<<std::endl;
         for (int i = 0; i < lines.size(); i++) {
@@ -60,9 +60,9 @@ namespace directional{
             EVector2 segTarget = lines[i].point + lines[i].direction * outParam;
             inSegments.push_back(Segment2(segSource, segTarget));
 
-            std::cout<<"inParam: "<<inParam.get_d()<<std::endl;
-            std::cout<<"outParam: "<<outParam.get_d()<<std::endl;
-            std::cout<<"intersecting segment: ("<<segSource[0].get_d()<<","<<segSource[1].get_d()<<")->("<<segTarget[0].get_d()<<","<<segTarget[1].get_d()<<")"<<std::endl;
+            //std::cout<<"inParam: "<<inParam.get_d()<<std::endl;
+            //std::cout<<"outParam: "<<outParam.get_d()<<std::endl;
+            //std::cout<<"intersecting segment: ("<<segSource[0].get_d()<<","<<segSource[1].get_d()<<")->("<<segTarget[0].get_d()<<","<<segTarget[1].get_d()<<")"<<std::endl;
         }
 
         //pushing in triangle segments
@@ -86,10 +86,10 @@ namespace directional{
 
         //First creating a graph of segment intersection
 
-        std::cout<<"************Computing segment arrangement*************"<<std::endl;
-        std::cout<<"list of segments: "<<std::endl;
-        for (int i=0;i<segments.size();i++)
-            std::cout<<segments[i]<<" isFunction: "<<data[i].isFunction<<" origHalfedge:  "<<data[i].origHalfedge<<" function index: "<<data[i].origNFunctionIndex<<std::endl;
+        //std::cout<<"************Computing segment arrangement*************"<<std::endl;
+        //std::cout<<"list of segments: "<<std::endl;
+        //for (int i=0;i<segments.size();i++)
+        //    std::cout<<segments[i]<<" isFunction: "<<data[i].isFunction<<" origHalfedge:  "<<data[i].origHalfedge<<" function index: "<<data[i].origNFunctionIndex<<std::endl;
         //Creating arrangement vertices
         std::vector<EVector2> arrVertices;
         //std::vector<std::vector<int>> VS;  //list of participating segments per vertex
@@ -103,7 +103,7 @@ namespace directional{
 
                 for (int r=0;r<result.size();r++){
                     arrVertices.push_back(segments[i].source * (1 - result[r].first) + segments[i].target * result[r].first);
-                    std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
+                    //std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
                     /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
                     VS[arrVertices.size() - 1].push_back(j);*/
@@ -145,7 +145,7 @@ namespace directional{
                 nextsi++;
                 if (nextsi!=SV[i].end()) {
                     arrEdges.push_back(std::pair<int, int>(si->second, nextsi->second));
-                    std::cout<<"Creating an edge ("<<si->second<<", "<<nextsi->second<<")"<<std::endl;
+                    //std::cout<<"Creating an edge ("<<si->second<<", "<<nextsi->second<<")"<<std::endl;
                     std::vector<HEData> newEdgeData(1); newEdgeData[0]=data[i];
                     edgeData.push_back(newEdgeData);
                 }
@@ -176,7 +176,7 @@ namespace directional{
         for (int i=0;i<arrEdges.size();i++)
             arrEdges[i]=std::pair<int, int>(uniqueVertexMap[arrEdges[i].first], uniqueVertexMap[arrEdges[i].second]);
 
-        std::cout<<"Edges after unifying vertices "<<std::endl;
+        //std::cout<<"Edges after unifying vertices "<<std::endl;
 
         //unifying edges with the same vertices (aggregating data) or degenerated
         Eigen::VectorXi isDeadEdge=Eigen::VectorXi::Constant(arrEdges.size(),0);
@@ -242,23 +242,23 @@ namespace directional{
 
         }
 
-        std::cout<<"Clean vertices and edges: "<<std::endl;
-        for (int i=0;i<arrVertices.size();i++)
-            std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
+        //std::cout<<"Clean vertices and edges: "<<std::endl;
+        //for (int i=0;i<arrVertices.size();i++)
+        //    std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
 
-        for (int i=0;i<arrEdges.size();i++) {
+        /*for (int i=0;i<arrEdges.size();i++) {
             std::cout << "arrEdge " << i << ": " << arrEdges[i].first << "," << arrEdges[i].second << std::endl;
             std::cout <<" edge data" <<std::endl;
             for (int j=0;j<edgeData[i].size();j++)
                 std::cout<<"isFunction: "<<edgeData[i][j].isFunction<<" origHalfedge: "<<edgeData[i][j].origHalfedge<<" function index :"<<edgeData[i][j].origNFunctionIndex<<std::endl;
-        }
+        }*/
 
-        for (int i=0;i<triDcel.halfedges.size();i++) {
+        /*for (int i=0;i<triDcel.halfedges.size();i++) {
             std::cout << "halfedge " << i << " of edge " << triDcel.halfedges[i].edge << " isFunction: " <<
                       triDcel.halfedges[i].data.isFunction << " origHalfEdge :" <<
                       triDcel.halfedges[i].data.origHalfedge << " origNFunctionIndex: " <<
                       triDcel.halfedges[i].data.origNFunctionIndex << std::endl;
-        }
+        }*/
 
         //Orienting segments around each vertex by CCW order
         for (int i=0;i<arrVertices.size();i++) {
@@ -270,9 +270,9 @@ namespace directional{
                     adjArrEdges.push_back(std::pair<int,bool>(j,false));
             }//not very efficient but probably not that bad
 
-            std::cout<<"Orienting vertex "<<i<<std::endl;
+            /*std::cout<<"Orienting vertex "<<i<<std::endl;
             for (int k=0;k<adjArrEdges.size();k++)
-                std::cout<<"Adjacent edge "<<adjArrEdges[k].first<<" with vertices "<<arrEdges[adjArrEdges[k].first].first<<","<<arrEdges[adjArrEdges[k].first].second<<std::endl;
+                std::cout<<"Adjacent edge "<<adjArrEdges[k].first<<" with vertices "<<arrEdges[adjArrEdges[k].first].first<<","<<arrEdges[adjArrEdges[k].first].second<<std::endl;*/
 
             std::set<std::pair<ENumber, int>> CCWSegments;
             //using this slope function: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
@@ -280,10 +280,10 @@ namespace directional{
                 EVector2 edgeVec = arrVertices[arrEdges[adjArrEdges[j].first].second] - arrVertices[arrEdges[adjArrEdges[j].first].first];
                 edgeVec = (adjArrEdges[j].second ? edgeVec : -edgeVec);
                 ENumber slopeFunc = slope_function(edgeVec);
-                std::cout<<"slope: "<<slopeFunc.get_d()<<" for edgeVec "<<edgeVec<<std::endl;
+                //std::cout<<"slope: "<<slopeFunc.get_d()<<" for edgeVec "<<edgeVec<<std::endl;
                 CCWSegments.insert(std::pair<ENumber, int>(slopeFunc, j));
             }
-            std::cout<<"Ordering of edges"<<std::endl;
+            //std::cout<<"Ordering of edges"<<std::endl;
             for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++)
                 std::cout<<si->second<<",";
             std::cout<<std::endl;
@@ -315,8 +315,8 @@ namespace directional{
 
             FunctionDCEL::Face newFace;
             newFace.ID = currFace++;
-            std::cout<<"New face "<<newFace.ID<<std::endl;
-            std::cout<<"edges: ";
+            //std::cout<<"New face "<<newFace.ID<<std::endl;
+            //std::cout<<"edges: ";
             int beginHE = i;
             newFace.halfedge=beginHE;
             int currHE = beginHE;
@@ -349,7 +349,7 @@ namespace directional{
                 currHE= triDcel.halfedges[currHE].next;
             }while(currHE!=beginHE);
             ENumber sfa = signed_face_area(faceVectors);
-            std::cout<<"Signed area of face "<<f<<": "<<sfa.get_d()<<std::endl;
+            //std::cout<<"Signed area of face "<<f<<": "<<sfa.get_d()<<std::endl;
             if (sfa<ENumber(0)){
                 outerFace=f;
                 break;
@@ -400,6 +400,9 @@ namespace directional{
 
         //pow(10,ceil(10/log10(minRange)));
         //cout<<"Resolution: "<<Resolution<<endl;
+
+        /*int f1 = origMesh.dcel.faces[0].ID;
+        int f2 = origMesh.dcel.faces[origMesh.dcel.halfedges[origMesh.dcel.halfedges[origMesh.dcel.faces[f1].halfedge].twin].face].ID;*/
 
         //Looping over all triangles, and arranging parametric lines for each
         for (int findex = 0; findex < origMesh.F.rows(); findex++) {
@@ -674,7 +677,7 @@ namespace directional{
             //converting the vertices to 3D
             for (int i = 0; i < localV.size(); i++) {
                 //checking if this is an original vertex
-                std::cout<<"Converting vertex "<<i<<" to 3D "<<std::endl;
+                //std::cout<<"Converting vertex "<<i<<" to 3D "<<std::endl;
                 bool isOrigTriangle = false;
                 for (int j = 0; j < 3; j++) {
                     if (localV[i] == ETriPoints2D[j]) {
@@ -702,17 +705,17 @@ namespace directional{
                 for (int j = 0; j < 3; j++)
                     baryValues[j] /= sum;
 
-                std::cout<<"baryValues vertex "<< baryValues[0].get_d()<<","<< baryValues[1].get_d()<<","<< baryValues[2].get_d()<<std::endl;
+                //std::cout<<"baryValues vertex "<< baryValues[0].get_d()<<","<< baryValues[1].get_d()<<","<< baryValues[2].get_d()<<std::endl;
 
                 localArrDcel.vertices[i].data.eCoords = EVector3({0, 0, 0});
                 for (int j = 0; j < 3; j++) {
-                    std::cout<<"ETriPoints3D["<<j<<"]: "<<ETriPoints3D[j]<<std::endl;
+                    //std::cout<<"ETriPoints3D["<<j<<"]: "<<ETriPoints3D[j]<<std::endl;
                     localArrDcel.vertices[i].data.eCoords =
                             localArrDcel.vertices[i].data.eCoords + ETriPoints3D[j] * baryValues[j];
                 }
                 //localArrDcel.vertices[i].data.eCoords = EVector3({localV[i][0], localV[i][1], 0});
 
-                std::cout<<"localArrDcel.vertices[i].data.eCoords: "<<localArrDcel.vertices[i].data.eCoords<<std::endl;
+                //std::cout<<"localArrDcel.vertices[i].data.eCoords: "<<localArrDcel.vertices[i].data.eCoords<<std::endl;
 
                 localArrDcel.vertices[i].data.coords << localArrDcel.vertices[i].data.eCoords[0].get_d(),
                         localArrDcel.vertices[i].data.eCoords[1].get_d(),
@@ -722,8 +725,8 @@ namespace directional{
 
             //aggregating to the general DCEL
             genDcel.aggregate_dcel(localArrDcel);
-            //localArrDcel.check_consistency(true, false, false, false);
-            //genDcel.check_consistency(true, false, false, false);
+            localArrDcel.check_consistency(true, false, false, false);
+            genDcel.check_consistency(true, false, false, false);
         }
     }
     

@@ -201,6 +201,13 @@ namespace directional
                     return false;
                 }
 
+                if (!edges[halfedges[i].edge].valid) {
+                    if (verbose)
+                        std::cout << "The edge of halfedges " << i << ", edge " << halfedges[i].edge
+                                  << " is not valid" << std::endl;
+                    return false;
+                }
+
                 if (halfedges[halfedges[i].next].vertex == halfedges[i].vertex) {  //a degenerate edge{
                     if (verbose)
                         std::cout << "Halfedge " << i << " with twin" << halfedges[i].twin
@@ -269,7 +276,7 @@ namespace directional
                     return false;
                 }
                 if ((halfedges[edges[i].halfedge].twin!=-1)&&(halfedges[halfedges[edges[i].halfedge].twin].edge!=i)){
-                    std::cout<<"Edge "<<i<<" points to twin halfedge "<<halfedges[edges[i].halfedge].twin<<" which does not point back."<<std::endl;
+                    std::cout<<"Edge "<<i<<" with halfedge "<<edges[i].halfedge<<" points to twin halfedge "<<halfedges[edges[i].halfedge].twin<<" which does not share the same edge."<<std::endl;
                     return false;
                 }
             }
@@ -626,7 +633,7 @@ namespace directional
                 if (halfedges[heindex].prev == halfedges[heindex].twin)
                     CloseEdge = halfedges[heindex].twin;
 
-                halfedges[CloseEdge].valid = halfedges[halfedges[CloseEdge].twin].valid = false;
+                halfedges[CloseEdge].valid = halfedges[halfedges[CloseEdge].twin].valid = edges[halfedges[CloseEdge].edge] = false;
 
                 vertices[halfedges[CloseEdge].vertex].halfedge = halfedges[halfedges[CloseEdge].twin].next;
                 faces[Face1].halfedge = halfedges[CloseEdge].prev;
@@ -706,6 +713,8 @@ namespace directional
             //if (halfedges[heindex].twin<0)
             //  return;
             //adjusting source
+
+            std::cout<<"Unifying halfedge "<<halfedges[heindex].prev<<" into halfedge "<<heindex<<" killing edge "<<halfedges[halfedges[heindex].prev].edge<<std::endl;
             vertices[halfedges[heindex].vertex].valid = false;
             halfedges[heindex].vertex = halfedges[halfedges[heindex].prev].vertex;
             if (halfedges[heindex].data.prescribedAngle < 0.0)
@@ -719,6 +728,7 @@ namespace directional
 
             //adjusting halfedges
             halfedges[halfedges[heindex].prev].valid = false;
+            edges[halfedges[halfedges[heindex].prev].edge].valid = false;
             halfedges[heindex].prev = halfedges[halfedges[heindex].prev].prev;
             halfedges[halfedges[heindex].prev].next = heindex;
 
@@ -726,7 +736,9 @@ namespace directional
             if (halfedges[heindex].twin >= 0) {
                 //if (halfedges[halfedges[heindex].twin].data.prescribedAngle < 0.0)
                 //    halfedges[halfedges[heindex].twin].data.prescribedAngle = halfedges[halfedges[halfedges[heindex].twin].next].data.prescribedAngle;
+                std::cout<<"Unifying halfedge "<<halfedges[halfedges[heindex].twin].next<<" into halfedge "<<halfedges[heindex].twin<<" killing edge "<<halfedges[halfedges[halfedges[heindex].twin].next].edge<<std::endl;
                 halfedges[halfedges[halfedges[heindex].twin].next].valid = false;
+                edges[halfedges[halfedges[halfedges[heindex].twin].next].edge].valid = false;
                 halfedges[halfedges[heindex].twin].next = halfedges[halfedges[halfedges[heindex].twin].next].next;
                 halfedges[halfedges[halfedges[heindex].twin].next].prev = halfedges[heindex].twin;
                 faces[halfedges[halfedges[heindex].twin].face].halfedge = halfedges[halfedges[heindex].twin].next;

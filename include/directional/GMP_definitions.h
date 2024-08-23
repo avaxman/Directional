@@ -212,26 +212,29 @@ namespace directional{
             VV[matches[i].second].push_back(matches[i].first);
         }
 
-        std::queue<int> nextVertexQueue;
+        std::deque<int> nextVertexQueue;
         for (int i=0;i<components.size();i++)
-            nextVertexQueue.push(i);
+            nextVertexQueue.push_front(i);
 
         int numComponents=0;
         while (!nextVertexQueue.empty()) {
             int nextVertex=nextVertexQueue.front();
-            nextVertexQueue.pop();
-            if (components[nextVertex]==-1)  //first components
-                components[nextVertex]=numComponents++;
+            nextVertexQueue.pop_front();
+            if (components[nextVertex]==-1) {  //first components
+                std::cout << "New component " << numComponents << " seed vertex " << nextVertex << std::endl;
+                components[nextVertex] = numComponents++;
+            }
 
             //Otherwise, doing DFS on edges
             for (int i=0;i<VV[nextVertex].size();i++){
                 if (components[VV[nextVertex][i]]==-1){
                     components[VV[nextVertex][i]]=components[nextVertex];
-                    nextVertexQueue.push(VV[nextVertex][i]);
+                    std::cout<<"adding vertex "<<VV[nextVertex][i]<<" to component "<<components[nextVertex]<<std::endl;
+                    nextVertexQueue.push_front(VV[nextVertex][i]);
                 } else assert(components[VV[nextVertex][i]]==components[nextVertex]);
             }
         }
-        return numComponents-1;
+        return numComponents;
     }
 
     int line_line_intersection(const Line2& line1,
@@ -265,7 +268,7 @@ namespace directional{
                                                              const Segment2& seg2){
 
         ENumber t1, t2;
-        std::cout<<"Computing intersection of "<<seg1<<" and "<<seg2<<std::endl;
+        //std::cout<<"Computing intersection of "<<seg1<<" and "<<seg2<<std::endl;
         int result = line_line_intersection(Line2(seg1.source, seg1.target-seg1.source),
                                             Line2(seg2.source, seg2.target-seg2.source),t1, t2);
 
@@ -275,14 +278,14 @@ namespace directional{
         }
 
         if (result==1) {  //a single intersection at most; should check t1 and t2
-            std::cout<<"single intersection"<<std::endl;
+            //std::cout<<"single intersection"<<std::endl;
             if ((t1>=ENumber(0))&&(t1<=ENumber(1))&&(t2>=ENumber(0))&&(t2<=ENumber(1))){
                 std::vector<std::pair<ENumber, ENumber>> point(1);
                 point[0]=std::pair<ENumber, ENumber>(t1,t2);
-                std::cout<<"Intersecting at parameters "<<point[0].first.get_d()<<","<<point[0].second.get_d()<<std::endl;
+                //std::cout<<"Intersecting at parameters "<<point[0].first.get_d()<<","<<point[0].second.get_d()<<std::endl;
                 return point;
             } else{
-                std::cout<<"Intersecting out of parameter bounds"<<std::endl;
+                //std::cout<<"Intersecting out of parameter bounds"<<std::endl;
                 return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
             }
         }
@@ -323,7 +326,7 @@ namespace directional{
     std::vector<ENumber> line_segment_intersection(const Line2& line,
                                                    const Segment2& segment){
 
-        std::cout<<"Computing intersection between line :"<<line<<" and segment "<<segment<<std::endl;
+        //std::cout<<"Computing intersection between line :"<<line<<" and segment "<<segment<<std::endl;
         Line2 segLine(segment.source, segment.target-segment.source);
         ENumber t1, t2;
         int intersectType=line_line_intersection(line, segLine, t1, t2);
@@ -374,12 +377,12 @@ namespace directional{
         }
         if (inParam==outParam)  //intersecting the triangle only by a vertex; ignored
             intFace=intEdge=false;
-        if (intFace){
+        /*if (intFace){
             std::cout<<"Intersecting within the face with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
-        }
-        else if (intEdge){
+        }*/
+        /*else if (intEdge){
             std::cout<<"Intersecting an edge with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
-        } else std::cout<<"Line doesn't intersect triangle"<<std::endl;
+        } else std::cout<<"Line doesn't intersect triangle"<<std::endl;*/
 
     }
 
@@ -391,7 +394,7 @@ namespace directional{
         //bool xy = (y0 && vec[1]>vec[0])||(!y0 && vec[1]<=vec[0]);
         bool xy = abs(vec[1])>abs(vec[0]);
 
-        std::cout<<"vec: "<<vec<<std::endl;
+        //std::cout<<"vec: "<<vec<<std::endl;
 
         if (xy){
             if (y0) return (vec[1]-vec[0])/(vec[1]); // case 1

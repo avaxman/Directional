@@ -1003,7 +1003,7 @@ namespace directional{
             if (!genDcel.check_consistency(verbose, true, false, false))
                 return false;
 
-            //twinning up edges
+            //twinning up halfedges
             set<FunctionDCEL::TwinFinder> Twinning;
             for (int i=0;i<genDcel.halfedges.size();i++){
                 if ((genDcel.halfedges[i].twin>=0)||(!genDcel.halfedges[i].valid))
@@ -1018,6 +1018,12 @@ namespace directional{
                         std::cout<<"warning: halfedge "<<i<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
                     genDcel.halfedges[Twinit->index].twin=i;
                     genDcel.halfedges[i].twin=Twinit->index;
+
+                    //assigning a single edge out of them and invalidaing the other one.
+                    genDcel.edges[genDcel.halfedges[Twinit->index].edge].valid=false;
+                    genDcel.halfedges[Twinit->index].edge = genDcel.halfedges[i].edge;
+
+                    std::cout<<"Twinning halfedge "<<i<<" to halfedge "<<Twinit->index<<std::endl;
 
                     if (genDcel.halfedges[i].data.isFunction){
                         genDcel.halfedges[Twinit->index].data.isFunction = true;
@@ -1112,7 +1118,7 @@ namespace directional{
 
             for (int i=0;i<genDcel.halfedges.size();i++)
                 if ((!genDcel.halfedges[i].data.isFunction)&&(genDcel.halfedges[i].twin!=-1))
-                    genDcel.halfedges[i].valid=false;
+                    genDcel.halfedges[i].valid=genDcel.edges[genDcel.halfedges[i].edge].valid = false;
 
             //realigning faces
             VectorXi visitedHE=VectorXi::Zero(genDcel.halfedges.size());
@@ -1173,9 +1179,18 @@ namespace directional{
                 }while (heiterate!=hebegin);
                 if (countThree<3){
                     do{
-                        /*DebugLog<<"Invalidating Vertex "<<Halfedges[heiterate].vertex<<"and  halfedge "<<heiterate<<" of valence "<<Valences[Halfedges[heiterate].vertex]<<endl;*/
+                        std::cout<<"Invalidating Vertex "<<genDcel.halfedges[heiterate].vertex<<" and  halfedge "<<heiterate<<" of valence "<<Valences[genDcel.halfedges[heiterate].vertex]<<std::endl;
 
                         genDcel.halfedges[heiterate].valid=false;
+
+                        //invalidating edge or assigning it to the twin
+                        if (genDcel.halfedges[heiterate].twin!=-1){
+                            if (!genDcel.halfedges[genDcel.halfedges[heiterate].twin].valid)
+                                genDcel.edges[genDcel.halfedges[heiterate].edge].valid=false;
+                            else
+                                genDcel.edges[genDcel.halfedges[heiterate].edge].halfedge = genDcel.halfedges[heiterate].twin;
+                        } else genDcel.edges[genDcel.halfedges[heiterate].edge].valid=false;
+
                         if (genDcel.halfedges[heiterate].twin!=-1)
                             genDcel.halfedges[genDcel.halfedges[heiterate].twin].twin=-1;
                         if ((genDcel.halfedges[heiterate].twin==-1)&&(genDcel.halfedges[genDcel.halfedges[heiterate].prev].twin==-1))  //origin is a boundary vertex
@@ -1204,8 +1219,11 @@ namespace directional{
                     genDcel.vertices[i].valid=false;
 
             for (int i=0;i<genDcel.vertices.size();i++){
-                if ((genDcel.vertices[i].valid)&&(Valences[i]<=2)&&(!isEar[i]))
+                if ((genDcel.vertices[i].valid)&&(Valences[i]<=2)&&(!isEar[i])) {
                     genDcel.unify_edges(genDcel.vertices[i].halfedge);
+                    /*if (!genDcel.check_consistency(verbose, true, true, true))
+                        return false;*/
+                }
             }
 
             if (!genDcel.check_consistency(verbose, true, true, true))
