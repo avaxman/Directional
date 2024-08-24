@@ -98,10 +98,11 @@ namespace directional {
     //  roots:              #TangentSpaces by N complex matrix with all N roots of the PolyVectors in order
     //    returns true if succeeded
     inline bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
-                                      const int N,
-                                      Eigen::MatrixXcd &roots,
-                                      bool signSymmetry = true,
-                                      const double rootTolerance = 1e-8) {
+                                  const int N,
+                                  Eigen::MatrixXcd &roots,
+                                  const bool signSymmetry = true,
+                                  const bool normalizeRoots = false,
+                                  const double rootTolerance = 1e-8) {
         using namespace std;
         using namespace Eigen;
 
@@ -173,19 +174,24 @@ namespace directional {
             roots = actualRoots;
         }
 
+        if (normalizeRoots)
+            roots.array()/=roots.array().abs();
+
         return true;
     }
 
 
     inline bool polyvector_to_raw(const directional::CartesianField &pvField,
                                       directional::CartesianField &rawField,
-                                      bool signSymmetry = true,
+                                      const bool signSymmetry = true,
+                                      const bool normalizeRoots = false,
                                       const double rootTolerance = 1e-8) {
 
         rawField.init(*(pvField.tb), fieldTypeEnum::RAW_FIELD, pvField.N);
         Eigen::MatrixXcd intField;
-        if (pvField.N % 2 != 0) signSymmetry = false;  //by definition
-        polyvector_to_raw(pvField.intField, pvField.N, intField, signSymmetry, rootTolerance);
+        bool trueSingSymmetry = signSymmetry;
+        if (pvField.N % 2 != 0) trueSingSymmetry = false;  //by definition
+        polyvector_to_raw(pvField.intField, pvField.N, intField, trueSingSymmetry, rootTolerance, normalizeRoots);
         rawField.set_intrinsic_field(intField);
         return true;
     }
