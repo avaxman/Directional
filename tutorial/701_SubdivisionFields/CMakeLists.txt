@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(601_SubdivisionFields)
+project(701_SubdivisionFields)
 
 set(CMAKE_CXX_STANDARD 14)
 

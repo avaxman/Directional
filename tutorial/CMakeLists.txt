@@ -4,6 +4,8 @@ project(Directional_tutorials)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb -fno-inline")
+
 
 ### Choose which chapters to compile
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)
@@ -105,14 +107,18 @@ if(DIRECTIONAL_VIEWER)
   add_subdirectory("203_Combing")
   add_subdirectory("301_PowerFields")
   add_subdirectory("302_PolyVectors")
-  #add_subdirectory("303_PolyCurlReduction")
-  #add_subdirectory("304_ConjugateFields")
+  # add_subdirectory("303_GinzburgLandau")
+  # add_subdirectory("304_ConjugateFields")
   add_subdirectory("401_IndexPrescription")
   add_subdirectory("501_SeamlessIntegration")
   add_subdirectory("502_DifferentOrders")
   add_subdirectory("503_SeamsSingsRounding")
   add_subdirectory("504_LinearReductions")
-  #add_subdirectory("601_SubdivisionFields")
+  add_subdirectory("601_FaceBasedFEM")
+  # add_subdirectory("602_HarmonicFields")
+  # add_subdirectory("603_DiscreteExteriorCalculus")
+  # add_subdirectory("604_HigherOrderFields")
+  # add_subdirectory("701_SubdivisionFields")
 endif()
 
 if(DIRECTIONAL_MESHER)
