@@ -35,7 +35,8 @@ int main()
   nonConfScalarField.from_vector(nonConfVec);
 
   confScalarField.gradient(exactField);
-  nonConfScalarField.rotCogradient(coexactField);
+  nonConfScalarField.gradient(coexactField);
+  nonConfScalarField.dualize();
 
   //demonstrating the exact sequences
   std::cout<<"max abs curl of exact field: "<<exactField.curl().cwiseAbs().maxCoeff()<<std::endl;
