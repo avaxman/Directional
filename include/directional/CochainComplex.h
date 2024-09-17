@@ -26,7 +26,7 @@
 namespace directional{
 
     //an interface to a single element in the class
-    template<typename NumberType>
+    /*template<typename NumberType>
     class Cochain{
     public:
 
@@ -43,25 +43,39 @@ namespace directional{
         //The metric is optional, but necessary for several operators in a cochain sequence
         virtual Eigen::SparseMatrix<NumberType> metric(){return Eigen::SparseMatrix<NumberType>();}
 
+        //This is another optional function that is only useful for explicit codifferential or dual cochains
+        virtual Eigen::SparseMatrix<NumberType> inverse_metric(){return Eigen::SparseMatrix<NumberType>();}
     };
 
-    template<typename NumberType, Cochain<NumberType> cochain>
+    template<typename NumberType, typename PrimalCochain>
+    class DualCochain: public Cochain<NumberType>{
+        static_assert(std::is_base_of<Cochain<NumberType>, PrimalCochain>::value, "The primal cochain must be of type class Cochain");
+
+        Eigen::SparseMatrix<NumberType> differential(){
+            return
+        }
+
+    };*/
+
+    template<typename NumberType>
     class CochainComplex {
     public:
 
-        std::vector<Cochain<NumberType>> sequence;
+        std::vector<Eigen::Vector<NumberType, Eigen::Dynamic>> cochains;
+        std::vector<Eigen::SparseMatrix<NumberType>> differentials;
+        std::vector<Eigen::SparseMatrix<NumberType>> metrics;
+
+        //optional: used if exist, otherwise an equation is solved
+        std::vector<Eigen::SparseMatrix<NumberType>> invMetrics;
 
         CochainComplex(){}
         ~CochainComplex(){}
 
         //checking that the cochain is propoer, that is d^2 = 0 and d^{N-1} = 0
         bool check_cochain_validity(double tolerance){
-            for (int i=0;i<sequence.size()-1;i++){
-                Eigen::SparseMatrix<NumberType> di = sequence[i].differential();
-                Eigen::SparseMatrix<NumberType> di1 = sequence[i+1].differential();
-                double maxAbsValue = 0.0;
-                Eigen::SparseMatrix<NumberType> d2 = di1*di;
-
+            for (int i=0;i<differentials.size()-1;i++){
+                Eigen::SparseMatrix<NumberType> d2 = differentials[i+1]*differentials[i];
+                double maxAbsValue=-32767000.0;
                 for (int k = 0; k < d2.outerSize(); ++k) {
                     for (typename Eigen::SparseMatrix<NumberType>::InnerIterator it(d2, k); it; ++it) {
                         double absValue = std::abs(it.value());
@@ -84,13 +98,13 @@ namespace directional{
             if (cochainNum==0)
                 return Eigen::Vector<NumberType, Eigen::Dynamic>();  //there is no prev
 
-            assert("cochain is out of bounds!" && cochainNum > 0 && cochainNum < sequence.size()-1);
-            Eigen::SparseMatrix<NumberType> Mi = sequence[cochainNum].metric();
-            Eigen::SparseMatrix<NumberType> di = sequence[cochainNum-1].differential();
+            assert("cochain is out of bounds!" && cochainNum > 0 && cochainNum < cochains.size()-1);
+            Eigen::SparseMatrix<NumberType> Mi = metrics[cochainNum];
+            Eigen::SparseMatrix<NumberType> di = differentials[cochainNum-1];
             assert("the cochain did not implement the metric function " && Mi.nonZeros()!=0);
 
             Eigen::SparseMatrix<NumberType> A = di.adjoint() * Mi * di;
-            Eigen::Vector<NumberType, Eigen::Dynamic> b = di.adjoint() * Mi * sequence[cochainNum].to_vector();
+            Eigen::Vector<NumberType, Eigen::Dynamic> b = di.adjoint() * Mi * cochains[cochainNum];
             Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
             solver.compute(A);
             assert("project_prev(): Decomposition failed!" && solver.info() == Eigen::Success);
@@ -106,12 +120,12 @@ namespace directional{
         void project_coexact(const int cochainNum,
                              Eigen::Vector<NumberType, Eigen::Dynamic>& gip1,
                              Eigen::Vector<NumberType, Eigen::Dynamic>& fi){
-            if (cochainNum==sequence.size())
+            if (cochainNum==cochains.size())
                 return Eigen::Vector<NumberType, Eigen::Dynamic>();  //there is no next
 
             assert("cochain is out of bounds!" && cochainNum > 0 && cochainNum < sequence.size()-1);
-            Eigen::SparseMatrix<NumberType> Mi = sequence[cochainNum].metric();
-            Eigen::SparseMatrix<NumberType> di = sequence[cochainNum].differential();
+            Eigen::SparseMatrix<NumberType> Mi = metrics[cochainNum];
+            Eigen::SparseMatrix<NumberType> di = differentials[cochainNum];
             assert("the cochain did not implement the metric function " && Mi.nonZeros()!=0);
             Eigen::Matrix2i orderMat; orderMat<<1,2,3,4;
             std::vector<Eigen::SparseMatrix<NumberType>> matVec;
@@ -122,7 +136,7 @@ namespace directional{
             Eigen::SparseMatrix<NumberType> A = sparse_block(orderMat, matVec);
             Eigen::Vector<NumberType, Eigen::Dynamic> b(Mi.rows()+di.rows());
             b.head(Mi.rows()).setZero();
-            b.tail(di.rows())=sequence[cochainNum+1].to_vector();
+            b.tail(di.rows())=cochains[cochainNum+1];
 
             Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
             solver.compute(A);
@@ -144,7 +158,7 @@ namespace directional{
             project_exact(cochainNum, exactPrev, exactCurr);
             project_coexact(cochainNum, coexactNext, coexactCurr);
             //TODO: perhaps extracting "to_vector()" is inefficient
-            harmCurr = sequence[cochainNum].to_vector() - exactCurr - coexactCurr;
+            harmCurr = cochains[cochainNum] - exactCurr - coexactCurr;
         }
 
         //Computes a basis (orthogonal under the metric) of harmonic fields for a given level i(=cochainNum)
@@ -157,8 +171,8 @@ namespace directional{
             std::vector<Eigen::SparseMatrix<NumberType>> matVec;
             Eigen::MatrixXi matOrder(2,1);
             matOrder<<1,2;
-            matVec.push_back(sequence[cochainNum-1].differential());
-            matVec.push_back(sequence[cochainNum].differential().adjoint());
+            matVec.push_back(differentials[cochainNum-1]);
+            matVec.push_back(differentials[cochainNum].adjoint());
             Eigen::SparseMatrix<NumberType> H = sparse_block(matOrder, matVec);
             Eigen::SparseQR<Eigen::SparseMatrix<NumberType>, Eigen::COLAMDOrdering<int>> qr;
             qr.compute(H);
@@ -168,6 +182,20 @@ namespace directional{
 
             //TODO: orthogonalize according to Mi
         }
+
+        void codifferential(const int cochainNum, Eigen::Vector<NumberType, Eigen::Dynamic>& result){
+            //TODO
+        }
+
+        void codifferential_matrix(const int cochainNum){
+            assert("Inverse metrics have not been defined!" && invMetrics.size()==0);
+            //TODO
+        }
+
+       CochainComplex dual_complex(){
+            //TODO: return dual complex
+        }
+
     };
 
 }
