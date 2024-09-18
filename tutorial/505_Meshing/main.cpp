@@ -60,7 +60,7 @@ int main()
     
     std::cout<<"Done!"<<std::endl;
     
-    //setting up mesh data from itnegration data
+    //setting up mesh data from integration data
     directional::MeshFunctionIsolinesData mfiData;
     directional::setup_mesh_function_isolines(meshCut[i], intData, mfiData);
     
