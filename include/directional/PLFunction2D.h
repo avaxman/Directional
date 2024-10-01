@@ -9,29 +9,32 @@
 #define DIRECTIONAL_PIECEWISE_LINEAR_FUNCTION_H
 
 #include <eigen/sparse>
+#include <directional/ScalarFunction2D.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 
 namespace directional{
 
-    //an interface to a single element in the class
     template<typename NumberType>
-    class PLFunction{
+    class PLFunction2D: public ScalarFunction2D<NumberType>{
     public:
 
+        int N;  //the order of the field
         const TriMesh* mesh;
         Eigen::Vector<NumberType, Eigen::Dynamic> vertexValues;
 
-        PLFunction(){}
-        ~PLFunction(){}
+        //nodeValues are values on vertices
+        PLFunction2D(){}
+        ~PLFunction2D(){}
 
-        void init(const TriMesh& _mesh, const Eigen::Vector<NumberType, Eigen::Dynamic> _vertexValues){
-            mesh = &_mesh;
-            vertexValues = _vertexValues;
+        void init(const TriMesh* _mesh, Eigen::Vector<NumberType, Eigen::Dynamic>& _vertexValues, const int _N=1){
+            N=_N;
+            mesh=_mesh;
+            vertexValues=_vertexValues;
         }
 
         //Only good for triangle meshes right now
-        NumberType value(const int faceIndex,
+        NumberType  value(const int faceIndex,
                          const Eigen::VectorXd& baryCoords){
 
             NumberType currValue = 0;
@@ -43,6 +46,7 @@ namespace directional{
 
         //TODO: save the matrix for future use
         Eigen::SparseMatrix<NumberType> gradient_matrix(){
+            assert("Currently only implemented for N=1" && N==1);
             Eigen::SparseMatrix<NumberType> G(3*mesh->F.rows(), vertexValues.size());
             std::vector<Eigen::Triplet<NumberType>> GTris;
             for (int i=0;i<mesh->F.rows();i++){
@@ -59,18 +63,20 @@ namespace directional{
         }
 
         void gradient(directional::CartesianField& gradField){
-            assert("PLFunction::gradient(): gradField is no of the correct type! " && gradField.N==1 && gradField.tv->discTangType()==discTangTypeEnum::FACE_SPACES);
+            assert("PLFunction::gradient(): gradField is no of the correct type! " && gradField.N==N && gradField.tb->discTangType()==discTangTypeEnum::FACE_SPACES);
             gradField.fieldType=fieldTypeEnum::RAW_FIELD;
             Eigen::SparseMatrix<NumberType> G = gradient_matrix();
             Eigen::Vector<NumberType, Eigen::Dynamic> fieldVector = G*vertexValues;
-            Eigen::Matrix<NumberType, Eigen::Dynamic, 3> extField(fieldVector.size()/3, 3);
+            Eigen::Matrix<NumberType, Eigen::Dynamic, 3> extField(fieldVector.size()/3, N);
             for (int i=0;i<fieldVector.size()/3;i++)
-                extField.row(i)<<fieldVector.segment(3*i,3).transpose();
+                for (int j=0;j<N;j++)
+                    extField.row(i)<<fieldVector.segment(3*N*i+3*j,3).transpose();
             gradField.set_extrinsic_field(extField);
         }
 
         //the original unlumped mass matrix of inner product of hat functions
         Eigen::SparseMatrix<NumberType> mass_matrix(){
+            assert("Currently only implemented for N=1" && N==1);
             Eigen::SparseMatrix<NumberType> M(vertexValues.size(), vertexValues.size());
             std::vector<Eigen::Triplet<NumberType>> MTris;
             for (int i=0;i<mesh->F.rows();i++){
@@ -82,6 +88,7 @@ namespace directional{
             return M;
         }
         Eigen::SparseMatrix<NumberType> lumped_mass_matrix(){
+            assert("Currently only implemented for N=1" && N==1);
             Eigen::SparseMatrix<NumberType> M(vertexValues.size(), vertexValues.size());
             std::vector<Eigen::Triplet<NumberType>> MTris;
             for (int i=0;i<mesh->F.rows();i++){

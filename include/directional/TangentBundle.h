@@ -52,8 +52,8 @@ namespace directional{
         //Geometry
         //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
         Eigen::VectorXcd connection;                        //#V, Metric connection between adjacent spaces
-        Eigen::VectorXd connectionMass;                     //The mass matrix of connections, of size #adjSpaces
-        Eigen::VectorXd tangentSpaceMass;                   //The inner-product mass for vectors in tangent spaces, of size #V (self masses) + #E (adjSpaces masses;  optional, usually for high-order fields)
+        Eigen::SparseMatrix<double> connectionMass;                     //The mass matrix of connections, of size #adjSpaces
+        Eigen::SparseMatrix<double> tangentSpaceMass;                   //The inner-product mass for vectors in tangent spaces, of size #V (self masses) + #E (adjSpaces masses;  optional, usually for high-order fields)
 
         //Extrinsic components
         Eigen::MatrixXd sources;  //the source point of the extrinsic vectors
@@ -86,19 +86,6 @@ namespace directional{
             interpSources=Eigen::MatrixXd();
             interpNormals=Eigen::MatrixXd();
             interpField=Eigen::MatrixXd();
-        }
-
-        Eigen::SparseMatrix<double> virtual inline gradient_operator(const int N,
-                                                                         const boundCondTypeEnum boundCondType){
-            assert(hasCochainSequence()==true);
-            return Eigen::SparseMatrix<double>();  //actually unreachable since assert would fail.
-        }
-
-        Eigen::SparseMatrix<double> virtual inline curl_operator(const int N,
-                                                                     const boundCondTypeEnum boundCondType,
-                                                                     const Eigen::VectorXi& matching=Eigen::VectorXi()){
-            assert(hasCochainSequence()==true);
-            return Eigen::SparseMatrix<double>();  //actually unreachable since assert would fail.
         }
 
     };

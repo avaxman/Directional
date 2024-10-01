@@ -149,7 +149,7 @@ namespace directional{
         void hodge_decomposition(const int cochainNum,
                                  const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
-                                 Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain
+                                 Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& nextDualCochainת
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& harmCurr){

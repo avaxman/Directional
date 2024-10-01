@@ -11,6 +11,7 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
+#include <directional/sparse_diagonal.h>
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/raw_to_polyvector.h>
@@ -119,8 +120,11 @@ namespace directional{
             //drawing from mesh geometry
 
             /************masses****************/
-            connectionMass.resize(mesh->EV.rows());
-            tangentSpaceMass.resize(mesh->V.rows());
+            connectionMass.resize(mesh->EV.rows(), mesh->EV.rows());
+            tangentSpaceMass.resize(mesh->V.rows(), mesh->V.rows());
+
+            std::vector<Eigen::Triplet<double>> connectionMassTris, tsMassTris;
+            Eigen::VectorXd cotWeights = Eigen::VectorXd::Zero(mesh->EV.rows());
 
             //cotangent weights
             Eigen::MatrixXd faceCotWeights=Eigen::MatrixXd::Zero(mesh->F.rows(),3);
@@ -133,15 +137,20 @@ namespace directional{
                     if (std::abs(sinAngle)>10e-7) //otherwise defaulting to zero
                         faceCotWeights(i,j) = cosAngle/sinAngle;
 
-                    connectionMass(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
+                    cotWeights(mesh->FE(i,j))+=0.5*faceCotWeights(i,j);
                 }
             }
 
+            connectionMass = directional::sparse_diagonal(cotWeights);
+
+
             //masses are vertex voronoi areas
-            tangentSpaceMass = Eigen::VectorXd::Zero(mesh->V.rows());
+            Eigen::VectorXd voronoiMass = Eigen::VectorXd::Zero(mesh->V.rows());
             for (int i=0;i<mesh->F.rows();i++)
                 for (int j=0;j<3;j++)
-                    tangentSpaceMass(mesh->F(i,j)) += mesh->faceAreas(i)/3.0;
+                    voronoiMass(mesh->F(i,j)) += mesh->faceAreas(i)/3.0;
+
+            tangentSpaceMass = directional::sparse_diagonal(voronoiMass);
 
         }
 

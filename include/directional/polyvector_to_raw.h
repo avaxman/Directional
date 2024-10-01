@@ -100,7 +100,7 @@ namespace directional {
     inline bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
                                   const int N,
                                   Eigen::MatrixXcd &roots,
-                                  const bool signSymmetry = true,
+                                  const bool _signSymmetry = true,
                                   const bool normalizeRoots = false,
                                   const double rootTolerance = 1e-8) {
         using namespace std;
@@ -109,6 +109,7 @@ namespace directional {
 
         MatrixXcd actualPVField;
         int actualN;
+        bool signSymmetry = _signSymmetry;
         if (N % 2 != 0) signSymmetry = false;  //by definition
         if (signSymmetry) {
             actualPVField.resize(pvField.rows(), N / 2);

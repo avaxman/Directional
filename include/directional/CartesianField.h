@@ -88,6 +88,10 @@ namespace directional{
             singLocalCycles = _singLocalCycles;
             singIndices = _singIndices;
         }
+
+        Eigen::SparseMatrix<double> inline mass_matrix(){
+            return tb->tangentSpaceMass;
+        }
     };
 
 }

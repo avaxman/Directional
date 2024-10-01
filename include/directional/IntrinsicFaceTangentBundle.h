@@ -71,17 +71,25 @@ namespace directional{
 
             //mass are face areas
             //igl::doublearea(mesh->V,mesh->F,tangentSpaceMass);
-            tangentSpaceMass=mesh->faceAreas;
+            tangentSpaceMass.resize(mesh->faceAreas.size(), mesh->faceAreas.size());
+            std::vector<Eigen::Triplet<double>> tsMassTris;
+            for (int i=0;i<mesh->faceAreas.size();i++)
+                tsMassTris.push_back(Eigen::Triplet<double>(i,i,mesh->faceAreas(i)));
+
+            tangentSpaceMass.setFromTriplets(tsMassTris.begin(), tsMassTris.end());
 
             //The "harmonic" weights from [Brandt et al. 2020].
-            connectionMass.resize(mesh->EF.rows());
+            connectionMass.resize(mesh->EF.rows(), mesh->EF.rows());
+            std::vector<Eigen::Triplet<double>> connectionMassTris;
             for (int i=0;i<mesh->EF.rows();i++){
                 if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
                     continue;  //boundary edge
 
                 double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
-                connectionMass(i)=3*primalLengthSquared/(tangentSpaceMass(mesh->EF(i,0))+tangentSpaceMass(mesh->EF(i,0)));
+                connectionMassTris.push_back(Eigen::Triplet<double>(i,i,3.0*primalLengthSquared/(mesh->faceAreas(mesh->EF(i,0))+mesh->faceAreas(mesh->EF(i,0)))));
             }
+
+            connectionMass.setFromTriplets(connectionMassTris.begin(), connectionMassTris.end());
         }
 
 
@@ -148,7 +156,7 @@ namespace directional{
         }
 
         Eigen::SparseMatrix<double> inline gradient_operator(const int N,
-                                                                 const boundCondTypeEnum boundCondType){
+                                                             const boundCondTypeEnum boundCondType){
             assert(hasCochainSequence()==true);
             Eigen::SparseMatrix<double> singleGradMatrix(2*mesh->F.size(), mesh->V.size());
             std::vector<Eigen::Triplet<double>> singleGradMatTriplets;
