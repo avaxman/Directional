@@ -192,7 +192,7 @@ namespace directional {
         Eigen::MatrixXcd intField;
         bool trueSingSymmetry = signSymmetry;
         if (pvField.N % 2 != 0) trueSingSymmetry = false;  //by definition
-        polyvector_to_raw(pvField.intField, pvField.N, intField, trueSingSymmetry, rootTolerance, normalizeRoots);
+        polyvector_to_raw(pvField.intField, pvField.N, intField, trueSingSymmetry, normalizeRoots, rootTolerance);
         rawField.set_intrinsic_field(intField);
         return true;
     }

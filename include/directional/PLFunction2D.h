@@ -27,9 +27,9 @@ namespace directional{
         PLFunction2D(){}
         ~PLFunction2D(){}
 
-        void init(const TriMesh* _mesh, Eigen::Vector<NumberType, Eigen::Dynamic>& _vertexValues, const int _N=1){
+        void init(const TriMesh& _mesh, Eigen::Vector<NumberType, Eigen::Dynamic>& _vertexValues, const int _N=1){
             N=_N;
-            mesh=_mesh;
+            mesh=&_mesh;
             vertexValues=_vertexValues;
         }
 

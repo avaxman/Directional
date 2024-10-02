@@ -103,22 +103,24 @@ namespace directional{
             assert("the cochain did not implement the metric function " && Mi.nonZeros()!=0);
 
             Eigen::SparseMatrix<NumberType> A = di.adjoint() * Mi * di;
-            Eigen::Vector<NumberType, Eigen::Dynamic> b = di.adjoint() * Mi * cochains[cochainNum];
+            Eigen::Vector<NumberType, Eigen::Dynamic> b = di.adjoint() * Mi * cochain;
             Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
             solver.compute(A);
             assert("project_prev(): Decomposition failed!" && solver.info() == Eigen::Success);
             prevCochain = solver.solve(b);
-            assert("project_prev(): Solver failed!" & solver.info() == Eigen::Success);
-            exactCochain = di*fim1;
+            assert("project_prev(): Solver failed!" && solver.info() == Eigen::Success);
+            exactCochain = di*prevCochain;
         }
 
-        //Solving the equation coexactCochain = argmin |coexactCochain|^2 s.t. di*cochain = di*coexactCochain with the metric of Mi
-        // the nextDualCochain returned is the lagrange multipliers, also the dual coexact generator of fi (so that Mi*coexactCochain = di^T*nextDualCochain)
+        //Solving the equation nextCochain = argmin |codiff_i*nextCochain - cochain|^2 with the metric of Mi, and where i = cochain, and also outputting coexactCochain = codiff_i*nextCochain
+        //However, since the codifferential is not assumed to be given explicitly, we instead solve for:
+        // coexactCochain = argmin |coexactCochain|^2 s.t. M_(i+1)*di*cochain = M_(i+1)*di*coexactCochain with the metric of Mi (i = cochainNum)
+        // nextCochain is the (i+1) form such that cocexactCochain = codiff*nextCochain (codifferential)
         void project_coexact(const int cochainNum,
                              const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
                              Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
-                             Eigen::Vector<NumberType, Eigen::Dynamic>& nextDualCochain){
-            if (cochainNum==cochains.size())
+                             Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
+            if (cochainNum>=metrics.size())
                 return Eigen::Vector<NumberType, Eigen::Dynamic>();  //there is no next
 
             assert("cochain is out of bounds!" && cochainNum > 0 && cochainNum < differentials.size()-1);
@@ -128,8 +130,8 @@ namespace directional{
             Eigen::Matrix2i orderMat; orderMat<<1,2,3,4;
             std::vector<Eigen::SparseMatrix<NumberType>> matVec;
             matVec.push_back(Mi);
-            matVec.push_back(di.adjoint());
-            matVec.push_back(di);
+            matVec.push_back(di.adjoint()*metrics[cochainNum+1]);
+            matVec.push_back(metrics[cochainNum+1]*di);
             matVec.push_back(Eigen::SparseMatrix<NumberType>(Mi.rows(), di.adjoint()));
             Eigen::SparseMatrix<NumberType> A = sparse_block(orderMat, matVec);
             Eigen::Vector<NumberType, Eigen::Dynamic> b(Mi.rows()+di.rows());
@@ -142,7 +144,7 @@ namespace directional{
             Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);
             assert("project_next(): Solver failed!" && solver.info() == Eigen::Success);
             coexactCochain = x.head(Mi.rows());
-            nextDualCochain = -x.tail(di.rows());
+            nextCochain = -x.tail(di.rows());
         }
 
         //computes the hodge decomposition of a cochain i(=cochainNum)
@@ -151,12 +153,12 @@ namespace directional{
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
-                                 Eigen::Vector<NumberType, Eigen::Dynamic>& nextDualCochainת
+                                 Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain,
                                  Eigen::Vector<NumberType, Eigen::Dynamic>& harmCurr){
 
             project_exact(cochainNum, cochain, prevCochain, exactCochain);
-            project_coexact(cochainNum, cochain, coexactCochain, nextDualCochain);
-            harmCurr = cochain - exactCurr - coexactCurr;
+            project_coexact(cochainNum, cochain, coexactCochain, nextCochain);
+            harmCurr = cochain - exactCochain - exactCochain;
         }
 
         //Computes a basis (orthogonal under the metric) of harmonic fields for a given level i(=cochainNum)

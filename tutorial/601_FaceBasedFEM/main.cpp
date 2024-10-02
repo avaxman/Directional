@@ -16,12 +16,13 @@ directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField exactField, coexactField;
 directional::DirectionalViewer viewer;
 directional::PLFunction2D<double> PLScalarFunc;
+directional::DiamondForm2D<double> DiamondForm;
 directional::CochainComplex<double> PLComplex;
 directional::CochainComplex<double> NonConfPLComplex;
 
-template<NumberType>
-directional::CochainComplex vector_field_complex_2D(directional::ScalarFunction<NumberType>& scalarFunc, directional::CartesianField& field, directional:VolumeForm2D<NumberType>& form){
-    CochainComplex complex<NumberType>;
+template<typename NumberType>
+directional::CochainComplex<NumberType> vector_field_complex_2D(directional::ScalarFunction2D<NumberType>& scalarFunc, directional::CartesianField& field, directional::VolumeForm2D<NumberType>& form){
+directional::CochainComplex<NumberType> complex;
     PLComplex.differentials.resize(2);
     PLComplex.metrics.resize(3);
     PLComplex.differentials[0] = scalarFunc.gradient_matrix();
@@ -53,12 +54,11 @@ int main()
   PLScalarFunc.gradient(exactField);
 
   coexactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-  PLComplex = vector_field_complex(PLScalarFunc, exactField, PLDiamondForm);
+  PLComplex = vector_field_complex_2D(PLScalarFunc, exactField, DiamondForm);
 
 
   //Generating the dual complex (representing PL non-conforming functions -> PC vector field -> Voronoi forms
   NonConfPLComplex = PLComplex.dual_complex();
-  Eigen::VectorXd coexactVec = ;
   coexactField.set_extrinsic_field(NonConfPLComplex.invMetrics[1]*NonConfPLComplex.differentials[0]*nonConfVec); //Emulating rotated cogradient field of the PL non-conforming function
 
   //demonstrating the exact sequences
