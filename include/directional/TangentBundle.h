@@ -88,6 +88,12 @@ namespace directional{
             interpField=Eigen::MatrixXd();
         }
 
+        Eigen::SparseMatrix<double> virtual inline curl_matrix(const boundCondTypeEnum boundCondType,
+                                                               const Eigen::VectorXi& matching,
+                                                               const bool intrinsic = false) const{
+            return Eigen::SparseMatrix<double>();
+        }
+
     };
 
 }

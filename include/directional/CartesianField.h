@@ -11,6 +11,7 @@
 #include <iostream>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
+#include <directional/single_to_N_matrix.h>
 #include <directional/TangentBundle.h>
 
 /***
@@ -31,7 +32,7 @@ namespace directional{
         const TangentBundle* tb;            //Referencing the tangent bundle on which the field is defined
 
         int N;                              //Degree of field (how many vectors are in each point);
-        fieldTypeEnum fieldType;                      //The representation of the field (for instance, either a raw field or a power/polyvector field)
+        fieldTypeEnum fieldType;            //The representation of the field (for instance, either a raw field or a power/polyvector field)
 
         Eigen::MatrixXd intField;           //Intrinsic representation (depending on the local basis of the face). Size #T x 2N
         Eigen::MatrixXd extField;           //Ambient coordinates. Size Size #T x 3N
@@ -79,31 +80,39 @@ namespace directional{
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }
 
-        Eigen::VectorXd flatten(const bool intrinsic=false){
+        //giving a single vector version of the field
+        //This is tangent space -> N coefficients -> xyz dominant order
+        Eigen::VectorXd flatten(const bool isIntrinsic=false){
+            Eigen::MatrixXd field = (isIntrinsic ? intField : extField);
+            Eigen::VectorXd vecField(field.rows()*field.cols());
+            for (int i=0;i<field.rows();i++)
+                for (int j=0;j<field.cols();j++)
+                    vecField(i*field.cols()+j) = field(i,j);
 
+            return vecField;
         }
 
 
         //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
         void inline set_singularities(const Eigen::VectorXi& _singLocalCycles,
-                                          const Eigen::VectorXi& _singIndices){
+                                      const Eigen::VectorXi& _singIndices){
 
             //TODO: remove boundary elements
             singLocalCycles = _singLocalCycles;
             singIndices = _singIndices;
         }
 
-        Eigen::SparseMatrix<double> inline mass_matrix(){
-            return tb->tangentSpaceMass;
+        Eigen::SparseMatrix<double> inline mass_matrix(const bool isIntrinsic = false){
+            return single_to_N_matrix(tb->tangentSpaceMass, N, (isIntrinsic ? 2 : 3), (isIntrinsic ? 2 : 3));
         }
 
         //Todo: this is only intrinsic
-        Eigen::SparseMatrix<double> inline curl_matrix(){
-            return tb->curl_matrix(N, boundCondTypeEnum::DIRICHLET, matching);
+        Eigen::SparseMatrix<double> inline curl_matrix(const bool isIntrinsic = false){
+            return single_to_N_matrix(tb->curl_matrix(boundCondTypeEnum::DIRICHLET, matching, isIntrinsic), N, 1, (isIntrinsic ? 2 : 3));
         }
 
-        Eigen::VectorXd inline curl(){
-            return curl_matrix()*flatten(true);
+        Eigen::VectorXd inline curl(const bool isIntrinsic = false){
+            return curl_matrix(isIntrinsic)*flatten(isIntrinsic);
         }
     };
 

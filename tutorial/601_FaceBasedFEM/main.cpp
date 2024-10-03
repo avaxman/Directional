@@ -61,15 +61,18 @@ int main()
   NonConfPLComplex = PLComplex.dual_complex();
   coexactField.set_extrinsic_field(NonConfPLComplex.invMetrics[1]*NonConfPLComplex.differentials[0]*nonConfVec); //Emulating rotated cogradient field of the PL non-conforming function
 
+  //computing divergence
+  Eigen::VectorXd divergence = PLScalarFunc.gradient_matrix().transpose()* coexactField.mass_matrix()*coexactField.flatten();
+
   //demonstrating the exact sequences
   std::cout<<"max abs curl of exact field (should be numerically zero): "<<exactField.curl().cwiseAbs().maxCoeff()<<std::endl;
-  std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<coexactField.div().cwiseAbs().maxCoeff()<<std::endl;
+  std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<divergence.cwiseAbs().maxCoeff()<<std::endl;
 
   //triangle mesh setup
   viewer.init();
   viewer.set_mesh(mesh);
   viewer.set_vertex_data(confVec, confVec.minCoeff(), confVec.maxCoeff(),"Conforming Function", 0);
-  viewer.set_field(PLScalarFunc.gradient(),"Gradient field", 0, 0);
+  viewer.set_field(exactField,"Gradient field", 0, 0);
   viewer.set_edge_data(nonConfVec, nonConfVec.minCoeff(), nonConfVec.maxCoeff(),"Non-Conforming Function", 0);
   viewer.set_field(coexactField,"Rot. Cogradient field", 0, 1);
   viewer.launch();

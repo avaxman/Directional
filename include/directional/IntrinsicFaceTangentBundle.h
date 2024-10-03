@@ -155,7 +155,7 @@ namespace directional{
 
         }
 
-        Eigen::SparseMatrix<double> inline gradient_operator(const int N,
+        /*Eigen::SparseMatrix<double> inline gradient_operator(const int N,
                                                              const boundCondTypeEnum boundCondType){
             assert(hasCochainSequence()==true);
             Eigen::SparseMatrix<double> singleGradMatrix(2*mesh->F.size(), mesh->V.size());
@@ -182,12 +182,11 @@ namespace directional{
 
             return gradMatrixN;
             //TODO: boundaries
-        }
+        }*/
 
         //TODO: boundaries
-        Eigen::SparseMatrix<double> inline curl_matrix(const int N,
-                                                         const boundCondTypeEnum boundCondType,
-                                                         const Eigen::VectorXi& matching){
+        Eigen::SparseMatrix<double> inline curl_matrix(const boundCondTypeEnum boundCondType,
+                                                       const Eigen::VectorXi& matching){
 
             Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), 2*mesh->F.rows());
             std::vector<Eigen::Triplet<double>> singleCurlMatTris;
@@ -208,7 +207,7 @@ namespace directional{
 
             singleCurlMatrix.setFromTriplets(singleCurlMatTris.begin(), singleCurlMatTris.end());
 
-            if (N==1)
+            /*if (N==1)
                 return singleCurlMatrix;
 
             Eigen::SparseMatrix<double> curlMatrixN(N*mesh->innerEdges.size(), 2*N*mesh->F.rows());
@@ -236,7 +235,7 @@ namespace directional{
                 }
             }
             curlMatrixN.setFromTriplets(curlMatNTris.begin(), curlMatNTris.end());
-            return curlMatrixN;
+            return curlMatrixN;*/
         }
 
     };
