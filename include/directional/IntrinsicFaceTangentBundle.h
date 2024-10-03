@@ -185,10 +185,9 @@ namespace directional{
         }
 
         //TODO: boundaries
-        Eigen::SparseMatrix<double> inline curl_operator(const int N,
-                                                             const boundCondTypeEnum boundCondType,
-                                                             const Eigen::VectorXi& matching){
-            assert(hasCochainSequence()==true);
+        Eigen::SparseMatrix<double> inline curl_matrix(const int N,
+                                                         const boundCondTypeEnum boundCondType,
+                                                         const Eigen::VectorXi& matching){
 
             Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), 2*mesh->F.rows());
             std::vector<Eigen::Triplet<double>> singleCurlMatTris;

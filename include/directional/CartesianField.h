@@ -79,6 +79,10 @@ namespace directional{
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }
 
+        Eigen::VectorXd flatten(const bool intrinsic=false){
+
+        }
+
 
         //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).
         void inline set_singularities(const Eigen::VectorXi& _singLocalCycles,
@@ -91,6 +95,15 @@ namespace directional{
 
         Eigen::SparseMatrix<double> inline mass_matrix(){
             return tb->tangentSpaceMass;
+        }
+
+        //Todo: this is only intrinsic
+        Eigen::SparseMatrix<double> inline curl_matrix(){
+            return tb->curl_matrix(N, boundCondTypeEnum::DIRICHLET, matching);
+        }
+
+        Eigen::VectorXd inline curl(){
+            return curl_matrix()*flatten(true);
         }
     };
 
