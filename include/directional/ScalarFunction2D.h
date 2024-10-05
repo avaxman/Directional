@@ -32,6 +32,7 @@ namespace directional{
         void virtual gradient(directional::CartesianField& gradField) = 0;
 
         Eigen::SparseMatrix<NumberType> virtual mass_matrix() = 0;
+        Eigen::SparseMatrix<NumberType> virtual inv_mass_matrix() = 0;
     };
 
 }

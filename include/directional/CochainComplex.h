@@ -185,7 +185,7 @@ namespace directional{
 
         void codifferential(const int cochainNum, const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain, Eigen::Vector<NumberType, Eigen::Dynamic>& result){
             assert("The first cochain in the sequence doesn't have a codifferential" && cochainNum>0);
-            if (invMetrics.size()!=0) //inverse matrices are given
+            if (invMetrics[cochainNum].size()!=0) //inverse matrices are given
                 result =  invMetrics[cochainNum]*differentials[cochainNum-1].adjoint()*metrics[cochainNum]*cochain;
             else{
                 Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
@@ -195,7 +195,7 @@ namespace directional{
 
         }
 
-        void dual_differential(const int cochainNum, const Eigen::Vector<NumberType, Eigen::Dynamic>& dualCochain, Eigen::Vector<NumberType, Eigen::Dynamic>& result){
+        /*void dual_differential(const int cochainNum, const Eigen::Vector<NumberType, Eigen::Dynamic>& dualCochain, Eigen::Vector<NumberType, Eigen::Dynamic>& result){
             assert("The first cochain in the sequence doesn't have a codifferential" && cochainNum>0);
             if (invMetrics.size()!=0) //inverse matrices are given
                 result =  invMetrics[cochainNum]*differentials[cochainNum-1].adjoint()*dualCochain;
@@ -204,22 +204,23 @@ namespace directional{
                 solver.compute(metrics[cochainNum]);
                 result = solver.solve(differentials[cochainNum-1].adjoint()*dualCochain);
             }
-        }
+        }*/
 
         void codifferential_matrix(const int cochainNum){
-            assert("codifferential_matrix(): Inverse metrics have not been defined!" && invMetrics.size()==0);
+            assert("codifferential_matrix(): Inverse metrics have not been defined!" && invMetrics[cochainNum].size()==0);
             return invMetrics[cochainNum]*differentials[cochainNum-1].adjoint()*metrics[cochainNum];
         }
 
         //creating a cochain complex that is dual to the current one
        CochainComplex dual_complex(){
-            assert("dual_complex(): Inverse metrics have not been defined!" && invMetrics.size()==0);
+            assert("dual_complex(): Inverse metrics have not been defined!" && invMetrics.size()!=0);
             CochainComplex dualComplex;
             dualComplex.differentials.resize(differentials.size());
             dualComplex.metrics = invMetrics;
             dualComplex.invMetrics = metrics;
             for (int i=0;i<differentials.size();i++)
-                dualComplex.differentials[differentials.size()-1-i] = invMetrics[i]*differentials[i].adjoint();
+                dualComplex.differentials[differentials.size() - 1 - i] = differentials[i].adjoint();
+            return dualComplex;
 
         }
     };

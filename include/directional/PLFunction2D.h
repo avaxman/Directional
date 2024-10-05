@@ -63,6 +63,7 @@ namespace directional{
 
             }
             G.setFromTriplets(GTris.begin(), GTris.end());
+            return G;
         }
 
         void gradient(directional::CartesianField& gradField){
@@ -70,10 +71,9 @@ namespace directional{
             gradField.fieldType=fieldTypeEnum::RAW_FIELD;
             Eigen::SparseMatrix<NumberType> G = gradient_matrix();
             Eigen::Vector<NumberType, Eigen::Dynamic> fieldVector = G*vertexValues;
-            Eigen::Matrix<NumberType, Eigen::Dynamic, 3> extField(fieldVector.size()/3, N);
-            for (int i=0;i<fieldVector.size()/3;i++)
-                for (int j=0;j<N;j++)
-                    extField.row(i)<<fieldVector.segment(3*N*i+3*j,3).transpose();
+            Eigen::Matrix<NumberType, Eigen::Dynamic, 3> extField(fieldVector.size()/(3*N), 3*N);
+            for (int i=0;i<extField.rows();i++)
+                extField.row(i)<<fieldVector.segment(3*N*i,3*N).transpose();
             gradField.set_extrinsic_field(extField);
         }
 
@@ -90,14 +90,16 @@ namespace directional{
             M.setFromTriplets(MTris.begin(), MTris.end());
             return M;
         }
-        Eigen::SparseMatrix<NumberType> lumped_mass_matrix(){
+
+        //uses the lumped matrix which is not a true inverse
+        Eigen::SparseMatrix<NumberType> inv_mass_matrix(){
             assert("Currently only implemented for N=1" && N==1);
             Eigen::SparseMatrix<NumberType> M(vertexValues.size(), vertexValues.size());
             std::vector<Eigen::Triplet<NumberType>> MTris;
             for (int i=0;i<mesh->F.rows();i++){
                 //adding the 1/3 of each face's area to the vertex
                 for (int j=0;j<3;j++)
-                    MTris.push_back(Eigen::Triplet<NumberType>(mesh->F(i,j),mesh->F(i,j), mesh->faceAreas(i)/3.0));
+                    MTris.push_back(Eigen::Triplet<NumberType>(mesh->F(i,j),mesh->F(i,j), 3.0/mesh->faceAreas(i)));
             }
             M.setFromTriplets(MTris.begin(), MTris.end());
             return M;

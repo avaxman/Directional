@@ -11,6 +11,7 @@
 #include <eigen/sparse>
 #include <directional/VolumeForm2D.h>
 #include <directional/TriMesh.h>
+#include <directional/sparse_diagonal.h>
 
 namespace directional{
 
@@ -27,9 +28,9 @@ namespace directional{
         ~DiamondForm2D(){}
 
 
-        void init(const TriMesh* _mesh, Eigen::Vector<NumberType, Eigen::Dynamic>& _diamondValues, const int _N=1){
+        void init(const TriMesh& _mesh, const Eigen::Vector<NumberType, Eigen::Dynamic>& _diamondValues, const int _N=1){
             N=_N;
-            mesh=_mesh;
+            mesh=&_mesh;
             diamondValues=_diamondValues;
         }
 
@@ -45,7 +46,24 @@ namespace directional{
 
                 diamondAreas(i)=diamondArea/3.0;
             }
+            Eigen::SparseMatrix<NumberType> massMat = directional::sparse_diagonal(diamondAreas);
+            return massMat;
+        }
 
+        Eigen::SparseMatrix<NumberType> inv_mass_matrix(){
+            Eigen::VectorXd diamondAreas(mesh->EF.rows());
+            for (int i=0;i<mesh->EF.rows();i++){
+                double diamondArea=0.0;
+                if (mesh->EF(i,0)!=-1)
+                    diamondArea+=mesh->faceAreas(mesh->EF(i,0));
+                if (mesh->EF(i,1)!=-1)
+                    diamondArea+=mesh->faceAreas(mesh->EF(i,1));
+
+                diamondAreas(i)=diamondArea/3.0;
+            }
+            Eigen::VectorXd invDiamondAreas = diamondAreas.array().inverse().matrix();
+            Eigen::SparseMatrix<NumberType> invMassMat = directional::sparse_diagonal(invDiamondAreas);
+            return invMassMat;
         }
     };
 

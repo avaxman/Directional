@@ -14,6 +14,7 @@
 #include <directional/dual_cycles.h>
 #include <directional/TriMesh.h>
 #include <directional/TangentBundle.h>
+#include <directional/sparse_diagonal.h>
 
 
 /***
@@ -71,27 +72,22 @@ namespace directional{
 
             //mass are face areas
             //igl::doublearea(mesh->V,mesh->F,tangentSpaceMass);
-            tangentSpaceMass.resize(mesh->faceAreas.size(), mesh->faceAreas.size());
-            std::vector<Eigen::Triplet<double>> tsMassTris;
-            for (int i=0;i<mesh->faceAreas.size();i++)
-                tsMassTris.push_back(Eigen::Triplet<double>(i,i,mesh->faceAreas(i)));
 
-            tangentSpaceMass.setFromTriplets(tsMassTris.begin(), tsMassTris.end());
+            tangentSpaceMass = directional::sparse_diagonal(mesh->faceAreas);
+            Eigen::VectorXd invFaceAreas = mesh->faceAreas.array().inverse();
+            invTangentSpaceMass = directional::sparse_diagonal(invFaceAreas);
 
             //The "harmonic" weights from [Brandt et al. 2020].
-            connectionMass.resize(mesh->EF.rows(), mesh->EF.rows());
-            std::vector<Eigen::Triplet<double>> connectionMassTris;
+            Eigen::VectorXd connMassVector = Eigen::VectorXd::Zero(mesh->EF.rows());
             for (int i=0;i<mesh->EF.rows();i++){
                 if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
                     continue;  //boundary edge
 
                 double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
-                connectionMassTris.push_back(Eigen::Triplet<double>(i,i,3.0*primalLengthSquared/(mesh->faceAreas(mesh->EF(i,0))+mesh->faceAreas(mesh->EF(i,0)))));
+                connMassVector(i) = 3.0*primalLengthSquared/(mesh->faceAreas(mesh->EF(i,0))+mesh->faceAreas(mesh->EF(i,1)));
             }
-
-            connectionMass.setFromTriplets(connectionMassTris.begin(), connectionMassTris.end());
+            connectionMass = directional::sparse_diagonal(connMassVector);
         }
-
 
         //projecting an arbitrary set of extrinsic vectors (e.g. coming from user-prescribed constraints) into intrinsic vectors.
         Eigen::MatrixXd  virtual inline project_to_intrinsic(const Eigen::VectorXi& tangentSpaces, const Eigen::MatrixXd& extDirectionals) const{
@@ -184,28 +180,50 @@ namespace directional{
             //TODO: boundaries
         }*/
 
-        //TODO: boundaries
-        Eigen::SparseMatrix<double> inline curl_matrix(const boundCondTypeEnum boundCondType,
-                                                       const Eigen::VectorXi& matching){
+        Eigen::SparseMatrix<double> virtual inline curl_matrix(const boundCondTypeEnum boundCondType,
+                                                               const Eigen::VectorXi& matching,
+                                                               const bool isIntrinsic = false) const{
 
-            Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), 2*mesh->F.rows());
+            Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), (isIntrinsic ? 2*mesh->F.rows() : 3*mesh->F.rows()));
             std::vector<Eigen::Triplet<double>> singleCurlMatTris;
             for (int i=0;i<mesh->innerEdges.size();i++){
                 Eigen::RowVector3d e = mesh->V.row(mesh->EV(mesh->innerEdges(i),1))-mesh->V.row(mesh->EV(mesh->innerEdges(i),0));
                 //curl is <right_face - left_face , e>
-                Eigen::RowVector2d einLeft; einLeft<<e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i),0))),
-                        e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i),0)));
+                if (isIntrinsic) {
+                    Eigen::RowVector2d einLeft;
+                    einLeft << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 0))),
+                            e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 0)));
 
-                Eigen::RowVector2d einRight; einRight<<e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i),1))),
-                        e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i),1)));
+                    Eigen::RowVector2d einRight;
+                    einRight << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 1))),
+                            e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 1)));
 
-                singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),0),-einLeft(0)));
-                singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),0)+1,-einLeft(1)));
-                singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),1),einRight(0)));
-                singleCurlMatTris.push_back(Eigen::Triplet<double>(i, 2*mesh->EF(mesh->innerEdges(i),1)+1,einRight(1)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 0), -einLeft(0)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 0) + 1, -einLeft(1)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 1), einRight(0)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 1) + 1, einRight(1)));
+                } else {
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0), -e(0)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0) + 1, -e(1)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0) + 2, -e(2)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1), e(0)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1) + 1, e(1)));
+                    singleCurlMatTris.push_back(
+                            Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1) + 2, e(2)));
+                }
             }
 
             singleCurlMatrix.setFromTriplets(singleCurlMatTris.begin(), singleCurlMatTris.end());
+            return singleCurlMatrix;
 
             /*if (N==1)
                 return singleCurlMatrix;

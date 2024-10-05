@@ -21,6 +21,7 @@ namespace directional{
         ~VolumeForm2D(){}
 
         Eigen::SparseMatrix<NumberType> virtual mass_matrix() = 0;
+        Eigen::SparseMatrix<NumberType> virtual inv_mass_matrix() = 0;
     };
 
 }

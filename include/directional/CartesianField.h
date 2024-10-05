@@ -75,10 +75,15 @@ namespace directional{
 
         //Setting the field by the extrinsic ambient field, which will get projected to the intrinsic tangent spaces.
         void inline set_extrinsic_field(const Eigen::MatrixXd& _extField){
-            assert(_extField.cols()==3*N);
-            extField=_extField;
+            //assert(_extField.cols()==3*N);
+            if (_extField.cols()==1){
+                extField.resize((_extField.size()/3*N), 3*N);
+                for (int i=0;i<_extField.size()/(3*N);i++)
+                    extField.row(i) = _extField.block(3*N*i, 0, 3*N,1).transpose();
+            } else extField=_extField;
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }
+
 
         //giving a single vector version of the field
         //This is tangent space -> N coefficients -> xyz dominant order
@@ -103,7 +108,11 @@ namespace directional{
         }
 
         Eigen::SparseMatrix<double> inline mass_matrix(const bool isIntrinsic = false){
-            return single_to_N_matrix(tb->tangentSpaceMass, N, (isIntrinsic ? 2 : 3), (isIntrinsic ? 2 : 3));
+            return single_to_N_matrix(tb->tangentSpaceMass, (isIntrinsic ? 2 : 3) * N, 1, 1);
+        }
+
+        Eigen::SparseMatrix<double> inline inv_mass_matrix(const bool isIntrinsic = false){
+            return single_to_N_matrix(tb->invTangentSpaceMass, (isIntrinsic ? 2 : 3) * N, 1,1);
         }
 
         //Todo: this is only intrinsic

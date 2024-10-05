@@ -33,9 +33,6 @@ namespace directional{
         //In case some methods are only defined for specific tangent bundles
         virtual discTangTypeEnum discTangType() const { return discTangTypeEnum::BASE_CLASS; }
 
-        //indicates if the tangent bundle has a cochain sequence
-        virtual bool hasCochainSequence() const { return false; }
-
         //indicates if the tangent bundle has a meaningful embedding
         virtual bool hasEmbedding() const { return false; }
 
@@ -54,6 +51,7 @@ namespace directional{
         Eigen::VectorXcd connection;                        //#V, Metric connection between adjacent spaces
         Eigen::SparseMatrix<double> connectionMass;                     //The mass matrix of connections, of size #adjSpaces
         Eigen::SparseMatrix<double> tangentSpaceMass;                   //The inner-product mass for vectors in tangent spaces, of size #V (self masses) + #E (adjSpaces masses;  optional, usually for high-order fields)
+        Eigen::SparseMatrix<double> invTangentSpaceMass;
 
         //Extrinsic components
         Eigen::MatrixXd sources;  //the source point of the extrinsic vectors

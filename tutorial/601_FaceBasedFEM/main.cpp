@@ -22,14 +22,18 @@ directional::CochainComplex<double> NonConfPLComplex;
 
 template<typename NumberType>
 directional::CochainComplex<NumberType> vector_field_complex_2D(directional::ScalarFunction2D<NumberType>& scalarFunc, directional::CartesianField& field, directional::VolumeForm2D<NumberType>& form){
-directional::CochainComplex<NumberType> complex;
-    PLComplex.differentials.resize(2);
-    PLComplex.metrics.resize(3);
-    PLComplex.differentials[0] = scalarFunc.gradient_matrix();
-    PLComplex.differentials[1] = field.curl_matrix();
-    PLComplex.metrics[0] = scalarFunc.mass_matrix();
-    PLComplex.metrics[1] = field.mass_matrix();
-    PLComplex.metrics[2] = form.mass_matrix();
+    directional::CochainComplex<NumberType> complex;
+    complex.differentials.resize(2);
+    complex.metrics.resize(3);
+    complex.invMetrics.resize(3);
+    complex.differentials[0] = scalarFunc.gradient_matrix();
+    complex.differentials[1] = field.curl_matrix();
+    complex.metrics[0] = scalarFunc.mass_matrix();
+    complex.metrics[1] = field.mass_matrix();
+    complex.metrics[2] = form.mass_matrix();
+    complex.invMetrics[0] = scalarFunc.inv_mass_matrix();
+    complex.invMetrics[1] = field.inv_mass_matrix();
+    complex.invMetrics[2] = form.inv_mass_matrix();
     return complex;
 }
 
@@ -44,18 +48,17 @@ int main()
       confVec[i] = 10.0*sin(mesh.V(i,0))*cos(mesh.V(i,1));
   for (int i=0;i<mesh.dcel.edges.size();i++){
       Eigen::RowVector3d midEdgePoint = 0.5*(mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1)));
-      nonConfVec[i] = 10.0*sin(midEdgePoint(i,1))*cos(midEdgePoint(i,2));
+      nonConfVec[i] = 10.0*sin(midEdgePoint(1))*cos(midEdgePoint(2));
   }
-
 
   //Exact (Gradient field):
   PLScalarFunc.init(mesh, confVec);
   exactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
   PLScalarFunc.gradient(exactField);
+  DiamondForm.init(mesh, Eigen::VectorXd::Zero(mesh.EV.rows()), 1);
 
   coexactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
   PLComplex = vector_field_complex_2D(PLScalarFunc, exactField, DiamondForm);
-
 
   //Generating the dual complex (representing PL non-conforming functions -> PC vector field -> Voronoi forms
   NonConfPLComplex = PLComplex.dual_complex();

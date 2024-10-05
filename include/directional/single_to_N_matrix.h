@@ -29,7 +29,7 @@ namespace directional
                 int colPack = int(it.col() / dCols);
                 int rowPos = it.col() % dRows;
                 int colPos = it.col() % dCols;
-                for (int j=0;j<N;j++)  //TODO
+                for (int j=0;j<N;j++)
                     NMatTris.push_back(Eigen::Triplet<Scalar>(N*dRows*rowPack+j*dRows+rowPos, N*dCols*colPack+j*dCols+colPos, it.value()));
             }
 
