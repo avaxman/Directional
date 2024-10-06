@@ -12,6 +12,7 @@
 #include <directional/ScalarFunction2D.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
+#include <directional/gradient_matrix.h>
 
 namespace directional{
 
@@ -46,24 +47,7 @@ namespace directional{
 
         //TODO: save the matrix for future use
         Eigen::SparseMatrix<NumberType> gradient_matrix(){
-            assert("Currently only implemented for N=1" && N==1);
-            Eigen::SparseMatrix<NumberType> G(3*mesh->F.rows(), vertexValues.size());
-            std::vector<Eigen::Triplet<NumberType>> GTris;
-            for (int i=0;i<mesh->F.rows();i++){
-                Eigen::RowVector3d n  = mesh->faceNormals.row(i);
-                Eigen::RowVector3d e01 = mesh->V.row(mesh->F(i, 1)) - mesh->V.row(mesh->F(i, 0));
-                Eigen::RowVector3d e12 = mesh->V.row(mesh->F(i, 2)) - mesh->V.row(mesh->F(i, 1));
-                Eigen::RowVector3d e20 = mesh->V.row(mesh->F(i, 0)) - mesh->V.row(mesh->F(i, 2));
-
-                Eigen::Matrix3d ep; ep<<n.cross(e12), n.cross(e20), n.cross(e01);
-                double faceArea = mesh->faceAreas(i);
-                for (int j=0;j<3;j++)
-                    for (int k=0;k<3;k++)
-                        GTris.push_back(Eigen::Triplet<NumberType>(3*i+k, mesh->F(i,j), ep(j,k)/(2.0*faceArea)));
-
-            }
-            G.setFromTriplets(GTris.begin(), GTris.end());
-            return G;
+            return directional::gradient_matrix<NumberType>(mesh, 1, N);
         }
 
         void gradient(directional::CartesianField& gradField){
