@@ -22,7 +22,7 @@ namespace directional{
     //this allows for N-functions as well going to N-fields (of the appropriate polynomial degree).
     //the result is always extrinsic (i.e., does not take into account any tangent bundle intrinsic parameterization).
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> gradient_matrix(const TriMesh* mesh,
+    Eigen::SparseMatrix<NumberType> conf_gradient_matrix(const TriMesh* mesh,
                                                     const int d,
                                                     const int N){
 
@@ -56,7 +56,7 @@ namespace directional{
                                                              const int N){
 
         assert("Currently only implemented for d=1" && d==1);
-        Eigen::SparseMatrix<NumberType> G1(3*N*mesh->F.rows(), mesh->V.size());
+        Eigen::SparseMatrix<NumberType> G1(3*N*mesh->F.rows(), mesh->EV.size());
         std::vector<Eigen::Triplet<NumberType>> GTris;
         for (int i=0;i<mesh->F.rows();i++){
             Eigen::RowVector3d n  = mesh->faceNormals.row(i);
@@ -64,11 +64,11 @@ namespace directional{
             Eigen::RowVector3d e12 = mesh->V.row(mesh->F(i, 2)) - mesh->V.row(mesh->F(i, 1));
             Eigen::RowVector3d e20 = mesh->V.row(mesh->F(i, 0)) - mesh->V.row(mesh->F(i, 2));
 
-            Eigen::Matrix3d ep; ep<<n.cross(e12), n.cross(e20), n.cross(e01);
+            Eigen::Matrix3d ep; ep<<n.cross(e01), n.cross(e12), n.cross(e20);
             double faceArea = mesh->faceAreas(i);
             for (int j=0;j<3;j++)
                 for (int k=0;k<3;k++)
-                    GTris.push_back(Eigen::Triplet<NumberType>(3*i+k, mesh->F(i,j), ep(j,k)/(2.0*faceArea)));
+                    GTris.push_back(Eigen::Triplet<NumberType>(3*i+k, mesh->FE(i,j), -ep(j,k)/(faceArea)));
 
         }
         G1.setFromTriplets(GTris.begin(), GTris.end());

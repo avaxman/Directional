@@ -3,39 +3,16 @@
 #include <directional/readOFF.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
-#include <directional/ScalarFunction2D.h>
-#include <directional/PLFunction2D.h>
-#include <directional/VolumeForm2D.h>
-#include <directional/DiamondForm2D.h>
 #include <directional/directional_viewer.h>
-#include <directional/CochainComplex.h>
-
+#include <directional/gradient_matrix.h>
+#include <directional/mass_matrices.h>
 
 directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
 directional::CartesianField exactField, coexactField;
 directional::DirectionalViewer viewer;
-directional::PLFunction2D<double> PLScalarFunc;
-directional::DiamondForm2D<double> DiamondForm;
-directional::CochainComplex<double> PLComplex;
-directional::CochainComplex<double> NonConfPLComplex;
 
-template<typename NumberType>
-directional::CochainComplex<NumberType> vector_field_complex_2D(directional::ScalarFunction2D<NumberType>& scalarFunc, directional::CartesianField& field, directional::VolumeForm2D<NumberType>& form){
-    directional::CochainComplex<NumberType> complex;
-    complex.differentials.resize(2);
-    complex.metrics.resize(3);
-    complex.invMetrics.resize(3);
-    complex.differentials[0] = scalarFunc.gradient_matrix();
-    complex.differentials[1] = field.curl_matrix();
-    complex.metrics[0] = scalarFunc.mass_matrix();
-    complex.metrics[1] = field.mass_matrix();
-    complex.metrics[2] = form.mass_matrix();
-    complex.invMetrics[0] = scalarFunc.inv_mass_matrix();
-    complex.invMetrics[1] = field.inv_mass_matrix();
-    complex.invMetrics[2] = form.inv_mass_matrix();
-    return complex;
-}
+
 
 int main()
 {
@@ -51,25 +28,21 @@ int main()
       nonConfVec[i] = 10.0*sin(midEdgePoint(1))*cos(midEdgePoint(2));
   }
 
-  //Exact (Gradient field):
-  PLScalarFunc.init(mesh, confVec);
-  exactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-  PLScalarFunc.gradient(exactField);
-  DiamondForm.init(mesh, Eigen::VectorXd::Zero(mesh.EV.rows()), 1);
+  Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix<double>(&mesh, 1,1);
+  Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix<double>(&mesh, 1,1);
+  Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix<double>(&mesh, 3, 1);
 
-  coexactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-  PLComplex = vector_field_complex_2D(PLScalarFunc, exactField, DiamondForm);
-
-  //Generating the dual complex (representing PL non-conforming functions -> PC vector field -> Voronoi forms
-  NonConfPLComplex = PLComplex.dual_complex();
-  coexactField.set_extrinsic_field(NonConfPLComplex.invMetrics[1]*NonConfPLComplex.differentials[0]*nonConfVec); //Emulating rotated cogradient field of the PL non-conforming function
-
-  //computing divergence
-  Eigen::VectorXd divergence = PLScalarFunc.gradient_matrix().transpose()* coexactField.mass_matrix()*coexactField.flatten();
+  Eigen::SparseMatrix<double> C = directional::curl_matrix<double>(&mesh, 3, 1, 1);
+  Eigen::SparseMatrix<double> D = directional::div_matrix<double>(&mesh, 3, 1, 1);
 
   //demonstrating the exact sequences
-  std::cout<<"max abs curl of exact field (should be numerically zero): "<<exactField.curl().cwiseAbs().maxCoeff()<<std::endl;
-  std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<divergence.cwiseAbs().maxCoeff()<<std::endl;
+  std::cout<<"max abs curl of exact field (should be numerically zero): "<<(C*Gv*confVec).cwiseAbs().maxCoeff()<<std::endl;
+  std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<(D*J*Ge*nonConfVec).cwiseAbs().maxCoeff()<<std::endl;
+
+    exactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
+    exactField.set_extrinsic_field(Gv*confVec);
+    coexactField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
+    coexactField.set_extrinsic_field(J*Ge*nonConfVec);
 
   //triangle mesh setup
   viewer.init();
