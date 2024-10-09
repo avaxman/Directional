@@ -223,7 +223,7 @@ namespace directional
             psFieldSourceList[fieldNum]->setPointRadius(10e-6);
             psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             for (int i=0;i<fieldList[fieldNum]->N;i++) {
-                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string("field ") + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
+                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string(fieldName) + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
                                                                                           sampledField.block(0, 3 * i, sampledField.rows(),
                                                                                                                 3));
                 psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);

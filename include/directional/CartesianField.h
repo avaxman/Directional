@@ -78,8 +78,8 @@ namespace directional{
             //assert(_extField.cols()==3*N);
             if (_extField.cols()==1){
                 extField.resize((_extField.size()/3*N), 3*N);
-                for (int i=0;i<_extField.size()/(3*N);i++)
-                    extField.row(i) = _extField.block(3*N*i, 0, 3*N,1).transpose();
+                for (int i=0;i<extField.rows();i++)
+                    extField.row(i) = _extField.block(3 * N * i, 0, 3 * N, 1).transpose();
             } else extField=_extField;
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }

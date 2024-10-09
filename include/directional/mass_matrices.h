@@ -20,7 +20,7 @@ namespace directional {
                                                         const int N,
                                                         const int d) {
         assert("Currently only implemented for d=1" && d == 1);
-        Eigen::SparseMatrix<NumberType> M1(mesh->V.size(), mesh->V.size());
+        Eigen::SparseMatrix<NumberType> M1(mesh->V.rows(), mesh->V.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
         for (int i = 0; i < mesh->F.rows(); i++) {
             for (int j = 0; j < 3; j++)
@@ -36,10 +36,10 @@ namespace directional {
 
     //The popular lumped version of the M0 (for d=0) matrix. Just voronoi area masses
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> lumped_voronoi_mass_matrix(const TriMesh* mesh,
+    Eigen::SparseMatrix<NumberType> lumped_voronoi_mass_matrix_2D(const TriMesh* mesh,
                                                                const int N){
 
-        Eigen::SparseMatrix<NumberType> M1(mesh->V.size(), mesh->V.size());
+        Eigen::SparseMatrix<NumberType> M1(mesh->V.rows(), mesh->V.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
         for (int i = 0; i < mesh->F.rows(); i++) {
             //adding the 1/3 of each face's area to the vertex
@@ -54,29 +54,29 @@ namespace directional {
 
     //The mass matrix for face-based vector quantities, which can be vector
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> face_vectors_mass_matrix(const TriMesh* mesh,
-                                                              const int vecDim,
+    Eigen::SparseMatrix<NumberType> face_vectors_mass_matrix_2D(const TriMesh* mesh,
+                                                              const bool isIntrinsic,
                                                               const int N,
                                                               const int d){
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> M1 = directional::sparse_diagonal(mesh->faceAreas);
-        return single_to_N_matrix(M1, vecDim*N, 1, 1);
+        return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
     }
 
     //Mass matrix for edge diamond regions, which is *inverse* areas
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> edge_diamond_mass_matrix(const TriMesh* mesh,
+    Eigen::SparseMatrix<NumberType> edge_diamond_mass_matrix_2D(const TriMesh* mesh,
                                                              const int N,
                                                              const int d){
         assert("Currently only works for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> M1(mesh->EV.size(), mesh->EV.size());
+        Eigen::SparseMatrix<NumberType> M1(mesh->EV.rows(), mesh->EV.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
         for (int i = 0; i < mesh->EF.rows(); i++) {
             //adding the 1/3 of each face's area to the edge, and taking an inverse
             NumberType mass=0.0;
             if (mesh->EF(i,0)!=-1) mass+=mesh->faceAreas(mesh->EF(i,0))/3.0;
             if (mesh->EF(i,1)!=-1) mass+=mesh->faceAreas(mesh->EF(i,1))/3.0;
-            MTris.push_back(Eigen::Triplet<NumberType>(i,i, 1.0/mass);
+            MTris.push_back(Eigen::Triplet<NumberType>(i,i, 1.0/mass));
         }
         M1.setFromTriplets(MTris.begin(), MTris.end());
         if (N==1)
@@ -85,14 +85,14 @@ namespace directional {
     }
 
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> face_vector_rotation_matrix<double>(const TriMesh* mesh,
-                                                                        const bool isIntrinsic,
-                                                                        const int N,
-                                                                        const int d){
+    Eigen::SparseMatrix<NumberType> face_vector_rotation_matrix_2D(const TriMesh* mesh,
+                                                                const bool isIntrinsic,
+                                                                const int N,
+                                                                const int d){
         assert("Currently only works for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> J(2*mesh->F.size(), 2*mesh->F.size());
+        Eigen::SparseMatrix<NumberType> J(2*mesh->F.rows(), 2*mesh->F.rows());
         std::vector<Eigen::Triplet<NumberType>> JTris;
-        Eigen::SparseMatrix<NumberType> EI = directional::face_extrinsic_to_intrinsic_matrix<double>(mesh, N, d);
+        Eigen::SparseMatrix<NumberType> EI = directional::face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
         for (int i=0;i<mesh->F.rows();i++){
             JTris.push_back(Eigen::Triplet<NumberType>(2*i,2*i, 0.0));
             JTris.push_back(Eigen::Triplet<NumberType>(2*i+1,2*i+1, 0.0));

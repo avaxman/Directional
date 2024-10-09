@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <cassert>
 #include <directional/TriMesh.h>
 
 namespace directional
