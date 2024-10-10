@@ -234,6 +234,68 @@ namespace directional
                               fieldNum);
         }
 
+        void inline set_1form(const TriMesh* mesh,
+                              const Eigen::VectorXd& oneForm,
+                              const std::string formName = "1-form",
+                              const int meshNum=0,
+                              const int fieldNum=0,
+                              const int samplingRate = 2,
+                              const double baryOffset = 0.1,
+                              const double sizeRatio = 0.1)
+
+        {
+            if (psFieldList.size()<fieldNum+1) {
+                psFieldSourceList.resize(fieldNum + 1);
+                psFieldList.resize(fieldNum+1);
+            }
+
+            //creating barcentric template
+            Eigen::VectorXd baryRange = Eigen::VectorXd::LinSpaced(samplingRate, 0.0, 1.0);
+            //creating all combinations
+            std::vector<Eigen::RowVector3d> baryCoords;
+            for (int i=0;i<baryRange.size();i++)
+                for (int j=0;j<baryRange.size();j++)
+                    for (int k=0;k<baryRange.size();k++)
+                        if (std::abs(baryRange(i)+baryRange(j)+baryRange(k)-1.0)<10e-7)
+                            baryCoords.push_back(Eigen::RowVector3d(baryRange(i), baryRange(j), baryRange(k)));
+
+            for (int i=0;i<baryCoords.size();i++){
+                baryCoords[i] = Eigen::RowVector3d::Ones()*baryOffset/3.0+baryCoords[i]*(1.0-baryOffset);
+                std::cout<<baryCoords[i]<<std::endl;
+            }
+
+            Eigen::MatrixXd sources(mesh->F.rows()*baryCoords.size(),3);
+            Eigen::MatrixXd field(mesh->F.rows()*baryCoords.size(),3);
+            for (int f=0;f<mesh->F.rows();f++) {
+                Eigen::RowVector3d n = mesh->faceNormals.row(f);
+                Eigen::RowVector3d e01 = mesh->V.row(mesh->F(f,1)) - mesh->V.row(mesh->F(f,0));
+                Eigen::RowVector3d e12 = mesh->V.row(mesh->F(f,2)) - mesh->V.row(mesh->F(f,1));
+                Eigen::RowVector3d e20 = mesh->V.row(mesh->F(f,0)) - mesh->V.row(mesh->F(f,2));
+
+                Eigen::RowVector3d gB0 = n.cross(e12)/(2*mesh->faceAreas(f));
+                Eigen::RowVector3d gB1 = n.cross(e20)/(2*mesh->faceAreas(f));
+                Eigen::RowVector3d gB2 = n.cross(e01)/(2*mesh->faceAreas(f));
+                for (int i = 0; i < baryCoords.size(); i++) {
+                    sources.row(baryCoords.size()*f+i) = mesh->V.row(mesh->F(f, 0)) * baryCoords[i](0) +
+                            mesh->V.row(mesh->F(f, 1)) *baryCoords[i](1) +
+                            mesh->V.row(mesh->F(f, 2)) * baryCoords[i](2);
+
+                    Eigen::RowVector3d whit01 = baryCoords[i](0)*gB1 - baryCoords[i](1)*gB0;
+                    Eigen::RowVector3d whit12 = baryCoords[i](1)*gB2 - baryCoords[i](2)*gB1;
+                    Eigen::RowVector3d whit20 = baryCoords[i](2)*gB0 - baryCoords[i](0)*gB2;
+
+                    field.row(baryCoords.size()*f+i) = oneForm(mesh->FE(f,0))*mesh->FEs(f,0)*whit01 + oneForm(mesh->FE(f,1))*mesh->FEs(f,1)*whit12 + oneForm(mesh->FE(f,2))*mesh->FEs(f,2)*whit20;
+                }
+            }
+
+            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), sources);
+            psFieldList[fieldNum].resize(1);
+            psFieldSourceList[fieldNum]->setPointRadius(10e-6);
+            psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
+            psFieldList[fieldNum][0] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
+            psFieldList[fieldNum][0]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
+        }
+
         void inline set_singularities(const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
                                       const int fieldNum=0,

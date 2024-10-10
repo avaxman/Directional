@@ -42,8 +42,8 @@ namespace directional {
     //The primal/dual diagonal hodge star (with a choice of center so as to make it positive)
     template<typename NumberType>
     void hodge_star_1_matrix(const TriMesh *mesh,
-                             Eigen::SparseMatrix<NumberType> hodgeStar,
-                             Eigen::SparseMatrix<NumberType> invHodgeStar,
+                             Eigen::SparseMatrix<NumberType>& hodgeStar,
+                             Eigen::SparseMatrix<NumberType>& invHodgeStar,
                              const bool circumcenter = true,
                              const bool isDirichlet = false) {
 

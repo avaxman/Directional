@@ -15,12 +15,12 @@ int main()
 {
     directional::readOFF(TUTORIAL_DATA_PATH "/Pegasus.off",mesh);
 
-    Eigen::VectorXd z0(mesh.dcel.vertices.size()), z2dual(mesh.dcel.edges.size());
+    Eigen::VectorXd z0(mesh.dcel.vertices.size()), z2dual(mesh.dcel.faces.size());
     for (int i=0;i<mesh.dcel.vertices.size();i++)
         z0[i] = sin(mesh.V(i,0)/20.0)*cos(mesh.V(i,1)/20.0);
-    for (int i=0;i<mesh.dcel.edges.size();i++){
-        Eigen::RowVector3d midEdgePoint = 0.5*(mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1)));
-        z2dual[i] = midEdgePoint(0); //sin(midEdgePoint(1)/20.0)*cos(midEdgePoint(2)/20.0);
+    for (int i=0;i<mesh.dcel.faces.size();i++){
+        Eigen::RowVector3d midFacePoint = (mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1)));
+        z2dual[i] = mesh.barycenters(i, 0); //sin(midEdgePoint(1)/20.0)*cos(midEdgePoint(2)/20.0);
     }
 
     Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(&mesh);
@@ -45,8 +45,8 @@ int main()
     viewer.init();
     viewer.set_mesh(mesh);
     viewer.set_vertex_data(z0, z0.minCoeff(), z0.maxCoeff(),"Primal 0-form", 0);
-    viewer.set_1form(z1Exact,"Gradient field", 0, 0, 20.0);
+    viewer.set_1form(&mesh, z1Exact,"Gradient field", 0, 0, 2, 0.1, 2.0);
     viewer.set_face_data(z2dual, z2dual.minCoeff(), z2dual.maxCoeff(),"dual 0-form", 0);
-    viewer.set_1form(z1Coexact,"Rot. Cogradient field", 0, 1, 10.0);
+    viewer.set_1form(&mesh, z1Coexact,"Rot. Cogradient field", 0, 1, 2, 0.1, 2.0);
     viewer.launch();
 }
