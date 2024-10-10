@@ -80,14 +80,15 @@ namespace directional {
                     if (std::abs(sinAngle)<10e-7)
                         continue;  //using 0 weight
 
-                    M1Weights(i)+=cosAngle/sinAngle;
+                    M1Weights(i)+=0.5*cosAngle/sinAngle;
                 }
             }
         }
 
         hodgeStar = directional::sparse_diagonal(M1Weights);
+        //Note! inverse hodge has a minus sign (see here, Fig. 2: https://dl.acm.org/doi/pdf/10.1145/2897824.2925880)
         Eigen::VectorXd invWeights = M1Weights.unaryExpr([](double v) {
-            return (std::abs(v)>10e-7 ? 1.0/v : 0.0);
+            return (std::abs(v)>10e-7 ? -1.0/v : 0.0);
         });
         invHodgeStar = directional::sparse_diagonal(invWeights);
     }
