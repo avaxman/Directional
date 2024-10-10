@@ -116,7 +116,7 @@ if(DIRECTIONAL_VIEWER)
   add_subdirectory("504_LinearReductions")
   add_subdirectory("601_FaceBasedFEM")
   add_subdirectory("602_DiscreteExteriorCalculus")
-  # add_subdirectory("602_HarmonicFields")
+  add_subdirectory("603_HodgeDecomposition")
   # 
   # add_subdirectory("604_HigherOrderFields")
   # add_subdirectory("701_SubdivisionFields")
