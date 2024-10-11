@@ -17,9 +17,9 @@ namespace directional {
 
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh* mesh,
-                                             const bool isIntrinsic,
-                                             const int N,
-                                             const int d){
+                                                   const bool isIntrinsic=false,
+                                                   const int N = 1,
+                                                   const int d = 1){
 
         assert("This method is currently defined only for d==1" && d==1);
         Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), (isIntrinsic ? 2*mesh->F.rows() : 3*mesh->F.rows()));

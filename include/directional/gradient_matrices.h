@@ -24,9 +24,9 @@ namespace directional{
     //the result is always extrinsic (i.e., does not take into account any tangent bundle intrinsic parameterization).
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> conf_gradient_matrix_2D(const TriMesh* mesh,
-                                                         const bool isIntrinsic,
-                                                         const int N,
-                                                         const int d){
+                                                         const bool isIntrinsic=false,
+                                                         const int N=1,
+                                                         const int d=1){
 
         assert("Currently only implemented for d=1" && d==1);
 
@@ -57,8 +57,8 @@ namespace directional{
     //The non-conforming Crouzeix-Raviart gradient matrix
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> non_conf_gradient_matrix_2D(const TriMesh* mesh,
-                                                             const int N,
-                                                             const int d){
+                                                             const int N=1,
+                                                             const int d=1){
 
         assert("Currently only implemented for d=1" && d==1);
         Eigen::SparseMatrix<NumberType> G1(3*N*mesh->F.rows(), mesh->EV.rows());

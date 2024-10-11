@@ -17,8 +17,8 @@ namespace directional {
 
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> conf_mass_matrix_2D(const TriMesh* mesh,
-                                                        const int N,
-                                                        const int d) {
+                                                        const int N = 1,
+                                                        const int d = 1) {
         assert("Currently only implemented for d=1" && d == 1);
         Eigen::SparseMatrix<NumberType> M1(mesh->V.rows(), mesh->V.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
@@ -37,7 +37,7 @@ namespace directional {
     //The popular lumped version of the M0 (for d=0) matrix. Just voronoi area masses
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> lumped_voronoi_mass_matrix_2D(const TriMesh* mesh,
-                                                               const int N){
+                                                                  const int N = 1){
 
         Eigen::SparseMatrix<NumberType> M1(mesh->V.rows(), mesh->V.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
@@ -55,9 +55,9 @@ namespace directional {
     //The mass matrix for face-based vector quantities, which can be vector
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> face_vectors_mass_matrix_2D(const TriMesh* mesh,
-                                                              const bool isIntrinsic,
-                                                              const int N,
-                                                              const int d){
+                                                                const bool isIntrinsic=false,
+                                                                const int N=1,
+                                                                const int d=1){
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> M1 = directional::sparse_diagonal(mesh->faceAreas);
         return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
@@ -66,8 +66,8 @@ namespace directional {
     //Mass matrix for edge diamond regions, which is *inverse* areas
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> edge_diamond_mass_matrix_2D(const TriMesh* mesh,
-                                                             const int N,
-                                                             const int d){
+                                                                const int N=1,
+                                                                const int d=1){
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> M1(mesh->EV.rows(), mesh->EV.rows());
         std::vector<Eigen::Triplet<NumberType>> MTris;
@@ -86,9 +86,9 @@ namespace directional {
 
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> face_vector_rotation_matrix_2D(const TriMesh* mesh,
-                                                                const bool isIntrinsic,
-                                                                const int N,
-                                                                const int d){
+                                                                   const bool isIntrinsic = false,
+                                                                   const int N = 1,
+                                                                   const int d = 1){
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> J(2*mesh->F.rows(), 2*mesh->F.rows());
         std::vector<Eigen::Triplet<NumberType>> JTris;
