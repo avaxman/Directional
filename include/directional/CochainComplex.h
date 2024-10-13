@@ -55,17 +55,18 @@ namespace directional{
                          Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
 
-        Eigen::Matrix2i orderMat; orderMat<<1,2,3,4;
+        Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
+        std::cout<<"orderMat: "<<orderMat<<std::endl;
         std::vector<Eigen::SparseMatrix<NumberType>> matVec;
         matVec.push_back(M);
         matVec.push_back(d.adjoint()*MNext);
         matVec.push_back(MNext*d);
-        matVec.push_back(Eigen::SparseMatrix<NumberType>(M.rows(), d.cols()));
+        matVec.push_back(Eigen::SparseMatrix<NumberType>(MNext.rows(), d.rows()));
         Eigen::SparseMatrix<NumberType> A;
         directional::sparse_block(orderMat, matVec, A);
         Eigen::Vector<NumberType, Eigen::Dynamic> b(M.rows()+d.rows());
         b.head(M.rows()).setZero();
-        b.tail(d.rows())=d*cochain;
+        b.tail(d.rows())=MNext*d*cochain;
 
         Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
         solver.compute(A);
@@ -93,7 +94,9 @@ namespace directional{
                              Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain,
                              Eigen::Vector<NumberType, Eigen::Dynamic>& harmCochain){
 
+        std::cout<<"before project exact"<<std::endl;
         project_exact(d, M, cochain, prevCochain, exactCochain);
+        std::cout<<"before project coexact"<<std::endl;
         project_coexact(dNext, M, MNext, cochain, coexactCochain, nextCochain);
         harmCochain = cochain - exactCochain - coexactCochain;
     }
@@ -117,20 +120,26 @@ namespace directional{
         matVec.push_back(dNext);
         matVec.push_back(d.adjoint()*M);
         Eigen::SparseMatrix<NumberType> H;
-        std::cout<<"Before sparse block"<<std::endl;
+        //std::cout<<"Before sparse block"<<std::endl;
         directional::sparse_block(matOrder, matVec, H);
-        std::cout<<"After sparse block"<<std::endl;
+        //std::cout<<"After sparse block"<<std::endl;
         Eigen::SparseQR<Eigen::SparseMatrix<NumberType>, Eigen::COLAMDOrdering<int>> qr;
-        qr.compute(H);
+        qr.compute(H.adjoint());
         assert("harmonic_field(): Decomposition failed!" && qr.info() == Eigen::Success);
         bettiNumber = H.cols() - qr.rank();
-        std::cout<<"BettiNumber: "<<bettiNumber<<std::endl;
+        //std::cout<<"BettiNumber: "<<bettiNumber<<std::endl;
+        //Eigen::VectorXi PIndices = qr.colsPermutation().indices();
         Eigen::SparseMatrix<NumberType> I(qr.matrixQ().cols(), bettiNumber);
         std::vector<Eigen::Triplet<NumberType>> ITris;
-        for (int i=0;i<bettiNumber;i++)
-            ITris.push_back(Eigen::Triplet<NumberType>(qr.matrixQ().cols()-i, bettiNumber-i,1));
+        for (int i=0;i<bettiNumber;i++) {
+            ITris.push_back(Eigen::Triplet<NumberType>(qr.matrixQ().cols()-i-1, bettiNumber - i - 1, 1));
+            //std::cout<<PIndices(PIndices.size() - i - 1)<<","<<bettiNumber - i - 1<<std::endl;
+        }
         I.setFromTriplets(ITris.begin(), ITris.end());
-        harmFields = Eigen::MatrixXd(qr.matrixQ() * Eigen::MatrixXd(I));
+        //std::cout<<"Eigen::MatrixXd(I): "<<Eigen::MatrixXd(I)<<std::endl;
+        harmFields = Eigen::MatrixXd(qr.matrixQ() * Eigen::MatrixXd(I)); //TODO: inefficient
+        //std::cout<<"H*Q: "<<(H*Eigen::MatrixXd(qr.matrixQ()))<<std::endl;
+        //std::cout<<"harmonicity: "<<(H*harmFields).cwiseAbs().maxCoeff()<<std::endl;
 
     }
 

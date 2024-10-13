@@ -55,11 +55,12 @@ namespace directional {
     //The mass matrix for face-based vector quantities, which can be vector
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> face_vectors_mass_matrix_2D(const TriMesh* mesh,
-                                                                const bool isIntrinsic=false,
+                                                                const bool isIntrinsic = false,
+                                                                const bool isInverse = false,
                                                                 const int N=1,
                                                                 const int d=1){
         assert("Currently only works for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> M1 = sparse_diagonal(mesh->faceAreas);
+        Eigen::SparseMatrix<NumberType> M1 = sparse_diagonal((isInverse ? mesh->faceAreas : 1.0/(mesh->faceAreas.array())));
         return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
     }
 
