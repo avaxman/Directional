@@ -22,8 +22,7 @@ namespace directional
   void sparse_block(const Eigen::MatrixXi& blockIndices,
                     const std::vector<Eigen::SparseMatrix<Scalar>>& blockMats,
                     Eigen::SparseMatrix<Scalar>& result){
-    
-    
+
     //assessing dimensions
     Eigen::VectorXi blockRowOffsets=Eigen::VectorXi::Zero(blockIndices.rows());
     Eigen::VectorXi blockColOffsets=Eigen::VectorXi::Zero(blockIndices.cols());
@@ -38,13 +37,16 @@ namespace directional
     
     result.conservativeResize(rowSize, colSize);
     std::vector<Eigen::Triplet<Scalar>> resultTriplets;
-    for (int i=0;i<blockRowOffsets.size();i++)
-       for (int j=0;j<blockColOffsets.size();j++)
-         for (int k=0; k<blockMats[i].outerSize(); ++k)
-           for (typename Eigen::SparseMatrix<Scalar>::InnerIterator it((blockMats[i]),k); it; ++it)
-             resultTriplets.push_back(Eigen::Triplet<Scalar>(blockRowOffsets(i)+it.row(),blockColOffsets(j)+it.col(),it.value()));
-    
-    
+
+    for (int i=0;i<blockIndices.rows();i++){
+        for (int j=0;j<blockIndices.cols();j++){
+            int currMat = blockIndices(i,j);
+            for (int k=0; k<blockMats[currMat].outerSize(); ++k)
+                for (typename Eigen::SparseMatrix<Scalar>::InnerIterator it(blockMats[currMat],k); it; ++it)
+                    resultTriplets.push_back(Eigen::Triplet<Scalar>(blockRowOffsets(i)+it.row(),blockColOffsets(j)+it.col(),it.value()));
+        }
+    }
+
     result.setFromTriplets(resultTriplets.begin(), resultTriplets.end());
     
   }

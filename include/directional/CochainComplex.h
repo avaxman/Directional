@@ -113,17 +113,25 @@ namespace directional{
 
         std::vector<Eigen::SparseMatrix<NumberType>> matVec;
         Eigen::MatrixXi matOrder(2,1);
-        matOrder<<1,2;
+        matOrder<<0,1;
         matVec.push_back(dNext);
         matVec.push_back(d.adjoint()*M);
-        Eigen::SparseMatrix<NumberType> H = sparse_block(matOrder, matVec);
+        Eigen::SparseMatrix<NumberType> H;
+        std::cout<<"Before sparse block"<<std::endl;
+        directional::sparse_block(matOrder, matVec, H);
+        std::cout<<"After sparse block"<<std::endl;
         Eigen::SparseQR<Eigen::SparseMatrix<NumberType>, Eigen::COLAMDOrdering<int>> qr;
         qr.compute(H);
         assert("harmonic_field(): Decomposition failed!" && qr.info() == Eigen::Success);
-        harmFields = qr.matrixQ().rightCols(H.cols() - qr.rank());
-        bettiNumber = harmFields.cols();
+        bettiNumber = H.cols() - qr.rank();
+        std::cout<<"BettiNumber: "<<bettiNumber<<std::endl;
+        Eigen::SparseMatrix<NumberType> I(qr.matrixQ().cols(), bettiNumber);
+        std::vector<Eigen::Triplet<NumberType>> ITris;
+        for (int i=0;i<bettiNumber;i++)
+            ITris.push_back(Eigen::Triplet<NumberType>(qr.matrixQ().cols()-i, bettiNumber-i,1));
+        I.setFromTriplets(ITris.begin(), ITris.end());
+        harmFields = Eigen::MatrixXd(qr.matrixQ() * Eigen::MatrixXd(I));
 
-        //TODO: orthogonalize according to M
     }
 
         /*void codifferential(const int cochainNum, const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain, Eigen::Vector<NumberType, Eigen::Dynamic>& result){

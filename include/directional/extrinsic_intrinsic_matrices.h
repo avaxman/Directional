@@ -15,23 +15,31 @@
 namespace directional {
 
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> face_extrinsic_to_intrinsic_matrix_2D(const TriMesh* mesh,
-                                                                          const int N,
-                                                                          const int d){
+    Eigen::SparseMatrix<NumberType> face_extrinsic_to_intrinsic_matrix_2D(const TriMesh *mesh,
+                                                                          const int N = 1,
+                                                                          const int d = 1) {
 
-        assert("This method is currently defined only for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> EI(2*mesh->F.rows(), 3*mesh->F.rows());
+        assert("This method is currently defined only for d==1" && d == 1);
+        Eigen::SparseMatrix<NumberType> EI(2 * mesh->F.rows(), 3 * mesh->F.rows());
         std::vector<Eigen::Triplet<NumberType>> EITris;
-        for (int i=0;i<mesh->F.rows();i++){
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i, 3*i, mesh->FBx(i,0)));
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i, 3*i+1, mesh->FBx(i,1)));
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i, 3*i+2, mesh->FBx(i,2)));
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i+1, 3*i, mesh->FBy(i,0)));
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i+1, 3*i+1, mesh->FBy(i,1)));
-            EITris.push_back(Eigen::Triplet<NumberType>(2*i+1, 3*i+2, mesh->FBy(i,2)));
+        for (int i = 0; i < mesh->F.rows(); i++) {
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i, 3 * i, mesh->FBx(i, 0)));
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i, 3 * i + 1, mesh->FBx(i, 1)));
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i, 3 * i + 2, mesh->FBx(i, 2)));
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i + 1, 3 * i, mesh->FBy(i, 0)));
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i + 1, 3 * i + 1, mesh->FBy(i, 1)));
+            EITris.push_back(Eigen::Triplet<NumberType>(2 * i + 1, 3 * i + 2, mesh->FBy(i, 2)));
         }
         EI.setFromTriplets(EITris.begin(), EITris.end());
-        return (N==1 ? EI : directional::single_to_N_matrix(EI, N, 2, 3));
+        return (N == 1 ? EI : directional::single_to_N_matrix(EI, N, 2, 3));
+    }
+
+    template<typename NumberType>
+    Eigen::SparseMatrix<NumberType> face_intrinsic_to_extrinsic_matrix_2D(const TriMesh *mesh,
+                                                                          const int N = 1,
+                                                                          const int d = 1) {
+        assert("This method is currently defined only for d==1" && d == 1);
+        return face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d).adjoint();
     }
 }
 

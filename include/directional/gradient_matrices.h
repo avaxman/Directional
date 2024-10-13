@@ -49,8 +49,8 @@ namespace directional{
         }
         G1.setFromTriplets(GTris.begin(), GTris.end());
         if (isIntrinsic){
-            Eigen::SparseMatrix<NumberType> EI = directional::face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
-            return (N==1 ? G1 : single_to_N_matrix(G1, N, 3, 1) )*EI;
+            Eigen::SparseMatrix<NumberType> EI = face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
+            return EI*(N==1 ? G1 : single_to_N_matrix(G1, N, 3, 1));
         } else return (N==1 ? G1 : single_to_N_matrix(G1, N, 3, 1));
     }
 
@@ -82,8 +82,6 @@ namespace directional{
         else return single_to_N_matrix(G1, N, 3, 1);
 
     }
-
-
 }
 
 #endif //DIRECTIONAL_GRADIENT_MATRIX_H

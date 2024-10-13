@@ -59,7 +59,7 @@ namespace directional {
                                                                 const int N=1,
                                                                 const int d=1){
         assert("Currently only works for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> M1 = directional::sparse_diagonal(mesh->faceAreas);
+        Eigen::SparseMatrix<NumberType> M1 = sparse_diagonal(mesh->faceAreas);
         return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
     }
 
@@ -92,7 +92,7 @@ namespace directional {
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> J(2*mesh->F.rows(), 2*mesh->F.rows());
         std::vector<Eigen::Triplet<NumberType>> JTris;
-        Eigen::SparseMatrix<NumberType> EI = directional::face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
+        Eigen::SparseMatrix<NumberType> EI = face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
         for (int i=0;i<mesh->F.rows();i++){
             JTris.push_back(Eigen::Triplet<NumberType>(2*i,2*i, 0.0));
             JTris.push_back(Eigen::Triplet<NumberType>(2*i+1,2*i+1, 0.0));
@@ -105,6 +105,6 @@ namespace directional {
         return EI.adjoint()*single_to_N_matrix(J, N, 2, 2)*EI;
     }
 
-};
+}
 
 #endif //DIRECTIONAL_MASS_MATRICES_H

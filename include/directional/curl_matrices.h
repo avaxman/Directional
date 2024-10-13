@@ -64,7 +64,7 @@ namespace directional {
 
         if (N==1)
             return singleCurlMatrix;
-        else return directional::single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
+        else return single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
     }
 }
 
