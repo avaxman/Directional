@@ -56,15 +56,18 @@ namespace directional {
                 double primalEdgeLengths = (mesh->V.row(mesh->EV(i, 0)) - mesh->V.row(mesh->EV(i, 1))).norm();
                 double dualEdgeLength=0.0;
                 Eigen::RowVector3d midEdge = (mesh->V.row(mesh->EV(i, 0)) + mesh->V.row(mesh->EV(i, 1))) / 2.0;
-                if (mesh->EF(i,0)!=0) {
+                bool isBoundary = false;
+                if (mesh->EF(i,0)!=-1) {
+                    isBoundary = true;
                     Eigen::RowVector3d leftBarycenter = mesh->barycenters.row(mesh->EF(i, 0));
                     dualEdgeLength += (leftBarycenter - midEdge).norm();
                 }
-                if (mesh->EF(i,1)!=0) {
+                if (mesh->EF(i,1)!=-1) {
+                    isBoundary = true;
                     Eigen::RowVector3d rightBarycenter = mesh->barycenters.row(mesh->EF(i, 1));
                     dualEdgeLength += (rightBarycenter - midEdge).norm();
                 }
-                M1Weights(i)=dualEdgeLength/primalEdgeLengths;
+                M1Weights(i)=(isBoundary ? 0.5 : 1.0)*dualEdgeLength/primalEdgeLengths;
             } else {//cot weights
                 M1Weights(i)=0.0;
                 for (int j=0;j<2;j++){

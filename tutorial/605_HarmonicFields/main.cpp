@@ -23,6 +23,7 @@ int main()
     ftb.init(mesh);
 
     //TODO: create the actual field
+
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(&mesh, true);
     Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(&mesh, true);
