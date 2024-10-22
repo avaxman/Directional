@@ -234,7 +234,7 @@ namespace directional
                               fieldNum);
         }
 
-        void inline set_1form(const TriMesh* mesh,
+        Eigen::MatrixXd inline set_1form(const TriMesh* mesh,
                               const Eigen::VectorXd& oneForm,
                               const std::string formName = "1-form",
                               const int meshNum=0,
@@ -294,6 +294,7 @@ namespace directional
             psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             psFieldList[fieldNum][0] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
             psFieldList[fieldNum][0]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
+            return field;
         }
 
         void inline set_singularities(const Eigen::VectorXi& singElements,

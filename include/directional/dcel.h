@@ -853,6 +853,7 @@ namespace directional
             halfedges.resize(3*F.rows());
             vertices.resize(V.rows());
             faces.resize(F.rows());
+            edges.clear();
 
             for (int i=0;i<F.rows();i++) {
                 faces[i].ID=i;

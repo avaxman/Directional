@@ -39,6 +39,38 @@ namespace directional {
         return d1;
     }
 
+    template<typename NumberType>
+    void linear_whitney_mass_matrix(const TriMesh* mesh,
+                                    Eigen::SparseMatrix<NumberType>& M1){
+
+        std::vector<Eigen::Triplet<NumberType>> M1Tris;
+        M1.resize(mesh->EV.rows(), mesh->EV.rows());
+        for (int i=0;i<mesh->F.rows();i++){
+            Eigen::RowVector3d n  = mesh->faceNormals.row(i);
+            Eigen::RowVector3d e01 = mesh->V.row(mesh->F(i, 1)) - mesh->V.row(mesh->F(i, 0));
+            Eigen::RowVector3d e12 = mesh->V.row(mesh->F(i, 2)) - mesh->V.row(mesh->F(i, 1));
+            Eigen::RowVector3d e20 = mesh->V.row(mesh->F(i, 0)) - mesh->V.row(mesh->F(i, 2));
+
+            Eigen::Matrix3d ep; ep<<n.cross(e12), n.cross(e20), n.cross(e01);
+            double faceArea = mesh->faceAreas(i);
+            ep.array()/=(2*faceArea);
+            //diagonal elements
+            for (int j=0;j<3;j++)
+                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i,j), mesh->FE(i,j), (ep.row(j).squaredNorm()+ep.row((j+1)%3).squaredNorm() - ep.row(j).dot(ep.row((j+1)%3)))*(faceArea/6.0)));
+
+            //off diagonal elements
+            for (int j=0;j<3;j++) {
+                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i, j), mesh->FE(i, (j + 1) % 3),
+                                                            (ep.row((j + 1) % 3).squaredNorm() +
+                                                             ep.row(j).dot(ep.row((j + 2) % 3))) * (-faceArea / 6.0)));
+                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i, (j + 1) % 3), mesh->FE(i, j),
+                                                            (ep.row((j + 1) % 3).squaredNorm() +
+                                                             ep.row(j).dot(ep.row((j + 2) % 3))) * (-faceArea / 6.0)));
+            }
+        }
+        M1.setFromTriplets(M1Tris.begin(), M1Tris.end());
+    }
+
     //The primal/dual diagonal hodge star (with a choice of center so as to make it positive)
     template<typename NumberType>
     void hodge_star_1_matrix(const TriMesh *mesh,
