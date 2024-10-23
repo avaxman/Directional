@@ -64,10 +64,10 @@ namespace directional {
         return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
     }
 
-    //The mass matrix for face-based vector quantities, which are by default inverse
+    //The mass matrix for face-based scalar quantities, which are *inverse* area by default
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> face_scalar_mass_matrix_2D(const TriMesh* mesh,
-                                                               const bool isInverse = true,
+                                                               const bool isInverse = false,
                                                                const int N=1,
                                                                const int d=1){
         assert("Currently only works for d==1" && d==1);

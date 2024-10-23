@@ -25,6 +25,7 @@
 
 namespace directional{
 
+    //TODO: should be solving also a minimal problem since we need the solution to be orthogonal to the null space in the prevM metric...
     //Solving the Poisson equation prevCochain = argmin |di*prevCochain - cochain|^2 with the metric of Mi, and where i = cochainNum, and also outputting exactCochain = di*prevCochain
     template<typename NumberType>
     void project_exact(const Eigen::SparseMatrix<NumberType> d,

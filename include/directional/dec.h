@@ -44,7 +44,7 @@ namespace directional {
                                     Eigen::SparseMatrix<NumberType>& M1){
 
         std::vector<Eigen::Triplet<NumberType>> M1Tris;
-        M1.resize(mesh->EV.rows(), mesh->EV.rows());
+        M1.resize(3*mesh->F.rows(), 3*mesh->F.rows());
         for (int i=0;i<mesh->F.rows();i++){
             Eigen::RowVector3d n  = mesh->faceNormals.row(i);
             Eigen::RowVector3d e01 = mesh->V.row(mesh->F(i, 1)) - mesh->V.row(mesh->F(i, 0));
@@ -56,19 +56,32 @@ namespace directional {
             ep.array()/=(2*faceArea);
             //diagonal elements
             for (int j=0;j<3;j++)
-                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i,j), mesh->FE(i,j), (ep.row(j).squaredNorm()+ep.row((j+1)%3).squaredNorm() - ep.row(j).dot(ep.row((j+1)%3)))*(faceArea/6.0)));
+                M1Tris.push_back(Eigen::Triplet<NumberType>(3*i+j, 3*i+j,
+                                                            (ep.row(j).squaredNorm()+ep.row((j+1)%3).squaredNorm() -
+                                                            ep.row(j).dot(ep.row((j+1)%3)))*(faceArea/6.0)));
+
 
             //off diagonal elements
             for (int j=0;j<3;j++) {
-                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i, j), mesh->FE(i, (j + 1) % 3),
+                M1Tris.push_back(Eigen::Triplet<NumberType>(3*i+j, 3*i + (j + 1) % 3,
                                                             (ep.row((j + 1) % 3).squaredNorm() +
                                                              ep.row(j).dot(ep.row((j + 2) % 3))) * (-faceArea / 6.0)));
-                M1Tris.push_back(Eigen::Triplet<NumberType>(mesh->FE(i, (j + 1) % 3), mesh->FE(i, j),
+                M1Tris.push_back(Eigen::Triplet<NumberType>(3*i + (j + 1) % 3, 3*i+j,
                                                             (ep.row((j + 1) % 3).squaredNorm() +
                                                              ep.row(j).dot(ep.row((j + 2) % 3))) * (-faceArea / 6.0)));
             }
         }
         M1.setFromTriplets(M1Tris.begin(), M1Tris.end());
+
+        //conversion matrix
+        std::vector<Eigen::Triplet<NumberType>> FEMatTris;
+        Eigen::SparseMatrix<NumberType> FEMat(3*mesh->F.rows(), mesh->EV.rows());
+        for (int i=0;i<mesh->F.rows();i++)
+            for (int j=0;j<3;j++)
+                FEMatTris.push_back(Eigen::Triplet<NumberType>(3*i+j, mesh->FE(i,j), mesh->FEs(i,j)));
+
+        FEMat.setFromTriplets(FEMatTris.begin(), FEMatTris.end());
+        M1 = FEMat.adjoint() * M1 * FEMat;
     }
 
     //The primal/dual diagonal hodge star (with a choice of center so as to make it positive)
