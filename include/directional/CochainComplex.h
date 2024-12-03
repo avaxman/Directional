@@ -25,23 +25,53 @@
 
 namespace directional{
 
-    //TODO: should be solving also a minimal problem since we need the solution to be orthogonal to the null space in the prevM metric...
-    //Solving the Poisson equation prevCochain = argmin |di*prevCochain - cochain|^2 with the metric of Mi, and where i = cochainNum, and also outputting exactCochain = di*prevCochain
+    //GaugeFixing = false means we are solving a generic Poisson equation prevCochain = argmin |d*prevCochain - cochain|^2 with the metric of M, outputting exactCochain = di*prevCochain, which doesn't care about d null space components in prevCochain.
+    //This has a precondition that d0 is injective, that is that d'*d is invertible. It will likely work softly (for instance for d0), but no guarantee.
+    //GaugeFixing = true means we want a minimum 2-norm solution (orthogonal to the null space of d), so we solve instead for:
+    // prevCochain = argmin |prevCochain|^2 s.t. d*prevCochain = cochain, with the metric of M.  The precondition is that d is surjective, that is that the constraint is satisfiable.
+    //The mass matrix if either for the cochain or the prevChain, depending on the gauge condition.
+
     template<typename NumberType>
     void project_exact(const Eigen::SparseMatrix<NumberType> d,
                        const Eigen::SparseMatrix<NumberType> M,
                        const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
                        Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
-                       Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain){
+                       Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain,
+                       const bool gaugeFixing = false){
 
-        Eigen::SparseMatrix<NumberType> A = d.adjoint() * M * d;
-        Eigen::Vector<NumberType, Eigen::Dynamic> b = d.adjoint() * M * cochain;
-        Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
-        solver.compute(A);
-        assert("project_prev(): Decomposition failed!" && solver.info() == Eigen::Success);
-        prevCochain = solver.solve(b);
-        assert("project_prev(): Solver failed!" && solver.info() == Eigen::Success);
-        exactCochain = d*prevCochain;
+        if (!gaugeFixing) {
+            Eigen::SparseMatrix<NumberType> A = d.adjoint() * M * d;
+            Eigen::Vector<NumberType, Eigen::Dynamic> b = d.adjoint() * M * cochain;
+            Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+            solver.compute(A);
+            assert("project_exact(): Decomposition failed!" && solver.info() == Eigen::Success);
+            prevCochain = solver.solve(b);
+            assert("project_exact(): Solver failed!" && solver.info() == Eigen::Success);
+
+        } else {
+            Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
+            std::cout<<"orderMat: "<<orderMat<<std::endl;
+            std::vector<Eigen::SparseMatrix<NumberType>> matVec;
+            matVec.push_back(M);
+            matVec.push_back(d.adjoint());
+            matVec.push_back(d);
+            matVec.push_back(Eigen::SparseMatrix<NumberType>(d.rows(), d.rows()));
+            Eigen::SparseMatrix<NumberType> A;
+            directional::sparse_block(orderMat, matVec, A);
+            Eigen::Vector<NumberType, Eigen::Dynamic> b(M.rows()+d.rows());
+            b.head(M.rows()).setZero();
+            b.tail(d.rows())=cochain;
+
+            Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+            solver.compute(A);
+            assert("project_exact(): Decomposition failed!" && solver.info() == Eigen::Success);
+            Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);
+            assert("project_exact(): Solver failed!" && solver.info() == Eigen::Success);
+            prevCochain = x.head(M.rows());
+            std::cout<<"d*prevCochain - cochain error :"<<(d*prevCochain - cochain).cwiseAbs().maxCoeff()<<std::endl;
+            //nextCochain = -x.tail(d.rows());
+        }
+        exactCochain = d * prevCochain;
     }
 
     //Solving the equation nextCochain = argmin |codiff_i*nextCochain - cochain|^2 with the metric of Mi, and where i = cochain, and also outputting coexactCochain = codiff_i*nextCochain
