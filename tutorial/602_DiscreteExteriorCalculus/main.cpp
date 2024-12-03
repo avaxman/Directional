@@ -42,11 +42,11 @@ int main()
 
     Eigen::SparseMatrix<double> L1 = d0.adjoint()*M1*d0;
     Eigen::SparseMatrix<double> L2 = d0.adjoint()*hodgeStar*d0;
-    Eigen::SparseMatrix<double> diff = L1-L2;
-    Eigen::VectorXd linFunc = mesh.V.col(0);
-    Eigen::VectorXd lapLin = L1*linFunc;
+    Eigen::SparseMatrix<double> diff = M1-hodgeStar;
+    //Eigen::VectorXd linFunc = mesh.V.col(0);
+    //Eigen::VectorXd lapLin = L1*linFunc;
 
-    std::cout<<"lapLin.cwiseAbs().maxCoeff(): "<<lapLin.cwiseAbs().maxCoeff()<<std::endl;
+    //std::cout<<"lapLin.cwiseAbs().maxCoeff(): "<<lapLin.cwiseAbs().maxCoeff()<<std::endl;
 
     double maxAbsValue = 0.0;
     for (int k = 0; k < diff.outerSize(); ++k)
@@ -62,6 +62,8 @@ int main()
     directional::project_exact(d1, M1, z2, z1, z2Exact, true);
 
     std::cout<<"Reproducing the original curl (z2): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
+
+    std::cout<<"Difference between M1 and hodge star : "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
 
     //triangle mesh setup
     viewer.init();
