@@ -125,9 +125,7 @@ namespace directional{
                              Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain,
                              Eigen::Vector<NumberType, Eigen::Dynamic>& harmCochain){
 
-        std::cout<<"before project exact"<<std::endl;
         project_exact(d, M, cochain, prevCochain, exactCochain);
-        std::cout<<"before project coexact"<<std::endl;
         project_coexact(dNext, M, MNext, cochain, coexactCochain, nextCochain);
         harmCochain = cochain - exactCochain - coexactCochain;
     }

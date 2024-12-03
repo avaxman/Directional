@@ -17,7 +17,7 @@ directional::DirectionalViewer viewer;
 
 int main()
 {
-    directional::readOFF(TUTORIAL_DATA_PATH "/Eight.off",mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/decimated-knight.off",mesh);
 
     Eigen::VectorXd z2(mesh.dcel.faces.size());
     /*for (int i=0;i<mesh.dcel.vertices.size();i++)
@@ -26,7 +26,7 @@ int main()
     //giving a 2-form of constant (pointwise curl).
     for (int i=0;i<mesh.dcel.faces.size();i++){
         //Eigen::RowVector3d midFacePoint = (mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1)));
-        z2[i] = mesh.faceAreas(i)*sin(mesh.barycenters(i,0)/20.0)*cos(mesh.barycenters(i,1)/20.0); //sin(midEdgePoint(1)/20.0)*cos(midEdgePoint(2)/20.0);
+        z2[i] = mesh.faceAreas(i)*sin(mesh.barycenters(i,0)/40.0)*cos(mesh.barycenters(i,1)/40.0); //sin(midEdgePoint(1)/20.0)*cos(midEdgePoint(2)/20.0);
     }
     //making it physical curl
     z2.array()-=z2.mean();
@@ -42,7 +42,7 @@ int main()
 
     Eigen::SparseMatrix<double> L1 = d0.adjoint()*M1*d0;
     Eigen::SparseMatrix<double> L2 = d0.adjoint()*hodgeStar*d0;
-    Eigen::SparseMatrix<double> diff = M1-hodgeStar;
+    Eigen::SparseMatrix<double> diff = L1-L2;
     //Eigen::VectorXd linFunc = mesh.V.col(0);
     //Eigen::VectorXd lapLin = L1*linFunc;
 
@@ -70,9 +70,9 @@ int main()
     viewer.set_mesh(mesh);
     /*viewer.set_vertex_data(z0, z0.minCoeff(), z0.maxCoeff(),"Primal 0-form", 0);
     viewer.set_1form(&mesh, z1Exact,"Exact field", 0, 0, 2, 0.2, 2.0);*/
-    viewer.set_face_data(z2, z2.minCoeff(), z2.maxCoeff(),"dual 0-form", 0);
-    Eigen::MatrixXd formField = viewer.set_1form(&mesh, z1,"Coexact field", 0, 0, 2, 0.3, 10.0);
-    Eigen::MatrixXd formFieldDiag = viewer.set_1form(&mesh, z1Diag,"Coexact field diag", 0, 1, 2, 0.3, 10.0);
+    viewer.set_face_data(z2, z2.minCoeff(), z2.maxCoeff(),"Integrated face curl", 0);
+    Eigen::MatrixXd formField = viewer.set_1form(&mesh, z1,"Coexact field", 0, 0, 2, 0.5, 20.0);
+    Eigen::MatrixXd formFieldDiag = viewer.set_1form(&mesh, z1Diag,"Coexact field diag", 0, 1, 2, 0.5, 20.0);
 
     viewer.launch();
 }

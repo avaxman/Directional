@@ -56,17 +56,20 @@ int main()
 
     for (int i=0;i<mesh.dcel.faces.size();i++){
         Eigen::RowVector3d midFacePointCOM = mesh.barycenters.row(i) - COM;
-        midFaceVec[i] = sin(midFacePointCOM(0)/2.0)+sin(midFacePointCOM(1)/2.0)+sin(midFacePointCOM(2)/2.0);
+        midFaceVec[i] = mesh.faceAreas[i]*(sin(midFacePointCOM(0)/2.0)+sin(midFacePointCOM(1)/2.0)+sin(midFacePointCOM(2)/2.0));
     }
     midFaceVec.array()/=midFaceVec.mean();
 
-    z1 = harmVec + d0*vertexVec +  invHodgeStar*d1.adjoint()*midFaceVec;
+    Eigen::VectorXd z1CoexactPres, z2Filtered;
+    directional::project_exact(d1, hodgeStar, midFaceVec, z1CoexactPres, z2Filtered, true);
+
+    z1 = harmVec + d0*vertexVec +  z1CoexactPres;
 
     std::cout<<"before hodge decomposition"<<std::endl;
     directional::hodge_decomposition<double>(d0, d1, hodgeStar, M2, z1, z0, z1Exact, z1Coexact, z2, z1Harmonic);
     std::cout<<"after hodge decomposition"<<std::endl;
     std::cout<<"Exact reproduction: "<<(z1Exact - d0*vertexVec).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Coexact reproduction: "<<(z1Coexact - invHodgeStar*d1.adjoint()*midFaceVec).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"Coexact reproduction: "<<(z1Coexact - z1CoexactPres).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Harmonic reproduction: "<<(z1Harmonic - harmVec).cwiseAbs().maxCoeff()<<std::endl;
 
     //triangle mesh setup
