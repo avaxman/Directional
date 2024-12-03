@@ -169,6 +169,7 @@ namespace directional{
         harmFields = Eigen::MatrixXd(qr.matrixQ() * Eigen::MatrixXd(I)); //TODO: inefficient
         //std::cout<<"H*Q: "<<(H*Eigen::MatrixXd(qr.matrixQ()))<<std::endl;
         //std::cout<<"harmonicity: "<<(H*harmFields).cwiseAbs().maxCoeff()<<std::endl;
+        std::cout<<"harmFields.cols(): "<<harmFields.cols()<<std::endl;
 
     }
 

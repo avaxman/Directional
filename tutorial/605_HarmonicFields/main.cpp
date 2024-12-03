@@ -12,9 +12,33 @@
 
 directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
-Eigen::VectorXd gradFieldVec, rotCogradFieldVec, harmFieldVec, vertexFunction, diamondForm;
-directional::CartesianField origField, gradField, rotCogradField, harmField;
+directional::CartesianField harmField;
 directional::DirectionalViewer viewer;
+Eigen::MatrixXd harmBasis;
+Eigen::SparseMatrix<double> IE;
+int currHarmBasis = 0;
+
+void callbackFunc() {
+    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
+    ImGui::Text("Harmonic basis function: %d", currHarmBasis);
+    ImGui::SameLine();
+    if (ImGui::Button("+")) {
+        currHarmBasis = (currHarmBasis + 1)%harmBasis.cols();
+        //std::cout<<"currHarmBasis: "<<currHarmBasis<<std::endl;
+        harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
+        viewer.set_field(harmField);
+        //std::cout<<"after set field"<<std::endl;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("-")) {
+        currHarmBasis = (currHarmBasis + harmBasis.cols() - 1)%harmBasis.cols();
+        //std::cout<<"currHarmBasis: "<<currHarmBasis<<std::endl;
+        harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
+        viewer.set_field(harmField);
+    }
+
+    ImGui::PopItemWidth();
+}
 
 
 int main()
@@ -30,59 +54,22 @@ int main()
     Eigen::SparseMatrix<double> Mx = directional::face_vectors_mass_matrix_2D<double>(&mesh, true);
     Eigen::SparseMatrix<double> iMx = directional::face_vectors_mass_matrix_2D<double>(&mesh, true, true);
     Eigen::SparseMatrix<double> Mc = directional::edge_diamond_mass_matrix_2D<double>(&mesh, true);
-    Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(&mesh);
+    IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(&mesh);
 
-    Eigen::MatrixXd harmBasis;
     int bettiNumber;
     directional::cohomology_basis(G, C, Mx,  harmBasis, bettiNumber);
-    //std::cout<<"Euler characteristic: "<<mesh.V.rows()-mesh.EV.rows()+mesh.F.rows()<<std::endl;
-    //std::cout<<"Betti number: "<<bettiNumber<<std::endl;
-    //std::cout<<"harmBasis: "<<harmBasis.block(0,0,20,harmBasis.cols())<<std::endl;
 
     std::cout<<"divergence of harmonic basis: "<<(G.adjoint()*Mx*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"curl of harmonic basis: "<<(C*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"bettiNumber: "<<bettiNumber<<std::endl;
 
-    Eigen::VectorXd harmVec = harmBasis.col(0);
-    Eigen::RowVector3d COM = mesh.V.colwise().mean();
-    std::cout<<"COM: "<<COM<<std::endl;
-    Eigen::VectorXd vertexVec(mesh.dcel.vertices.size()), midEdgeVec(mesh.dcel.edges.size());
-    for (int i=0;i<mesh.dcel.vertices.size();i++)
-        vertexVec[i] = cos((mesh.V(i,0)-COM(1))/4.0)*cos((mesh.V(i,2)-COM(2))/4.0);
-
-    vertexVec.array()/=vertexVec.mean();
-
-    for (int i=0;i<mesh.dcel.edges.size();i++){
-        Eigen::RowVector3d midEdgePointCOM = 0.5*(mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1))) - COM;
-        midEdgeVec[i] = sin(midEdgePointCOM(0)/4.0)+sin(midEdgePointCOM(1)/4.0)+sin(midEdgePointCOM(2)/4.0);
-    }
-    midEdgeVec.array()/=midEdgeVec.mean();
-
-    origField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    origField.set_extrinsic_field(IE*(harmVec + G*vertexVec +  iMx*C.adjoint()*midEdgeVec));
-
-    std::cout<<"before hodge decomposition"<<std::endl;
-    directional::hodge_decomposition<double>(G, C, Mx, Mc, origField.flatten(true), vertexFunction, gradFieldVec, rotCogradFieldVec, diamondForm, harmFieldVec);
-    std::cout<<"after hodge decomposition"<<std::endl;
-    std::cout<<"Exact reproduction: "<<(gradFieldVec - G*vertexVec).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Coexact reproduction: "<<(rotCogradFieldVec - iMx*C.adjoint()*midEdgeVec).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Harmonic reproduction: "<<(harmFieldVec - harmVec).cwiseAbs().maxCoeff()<<std::endl;
-
-    gradField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    gradField.set_extrinsic_field((const Eigen::VectorXd)(IE*gradFieldVec));
-    //std::cout<<"exactField.extField: "<<exactField.extField<<std::endl;
-    rotCogradField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    rotCogradField.set_extrinsic_field((const Eigen::VectorXd)(IE*rotCogradFieldVec));
-    harmField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    harmField.set_extrinsic_field((const Eigen::VectorXd)(IE*harmFieldVec));
-
-    //triangle mesh setup
     viewer.init();
+    viewer.set_callback(&callbackFunc);
     viewer.set_mesh(mesh);
-    viewer.set_field(origField,"Original Field", 0, 0, 2.0);
-    viewer.set_vertex_data(vertexFunction, vertexFunction.minCoeff(), vertexFunction.maxCoeff(),"Vertex Function", 0);
-    viewer.set_field(gradField,"Gradient Field", 0, 1, 2.0);
-    viewer.set_edge_data(diamondForm, diamondForm.minCoeff(), diamondForm.maxCoeff(),"Diamond Function", 0);
-    viewer.set_field(rotCogradField,"Rotated Cogradient Field", 0, 2, 2.0);
-    viewer.set_field(harmField,"Harmonic Field", 0, 3, 2.0);
+    //std::cout<<"before set extrinsic field "<<std::endl;
+    harmField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
+    harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
+    //std::cout<<"after set extrinsic field "<<std::endl;
+    viewer.set_field(harmField);
     viewer.launch();
 }
