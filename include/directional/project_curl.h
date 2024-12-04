@@ -110,7 +110,7 @@ namespace directional {
 
         //TODO: hard constraints
 
-        SparseMatrix<double> C = directional::curl_matrix_2D<double>((((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, true, origField.N);
+        SparseMatrix<double> C = directional::curl_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.matching, true, origField.N);
         SparseMatrix<double> CR=C*R;
         SparseMatrix<double> CRt=CR.transpose();
         SparseMatrix<double> ER=E*R;

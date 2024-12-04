@@ -20,6 +20,7 @@
 #include <directional/raw_to_polyvector.h>
 #include <directional/project_curl.h>
 #include <directional/principal_matching.h>
+#include <directional/sparse_diagonal.h>
 
 namespace directional
 {
@@ -78,7 +79,7 @@ namespace directional
 
         pvField.init(tb, fieldTypeEnum::POLYVECTOR_FIELD, N);
 
-        assert(pvData.projectCurl && tb.discTangType()==directional::FACE_SPACES && "Projecting curl only works for face-based fields for now!");
+        assert((!pvData.projectCurl || tb.discTangType()==directional::discTangTypeEnum::FACE_SPACES) && "Projecting curl only works for face-based fields for now!");
 
         //Building the smoothness matrices, with an energy term for each inner edge and degree
         int rowCounter=0;
@@ -89,7 +90,7 @@ namespace directional
 
         pvData.totalSmoothWeight = pvField.tb->connectionMass.sum();
 
-        vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
+        //vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
         for (int n = 0; n < pvData.N; n++)
         {
             for (int i=0;i<pvField.tb->adjSpaces.rows();i++)
@@ -102,22 +103,35 @@ namespace directional
                 dTriplets.push_back(Triplet<complex<double> >(rowCounter, n*pvField.intField.rows()+pvField.tb->adjSpaces(i,1), -1.0));
 
                 //stiffness weights
-                WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->connectionMass(i)));
+                //WSmoothTriplets.push_back(Triplet<complex<double> >(rowCounter, rowCounter, pvField.tb->connectionMass(i)));
                 rowCounter++;
             }
 
-            for (int i=0;i<pvField.intField.rows();i++)
-                MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.tb->tangentSpaceMass(i)));
+            //for (int i=0;i<pvField.intField.rows();i++)
+            //    MTriplets.push_back(Triplet<complex<double>>(n*pvField.intField.rows()+i, n*pvField.intField.rows()+i, pvField.tb->tangentSpaceMass(i)));
         }
 
         pvData.smoothMat.resize(rowCounter, pvData.N*pvField.intField.rows());
         pvData.smoothMat.setFromTriplets(dTriplets.begin(), dTriplets.end());
 
-        pvData.WSmooth.resize(rowCounter, rowCounter);
-        pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
+        std::vector<Eigen::SparseMatrix<double>> WVector, MVector;
+        MatrixXi blkDiagIndices(N,2);
+        for (int n=0; n<N;n++) {
+            WVector.push_back(pvField.tb->connectionMass);
+            MVector.push_back(pvField.tb->tangentSpaceMass);
+            blkDiagIndices.row(n) << n, n;
+        }
+        SparseMatrix<double> WSmooth, M;
+        directional::sparse_diagonal(WVector, WSmooth);
+        directional::sparse_diagonal(MVector, M);
+        pvData.WSmooth = WSmooth.cast<std::complex<double>>();
+        pvData.M = M.cast<std::complex<double>>();
 
-        pvData.M.resize(pvData.N*pvField.intField.rows(), pvData.N*pvField.intField.rows());
-        pvData.M.setFromTriplets(MTriplets.begin(), MTriplets.end());
+        //pvData.WSmooth.resize(rowCounter, rowCounter);
+        //pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
+
+        //pvData.M.resize(pvData.N*pvField.intField.rows(), pvData.N*pvField.intField.rows());
+        //pvData.M.setFromTriplets(MTriplets.begin(), MTriplets.end());
 
         //creating reduction transformation
         VectorXi numSpaceConstraints = Eigen::VectorXi::Zero(pvField.intField.rows());
@@ -187,17 +201,29 @@ namespace directional
         /****************rotational-symmetry matrices********************/
         //TODO: use new massweights
         if (pvData.wRoSy >= 0.0){ //this is anyhow enforced, this matrix is unnecessary)
-            vector<Triplet<complex<double>>> roSyTriplets, WRoSyTriplets;
+            vector<Triplet<complex<double>>> roSyTriplets;
             for (int i=pvField.intField.rows();i<pvData.N*pvField.intField.rows();i++){
                 roSyTriplets.push_back(Triplet<complex<double>>(i,i,1.0));
-                WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.tb->tangentSpaceMass(i%pvField.intField.rows())));
+                //WRoSyTriplets.push_back(Triplet<complex<double>>(i,i,pvField.tb->tangentSpaceMass(i%pvField.intField.rows())));
+            }
+
+            std::vector<Eigen::SparseMatrix<double>> WRosyVec;
+            WRosyVec.push_back(Eigen::SparseMatrix<double>(pvField.intField.rows(), pvField.intField.rows()));  //for the free coefficient
+            Eigen::MatrixXi WRosyIndices(N,2);
+            WRosyIndices.row(0)<<0,0;
+            for (int i=1;i<N;i++){
+                WRosyVec.push_back(pvField.tb->tangentSpaceMass);
+                WRosyIndices.row(i)<<i,i;
             }
 
             pvData.roSyMat.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
             pvData.roSyMat.setFromTriplets(roSyTriplets.begin(), roSyTriplets.end());
 
-            pvData.WRoSy.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
-            pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
+            //pvData.WRoSy.resize(N*pvField.intField.rows(), N*pvField.intField.rows());
+            //pvData.WRoSy.setFromTriplets(WRoSyTriplets.begin(), WRoSyTriplets.end());
+            Eigen::SparseMatrix<double> WRosy;
+            directional::sparse_diagonal(WRosyVec, WRosy);
+            pvData.WRoSy = WRosy.cast<std::complex<double>>();
 
             pvData.totalRoSyWeight=((double)pvData.N)*pvField.tb->tangentSpaceMass.sum();
         } else {
@@ -244,10 +270,11 @@ namespace directional
                 for (int k=0;k<IAiA.cols();k++)
                     alignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, k*jump*pvField.intField.rows()+pvData.constSpaces(i), IAiA(j,k)));
 
+            //TODO: not a great summing... also using random access which is quite bad...
             alignRhsList.push_back(singleReducRhs);
             for (int j=0;j<singleReducRhs.size();j++){
-                WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.tb->tangentSpaceMass(pvData.constSpaces(i))));
-                pvData.totalConstrainedWeight+=pvField.tb->tangentSpaceMass(pvData.constSpaces(i));
+                WAlignTriplets.push_back(Triplet<complex<double>>(rowCounter+j, rowCounter+j, pvData.wAlignment(i)*pvField.tb->tangentSpaceMass.coeff(pvData.constSpaces(i),pvData.constSpaces(i))));
+                pvData.totalConstrainedWeight+=pvField.tb->tangentSpaceMass.coeff(pvData.constSpaces(i),pvData.constSpaces(i));
             }
             rowCounter+=realN;
         }
@@ -294,7 +321,7 @@ namespace directional
         SimplicialLDLT<SparseMatrix<complex<double>>> solver;
         solver.compute(totalLhs);
         VectorXcd reducedDofs = solver.solve(totalRhs);
-        assert(solver.info() == Success & "PolyVector solver failed!");
+        assert(solver.info() == Success && "PolyVector solver failed!");
         VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
         MatrixXcd intField(pvData.sizeT, pvData.N);
         for (int i=0;i<pvData.N;i++)
@@ -320,9 +347,7 @@ namespace directional
         for (int i=0;i<pvData.numIterations;i++){
 
             //TODO: iteration of implicit Euler step
-
-
-
+            std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
             if (pvData.normalizeField){
                 CartesianField rawField;
                 polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
@@ -336,11 +361,8 @@ namespace directional
                 project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
                 directional::raw_to_polyvector(rawField,  pvField);
 
-
+            }
         }
-
-
-
     }
 
 

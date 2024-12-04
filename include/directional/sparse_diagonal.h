@@ -28,6 +28,33 @@ namespace directional
 
     }
 
+    //diagonal sparse matrices
+    template <typename Scalar>
+    inline void sparse_diagonal(const std::vector<Eigen::SparseMatrix<Scalar>>& diagValues,
+                                Eigen::SparseMatrix<Scalar>& diagMatrix){
+
+        int numRows=0, numCols=0;
+        Eigen::MatrixXi offsets(diagValues.size(),2);
+        for (int i=0;i<diagValues.size();i++) {
+            offsets.row(i)<<numRows, numCols;
+            numRows += diagValues[i].rows();
+            numCols += diagValues[i].cols();
+        }
+        diagMatrix.resize(numRows, numCols);
+        std::vector<Eigen::Triplet<Scalar>> diagMatTris;
+        for (int i=0;i<diagValues.size();i++) {
+            for (int k = 0; k < diagValues[i].outerSize(); ++k) {
+                for (Eigen::SparseMatrix<double>::InnerIterator it(diagValues[i], k); it; ++it) {
+                    diagMatTris.push_back(Eigen::Triplet<Scalar>(offsets(i,0)+it.row(), offsets(i,1)+it.col(), it.value()));
+                }
+            }
+        }
+
+        diagMatrix.setFromTriplets(diagMatTris.begin(), diagMatTris.end());
+        //return diagMatrix;
+
+    }
+
 
 
 }

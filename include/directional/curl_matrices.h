@@ -17,6 +17,7 @@ namespace directional {
 
     template<typename NumberType>
     Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh* mesh,
+                                                   const Eigen::VectorXi& matching,
                                                    const bool isIntrinsic=false,
                                                    const int N = 1,
                                                    const int d = 1){
@@ -24,6 +25,7 @@ namespace directional {
         assert("This method is currently defined only for d==1" && d==1);
         Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), (isIntrinsic ? 2*mesh->F.rows() : 3*mesh->F.rows()));
         std::vector<Eigen::Triplet<double>> singleCurlMatTris;
+        //TODO: use matching
         for (int i=0;i<mesh->innerEdges.size();i++){
             Eigen::RowVector3d e = mesh->V.row(mesh->EV(mesh->innerEdges(i),1))-mesh->V.row(mesh->EV(mesh->innerEdges(i),0));
             //curl is <right_face - left_face , e>
@@ -64,7 +66,7 @@ namespace directional {
 
         if (N==1)
             return singleCurlMatrix;
-        else return single_to_N_matrix(singleCurlMatrix, N, matching, 1, (isIntrinsic ? 2 : 3));
+        else return single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
     }
 }
 

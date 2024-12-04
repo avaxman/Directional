@@ -180,9 +180,9 @@ namespace directional{
             //TODO: boundaries
         }*/
 
-        Eigen::SparseMatrix<double> virtual inline curl_matrix(const boundCondTypeEnum boundCondType,
-                                                               const Eigen::VectorXi& matching,
-                                                               const bool isIntrinsic = false) const{
+        //Eigen::SparseMatrix<double> virtual inline curl_matrix(const boundCondTypeEnum boundCondType,
+        //                                                       const Eigen::VectorXi& matching,
+         //                                                      const bool isIntrinsic = false) const{
 
 
 
@@ -215,7 +215,7 @@ namespace directional{
             }
             curlMatrixN.setFromTriplets(curlMatNTris.begin(), curlMatNTris.end());
             return curlMatrixN;*/
-        }
+        //}
 
     };
 

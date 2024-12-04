@@ -116,13 +116,13 @@ namespace directional{
         }
 
         //Todo: this is only intrinsic
-        Eigen::SparseMatrix<double> inline curl_matrix(const bool isIntrinsic = false){
-            return single_to_N_matrix(tb->curl_matrix(boundCondTypeEnum::DIRICHLET, matching, isIntrinsic), N, 1, (isIntrinsic ? 2 : 3));
-        }
+        //Eigen::SparseMatrix<double> inline curl_matrix(const bool isIntrinsic = false){
+        //    return single_to_N_matrix(tb->curl_matrix(boundCondTypeEnum::DIRICHLET, matching, isIntrinsic), N, 1, (isIntrinsic ? 2 : 3));
+        //}
 
-        Eigen::VectorXd inline curl(const bool isIntrinsic = false){
-            return curl_matrix(isIntrinsic)*flatten(isIntrinsic);
-        }
+        //Eigen::VectorXd inline curl(const bool isIntrinsic = false){
+        //    return curl_matrix(isIntrinsic)*flatten(isIntrinsic);
+        //}
     };
 
 }
