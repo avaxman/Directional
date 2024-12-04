@@ -49,12 +49,22 @@ namespace directional{
 
         int jump = ((signSymmetry)&&(N%2==0) ? 2 : 1);
         Eigen::MatrixXcd actualPVField(pvField.rows(), 1);
-        actualPVField.col(0)=actualRoots.col(0);
+        actualPVField.col(0)=-actualRoots.col(0);
         for (int i=1;i<actualN;i++)
             multiply_polynomials(actualPVField, actualRoots.col(i));
 
         for (int i=0;i<N;i+=jump)
             pvField.col(i)=actualPVField.col(i/jump);
+    }
+
+
+    inline void raw_to_polyvector(const CartesianField& rawField,
+                                  CartesianField& pvField,
+                                  const bool signSymmetry=true){
+
+        Eigen::MatrixXcd pvFieldComplex;
+        raw_to_polyvector(rawField.intField, rawField.N, pvFieldComplex, signSymmetry);
+        pvField.set_intrinsic_field(pvFieldComplex);
     }
 
 }

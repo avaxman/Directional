@@ -154,7 +154,7 @@ int main()
   smoothWeight = 1.0;
   roSyWeight = 1.0;
   alignWeight = 1.0;
-  
+
   //triangle mesh setup
   viewer.init();
   viewer.set_mesh(mesh,0);

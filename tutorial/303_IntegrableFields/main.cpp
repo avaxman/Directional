@@ -8,7 +8,7 @@
 #include <directional/read_raw_field.h>
 #include <directional/curl_matching.h>
 #include <directional/combing.h>
-#include <directional/polycurl_reduction.h>
+#include <directional/project_curl.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
 
@@ -25,17 +25,8 @@ double curlMax, curlMaxOrig;
 int N;
 int iter=0;
 
-// The set of parameters for calculating the curl-free fields
-directional::polycurl_reduction_parameters params;
-
-// Solver data (needed for precomputation)
-directional::PolyCurlReductionSolverData pcrdata;
-
-
 typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
 ViewingModes viewingMode=ORIGINAL_FIELD;
-
-
 
 void update_visualization()
 {
@@ -50,24 +41,6 @@ void update_visualization()
 void callbackFunc() {
     ImGui::PushItemWidth(100);
 
-    if (ImGui::Button("Reduce Curl")){
-        for (int bi = 0; bi<5; ++bi)
-        {
-            directional::polycurl_reduction_solve(pcrdata, params, rawFieldCF, iter ==0);
-            iter++;
-            params.wSmooth *= params.redFactor_wsmooth;
-        }
-
-        Eigen::VectorXi prinIndices;
-        directional::curl_matching(rawFieldCF, curlCF);
-        directional::combing(rawFieldCF, combedFieldCF);
-        directional::curl_matching(combedFieldCF,curlCF);
-        viewer.set_field(combedFieldCF,"", 0, 1);
-        viewer.set_seams(combedFieldCF.matching, 0,1);
-    }
-    curlMax= curlCF.maxCoeff();
-    ImGui::SameLine();
-    ImGui::Text("Maxmimum absolute curl: %ld", curlMax);
 
     const char* items[] = { "Original field", "Original curl", "Optimized field", "Optimized curl"};
     static const char* current_item = NULL;
@@ -119,24 +92,9 @@ int main(int argc, char *argv[])
   rawFieldOrig.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   rawFieldCF.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
   directional::read_raw_field(TUTORIAL_DATA_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
-  
-  //combing the field in a way that minimizes curl
-  directional::curl_matching(rawFieldOrig,curlOrig);
-  curlMaxOrig= curlOrig.maxCoeff();
-  curlMax = curlMaxOrig;
 
-  directional::combing(rawFieldOrig, combedFieldOrig);
 
-  //trivial constraints
-  Eigen::VectorXi b; b.resize(1); b<<0;
-  Eigen::MatrixXd bc; bc.resize(1,6); bc<<rawFieldOrig.extField.row(0).head(6);
-  Eigen::VectorXi blevel; blevel.resize(1); b<<1;
-  directional::polycurl_reduction_precompute(mesh, b, bc, blevel, rawFieldOrig , pcrdata);
-  
-  rawFieldCF = rawFieldOrig;
-  combedFieldCF = combedFieldOrig;
-  curlCF = curlOrig;
-  
+
   //triangle mesh setup
   viewer.init();
   viewer.set_mesh(mesh);

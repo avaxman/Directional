@@ -12,21 +12,20 @@
 #include <Eigen/Core>
 #include <vector>
 #include <set>
-#include <directional/TangentBundle.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
 #include <directional/CartesianField.h>
-#include <directional/polyvector_to_raw.h>
-#include <directional/raw_to_polyvector.h>
-#include <directional/principal_matching.h>
+#include <directional/curl_matrices.h>
+#include <directional/sparse_block.h>
 
 namespace directional {
 
     inline void gradient_descent(const Eigen::SparseMatrix<double>& A,
-                          const Eigen::VectorXd& gradMasses,
-                          const Eigen::VectorXd& b,
-                          const Eigen::VectorXd& initx,
-                          const double tol,
-                          const int maxIterations,
-                          Eigen::VectorXd& resultx)
+                                 const Eigen::VectorXd& gradMasses,
+                                 const Eigen::VectorXd& b,
+                                 const Eigen::VectorXd& initx,
+                                 const double tol,
+                                 const int maxIterations,
+                                 Eigen::VectorXd& resultx)
     {
 
         using namespace Eigen;
@@ -54,40 +53,36 @@ namespace directional {
     }
 
 
-    inline void project_curl(const TriMesh& mesh,
-                                 const Eigen::VectorXi& bc,
-                                 const Eigen::MatrixXd& b,
-                                 const PVData& pvData,
-                                 const double smoothCoeff,
-                                 Eigen::MatrixXd& rawField){
+    //This only works with face based raw fields, with a given matching
+    //Reducing the curl of a field by solving for the closest raw field that is curl free.
+    //the optional objMatrix is in case we want to minimize an objective (default: closeness)
+    //The optional reducMatrix is if the field has reduced degrees of freedom (for instance, symmetry). We have that field = reducMatrix*trueDofField
+    //Currently hard constraints are ignored
+    inline void project_curl(const CartesianField& origField,
+                             const Eigen::VectorXi& constFaces,   //these are only in case of hard constraints, otherwise leave empty (soft constraints should be baked into objMatrix
+                             const Eigen::MatrixXd& constVectors,
+                             CartesianField& curlFreeField,
+                             const Eigen::SparseMatrix<double>& objMatrix=Eigen::SparseMatrix<double>(),
+                             const Eigen::VectorXd& objRhs=Eigen::VectorXd(),
+                             const Eigen::SparseMatrix<double>& reducMatrix = Eigen::SparseMatrix<double>()){
 
         using namespace Eigen;
         using namespace std;
 
+        assert(origField.fieldType == fieldTypeEnum::RAW_FIELD && origField.tb->discTangType() ==discTangTypeEnum::FACE_SPACES && "project_curl(): field should be a face-based raw field!");
 
-        VectorXi matching;//, singVertices,singIndices, combedMatching;
+        VectorXd rawFieldVec = origField.flatten();
 
-        VectorXd curl, effort;
-        directional::principal_matching(rawField);
+        VectorXi constinFace(constFaces.size());
 
-        MatrixXd prevRawField=rawField;
-        VectorXd rawFieldReducedVec(2*pvglData.d*F.rows());
-        VectorXd rawFieldVec(2*pvglData.N*F.rows());
-        VectorXi constinFace(bc.size());
-        for (int i=0;i<F.rows();i++){
-            for (int j=0;j<pvglData.N;j++){
-                RowVector3d currVector3D = rawField.block(i, 3*j,1,3);
-                rawFieldVec.segment(2*pvglData.N*i+2*j,2)<<B1.row(i).dot(currVector3D), B2.row(i).dot(currVector3D);
-            }
-        }
-
-        for (int i=0;i<bc.size();i++){
+        //Finding the closest const field in face
+        for (int i=0;i<constFaces.size();i++){
             double maxDot=-32767.0;
             //cout<<"b.row(i): "<<b.row(i)<<endl;
-            for (int j=0;j<pvglData.N;j++){
-                RowVector3d currVector3D = rawField.block(bc(i), 3*j,1,3).normalized();
+            for (int j=0;j<origField.N;j++){
+                RowVector3d currVector3D = origField.extField.block(constFaces(i), 3*j,1,3).normalized();
                 //cout<<"currVector3D: "<<currVector3D<<endl;
-                double currDot = currVector3D.dot(b.row(i));
+                double currDot = currVector3D.dot(constVectors.row(i));
                 if (currDot>maxDot){
                     maxDot=currDot;
                     constinFace(i)=j;
@@ -96,88 +91,56 @@ namespace directional {
             //cout<<"maxDot: "<<maxDot<<endl;
         }
 
-        rawFieldReducedVec=pvglData.bigInvSymmMat*rawFieldVec;
-
-        SparseMatrix<double> C,CNorm;
-        VectorXd MeArray, dualWeightsArray;
-        curl_matrix(V, F, EV, EF,  pvglData.N, matching, B1, B2,C, CNorm, MeArray,dualWeightsArray);
-
-        SparseMatrix<double> CReduced=C*pvglData.bigSymmMat;
-        SparseMatrix<double> CRedTrans=CReduced.transpose();
-
-        SparseMatrix<double> CNormReduced=CNorm*pvglData.bigSymmMat;
-        SparseMatrix<double> CNormRedTrans=CNorm.transpose();
-
-        //cout<<"(C*rawFieldVec).lpNorm<Infinity>() before: "<<(C*rawFieldVec).lpNorm<Infinity>()<<endl;
-        VectorXd x0 = rawFieldReducedVec;
-        VectorXd x = x0;
-        SparseMatrix<double> eyeMat,dualWeightsMat;
-        igl::speye(x0.size(),x0.size(), eyeMat);
-        SparseMatrix<double> MeMat, MfMat, MfConstMat;
-        igl::diag(MeArray/MeArray.sum(), MeMat);
-        igl::diag(dualWeightsArray/dualWeightsArray.sum(), dualWeightsMat);
-        igl::diag(pvglData.MfArray/pvglData.MfArray.sum(), MfMat);
-        VectorXd MfNConstArray=VectorXd::Zero(2*pvglData.N*F.rows());
-        for (int i=0;i<bc.rows();i++)
-            for (int j=0;j<2;j++)
-                MfNConstArray(2*pvglData.N*bc(i)+2*constinFace(i)+j)=pvglData.MfNArray(2*pvglData.N*bc(i)+2*constinFace(i)+j);
-
-        //creating orthogonal energy
-        SparseMatrix<double> orthAlignMat;
-        vector<Triplet<double> > orthAlignTris;
-        for (int i=0;i<bc.size();i++){
-            RowVector2d currVector2D; currVector2D<<-B2.row(bc(i)).dot(b.row(i)), B1.row(bc(i)).dot(b.row(i));  //dot product with the orthogonal vector
-            for (int j=0;j<2;j++)
-                orthAlignTris.push_back(Triplet<double>(i, 2*pvglData.N*bc(i)+2*constinFace(i)+j,currVector2D(j)));
+        SparseMatrix<double> E;
+        VectorXd rhs;
+        if (objMatrix.nonZeros()==0){
+            E.resize(rawFieldVec.size(), rawFieldVec.size());
+            E.setIdentity();
+            rhs = VectorXd::Zero(E.rows());
+        } else {
+            E = objMatrix;
+            rhs = objRhs;
         }
 
-        orthAlignMat.resize(bc.rows(), 2*pvglData.N*F.rows());
-        orthAlignMat.setFromTriplets(orthAlignTris.begin(), orthAlignTris.end());
+        SparseMatrix<double> R;
+        if (reducMatrix.nonZeros()==0){
+            E.resize(rawFieldVec.size(), rawFieldVec.size());
+            E.setIdentity();
+        } else R = reducMatrix;
 
-        //cout<<"orthAlignMat*rawFieldVec: "<<orthAlignMat*rawFieldVec<<endl;
+        //TODO: hard constraints
 
-        VectorXd MfOrthAlignArray(bc.rows());
-        for (int i=0;i<bc.size();i++)
-            MfOrthAlignArray(i)=pvglData.MfArray(2*pvglData.d*bc(i));
+        SparseMatrix<double> C = directional::curl_matrix_2D<double>((((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, true, origField.N);
+        SparseMatrix<double> CR=C*R;
+        SparseMatrix<double> CRt=CR.transpose();
+        SparseMatrix<double> ER=E*R;
 
-        SparseMatrix<double> MfOrthAlignMat;
-        igl::diag(MfOrthAlignArray/MfOrthAlignArray.sum(), MfOrthAlignMat);
+        cout<<"(C*rawFieldVec).lpNorm<Infinity>() before: "<<(C*rawFieldVec).lpNorm<Infinity>()<<endl;
 
-        SparseMatrix<double> EAlign = pvglData.bigSymmMat.transpose()*orthAlignMat.transpose()*MfOrthAlignMat*orthAlignMat*pvglData.bigSymmMat;
+        Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
+        std::vector<Eigen::SparseMatrix<double>> matVec;
+        matVec.push_back(ER.transpose()*ER);
+        matVec.push_back(CRt);
+        matVec.push_back(CR);
+        matVec.push_back(Eigen::SparseMatrix<double>(CR.rows(), CR.rows()));
+        Eigen::SparseMatrix<double> A;
+        directional::sparse_block(orderMat, matVec, A);
+        Eigen::Vector<double, Eigen::Dynamic> b(ER.rows()+CR.rows());
+        b.head(ER.rows()) = ER.transpose()*rhs;
+        b.tail(CR.rows()).setZero();
 
-        cout<<"Max Curl before: "<<(CNormReduced*x).lpNorm<Infinity>() <<endl;
-        //cout<<"Align energy before: "<<x.transpose()*EAlign*x<<endl;
+        Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+        solver.compute(A);
+        assert("project_curl(): Decomposition failed!" && solver.info() == Eigen::Success);
+        Eigen::Vector<double, Eigen::Dynamic> x = solver.solve(b);
+        assert("project_curl(): Solver failed!" && solver.info() == Eigen::Success);
 
-        SparseMatrix<double> CEnergyMat=CReduced.transpose()*MeMat*CReduced;
 
-        for (double rho = 1.0; rho>1e-5;rho/=1.5){
-            SparseMatrix<double> currMat = CEnergyMat + (MfMat+pvglData.alignCoeff*EAlign)*rho;
-            VectorXd rhs = rho*(MfMat*x);
-            VectorXd prevx=x;
-            gradient_descent(currMat, pvglData.MfInvArray, rhs, prevx, 10e-4, 50, x);
+        VectorXd cfFieldVec = R*b.head(ER.rows());
+        cout<<"(C*rawFieldVec).lpNorm<Infinity>() after: "<<(C*cfFieldVec).lpNorm<Infinity>()<<endl;
 
-            //cout<<"(C*rawFieldVec).lpNorm<Infinity>() inside iteration: "<<(C*pvglData.bigSymmMat*x).lpNorm<Infinity>()<<endl;
-            //ConjugateGradient<SparseMatrix<double>, Lower|Upper> cg;
-            //cg.compute(currMat);
-            //x=cg.solveWithGuess(rhs,prevx);
-        }
-
-        cout<<"Max Curl after: "<<(CNormReduced*x).lpNorm<Infinity>() <<endl;
-        //cout<<"Align energy after: "<<x.transpose()*EAlign*x<<endl;
-
-        //normalizing result
-        rawFieldVec=pvglData.bigSymmMat*x;
-        rawField.resize(rawField.rows(), rawField.cols());
-        double totalLengthSum=0.0;
-        for (int i=0;i<F.rows();i++)
-            for (int j=0;j<pvglData.N;j++){
-                rawField.block(i, 3*j,1,3)=rawFieldVec(2*pvglData.N*i+2*j)*B1.row(i)+rawFieldVec(2*pvglData.N*i+2*j+1)*B2.row(i);
-                totalLengthSum+=rawField.block(i, 3*j,1,3).norm();
-            }
-
-        rawField.array()/=totalLengthSum/(double)(F.rows()*pvglData.N);
-        rawFieldVec.array()/=totalLengthSum/(double)(F.rows()*pvglData.N);
-        cout<<"(C*rawFieldVec).lpNorm<Infinity>() after: "<<(C*rawFieldVec).lpNorm<Infinity>()<<endl;
+        curlFreeField=origField;
+        curlFreeField.set_extrinsic_field(cfFieldVec);
     }
 };
 

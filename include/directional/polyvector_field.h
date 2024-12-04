@@ -19,6 +19,7 @@
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
 #include <directional/project_curl.h>
+#include <directional/principal_matching.h>
 
 namespace directional
 {
@@ -39,7 +40,7 @@ namespace directional
         double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
         Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
         bool projectCurl;               // Project out the curl of the field
-        bool normalizeField;                 // Normalize the field (per vector)
+        bool normalizeField;            // Normalize the field (per vector)
         int numIterations;              //  Iterate energy reduction->(possibly)normalize->(possibly)project curl
 
         Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
@@ -53,7 +54,7 @@ namespace directional
         Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
         double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
 
-        PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalize(false) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+        PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalizeField(false) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
         ~PolyVectorData(){}
     };
 
@@ -305,11 +306,15 @@ namespace directional
         if (pvData.normalizeField){
            CartesianField rawField;
            polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
-           raw_to_polyvector(rawField.intField, pvField);
+           raw_to_polyvector(rawField,  pvField);
         }
 
-        if (pvData.projectCurl)
-            project_curl(pvField);
+        //testing raw_to_polyvector
+        CartesianField rawField, pvField2;
+        polyvector_to_raw(pvField, rawField);
+        directional::raw_to_polyvector(rawField, pvField2);
+
+        std::cout<<"raw_to_polyvector(polyvector_to_raw()) test: "<<(pvField.intField-pvField2.intField).cwiseAbs().maxCoeff()<<std::endl;
 
         //Doing reduce energy-renormalize-project curl iterations
         for (int i=0;i<pvData.numIterations;i++){
@@ -317,14 +322,21 @@ namespace directional
             //TODO: iteration of implicit Euler step
 
 
+
             if (pvData.normalizeField){
                 CartesianField rawField;
                 polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
-                raw_to_polyvector(rawField.intField, pvField);
+                directional::raw_to_polyvector(rawField, pvField);
             }
 
-            if (pvData.projectCurl)
-                project_curl(pvField);
+            if (pvData.projectCurl){
+                CartesianField rawField, curlFreeField;
+                polyvector_to_raw(pvField, rawField, pvData.N%2==0, false);
+                directional::principal_matching(rawField);
+                project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
+                directional::raw_to_polyvector(rawField,  pvField);
+
+
         }
 
 
@@ -340,10 +352,10 @@ namespace directional
                                  const double roSyWeight,
                                  const Eigen::VectorXd& alignWeights,
                                  const int N,
-                                 const bool projectCurl,
-                                 const bool normalizeField,
-                                 const int numIterations,
-                                 directional::CartesianField& pvField)
+                                 directional::CartesianField& pvField,
+                                 const bool projectCurl = false,
+                                 const bool normalizeField = false,
+                                 const int numIterations = false)
     {
         PolyVectorData pvData;
         if (constSpaces.size()!=0) {
@@ -351,7 +363,7 @@ namespace directional
             pvData.constVectors = constVectors;
             pvData.wAlignment = alignWeights;
             pvData.projectCurl = projectCurl;
-            pvData.normalizeField = normalizeField
+            pvData.normalizeField = normalizeField;
             pvData.numIterations = numIterations;
         }else{
             pvData.constSpaces.resize(1); pvData.constSpaces(0)=0;

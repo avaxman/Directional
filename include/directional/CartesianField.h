@@ -87,7 +87,7 @@ namespace directional{
 
         //giving a single vector version of the field
         //This is tangent space -> N coefficients -> xyz dominant order
-        Eigen::VectorXd flatten(const bool isIntrinsic=false){
+        Eigen::VectorXd flatten(const bool isIntrinsic=false) const{
             Eigen::MatrixXd field = (isIntrinsic ? intField : extField);
             Eigen::VectorXd vecField(field.rows()*field.cols());
             for (int i=0;i<field.rows();i++)

@@ -33,12 +33,19 @@ namespace directional {
     }
 
     inline void multiply_polynomials(Eigen::MatrixXcd &p1,
-                                         const Eigen::MatrixXcd &p2) {
+                                     const Eigen::MatrixXcd &p2) {
         assert(p1.rows() == p2.rows());
         Eigen::MatrixXcd newp = Eigen::MatrixXcd::Zero(p1.rows(), p1.cols() + p2.cols());
         for (int i = 0; i < p1.cols(); i++)
             for (int j = 0; j < p2.cols(); j++)
                 newp.col(i + j).array() += p1.col(i).array() * p2.col(j).array();
+
+
+        for (int i =0; i < p1.cols(); i++)
+            newp.col(i + p2.cols()) += p1.col(i);
+
+        for (int i =0; i < p2.cols(); i++)
+            newp.col(i + p1.cols()) += p2.col(i);
 
         p1 = newp;
     }
