@@ -1,111 +1,99 @@
 #include <iostream>
-#include <fstream>
+#include <Eigen/Core>
 #include <directional/readOFF.h>
-#include <directional/readOBJ.h>
-#include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
-#include <directional/CartesianField.h>
-#include <directional/read_raw_field.h>
-#include <directional/curl_matching.h>
-#include <directional/combing.h>
-#include <directional/project_curl.h>
+#include <directional/write_raw_field.h>
+#include <directional/polyvector_to_raw.h>
+#include <directional/raw_to_polyvector.h>
+#include <directional/polyvector_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
+#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/CartesianField.h>
+#include <directional/curl_matching.h>
 
-using namespace std;
-
+Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
 directional::IntrinsicFaceTangentBundle ftb;
-directional::CartesianField rawFieldOrig, rawFieldCF;
-directional::CartesianField combedFieldOrig, combedFieldCF;
-Eigen::VectorXd curlOrig, curlCF; // norm of curl per edge
+directional::CartesianField pvFieldSoft, rawFieldSoft,constraintsField, rawFieldOrig, pvFieldOrig;
+Eigen::MatrixXd constVectors;
+Eigen::VectorXd curlOrig,curlCF;
+
+double smoothWeight, roSyWeight, alignWeight;
+
 directional::DirectionalViewer viewer;
 
-double curlMax, curlMaxOrig;
-int N;
-int iter=0;
+int N = 4;
+typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
+ViewingModes viewingMode=CONSTRAINTS;
 
-typedef enum {ORIGINAL_FIELD, ORIGINAL_CURL, OPTIMIZED_FIELD, OPTIMIZED_CURL} ViewingModes;
-ViewingModes viewingMode=ORIGINAL_FIELD;
 
-void update_visualization()
+int main()
 {
-  using namespace std;
-  using namespace Eigen;
+    // Load mesh
+    directional::readOFF(TUTORIAL_DATA_PATH "/cheburashka.off", mesh);
+    ftb.init(mesh);
+    pvFieldSoft.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
+    pvFieldOrig.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
 
-  Eigen::VectorXd currCurl = (viewingMode==ORIGINAL_CURL ? curlOrig: curlCF);
-  viewer.set_edge_data(currCurl, 0.0,curlMaxOrig);
-  //viewer.toggle_edge_data((viewingMode==ORIGINAL_CURL) || (viewingMode==OPTIMIZED_CURL))
-}
-
-void callbackFunc() {
-    ImGui::PushItemWidth(100);
-
-
-    const char* items[] = { "Original field", "Original curl", "Optimized field", "Optimized curl"};
-    static const char* current_item = NULL;
-
-    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
-    {
-        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-        {
-            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
-            if (ImGui::Selectable(items[n], is_selected)){
-                switch (n){
-                    case 0:
-                        viewingMode = ORIGINAL_FIELD;
-                        break;
-                    case 1:
-                        viewingMode = ORIGINAL_CURL;
-
-                        break;
-                    case 2:
-                        viewingMode = OPTIMIZED_FIELD;
-                        break;
-                    case 3:
-                        viewingMode = OPTIMIZED_CURL;
-                        break;
-                }
-                update_visualization();
-            }
-            current_item = items[n];
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+    //discovering and constraining sharp edges
+    std::vector<int> constFaceslist;
+    std::vector<Eigen::Vector3d> constVectorslist;
+    for (int i=0;i<mesh.EF.rows();i++){
+        if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.5){
+            constFaceslist.push_back(mesh.EF(i,0));
+            constFaceslist.push_back(mesh.EF(i,1));
+            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
         }
-        ImGui::EndCombo();
     }
 
-    if (ImGui::Button("Save optimized Field"))
-        directional::write_raw_field(TUTORIAL_DATA_PATH "/polycurl.rawfield", combedFieldCF);
+    constFaces.resize(constFaceslist.size());
+    constVectors.resize(constVectorslist.size(),3);
+    for (int i=0;i<constFaces.size();i++){
+        constFaces(i)=constFaceslist[i];
+        constVectors.row(i)=constVectorslist[i];
+    }
 
-    ImGui::PopItemWidth();
-}
+    //generating the viewing fields
+    Eigen::MatrixXd rawFieldConstraints=Eigen::MatrixXd::Zero(mesh.F.rows(),N*3);
+    Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(mesh.F.rows());
+    for (int i=0;i<constFaces.size();i++){
+        rawFieldConstraints.block(constFaces(i),3*posInFace(constFaces(i)), 1,3)=constVectors.row(i);
+        posInFace(constFaces(i))++;
+    }
 
+    //Just to show the other direction if N is even, since we are by default constraining it
+    if (N%2==0)
+        rawFieldConstraints.middleCols(rawFieldConstraints.cols()/2, rawFieldConstraints.cols()/2)=-rawFieldConstraints.middleCols(0, rawFieldConstraints.cols()/2);
 
-int main(int argc, char *argv[])
-{
-  
+    constraintsField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
+    constraintsField.set_extrinsic_field(rawFieldConstraints);
 
-  // Load a mesh
-  directional::readOFF(TUTORIAL_DATA_PATH "/cheburashka.off", mesh);
-  ftb.init(mesh);
-  rawFieldOrig.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
-  rawFieldCF.init(ftb, directional::fieldTypeEnum::RAW_FIELD, N);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/cheburashka.rawfield", ftb, N, rawFieldOrig);
+    smoothWeight = 1.0;
+    roSyWeight = 1.0;
+    alignWeight = 1.0;
 
+    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldOrig, false, false);
+    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldSoft, true, true, 1);
+    directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
+    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
 
+    std::cout<<"Raw Field first: "<<rawFieldOrig.extField.row(0)<<std::endl;
+    std::cout<<"Optimized Field first: "<<rawFieldSoft.extField.row(0)<<std::endl;
 
-  //triangle mesh setup
-  viewer.init();
-  viewer.set_mesh(mesh);
-  viewer.set_field(combedFieldOrig, "", 0, 0);
-  viewer.set_seams((combedFieldOrig.matching, 0,0);
-  viewer.set_field(combedFieldCF, "", 0, 1);
-  viewer.set_seams((combedFieldCF.matching, 0,1);
-  update_visualization();
-  
-  viewer.set_callback(callbackFunc);
-  viewer.launch();
-  
-  return 0;
+    directional::curl_matching(rawFieldOrig,curlOrig);
+    std:: cout<<"Max curl original: "<<curlOrig.cwiseAbs().maxCoeff()<<std::endl;
+    directional::curl_matching(rawFieldSoft,curlCF);
+    std:: cout<<"Max curl optimized: "<<curlCF.cwiseAbs().maxCoeff()<<std::endl;
+
+    //triangle mesh setup
+    viewer.init();
+    viewer.set_mesh(mesh,0);
+    viewer.set_field(constraintsField,"Constraints",0, 0);
+    viewer.highlight_faces(constFaces,0);
+    viewer.set_field(rawFieldOrig,"Original Field", 0, 0);
+    viewer.set_field(rawFieldSoft,"Curl-free Field", 0, 1);
+    viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
+    viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
+    viewer.launch();
 }

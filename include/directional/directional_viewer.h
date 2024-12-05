@@ -74,6 +74,11 @@ namespace directional
 
             meshList[meshNum]=&mesh;
             psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName + std::to_string(meshNum), mesh.V, mesh.F);
+
+            std::vector<int> permArr(mesh.EV.rows());
+            for (int i=0;i<permArr.size();i++)
+                permArr[i]=i;
+            psSurfaceMeshList[meshNum]->setEdgePermutation(permArr);
         }
 
         /*void inline set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -121,10 +126,7 @@ namespace directional
                                   const std::string dataName="",
                                   const int meshNum=0)
         {
-            std::vector<int> permArr(edgeData.size());
-            for (int i=0;i<permArr.size();i++)
-                permArr[i]=i;
-            psSurfaceMeshList[meshNum]->setEdgePermutation(permArr);
+
             psSurfaceMeshList[meshNum]->addEdgeScalarQuantity("edge data" + std::to_string(meshNum), edgeData);
         }
 

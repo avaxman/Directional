@@ -16,6 +16,7 @@
 #include <directional/CartesianField.h>
 #include <directional/curl_matrices.h>
 #include <directional/sparse_block.h>
+#include <directional/extrinsic_intrinsic_matrices.h>
 
 namespace directional {
 
@@ -71,7 +72,7 @@ namespace directional {
 
         assert(origField.fieldType == fieldTypeEnum::RAW_FIELD && origField.tb->discTangType() ==discTangTypeEnum::FACE_SPACES && "project_curl(): field should be a face-based raw field!");
 
-        VectorXd rawFieldVec = origField.flatten();
+        VectorXd rawFieldVec = origField.flatten(true);
 
         VectorXi constinFace(constFaces.size());
 
@@ -104,8 +105,8 @@ namespace directional {
 
         SparseMatrix<double> R;
         if (reducMatrix.nonZeros()==0){
-            E.resize(rawFieldVec.size(), rawFieldVec.size());
-            E.setIdentity();
+            R.resize(rawFieldVec.size(), rawFieldVec.size());
+            R.setIdentity();
         } else R = reducMatrix;
 
         //TODO: hard constraints
@@ -140,7 +141,8 @@ namespace directional {
         cout<<"(C*rawFieldVec).lpNorm<Infinity>() after: "<<(C*cfFieldVec).lpNorm<Infinity>()<<endl;
 
         curlFreeField=origField;
-        curlFreeField.set_extrinsic_field(cfFieldVec);
+        Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.N);
+        curlFreeField.set_extrinsic_field(IE*cfFieldVec);
     }
 };
 

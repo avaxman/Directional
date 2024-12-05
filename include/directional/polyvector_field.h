@@ -359,7 +359,7 @@ namespace directional
                 polyvector_to_raw(pvField, rawField, pvData.N%2==0, false);
                 directional::principal_matching(rawField);
                 project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
-                directional::raw_to_polyvector(rawField,  pvField);
+                directional::raw_to_polyvector(curlFreeField,  pvField);
 
             }
         }
@@ -377,7 +377,7 @@ namespace directional
                                  directional::CartesianField& pvField,
                                  const bool projectCurl = false,
                                  const bool normalizeField = false,
-                                 const int numIterations = false)
+                                 const int numIterations = 25)
     {
         PolyVectorData pvData;
         if (constSpaces.size()!=0) {

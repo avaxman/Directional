@@ -77,7 +77,7 @@ namespace directional{
         void inline set_extrinsic_field(const Eigen::MatrixXd& _extField){
             //assert(_extField.cols()==3*N);
             if (_extField.cols()==1){
-                extField.resize((_extField.size()/3*N), 3*N);
+                extField.resize((_extField.size()/(3*N)), 3*N);
                 for (int i=0;i<extField.rows();i++)
                     extField.row(i) = _extField.block(3 * N * i, 0, 3 * N, 1).transpose();
             } else extField=_extField;
