@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
+endif()
+
 
 ### Choose which chapters to compile
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)

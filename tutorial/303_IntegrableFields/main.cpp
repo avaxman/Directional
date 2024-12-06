@@ -22,7 +22,7 @@ double smoothWeight, roSyWeight, alignWeight;
 
 directional::DirectionalViewer viewer;
 
-int N = 4;
+int N = 1;
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
@@ -39,7 +39,7 @@ int main()
     std::vector<int> constFaceslist;
     std::vector<Eigen::Vector3d> constVectorslist;
     for (int i=0;i<mesh.EF.rows();i++){
-        if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.5){
+        if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.1){
             constFaceslist.push_back(mesh.EF(i,0));
             constFaceslist.push_back(mesh.EF(i,1));
             constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
@@ -55,7 +55,7 @@ int main()
     }
 
     //generating the viewing fields
-    Eigen::MatrixXd rawFieldConstraints=Eigen::MatrixXd::Zero(mesh.F.rows(),N*3);
+    Eigen::MatrixXd rawFieldConstraints=Eigen::MatrixXd::Zero(mesh.F.rows(),(N+3)*3);
     Eigen::VectorXi posInFace=Eigen::VectorXi::Zero(mesh.F.rows());
     for (int i=0;i<constFaces.size();i++){
         rawFieldConstraints.block(constFaces(i),3*posInFace(constFaces(i)), 1,3)=constVectors.row(i);
@@ -94,6 +94,6 @@ int main()
     viewer.set_field(rawFieldOrig,"Original Field", 0, 0);
     viewer.set_field(rawFieldSoft,"Curl-free Field", 0, 1);
     viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
-    viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
+    //viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
     viewer.launch();
 }

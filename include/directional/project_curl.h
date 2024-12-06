@@ -97,7 +97,7 @@ namespace directional {
         if (objMatrix.nonZeros()==0){
             E.resize(rawFieldVec.size(), rawFieldVec.size());
             E.setIdentity();
-            rhs = VectorXd::Zero(E.rows());
+            rhs = rawFieldVec;
         } else {
             E = objMatrix;
             rhs = objRhs;
@@ -137,7 +137,7 @@ namespace directional {
         assert("project_curl(): Solver failed!" && solver.info() == Eigen::Success);
 
 
-        VectorXd cfFieldVec = R*b.head(ER.rows());
+        VectorXd cfFieldVec = R*x.head(ER.rows());
         cout<<"(C*rawFieldVec).lpNorm<Infinity>() after: "<<(C*cfFieldVec).lpNorm<Infinity>()<<endl;
 
         curlFreeField=origField;
