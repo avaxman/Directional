@@ -143,6 +143,11 @@ namespace directional {
         curlFreeField=origField;
         Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.N);
         curlFreeField.set_extrinsic_field(IE*cfFieldVec);
+
+              //checking with extrinsic matrix
+        SparseMatrix<double> Cext = directional::curl_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.matching, false, origField.N);
+        cout<<"Extrinsic curl: "<<(Cext*IE*cfFieldVec).lpNorm<Infinity>()<<endl;
+
     }
 };
 

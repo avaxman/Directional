@@ -88,11 +88,23 @@ namespace directional{
         //giving a single vector version of the field
         //This is tangent space -> N coefficients -> xyz dominant order
         Eigen::VectorXd flatten(const bool isIntrinsic=false) const{
+            assert(fieldType==fieldTypeEnum::RAW_FIELD && "flatten(): the real method is only good for raw fields");
             Eigen::MatrixXd field = (isIntrinsic ? intField : extField);
             Eigen::VectorXd vecField(field.rows()*field.cols());
             for (int i=0;i<field.rows();i++)
                 for (int j=0;j<field.cols();j++)
                     vecField(i*field.cols()+j) = field(i,j);
+
+            return vecField;
+        }
+
+        //Giving a single complex version (for power fields and polyvectors)
+        Eigen::VectorXcd flatten_complex() const{
+            assert((fieldType==fieldTypeEnum::POWER_FIELD || fieldType==fieldTypeEnum::POLYVECTOR_FIELD) && "flatten(): the complex method is only good for PolyVector or Power fields");
+            Eigen::VectorXcd vecField(intField.rows()*intField.cols()/2);
+            for (int i=0;i<intField.rows();i++)
+                for (int j=0;j<intField.cols();j+=2)
+                    vecField(i*intField.cols()/2+j/2) = std::complex<double>(intField(i,j),intField(i,j+1));
 
             return vecField;
         }

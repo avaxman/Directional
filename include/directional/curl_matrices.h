@@ -23,50 +23,52 @@ namespace directional {
                                                    const int d = 1){
 
         assert("This method is currently defined only for d==1" && d==1);
-        Eigen::SparseMatrix<double> singleCurlMatrix(mesh->innerEdges.size(), (isIntrinsic ? 2*mesh->F.rows() : 3*mesh->F.rows()));
+        Eigen::SparseMatrix<double> singleCurlMatrix(N*mesh->innerEdges.size(), (isIntrinsic ? 2*N*mesh->F.rows() : 3*N*mesh->F.rows()));
         std::vector<Eigen::Triplet<double>> singleCurlMatTris;
         //TODO: use matching
         for (int i=0;i<mesh->innerEdges.size();i++){
             Eigen::RowVector3d e = mesh->V.row(mesh->EV(mesh->innerEdges(i),1))-mesh->V.row(mesh->EV(mesh->innerEdges(i),0));
             //curl is <right_face - left_face , e>
-            if (isIntrinsic) {
-                Eigen::RowVector2d einLeft;
-                einLeft << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 0))),
-                        e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 0)));
+            for (int n=0;n<N;n++){
+                if (isIntrinsic) {
+                        Eigen::RowVector2d einLeft;
+                        einLeft << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 0))),
+                                e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 0)));
 
-                Eigen::RowVector2d einRight;
-                einRight << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 1))),
-                        e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 1)));
+                        Eigen::RowVector2d einRight;
+                        einRight << e.dot(mesh->FBx.row(mesh->EF(mesh->innerEdges(i), 1))),
+                                e.dot(mesh->FBy.row(mesh->EF(mesh->innerEdges(i), 1)));
 
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 0), -einLeft(0)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 0) + 1, -einLeft(1)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 1), einRight(0)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 2 * mesh->EF(mesh->innerEdges(i), 1) + 1, einRight(1)));
-            } else {
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0), -e(0)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0) + 1, -e(1)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 0) + 2, -e(2)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1), e(0)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1) + 1, e(1)));
-                singleCurlMatTris.push_back(
-                        Eigen::Triplet<double>(i, 3 * mesh->EF(mesh->innerEdges(i), 1) + 2, e(2)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 2 * N * mesh->EF(mesh->innerEdges(i), 0) + 2*n, -einLeft(0)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 2 * N * mesh->EF(mesh->innerEdges(i), 0) + 2*n + 1, -einLeft(1)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 2 * N * mesh->EF(mesh->innerEdges(i), 1) + 2*((n+matching(i))%N), einRight(0)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 2 * N * mesh->EF(mesh->innerEdges(i), 1) + 2*((n+matching(i))%N) + 1, einRight(1)));
+                } else {
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 0) + 3*n, -e(0)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 0) + 3*n + 1, -e(1)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 0) + 3*n + 2, -e(2)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 1) + 3*((n+matching(i))%N), e(0)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 1) + 3*((n+matching(i))%N) + 1, e(1)));
+                        singleCurlMatTris.push_back(
+                                Eigen::Triplet<double>(N * i + n, 3 * N * mesh->EF(mesh->innerEdges(i), 1) + 3*((n+matching(i))%N) + 2, e(2)));
+                }
             }
         }
 
         singleCurlMatrix.setFromTriplets(singleCurlMatTris.begin(), singleCurlMatTris.end());
 
-        if (N==1)
+        //if (N==1)
             return singleCurlMatrix;
-        else return single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
+        //else return single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
     }
 }
 

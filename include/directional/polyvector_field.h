@@ -42,6 +42,7 @@ namespace directional
         Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
         bool projectCurl;               // Project out the curl of the field
         bool normalizeField;            // Normalize the field (per vector)
+        double timeStep;                // Time step factor (for implicit smoothing)
         int numIterations;              //  Iterate energy reduction->(possibly)normalize->(possibly)project curl
 
         Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
@@ -323,6 +324,8 @@ namespace directional
         VectorXcd reducedDofs = solver.solve(totalRhs);
         assert(solver.info() == Success && "PolyVector solver failed!");
         VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
+
+
         MatrixXcd intField(pvData.sizeT, pvData.N);
         for (int i=0;i<pvData.N;i++)
             intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
@@ -337,16 +340,40 @@ namespace directional
         }
 
         //testing raw_to_polyvector
-        CartesianField rawField, pvField2;
+        /*CartesianField rawField, pvField2;
         polyvector_to_raw(pvField, rawField);
         directional::raw_to_polyvector(rawField, pvField2);
 
-        std::cout<<"raw_to_polyvector(polyvector_to_raw()) test: "<<(pvField.intField-pvField2.intField).cwiseAbs().maxCoeff()<<std::endl;
-
+        std::cout<<"raw_to_polyvector(polyvector_to_raw()) test: "<<(pvField.intField-pvField2.intField).cwiseAbs().maxCoeff()<<std::endl;*/
+       
         //Doing reduce energy-renormalize-project curl iterations
+        
+        complex<double> totalMass, timeStep;
+        Eigen::SparseMatrix<complex<double>> implicitLhs;
+        SimplicialLDLT<SparseMatrix<complex<double>>> reducProjSolver;
+        
+        if (pvData.numIterations != 0){
+            totalMass = (RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0);
+            timeStep = pvData.timeStep*totalMass;  
+            implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat + timeStep * totalLhs;
+            solver.compute(implicitLhs);
+            assert(solver.info() == Success && "Implicit solver failed!");
+            reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.reducMat);
+            assert(reducProjSolver.info() == Success && "Reduction Projection solver failed!");
+        }
         for (int i=0;i<pvData.numIterations;i++){
 
-            //TODO: iteration of implicit Euler step
+            //TODO: the reduction is not correct....
+            VectorXcd implicitRhs = totalRhs + pvData.M * reducedDofs;
+            reducedDofs = solver.solve(totalRhs);
+            assert(solver.info() == Success && "PolyVector solver failed!");
+            VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
+            MatrixXcd intField(pvData.sizeT, pvData.N);
+            for (int i=0;i<pvData.N;i++)
+                intField.col(i) = fullDofs.segment(i*pvData.sizeT,pvData.sizeT);
+
+            pvField.set_intrinsic_field(intField);
+
             std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
             if (pvData.normalizeField){
                 CartesianField rawField;
@@ -360,8 +387,12 @@ namespace directional
                 directional::principal_matching(rawField);
                 project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
                 directional::raw_to_polyvector(curlFreeField,  pvField);
-
             }
+
+            //recreating prevSolution with reducedDof
+            fullDofs = pvField.flatten_complex();
+            reducedDofs = reducProjSolver.solve(pvData.reducMat.adjoint()*(fullDofs-pvData.reducRhs));
+
         }
     }
 
