@@ -23,7 +23,7 @@ double smoothWeight, roSyWeight, alignWeight;
 
 directional::DirectionalViewer viewer;
 
-int N = 1;
+int N = 4;
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
@@ -75,7 +75,7 @@ int main()
     alignWeight = 1.0;
 
     directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldOrig, false, false);
-    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldSoft, true, true, 1);
+    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldSoft, true, true, 25);
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
     //std::cout<<rawFieldOrig.matching<<std::endl;
     directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);

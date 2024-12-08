@@ -42,7 +42,7 @@ namespace directional
         Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
         bool projectCurl;               // Project out the curl of the field
         bool normalizeField;            // Normalize the field (per vector)
-        double timeStep;                // Time step factor (for implicit smoothing)
+        double implicitFactor;          // Implicit smoothing factor
         int numIterations;              //  Iterate energy reduction->(possibly)normalize->(possibly)project curl
 
         Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
@@ -56,7 +56,7 @@ namespace directional
         Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
         double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
 
-        PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalizeField(false) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+        PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalizeField(false), implicitFactor(0.1) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
         ~PolyVectorData(){}
     };
 
@@ -354,9 +354,8 @@ namespace directional
         
         if (pvData.numIterations != 0){
             totalMass = (RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0);
-            implicitCoeff = pvData.timeStep/totalMass;  
-            implicitLhs = implicitCoeff*pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  totalLhs;
-            solver.compute(implicitLhs);
+            implicitCoeff = pvData.implicitFactor/totalMass;  
+            
             assert(solver.info() == Success && "Implicit factorization failed!");
             reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
             assert(reducProjSolver.info() == Success && "Reduction Projection solver failed!");
@@ -364,9 +363,15 @@ namespace directional
         for (int i=0;i<pvData.numIterations;i++){
 
             //TODO: the reduction is not correct....
+            implicitLhs = implicitCoeff*pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  totalLhs;
+            solver.compute(implicitLhs);
+            std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
             VectorXcd implicitRhs = totalRhs + implicitCoeff*pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
-            reducedDofs = solver.solve(totalRhs);
+            //std::cout<<"Existing solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
+            reducedDofs = solver.solve(implicitRhs);
             assert(solver.info() == Success && "Implicit step failed!");
+            std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+            implicitCoeff*=1.2;
             VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
             MatrixXcd intField(pvData.sizeT, pvData.N);
             for (int i=0;i<pvData.N;i++)
@@ -408,7 +413,7 @@ namespace directional
                                  directional::CartesianField& pvField,
                                  const bool projectCurl = false,
                                  const bool normalizeField = false,
-                                 const int numIterations = 25)
+                                 const int numIterations = 0)
     {
         PolyVectorData pvData;
         if (constSpaces.size()!=0) {
