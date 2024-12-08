@@ -348,25 +348,25 @@ namespace directional
        
         //Doing reduce energy-renormalize-project curl iterations
         
-        complex<double> totalMass, timeStep;
+        complex<double> totalMass, implicitCoeff;
         Eigen::SparseMatrix<complex<double>> implicitLhs;
         SimplicialLDLT<SparseMatrix<complex<double>>> reducProjSolver;
         
         if (pvData.numIterations != 0){
             totalMass = (RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0);
-            timeStep = pvData.timeStep*totalMass;  
-            implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat + timeStep * totalLhs;
+            implicitCoeff = pvData.timeStep/totalMass;  
+            implicitLhs = implicitCoeff*pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  totalLhs;
             solver.compute(implicitLhs);
-            assert(solver.info() == Success && "Implicit solver failed!");
-            reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.reducMat);
+            assert(solver.info() == Success && "Implicit factorization failed!");
+            reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
             assert(reducProjSolver.info() == Success && "Reduction Projection solver failed!");
         }
         for (int i=0;i<pvData.numIterations;i++){
 
             //TODO: the reduction is not correct....
-            VectorXcd implicitRhs = totalRhs + pvData.M * reducedDofs;
+            VectorXcd implicitRhs = totalRhs + implicitCoeff*pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
             reducedDofs = solver.solve(totalRhs);
-            assert(solver.info() == Success && "PolyVector solver failed!");
+            assert(solver.info() == Success && "Implicit step failed!");
             VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
             MatrixXcd intField(pvData.sizeT, pvData.N);
             for (int i=0;i<pvData.N;i++)
@@ -391,7 +391,7 @@ namespace directional
 
             //recreating prevSolution with reducedDof
             fullDofs = pvField.flatten_complex();
-            reducedDofs = reducProjSolver.solve(pvData.reducMat.adjoint()*(fullDofs-pvData.reducRhs));
+            reducedDofs = reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
 
         }
     }

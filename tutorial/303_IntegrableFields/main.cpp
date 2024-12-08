@@ -23,7 +23,7 @@ double smoothWeight, roSyWeight, alignWeight;
 
 directional::DirectionalViewer viewer;
 
-int N = 4;
+int N = 1;
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
