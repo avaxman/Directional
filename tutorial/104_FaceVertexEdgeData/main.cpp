@@ -35,7 +35,7 @@ int main()
   viewer.init();
   viewer.set_mesh(mesh);
   viewer.set_field(field);
-  viewer.toggle_mesh_edges(false);
+  //viewer.toggle_mesh_edges(false);
   viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff());
   viewer.set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff());
   viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff());
