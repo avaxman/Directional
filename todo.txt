@@ -29,9 +29,15 @@ Bugs & todos
 11. visualization bugs in 202.
 12. enabled field and singularity indices as default.
 13. set_field etc. naming conventions
+14. 301 not compiling
+15. 302 solve overriding visualization.
+16. tune coefficients and allow for implicit normalization with a coefficient.
+17. add a GL tutorial in chapter 3 (just smooth-and-normalize)
+18. profile 303 to see why curl projection is so slow.
+19. add interaction in 303.
+20. 401 allow choice of cycle.
 
 
-
-
+N-1. simplify and abstract calls.
 N-1. Kill all printouts.
 N. Document and clean all new files, remove obsolete files. 
