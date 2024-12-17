@@ -1,17 +1,13 @@
 Required features
 
-1. Mixed-integer cross-fields
-2. Spherical harmonics for tet meshes and BEM.
-3. Line-integral convolution
-4. Full directional-field I/O
-5. 3D streamline tracing
-6. BendFields
-8. vertex-based tangent spaces
-9. Basic support for DEC.
-10. Tensor fields in 2D and 3D.
-11. Killing vfs.
-12. Discrete differential operators.
-13. Helmholtz-Hodge decomposition
+1. Spherical harmonics for tet meshes and BEM.
+2. Line-integral convolution
+3. Full directional-field I/O
+4. 3D streamline tracing
+5. Tensor fields in 2D and 3D.
+6. Killing vfs.
+7. Discrete differential operators.
+
 
 
 Bugs & todos
@@ -36,6 +32,9 @@ Bugs & todos
 18. profile 303 to see why curl projection is so slow.
 19. add interaction in 303.
 20. 401 allow choice of cycle.
+21. 501 excessive printing and valence 2 warnings
+22. 501 redundant mesh and wrong period of UV.
+22. 502 enable sing + field together. Also still valence 2 warning
 
 
 N-1. simplify and abstract calls.

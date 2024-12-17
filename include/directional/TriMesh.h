@@ -52,6 +52,12 @@ namespace directional{
         inline int HE(const int index) const {return dcel.halfedges[index].edge;}
         inline int EH(const int index, const int side) const {return (side==0 ? dcel.edges[index].halfedge : dcel.halfedges[dcel.edges[index].halfedge].twin);}
         inline int FH(const int index) const {return dcel.faces[index].halfedge;}
+        inline int FH(const int index, const int inFace) const {
+            int he = dcel.faces[index].halfedge;
+            for (int i=0;i<inFace;i++)
+                he = nextH(he);
+            return he;
+        }
 
         //Geometric quantities
         Eigen::MatrixXd faceNormals;
