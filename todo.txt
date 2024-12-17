@@ -37,6 +37,7 @@ Bugs & todos
 22. 502 enable sing + field together. Also still valence 2 warning
 
 
+
 N-1. simplify and abstract calls.
 N-1. Kill all printouts.
 N. Document and clean all new files, remove obsolete files. 

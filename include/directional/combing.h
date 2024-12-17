@@ -65,7 +65,8 @@ namespace directional
         int nextMatching=(rawField.matching(rawField.tb->oneRing(currSpaceMatching.first,i)));
         int nextFace=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),1) : rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0));
         nextMatching*=(rawField.tb->adjSpaces(rawField.tb->oneRing(currSpaceMatching.first,i),0)==currSpaceMatching.first ? 1.0 : -1.0);
-        nextMatching=(nextMatching+currSpaceMatching.second+10*rawField.N)%rawField.N;  //killing negatives
+        nextMatching=(nextMatching+currSpaceMatching.second+1000*rawField.N)%rawField.N;  //killing negatives
+        assert("combing(): NextMatching is out of bounds! " && (nextMatching>=0 && nextMatching<rawField.N));
         if ((nextFace!=-1)&&(!visitedSpaces(nextFace))&&(!spaceIsCut(currSpaceMatching.first,i)))
           spaceMatchingQueue.push(std::pair<int,int>(nextFace, nextMatching));
         
@@ -84,7 +85,7 @@ namespace directional
     }
 
     //TODO: only update effort.
-    principal_matching(combedField);
+    principal_matching(combedField, false);
   }
 }
 

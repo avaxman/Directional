@@ -144,7 +144,7 @@ namespace directional {
           }
       }*/
 
-      std::cout<<"isHECut: "<<isHECut<<std::endl;
+      //std::cout<<"isHECut: "<<isHECut<<std::endl;
 
       face2cut.resize(mesh.F.rows(),3);
       for (int i=0;i<mesh.F.rows();i++) {
