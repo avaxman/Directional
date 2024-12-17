@@ -18,7 +18,7 @@ namespace directional
     // Takes a field in raw form and computes both the principal effort and the consequent principal matching on every edge.
     // Important: if the Raw field in not CCW ordered, the result is meaningless.
     // The input and output are both a RAW_FIELD type cartesian field, in which the matching, effort, and singularities are set.
-    inline void principal_matching(directional::CartesianField& field)
+    inline void principal_matching(directional::CartesianField& field, const bool isSingularities = true)
     {
 
         typedef std::complex<double> Complex;
@@ -76,7 +76,8 @@ namespace directional
         }
 
         //Getting final singularities and their indices
-        effort_to_indices(field);
+        if (isSingularities)
+            effort_to_indices(field);
 
     }
 }
