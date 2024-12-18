@@ -34,8 +34,8 @@ Bugs & todos
 20. 401 allow choice of cycle.
 21. 501 excessive printing and valence 2 warnings
 22. 501 redundant mesh and wrong period of UV.
-22. 502 enable sing + field together. Also still valence 2 warning
-
+23. 502 enable sing + field together. Also still valence 2 warning
+24. Kill debug issues in 503 and relook at cut_mesh_with_singularities
 
 
 N-1. simplify and abstract calls.
