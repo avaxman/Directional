@@ -19,7 +19,7 @@ Bugs & todos
 5. Weird visualization bug of overriding in 102.
 6. subdivision-based streamline tracing for 1-forms
 7. 103 crashes on release
-8. 1-form as poisson disk sampling
+8. 1-form as Poisson disk sampling
 9. fix curl_matching
 10. Actually implement 201.
 11. visualization bugs in 202.
@@ -31,13 +31,24 @@ Bugs & todos
 17. add a GL tutorial in chapter 3 (just smooth-and-normalize)
 18. profile 303 to see why curl projection is so slow.
 19. add interaction in 303.
-20. 401 allow choice of cycle.
+20. 401 should allow choice of cycle.
 21. 501 excessive printing and valence 2 warnings
 22. 501 redundant mesh and wrong period of UV.
-23. 502 enable sing + field together. Also still valence 2 warning
+23. 502 enable sing + field together. Also still a valence 2 warning
 24. Kill debug issues in 503 and relook at cut_mesh_with_singularities
-
-
-N-1. simplify and abstract calls.
-N-1. Kill all printouts.
-N. Document and clean all new files, remove obsolete files. 
+25. 504 has z-fighting.
+26. Shows boundary point as singular (is this ok?)
+27. kill GMP in 505.
+28. 601: vector lengths
+29. 602: redundant printing
+30. 602: rename functions to something coherent, make a more interesting tutorial.
+31. 603: remove the recomputation of the harmonic basis, and instead save the result.
+32. 603: rescale the quantities to be scalable.
+33. 604: allow for Neumann and Dirichlet
+34. 604: can we do several meshes?
+35. 1-form visualization with poisson disc sampling
+36. refactor setup_integration() and integrate() to use project_exact().
+37. 605: perhaps add orthogonalization to an existing homology basis.
+39. simplify and abstract calls.
+40. Kill all printouts.
+41. Document and clean all new files, remove obsolete files. 

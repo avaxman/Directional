@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <cassert>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <directional/gaussian_curvature.h>

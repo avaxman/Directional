@@ -19,7 +19,6 @@
 #include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/polygonal_edge_topology.h>
-#include <directional/GMP_definitions.h>
 #include <directional/setup_mesh_function_isolines.h>
 #include <directional/NFunctionMesher.h>
 #include <directional/generate_mesh.h>

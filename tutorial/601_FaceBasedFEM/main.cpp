@@ -34,7 +34,7 @@ int main()
     Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(&mesh, 1,1);
     Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<double>(&mesh, false, 1, 1);
 
-    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(&mesh, false, 1, 1);
+    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(&mesh, Eigen::VectorXi(), false, 1, 1);
     Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(&mesh, false, 1, 1);
 
     //std::cout<<"Gv*confVec: "<<Gv*confVec<<std::endl;

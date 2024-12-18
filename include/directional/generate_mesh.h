@@ -20,6 +20,8 @@
 #include <directional/DCEL.h>
 #include <directional/GMP_definitions.h>
 #include <directional/NFunctionMesher.h>
+#include <operators/io_stream.hpp>
+
 
 namespace directional{
 
@@ -102,7 +104,7 @@ namespace directional{
                     continue;  //that means the segments intersect away from the triangle.
 
                 for (int r=0;r<result.size();r++){
-                    arrVertices.push_back(segments[i].source * (1 - result[r].first) + segments[i].target * result[r].first);
+                    arrVertices.push_back(segments[i].source * (ENumber(1) - result[r].first) + segments[i].target * result[r].first);
                     //std::cout<<"Segments ("<<i<<","<<j<<") create arragment vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
                     /*VS.push_back(std::vector<int>());
                     VS[arrVertices.size() - 1].push_back(i);
@@ -422,7 +424,7 @@ namespace directional{
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
             vector<ENumber> triExactNFunction = exactNFunction[findex];
-            //std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
+            std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
             /*for (int i=0;i<triExactNFunction.size();i++)
                 std::cout<<triExactNFunction[i].get_d()<<std::endl;*/
 
@@ -432,8 +434,8 @@ namespace directional{
             vector<ENumber> minFuncs(mfiData.N);
             vector<ENumber> maxFuncs(mfiData.N);
             for (int k = 0; k < mfiData.N; k++) {
-                minFuncs[k] = mpq_class(327600);
-                maxFuncs[k] = mpq_class(-327600);
+                minFuncs[k] = ENumber(327600);
+                maxFuncs[k] = ENumber(-327600);
             }
 
             for (int i = 0; i < 3; i++) {
@@ -459,12 +461,12 @@ namespace directional{
             //vector<NFunctionMesher::EdgeData> EdgeDatas;
             std::vector<EVector2> ETriPoints2D(3);
             std::vector<EVector3> ETriPoints3D(3);
-            ETriPoints2D[0][0] = 0;
-            ETriPoints2D[0][1] = 0;
-            ETriPoints2D[1][0] = 1;
-            ETriPoints2D[1][1] = 0;
-            ETriPoints2D[2][0] = 0;
-            ETriPoints2D[2][1] = 1;
+            ETriPoints2D[0][0] = ENumber(0);
+            ETriPoints2D[0][1] = ENumber(0);
+            ETriPoints2D[1][0] = ENumber(1);
+            ETriPoints2D[1][1] = ENumber(0);
+            ETriPoints2D[2][0] = ENumber(0);
+            ETriPoints2D[2][1] = ENumber(1);
 
             for (int i = 0; i < 3; i++) {
                 RowVector3d position = origMesh.V.row(origMesh.F(findex, i));
@@ -546,9 +548,9 @@ namespace directional{
                 vector<EInt> isoValues;
                 //cout<<"isoValues: "<<endl;
                 EInt q, r;
-                div_mod(minFuncs[funcIter].get_num_mpz_t(), minFuncs[funcIter].get_den_mpz_t(), q, r);
+                div_mod(minFuncs[funcIter].num, minFuncs[funcIter].den, q, r);
                 EInt minIsoValue = q + (r < 0 ? -1 : 0);
-                div_mod(maxFuncs[funcIter].get_num_mpz_t(), maxFuncs[funcIter].get_den_mpz_t(), q, r);
+                div_mod(maxFuncs[funcIter].num, maxFuncs[funcIter].den, q, r);
                 EInt maxIsoValue = q + (r < 0 ? 0 : -1);
                 for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue++) {
                     //cout<<"isoValue: "<<isoValue<<endl;
@@ -587,9 +589,9 @@ namespace directional{
                 rhs[2] = -gradVector[0] * ETriPoints2D[2][0] - gradVector[1] * ETriPoints2D[2][1];
 
                 ENumber invM[2][3];
-                invM[0][0] = 2 * a - b - c;
-                invM[0][1] = 2 * b - a - c;
-                invM[0][2] = 2 * c - b - a;
+                invM[0][0] = ENumber(2) * a - b - c;
+                invM[0][1] = ENumber(2) * b - a - c;
+                invM[0][2] = ENumber(2) * c - b - a;
                 invM[1][0] = b * b - a * b + c * c - a * c;
                 invM[1][1] = a * a - b * a + c * c - b * c;
                 invM[1][2] = a * a - c * a + b * b - c * b;
@@ -646,7 +648,7 @@ namespace directional{
                     //ENumber isoVec[2];
                     //isoVec[0]=isoValues[isoIndex];
                     //isoVec[1]= ENumber(1);
-                    ENumber currc = isoValues[isoIndex] * x[0] + x[1];
+                    ENumber currc = x[0]* isoValues[isoIndex] + x[1];
                     // ENumber a=ENumber((int)(gradVector[0]*Resolution),Resolution);
                     //ENumber b=ENumber((int)(gradVector[1]*Resolution),Resolution);
                     //ENumber c=ENumber((int)(currc(0)*Resolution),Resolution);
@@ -691,7 +693,7 @@ namespace directional{
 
                 //finding out barycentric coordinates
                 ENumber baryValues[3];
-                ENumber sum = 0;
+                ENumber sum(0);
                 for (int j = 0; j < 3; j++) {
                     //ETriangle2D t(vi->point(), ETriPoints2D[(i + 1) % 3], ETriPoints2D[(i + 2) % 3]);
                     vector<EVector2> inTri(3);
@@ -707,7 +709,7 @@ namespace directional{
 
                 //std::cout<<"baryValues vertex "<< baryValues[0].get_d()<<","<< baryValues[1].get_d()<<","<< baryValues[2].get_d()<<std::endl;
 
-                localArrDcel.vertices[i].data.eCoords = EVector3({0, 0, 0});
+                localArrDcel.vertices[i].data.eCoords = EVector3({ENumber(0), ENumber(0), ENumber(0)});
                 for (int j = 0; j < 3; j++) {
                     //std::cout<<"ETriPoints3D["<<j<<"]: "<<ETriPoints3D[j]<<std::endl;
                     localArrDcel.vertices[i].data.eCoords =
@@ -717,9 +719,9 @@ namespace directional{
 
                 //std::cout<<"localArrDcel.vertices[i].data.eCoords: "<<localArrDcel.vertices[i].data.eCoords<<std::endl;
 
-                localArrDcel.vertices[i].data.coords << localArrDcel.vertices[i].data.eCoords[0].get_d(),
-                        localArrDcel.vertices[i].data.eCoords[1].get_d(),
-                        localArrDcel.vertices[i].data.eCoords[2].get_d();
+                localArrDcel.vertices[i].data.coords << localArrDcel.vertices[i].data.eCoords[0].to_double(),
+                        localArrDcel.vertices[i].data.eCoords[1].to_double(),
+                        localArrDcel.vertices[i].data.eCoords[2].to_double();
 
             }
 

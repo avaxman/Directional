@@ -50,7 +50,7 @@ int main()
 
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(&mesh, true);
-    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(&mesh, true);
+    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(&mesh, Eigen::VectorXi(), true);
     Eigen::SparseMatrix<double> Mx = directional::face_vectors_mass_matrix_2D<double>(&mesh, true);
     Eigen::SparseMatrix<double> iMx = directional::face_vectors_mass_matrix_2D<double>(&mesh, true, true);
     Eigen::SparseMatrix<double> Mc = directional::edge_diamond_mass_matrix_2D<double>(&mesh, true);

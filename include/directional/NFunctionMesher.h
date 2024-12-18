@@ -13,8 +13,6 @@
 #include <utility>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include <gmp.h>
-#include <gmpxx.h>
 #include <directional/GMP_definitions.h>
 #include <directional/dcel.h>
 #include <directional/setup_mesh_function_isolines.h>
@@ -828,8 +826,8 @@ namespace directional{
 
             if (verbose){
                 for (int i=0;i<Result.size();i++){
-                    if (squaredDistance(Set1[Result[i].first],Set2[Result[i].second])>0){
-                        std::cout<<"("<<Result[i].first<<","<<Result[i].second<<") with dist "<<squaredDistance(Set1[Result[i].first],Set2[Result[i].second]).get_d()<<std::endl;
+                    if (squaredDistance(Set1[Result[i].first],Set2[Result[i].second])>ENumber(0)){
+                        std::cout<<"("<<Result[i].first<<","<<Result[i].second<<") with dist "<<squaredDistance(Set1[Result[i].first],Set2[Result[i].second]).to_double()<<std::endl;
                         std::cout<<"Distance is abnormally not zero!"<<std::endl;
                     }
                 }
@@ -1286,7 +1284,7 @@ namespace directional{
             //sanity check - comparing exact to double
             double maxError2 = -32767000.0;
             for (int i=0;i<exactCutNFunctionVec.size();i++){
-                double fromExact = exactCutNFunctionVec[i].get_d();
+                double fromExact = exactCutNFunctionVec[i].to_double();
                 if (abs(fromExact-cutNFunctionVec[i])>maxError2)
                     maxError2 =abs(fromExact-cutNFunctionVec[i]);
             }

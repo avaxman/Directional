@@ -72,11 +72,11 @@ if (DIRECTIONAL_MESHER)
 
   #find_package(GMP REQUIRED)
 
-  set(GMP_INCLUDE_DIR /usr/local/opt/gmp/include)
-  set(GMP_LIBRARIES /usr/local/opt/gmp/lib/libgmp.dylib)
+  #set(GMP_INCLUDE_DIR /usr/local/opt/gmp/include)
+  #set(GMP_LIBRARIES /usr/local/opt/gmp/lib/libgmp.dylib)
 
   # Include GMP headers
-  include_directories(${GMP_INCLUDE_DIR})
+  #include_directories(${GMP_INCLUDE_DIR})
 
   # Set GMP library and include directories
   #set(GMP_INCLUDE_DIR ${EXTERNAL_INSTALL_LOCATION}/gmp/include)
@@ -86,7 +86,10 @@ if (DIRECTIONAL_MESHER)
   #include_directories(${GMP_INCLUDE_DIR})
 
   # Add GMP library directory to link directories
-  link_directories(${GMP_LIB_DIR})
+  #link_directories(${GMP_LIB_DIR})
+
+  set(BIGINT_INCLUDE_DIR ${DIRECTIONAL_EXTERNAL}/BigInt/include)
+  include_directories(${BIGINT_INCLUDE_DIR})
 endif()
 
 
