@@ -50,7 +50,9 @@ namespace directional {
       faceQueue.push(std::pair<int,int>(currFace,-1));
       while (!faceQueue.empty()){
           std::pair<int, int> currFaceHE = faceQueue.front();
-          int currFace =currFaceHE.first;
+          int currFace = currFaceHE.first;
+          if ((currFace == 3010)||(currFace == 3082)||(currFace == 3011))
+            int kaka=8;
           int prevHE = currFaceHE.second;
           faceQueue.pop();
           if (isFaceVisited[currFace]==1)
@@ -67,6 +69,7 @@ namespace directional {
               int currHE = heiterate; //mesh.FH(currFace,i);
               if (mesh.dcel.halfedges[currHE].twin==-1){
                   isHECut(currHE)=0;
+                  heiterate = mesh.dcel.halfedges[heiterate].next;
                   continue;
               }
               int nextFace = mesh.dcel.halfedges[mesh.dcel.halfedges[currHE].twin].face;

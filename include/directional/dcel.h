@@ -864,7 +864,8 @@ namespace directional
                     vertices[halfedges[3*i+j].vertex].halfedge=3*i+j;
                     halfedges[3*i+j].next=3*i+(j+1)%3;
                     halfedges[3*i+j].prev=3*i+(j+2)%3;
-                    halfedges[3*i+j].face=i;
+                    halfedges[3*i+j].face = i;
+                    halfedges[3*i+j].edge = -1;
                 }
             }
 

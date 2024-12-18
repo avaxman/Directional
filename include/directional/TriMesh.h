@@ -54,6 +54,7 @@ namespace directional{
         inline int FH(const int index) const {return dcel.faces[index].halfedge;}
         inline int FH(const int index, const int inFace) const {
             int he = dcel.faces[index].halfedge;
+            while (HV(he)!=F(index,0)) he = nextH(he);
             for (int i=0;i<inFace;i++)
                 he = nextH(he);
             return he;
@@ -96,9 +97,7 @@ namespace directional{
             //This is done in the polyscope compatible fashion
             dcel.init(V, F);
             bool consistency = dcel.check_consistency(true,true,true,true);
-            if (!consistency)
-                std::cout<<"Something is wrong with the DCEL!!"<<std::endl;
-
+            assert(consistency && "compute_edge_quantities(): Something is wrong with the DCEL!!");
             EV.resize(dcel.edges.size(),2);
             EF = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);
             EFi = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);

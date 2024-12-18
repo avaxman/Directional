@@ -12,6 +12,7 @@
 #include <directional/integrate.h>
 #include <directional/branched_isolines.h>
 #include <directional/directional_viewer.h>
+#include <directional/cut_mesh_with_singularities.h>
 
 
 int N;
@@ -113,11 +114,17 @@ int main()
   
   //combing and cutting
   directional::principal_matching(rawField);
+  directional::combing(rawField, combedField);
 
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
   directional::setup_integration(rawField, intData, meshCut, combedField);
-  
+  /*directional::cut_mesh_with_singularities(meshWhole, rawField.singLocalCycles, intData.face2cut);
+  Eigen::VectorXd seamFunc = Eigen::VectorXd::Zero(meshWhole.EV.rows());
+  for (int i=0;i<meshWhole.F.rows();i++)
+    for (int j=0;j<3;j++)
+      seamFunc(meshWhole.FE(i,j))+=intData.face2cut(i,j);*/
+
   intData.verbose=false;
   intData.integralSeamless=true;
   intData.roundSeams=true;
@@ -136,6 +143,7 @@ int main()
   viewer.set_mesh(meshWhole,0);
   viewer.set_field(rawField);
   viewer.set_seams(combedField.matching);
+  //viewer.set_edge_data(seamFunc, 0.0, 2.0);
   viewer.set_isolines(meshCut, NFunctionSings);
   viewer.set_callback(callbackFunc);
   viewer.launch();
