@@ -14,18 +14,19 @@
 #include <utility>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include <BigInt.hpp>
-#include <functions/math.hpp>
-#include <operators/arithmetic_assignment.hpp>
+//#include <BigInt.hpp>
+//#include <functions/math.hpp>
+//#include <operators/arithmetic_assignment.hpp>
+#include <directional/BigInteger.h>
 
 
 namespace directional{
 
-    typedef BigInt EInt;
+    typedef BigInteger EInt;
 
     class ENumber{
     public:
-        BigInt num, den;
+        EInt num, den;
         bool simple;  //whether number is simplified
 
         ENumber(){num=0; den=1;}
@@ -36,7 +37,7 @@ namespace directional{
         
         ~ENumber(){}
 
-        ENumber(const BigInt _num, const BigInt _den):num(_num), den(_den), simple(true){
+        ENumber(const EInt _num, const EInt _den, const bool toSimplify=false):num(_num), den(_den), simple(true){
             assert("ENumber(): denominator is zero!" && den!=0); 
             simplify(); 
             if (den<0){ 
@@ -44,20 +45,28 @@ namespace directional{
                 num = -num;}
         }
 
-        ENumber(const BigInt _num){
+        ENumber(const EInt _num){
             num = _num;
             den=1;
         }
 
         void simplify(){
-            BigInt common = gcd(num, den);
+            if (num==0) {den=1; return;}
+            EInt common = gcd(num, den);
             num/=common;
             den/=common;
             if (den<0){
                 den = -den;
                 num = -num;
             }
+            
             simple=true;
+        }
+
+        ENumber operator=(const ENumber& e2){
+            num = e2.num;
+            den = e2.den;
+            return *this;
         }
 
         ENumber operator+(const ENumber& b2) const{
@@ -99,26 +108,44 @@ namespace directional{
 
         //Numbers are simple now because they are constructed to be simple
         bool operator==(const ENumber& b2) const{
+            //return (this->num*b2.den == this->den*b2.num);
             return ((this->num == b2.num)&&(this->den==b2.den));
         }
 
         bool operator!=(const ENumber& b2) const{
+            //return (this->num*b2.den != this->den*b2.num);
             return ((this->num != b2.num)||(this->den!=b2.den));
         }
 
         bool operator>=(const ENumber& b2) const{
+            if ((b2.num<=0)&&(this->num>=0))
+                return true;
+            if ((b2.num>0)&&(this->num<0))
+                return false;
             return (this->num*b2.den >= this->den*b2.num);
         }
 
         bool operator<=(const ENumber& b2) const{
+            if ((b2.num>=0)&&(this->num<=0))
+                return true;
+            if ((b2.num<0)&&(this->num>0))
+                return false;
             return (this->num*b2.den <= this->den*b2.num);
         }
 
         bool operator>(const ENumber& b2) const{
+            if ((b2.num<0)&&(this->num>0))
+                return true;
+            if ((b2.num>0)&&(this->num<0))
+                return false;
             return (this->num*b2.den > this->den*b2.num);
         }
 
         bool operator<(const ENumber& b2) const{
+            if ((b2.num>0)&&(this->num<0))
+                return true;
+            if ((b2.num<0)&&(this->num>0))
+                return false;
             return (this->num*b2.den < this->den*b2.num);
         }
 
@@ -399,7 +426,7 @@ namespace directional{
                                             Line2(seg2.source, seg2.target-seg2.source),t1, t2);
 
         if (result==0) {
-            std::cout<<"supporting lines don't intersect"<<std::endl;
+            //std::cout<<"supporting lines don't intersect"<<std::endl;
             return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
         }
 
@@ -417,7 +444,7 @@ namespace directional{
         }
 
         if (result==2){  //lines overlap; should check the segments overlap and then return both overlap points (order not important)
-            std::cout<<"Supporting lines overlap"<<std::endl;
+            //std::cout<<"Supporting lines overlap"<<std::endl;
             EVector2 vec = seg1.target-seg1.source;
             int axis = (vec[0]!=ENumber(0) ? 0 : 1);
             Segment2 sortSeg1, sortSeg2;
@@ -435,10 +462,10 @@ namespace directional{
                 std::vector<std::pair<ENumber, ENumber>> points(2);
                 points[0] = std::pair<ENumber, ENumber>(startAtSeg1, startAtSeg2);
                 points[1] = std::pair<ENumber, ENumber>(endAtSeg1, endAtSeg2);
-                std::cout<<"Intersecting at parameters "<<points[0].first.to_double()<<","<<points[0].second.to_double()<<" and "<<points[1].first.to_double()<<","<<points[1].second.to_double()<<std::endl;
+                //std::cout<<"Intersecting at parameters "<<points[0].first.to_double()<<","<<points[0].second.to_double()<<" and "<<points[1].first.to_double()<<","<<points[1].second.to_double()<<std::endl;
                 return points;
             } else{
-                std::cout<<"parameters don't overlap"<<std::endl;
+                //std::cout<<"parameters don't overlap"<<std::endl;
                 return std::vector<std::pair<ENumber, ENumber>>(); //no intersection
             }
 

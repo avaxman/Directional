@@ -472,9 +472,9 @@ namespace directional{
                 RowVector3d position = origMesh.V.row(origMesh.F(findex, i));
                 //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
                 //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-                ENumber x = ENumber((signed long) round((long double) (position(0)) * resolution), resolution);
-                ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution);
-                ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution);
+                ENumber x = ENumber((signed long) round((long double) (position(0)) * resolution), resolution, true);
+                ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution, true);
+                ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution, true);
 
                 EVector3 xyz;
                 xyz[0] = x;
@@ -552,7 +552,7 @@ namespace directional{
                 EInt minIsoValue = q + (r < 0 ? -1 : 0);
                 div_mod(maxFuncs[funcIter].num, maxFuncs[funcIter].den, q, r);
                 EInt maxIsoValue = q + (r < 0 ? 0 : -1);
-                for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue++) {
+                for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue=isoValue+EInt(1)) {
                     //cout<<"isoValue: "<<isoValue<<endl;
                     isoValues.push_back(isoValue);
                 }
