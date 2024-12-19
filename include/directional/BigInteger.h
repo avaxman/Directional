@@ -63,6 +63,10 @@ public:
     }*/
 
     BigInteger operator+(const BigInteger &other) const {
+        if (other==0)
+            return *this;
+        if (*this==0)
+            return other;
         if (negative != other.negative) {
             return *this - (-other);
         }
@@ -71,7 +75,7 @@ public:
         result.negative = negative;
 
         long long carry = 0;
-        for (size_t i = 0; i < std::max(digits.size(), other.digits.size()) || carry; i++) {
+        for (size_t i = 0; (i < std::max(digits.size(), other.digits.size())) || carry; i++) {
             long long sum = carry;
             if (i < digits.size()) sum += digits[i];
             if (i < other.digits.size()) sum += other.digits[i];
@@ -93,6 +97,10 @@ public:
     }
 
     BigInteger operator-(const BigInteger &other) const {
+        if (other==0)
+            return *this;
+        if (*this==0)
+            return -other;
         if (negative != other.negative) {
             return *this + (-other);
         }
@@ -130,7 +138,7 @@ public:
 
         for (size_t i = 0; i < digits.size(); ++i) {
             long long carry = 0;
-            for (size_t j = 0; j < other.digits.size() || carry; ++j) {
+            for (int j = 0; (j < other.digits.size()) || carry; ++j) {
                 long long prod = result.digits[i + j] + digits[i] * (j < other.digits.size() ? other.digits[j] : 0) + carry;
                 result.digits[i + j] = prod % BASE;
                 carry = prod / BASE;
@@ -141,10 +149,46 @@ public:
         return result;
     }
 
-    BigInteger operator/(const BigInteger &other) const {
-        if (other == BigInteger(0)) {
-            throw std::runtime_error("Division by zero");
+    /*BigInteger operator/(const BigInteger &other) const {
+        assert("Biginteger division: division by zero!" && other != BigInteger(0));
+        BigInteger dividend = *this;
+        BigInteger divisor = other;
+        dividend.negative = divisor.negative = false;
+
+        BigInteger quotient;
+        quotient.digits.resize(dividend.digits.size());
+        BigInteger currDividend;  //the current part of the dividend we are trying to fit in
+        for (int i = dividend.digits.size()-1 ; i>=0 ; i--){
+            currDividend = currDividend * BigInteger(BASE) + BigInteger(dividend.digits[i]);
+            if (divisor < currDividend){
+                quotient = quotient*BigInteger(BASE);
+                continue;
+            }
+
+            //finding out how many times the divisor fits in the currDividend
+            //doing binary search
+            long long currQuotient = BASE-1;
+            long long currLeap = BASE/2;
+            for (int currLeap=BASE/2 ; currLeap >= 1 ; currLeap/=2){
+                BigInteger diff = BigInteger(currQuotient)*divisor - BigInteger(currDividend);
+                if (diff>0)
+                    currQuotient-=currLeap;
+                if (diff<0) 
+                    currQuotient+=currLeap; 
+                if (diff==0)
+                    break;  //exactly multiplies
+            }
+
+            quotient = quotient*BigInteger(BASE)+currQuotient;
+            currDividend = currDividend - BigInteger(currQuotient)*divisor;
         }
+
+    }*/
+    
+    
+    
+    BigInteger operator/(const BigInteger &other) const {
+        
 
         BigInteger dividend = *this;
         BigInteger divisor = other;
@@ -152,17 +196,25 @@ public:
 
         BigInteger quotient;
         quotient.digits.resize(dividend.digits.size());
-
+        //std::cout<<"Dividing "<<dividend.to_string()<<" by "<<divisor.to_string()<<std::endl;
         BigInteger current;
-        for (size_t i = dividend.digits.size()-1; i>=0;i--) {
+        for (int i = dividend.digits.size()-1; i>=0 ; i--) {
             current = current * BigInteger(BASE) + BigInteger(dividend.digits[i]);
+            //std::cout<<"current: "<<current.to_string()<<std::endl;
             long long count = 0;
             long long left = 0, right = BASE - 1;
             int whileTest=0;
             while (left <= right) {
+                //std::cout<<"left: "<<left<<" right:"<<right<<std::endl;
                 long long mid = (left + right) / 2;
-                if (divisor * BigInteger(mid) <= current) {
+                //std::cout<<"mid: "<<mid<<std::endl;
+                //std::cout<<"divisor * BigInteger(mid): "<<(divisor * BigInteger(mid)).to_string()<<std::endl;
+                BigInteger diff = current - divisor * BigInteger(mid);
+                //std::cout<<"mid: "<<mid<<std::endl;
+                //std::cout<<"diff: "<<diff.to_string()<<std::endl;
+                if (diff >= 0) {
                     count = mid;
+                    //std::cout<<"count: "<<count<<std::endl;
                     left = mid + 1;
                 } else {
                     right = mid - 1;
@@ -176,6 +228,11 @@ public:
 
         quotient.negative = negative != other.negative;
         quotient.trim();
+        
+        //testing subdivision:
+        std::cout<<"dividend: "<<dividend.to_string()<<std::endl;
+        std::cout<<"divisor: "<<divisor.to_string()<<std::endl;
+        std::cout<<"quotient: "<<quotient.to_string()<<std::endl;
         return quotient;
     }
 

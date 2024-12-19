@@ -405,9 +405,9 @@ namespace directional{
 
         t1 = ((line2.point[0]-line1.point[0])*(line2.direction[1])-(line2.point[1]-line1.point[1])*(line2.direction[0]))/denom;
         t2 = ((line2.point[0]-line1.point[0])*(line1.direction[1])-(line2.point[1]-line1.point[1])*(line1.direction[0]))/denom;
-        //std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
-        //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
-        //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
+        std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
+        std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
+        std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
         EVector2 diff = (line1.point+t1*line1.direction) - (line2.point+t2*line2.direction);
         //diff.canonicalize();
         assert("line_line_intersection is wrong!" && diff == EVector2());
