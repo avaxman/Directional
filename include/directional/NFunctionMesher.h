@@ -1264,17 +1264,17 @@ namespace directional{
             //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
             vector<ENumber> exactVertexNFunction(mfiData.vertexNFunction.size());
             for (int i=0;i<mfiData.vertexNFunction.size();i++){
-                exactVertexNFunction[i]=ENumber((signed long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(unsigned long)resolution);
-                /*if (abs(exactVertexNFunction[i].to_double() - vertexNFunction(i))>10e-8) {
+                exactVertexNFunction[i]=ENumber((long long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(long long)resolution);
+                /*if (abs(exactVertexNFunction[i].to_double() - mfiData.vertexNFunction(i))>2.0/(double)resolution) {
                     cout << "exactVertexNFunction[i].to_double(): " << exactVertexNFunction[i].to_double() << endl;
-                    cout << "vertexNFunction(i): " << vertexNFunction(i) << endl;
-                    cout << "(long double)(vertexNFunction(i)*resolution): " << (long double)(vertexNFunction(i) * resolution) << endl;
+                    cout << "vertexNFunction(i): " << mfiData.vertexNFunction(i) << endl;
+                    cout << "(long double)(vertexNFunction(i)*resolution): " << (long double)(mfiData.vertexNFunction(i) * resolution) << endl;
                 }*/
             }
 
             for (int i=0;i<mfiData.integerVars.size();i++){
                 exactVertexNFunction[mfiData.integerVars(i)]=ENumber((long)round(mfiData.vertexNFunction(mfiData.integerVars(i))));
-                //cout<<"rounding diff of integer var "<<integerVars(i)<<" is "<<exactVertexNFunction[integerVars(i)].to_double()-vertexNFunction(integerVars(i))<<endl;
+                //cout<<"rounding diff of integer var "<<mfiData.integerVars(i)<<" is "<<exactVertexNFunction[mfiData.integerVars(i)].to_double()-mfiData.vertexNFunction(mfiData.integerVars(i))<<endl;
             }
 
             VectorXd cutNFunctionVec = mfiData.orig2CutMat*mfiData.vertexNFunction;
@@ -1285,8 +1285,10 @@ namespace directional{
             double maxError2 = -32767000.0;
             for (int i=0;i<exactCutNFunctionVec.size();i++){
                 double fromExact = exactCutNFunctionVec[i].to_double();
-                if (abs(fromExact-cutNFunctionVec[i])>maxError2)
-                    maxError2 =abs(fromExact-cutNFunctionVec[i]);
+                if (abs(fromExact-cutNFunctionVec[i])>maxError2){
+                  maxError2 =abs(fromExact-cutNFunctionVec[i]);
+                  //cout<<"i, fromExact, cutNFunctionVec[i]: "<<i<<","<<fromExact<<","<<cutNFunctionVec[i]<<endl;
+                }
             }
 
             cout<<"double from exact in halfedges maxError2: "<<maxError2<<endl;

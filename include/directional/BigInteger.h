@@ -42,6 +42,12 @@ public:
             value /= BASE;
         }
     }
+  
+  BigInteger abs() const{
+    BigInteger absNum = *this;
+    absNum.negative=false;
+    return absNum;
+  }
 
     /*BigInteger(const std::string &str) {
         negative = false;
@@ -105,7 +111,7 @@ public:
             return *this + (-other);
         }
 
-        if (*this < other) {
+        if (this->abs() < other.abs()) {
             return -(other - *this);
         }
 
@@ -134,7 +140,7 @@ public:
     BigInteger operator*(const BigInteger &other) const {
         BigInteger result;
         result.digits.resize(digits.size() + other.digits.size());
-        result.negative = negative != other.negative;
+        result.negative = (negative != other.negative);
 
         for (size_t i = 0; i < digits.size(); ++i) {
             long long carry = 0;
@@ -144,9 +150,12 @@ public:
                 carry = prod / BASE;
             }
         }
-
-        result.trim();
-        return result;
+      
+      result.trim();
+      /*std::cout<<"this: "<<this->to_string()<<std::endl;
+      std::cout<<"other: "<<other.to_string()<<std::endl;
+      std::cout<<"product: "<<result.to_string()<<std::endl;*/
+      return result;
     }
 
     /*BigInteger operator/(const BigInteger &other) const {
@@ -194,6 +203,8 @@ public:
         BigInteger divisor = other;
         dividend.negative = divisor.negative = false;
 
+        if (divisor==1)
+          int kaka=8;
         BigInteger quotient;
         quotient.digits.resize(dividend.digits.size());
         //std::cout<<"Dividing "<<dividend.to_string()<<" by "<<divisor.to_string()<<std::endl;
@@ -226,13 +237,13 @@ public:
             current = current - divisor * BigInteger(count);
         }
 
-        quotient.negative = negative != other.negative;
+        quotient.negative = (negative != other.negative);
         quotient.trim();
         
         //testing subdivision:
-        std::cout<<"dividend: "<<dividend.to_string()<<std::endl;
-        std::cout<<"divisor: "<<divisor.to_string()<<std::endl;
-        std::cout<<"quotient: "<<quotient.to_string()<<std::endl;
+        //std::cout<<"dividend: "<<this->to_string()<<std::endl;
+        //std::cout<<"divisor: "<<other.to_string()<<std::endl;
+        //std::cout<<"quotient: "<<quotient.to_string()<<std::endl;
         return quotient;
     }
 
