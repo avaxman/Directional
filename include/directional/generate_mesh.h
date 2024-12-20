@@ -424,6 +424,7 @@ namespace directional{
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
             vector<ENumber> triExactNFunction = exactNFunction[findex];
+          if (findex % 100 == 0)
             std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
             /*for (int i=0;i<triExactNFunction.size();i++)
                 std::cout<<triExactNFunction[i].get_d()<<std::endl;*/
@@ -472,9 +473,13 @@ namespace directional{
                 RowVector3d position = origMesh.V.row(origMesh.F(findex, i));
                 //ENumber cx=ENumber((int)(Location.x()*Resolution),Resolution);
                 //ENumber cy=ENumber((int)(Location.y()*Resolution),Resolution);
-                ENumber x = ENumber((signed long) round((long double) (position(0)) * resolution), resolution, true);
-                ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution, true);
-                ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution, true);
+                //ENumber x = ENumber((signed long) round((long double) (position(0)) * resolution), resolution, true);
+                //ENumber y = ENumber((signed long) round((long double) (position(1)) * resolution), resolution, true);
+                //ENumber z = ENumber((signed long) round((long double) (position(2)) * resolution), resolution, true);
+              double tol = 1.0/(double)resolution;
+              ENumber x = ENumber(position(0), tol);
+              ENumber y = ENumber(position(1), tol);
+              ENumber z = ENumber(position(2), tol);
 
                 EVector3 xyz;
                 xyz[0] = x;

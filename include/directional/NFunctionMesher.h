@@ -1263,9 +1263,12 @@ namespace directional{
 
             //computing exact rational corner values by quantizing the free variables d and then manually performing the sparse matrix multiplication
             vector<ENumber> exactVertexNFunction(mfiData.vertexNFunction.size());
+          double tol = 1.0/(double)resolution;
             for (int i=0;i<mfiData.vertexNFunction.size();i++){
-                exactVertexNFunction[i]=ENumber((long long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(long long)resolution);
-                /*if (abs(exactVertexNFunction[i].to_double() - mfiData.vertexNFunction(i))>2.0/(double)resolution) {
+                //exactVertexNFunction[i]=ENumber((long long)round((long double)(mfiData.vertexNFunction(i)*resolution)),(long long)resolution);
+              exactVertexNFunction[i]=ENumber(mfiData.vertexNFunction(i),tol);
+            
+              /*if (abs(exactVertexNFunction[i].to_double() - mfiData.vertexNFunction(i))>2.0/(double)resolution) {
                     cout << "exactVertexNFunction[i].to_double(): " << exactVertexNFunction[i].to_double() << endl;
                     cout << "vertexNFunction(i): " << mfiData.vertexNFunction(i) << endl;
                     cout << "(long double)(vertexNFunction(i)*resolution): " << (long double)(mfiData.vertexNFunction(i) * resolution) << endl;

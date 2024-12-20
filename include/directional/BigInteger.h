@@ -32,8 +32,7 @@ private:
     for (int i=digits.size()-1; i>=0 ;i--)
       result = result * BASE + digits[i];
     
-    if (negative) result = -result;
-    return result;
+    return (negative ? -result : result);
   }
   
 public:
@@ -205,6 +204,78 @@ public:
    
    }*/
   
+  //A version that expects the result to be a single digit (like as a part of long division).
+  inline BigInteger single_digit_division(const BigInteger& other) const{
+    
+    if (*this==0)
+      return 0;
+    
+    if (other==1)
+      return *this;
+    
+    if (this->abs() < other.abs())
+      return 0;
+    
+    if ((this->digits.size()<=CONVERTIBLE_SIZE)&&(other.digits.size()<=CONVERTIBLE_SIZE)){
+      long long convertThis = this->convert();
+      long long convertOther = other.convert();
+      return convertThis/convertOther;
+    }
+    
+    //assert("single_digit_division(): the single-digit assumption cannot happen!" && this->digits.size()<=other.digits.size()+1);
+    //std::cout<<"single digit this: "<<this->to_string()<<std::endl;
+    //std::cout<<"single digit other: "<<other.to_string()<<std::endl;
+        
+    //ealuating the result by dividing digit by digit and refining the result
+    BigInteger dividend = this->abs();
+    BigInteger divisor = other.abs();
+    
+    BigInteger currDividend, currDivisor;
+    currDividend.digits.resize(1+dividend.digits.size()-divisor.digits.size());
+    currDivisor.digits.resize(1);
+    currDivisor.digits[0]=divisor.digits[divisor.digits.size()-1];
+    for (int i=0;i<currDividend.digits.size();i++)
+      currDividend.digits[currDividend.digits.size()-i-1] = dividend.digits[dividend.digits.size()-1-i];
+    
+    //std::cout<<"single digit dividend: "<<dividend<<std::endl;
+    //std::cout<<"single digit divisor: "<<divisor<<std::endl;
+    //std::cout<<"currDividend: "<<currDividend<<std::endl;
+    //std::cout<<"currDivisor: "<<currDivisor<<std::endl;
+    
+    long long quotient = currDividend.convert()/currDivisor.convert();
+    long long left = (currDividend).convert()/(currDivisor+1).convert();
+    long long right = (currDividend+1).convert()/(currDivisor).convert();
+    
+    //std::cout<<"quotient: "<<quotient<<std::endl;
+    //std::cout<<"left: "<<left<<std::endl;
+    //std::cout<<"right: "<<right<<std::endl;
+    
+    //long long count = 0;
+    int whileTest=0;
+    while (left <= right) {
+      //std::cout<<"left: "<<left<<" right:"<<right<<std::endl;
+      long long mid = (left + right) / 2;
+      //std::cout<<"mid: "<<mid<<std::endl;
+      //std::cout<<"divisor * BigInteger(mid): "<<(divisor * BigInteger(mid)).to_string()<<std::endl;
+      BigInteger diff = dividend - divisor * BigInteger(mid);
+      //std::cout<<"mid: "<<mid<<std::endl;
+      //std::cout<<"diff: "<<diff.to_string()<<std::endl;
+      if (diff >= 0) {
+        quotient = mid;
+        if (diff==0)
+          break; //it's found
+        //std::cout<<"count: "<<count<<std::endl;
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
+      whileTest++;
+      assert("operator/: while running too long! " && whileTest<10000);
+    }
+    //std::cout<<"single digit result: "<<(this->negative != other.negative ? -count : count)<<std::endl;
+    return (this->negative != other.negative ? -quotient : quotient);
+  }
+  
   
   
   inline BigInteger operator/(const BigInteger &other) const {
@@ -225,11 +296,11 @@ public:
       return convertThis/convertOther;
     }
     
+  
     //TODO: leading zeros
     
-    BigInteger dividend = *this;
-    BigInteger divisor = other;
-    dividend.negative = divisor.negative = false;
+    BigInteger dividend = this->abs();
+    BigInteger divisor = other.abs();
                                               
     BigInteger quotient;
     quotient.digits.resize(dividend.digits.size());
@@ -238,38 +309,20 @@ public:
     for (int i = dividend.digits.size()-1; i>=0 ; i--) {
       current = current * BigInteger(BASE) + BigInteger(dividend.digits[i]);
       //std::cout<<"current: "<<current.to_string()<<std::endl;
-      long long count = 0;
-      long long left = 0, right = BASE - 1;
-      int whileTest=0;
-      while (left <= right) {
-        //std::cout<<"left: "<<left<<" right:"<<right<<std::endl;
-        long long mid = (left + right) / 2;
-        //std::cout<<"mid: "<<mid<<std::endl;
-        //std::cout<<"divisor * BigInteger(mid): "<<(divisor * BigInteger(mid)).to_string()<<std::endl;
-        BigInteger diff = current - divisor * BigInteger(mid);
-        //std::cout<<"mid: "<<mid<<std::endl;
-        //std::cout<<"diff: "<<diff.to_string()<<std::endl;
-        if (diff >= 0) {
-          count = mid;
-          //std::cout<<"count: "<<count<<std::endl;
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-        whileTest++;
-        assert("operator/: while running too long! " && whileTest<10000);
-      }
-      quotient.digits[i] = count;
-      current = current - divisor * BigInteger(count);
+      quotient.digits[i] = (current.single_digit_division(divisor)).convert();
+      current = current -  BigInteger(quotient.digits[i]) * divisor;
     }
     
     quotient.negative = (negative != other.negative);
     quotient.trim();
     
     //testing subdivision:
-    //std::cout<<"dividend: "<<this->to_string()<<std::endl;
-    //std::cout<<"divisor: "<<other.to_string()<<std::endl;
-    //std::cout<<"quotient: "<<quotient.to_string()<<std::endl;
+    //std::cout<<"full long division dividend: "<<this->to_string()<<std::endl;
+    //std::cout<<"full long division divisor: "<<other.to_string()<<std::endl;
+    //std::cout<<"full long division quotient: "<<quotient.to_string()<<std::endl;
+    if ((other==-1)&&(this->digits.size()>1))
+      int kaka=8;
+    
     return quotient;
   }
   

@@ -5,6 +5,3 @@
 [submodule "external/polyscope"]
 	path = external/polyscope
 	url = https://github.com/nmwsharp/polyscope.git
-[submodule "external/BigInt"]
-	path = external/BigInt
-	url = https://github.com/faheel/BigInt.git
