@@ -87,7 +87,7 @@ public:
       return *this - (-other);
     }
     
-    BigInteger result;
+    BigInteger result;  //TODO: reserve
     result.negative = negative;
     
     long long carry = 0;
@@ -125,7 +125,7 @@ public:
       return -(other - *this);
     }
     
-    BigInteger result;
+    BigInteger result;   //TODO: reserve
     result.negative = negative;
     
     long long borrow = 0;
@@ -161,6 +161,26 @@ public:
       }
     }
     
+    result.trim();
+    /*std::cout<<"this: "<<this->to_string()<<std::endl;
+     std::cout<<"other: "<<other.to_string()<<std::endl;
+     std::cout<<"product: "<<result.to_string()<<std::endl;*/
+    return result;
+  }
+  
+  //Specialized version for multiplying directly with a single digit (effective for division)s
+  BigInteger operator*(const long long &other) const {
+    BigInteger result;
+    result.digits.resize(digits.size() + 1);
+    result.negative = (negative != other<0);
+    
+    long long carry = 0;
+    for (size_t i = 0; i < digits.size(); ++i) {
+      long long prod = digits[i] * other + carry;
+      result.digits[i] = prod % BASE;
+      carry = prod / BASE;
+    }
+    result.digits[digits.size()]=carry;
     result.trim();
     /*std::cout<<"this: "<<this->to_string()<<std::endl;
      std::cout<<"other: "<<other.to_string()<<std::endl;
@@ -205,21 +225,30 @@ public:
    }*/
   
   //A version that expects the result to be a single digit (like as a part of long division).
-  inline BigInteger single_digit_division(const BigInteger& other) const{
+  inline long long single_digit_division(const BigInteger& other, BigInteger& mod) const{
     
-    if (*this==0)
+    if (*this==0){
+      mod = 0;
       return 0;
+    }
     
-    if (other==1)
-      return *this;
+    if (other==1){
+      mod = 0;
+      return this->convert();
+    }
     
-    if (this->abs() < other.abs())
+    if (this->abs() < other.abs()){
+      mod = *this;
       return 0;
+    }
+      
     
     if ((this->digits.size()<=CONVERTIBLE_SIZE)&&(other.digits.size()<=CONVERTIBLE_SIZE)){
       long long convertThis = this->convert();
       long long convertOther = other.convert();
-      return convertThis/convertOther;
+      long long quotient = convertThis/convertOther;
+      mod = BigInteger(convertThis - convertOther*quotient);   //TODO: is this corret and not overflowing?
+      return quotient;
     }
     
     //assert("single_digit_division(): the single-digit assumption cannot happen!" && this->digits.size()<=other.digits.size()+1);
@@ -257,11 +286,13 @@ public:
       long long mid = (left + right) / 2;
       //std::cout<<"mid: "<<mid<<std::endl;
       //std::cout<<"divisor * BigInteger(mid): "<<(divisor * BigInteger(mid)).to_string()<<std::endl;
-      BigInteger diff = dividend - divisor * BigInteger(mid);
+      BigInteger diff = dividend - divisor * mid;
+      
       //std::cout<<"mid: "<<mid<<std::endl;
       //std::cout<<"diff: "<<diff.to_string()<<std::endl;
       if (diff >= 0) {
         quotient = mid;
+        mod = diff;
         if (diff==0)
           break; //it's found
         //std::cout<<"count: "<<count<<std::endl;
@@ -273,7 +304,7 @@ public:
       assert("operator/: while running too long! " && whileTest<10000);
     }
     //std::cout<<"single digit result: "<<(this->negative != other.negative ? -count : count)<<std::endl;
-    return (this->negative != other.negative ? -quotient : quotient);
+    return(this->negative != other.negative ? -quotient : quotient);
   }
   
   
@@ -307,10 +338,14 @@ public:
     //std::cout<<"Dividing "<<dividend.to_string()<<" by "<<divisor.to_string()<<std::endl;
     BigInteger current;
     for (int i = dividend.digits.size()-1; i>=0 ; i--) {
-      current = current * BigInteger(BASE) + BigInteger(dividend.digits[i]);
+      current.digits.insert(current.digits.begin(), dividend.digits[i]);
+      //current = current * BigInteger(BASE) + BigInteger(dividend.digits[i]);
       //std::cout<<"current: "<<current.to_string()<<std::endl;
-      quotient.digits[i] = (current.single_digit_division(divisor)).convert();
-      current = current -  BigInteger(quotient.digits[i]) * divisor;
+      BigInteger mod;
+      quotient.digits[i] = current.single_digit_division(divisor, mod);  //updates current as the modulo
+      current = mod;
+      //quotient.digits[i] = (current.single_digit_division(divisor)).convert();
+      //current = current -  BigInteger(quotient.digits[i]) * divisor;
     }
     
     quotient.negative = (negative != other.negative);
@@ -400,6 +435,7 @@ public:
 
 BigInteger gcd(BigInteger a, BigInteger b) {
   int whileTest=0;
+  if (b > a) std::swap(a,b);
   while (b != BigInteger(0)) {
     BigInteger temp = b;
     b = a % b;

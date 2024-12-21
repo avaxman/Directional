@@ -646,7 +646,7 @@ ENumber triangle_area(const std::vector<EVector2>& tri){
 void div_mod(const EInt a, const EInt b, EInt& q, EInt& r){
   //mpz_tdiv_qr(q.get_mpz_t(),r.get_mpz_t(),a,b);
   q = a / b;
-  r = a % b;
+  r = a - b * q;
 }
 }
 

@@ -407,6 +407,7 @@ namespace directional{
         int f2 = origMesh.dcel.faces[origMesh.dcel.halfedges[origMesh.dcel.halfedges[origMesh.dcel.faces[f1].halfedge].twin].face].ID;*/
 
         //Looping over all triangles, and arranging parametric lines for each
+      auto start = std::chrono::high_resolution_clock::now();
         for (int findex = 0; findex < origMesh.F.rows(); findex++) {
 
             //building small face overlays of one triangle and a few roughly surrounding hexes to retrieve the structure in the face
@@ -424,8 +425,14 @@ namespace directional{
              Triangle2D CurrTri(TriPoints2D[0], TriPoints2D[1], TriPoints2D[2]);*/
 
             vector<ENumber> triExactNFunction = exactNFunction[findex];
-          if (findex % 100 == 0)
+          if (findex % 100 == 0){
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
             std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
+            std::cout << "Execution time: " << duration.count() << " microseconds" << std::endl;
+            start = std::chrono::high_resolution_clock::now();
+
+          }
             /*for (int i=0;i<triExactNFunction.size();i++)
                 std::cout<<triExactNFunction[i].get_d()<<std::endl;*/
 
