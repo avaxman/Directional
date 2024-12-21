@@ -464,11 +464,16 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
       vector<EInt> isoValues;
       EInt q, r;
       div_mod(minFuncs[funcIter].num, minFuncs[funcIter].den, q, r);
-      EInt minIsoValue = q + (r < 0 ? -1 : 0);
+      EInt minIsoValue = q + (minFuncs[funcIter].num < 0 ? -1 : 0);
       div_mod(maxFuncs[funcIter].num, maxFuncs[funcIter].den, q, r);
-      EInt maxIsoValue = q + (r < 0 ? 0 : -1);
-      for (EInt isoValue = minIsoValue - 2; isoValue <= maxIsoValue + 2; isoValue=isoValue+EInt(1))
+      EInt maxIsoValue = q + (maxFuncs[funcIter].num < 0 ? 0 : 1);
+      for (EInt isoValue = minIsoValue; isoValue <= maxIsoValue; isoValue=isoValue+EInt(1))
         isoValues.push_back(isoValue);
+      
+      /*std::cout<<"minFuncs[funcIter]: "<<minFuncs[funcIter].to_double()<<std::endl;
+      std::cout<<"maxFuncs[funcIter]: "<<maxFuncs[funcIter].to_double()<<std::endl;
+      std::cout<<"minIsoValue: "<<minIsoValue.to_string()<<std::endl;
+      std::cout<<"maxIsoValue: "<<maxIsoValue.to_string()<<std::endl;*/
       
       //computing gradient of function in plane
       EVector2 e01 = ETriPoints2D[1] - ETriPoints2D[0];
@@ -512,18 +517,15 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
         for (int col = 0; col < 3; col++)
           invM[row][col] /= (ENumber(2) * (a * a - a * b - a * c + b * b - b * c + c * c));
       
-      //cout<<(ENumber(2)*(a*a - a*b - a*c + b*b- b*c + c*c)).to_double()<<endl;
-      
       ENumber x[2];
       x[0] = invM[0][0] * rhs[0] + invM[0][1] * rhs[1] + invM[0][2] * rhs[2];
       x[1] = invM[1][0] * rhs[0] + invM[1][1] * rhs[1] + invM[1][2] * rhs[2];
       
-      
       //sanity check
-      ENumber error[3];
+      /*ENumber error[3];
       error[0] = x[0] * a + x[1] - rhs[0];
       error[1] = x[0] * b + x[1] - rhs[1];
-      error[2] = x[0] * c + x[1] - rhs[2];
+      error[2] = x[0] * c + x[1] - rhs[2];*/
       
       //generating all lines
       for (int isoIndex = 0; isoIndex < isoValues.size(); isoIndex++) {
@@ -542,7 +544,6 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
         
         paramLines.push_back(Line2(linePoint, lineVector));
         lineData.push_back(funcIter);
-        //cout<<"paramLine: "<<gradVector[0]<<","<<gradVector[1]<<","<<currc<<endl;
       }
     }
     
