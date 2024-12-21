@@ -78,9 +78,9 @@ public:
     //std::cout<<"den: "<<den.to_string()<<std::endl;
   }
   
-  ENumber(const EInt _num, const EInt _den, const bool toSimplify=false):num(_num), den(_den), simple(true){
+  ENumber(const EInt _num, const EInt _den, const bool toSimplify=true):num(_num), den(_den), simple(true){
     assert("ENumber(): denominator is zero!" && den!=0);
-    simplify();
+    if (toSimplify) simplify();
     if (den<0){
       den = -den;
       num = -num;}
@@ -88,7 +88,7 @@ public:
   
   ENumber(const EInt _num){
     num = _num;
-    den=1;
+    den = 1;
   }
   
   void simplify(){
@@ -111,8 +111,10 @@ public:
   }
   
   ENumber operator+(const ENumber& b2) const{
-    ENumber add((this->den * b2.num + this->num * b2.den), (this->den * b2.den));
-    return add;
+    if (this->den == b2.den)
+      return ENumber(this->num + b2.num, this->den);
+    else
+      return ENumber((this->den * b2.num + this->num * b2.den), (this->den * b2.den));
   }
   
   
@@ -122,28 +124,31 @@ public:
   }
   
   ENumber operator-(const ENumber& b2) const{
-    ENumber sub((this->num * b2.den - this->den * b2.num), (this->den * b2.den));
-    return sub;
+    if (this->den == b2.den)
+      return ENumber(this->num - b2.num, this->den);
+    else
+      return ENumber((this->num * b2.den - this->den * b2.num), (this->den * b2.den));
   }
   
   ENumber operator-() const{
-    return ENumber(-num, den);
+    return ENumber(-num, den, false);
   }
   
   ENumber operator*(const ENumber& b2) const{
-    ENumber mul(this->num * b2.num, this->den * b2.den);
-    return mul;
+    ENumber cross1(this->num, b2.den);
+    ENumber cross2(b2.num, this->den);
+    return ENumber(cross1.num * cross2.num, cross1.den * cross2.den, false);
   }
   
   ENumber operator/(const ENumber& b2) const{
     assert("ENumber division by zero!" && b2.num!=0);
-    ENumber div(this->num * b2.den, this->den * b2.num);
-    return div;
+    ENumber cross1(this->num, b2.num);
+    ENumber cross2(b2.den, this->den);
+    return ENumber(cross1.num * cross2.num, cross1.den * cross2.den, false);
   }
   
   ENumber operator/=(const ENumber& b2){
-    assert("ENumber division by zero!" && b2.num!=0);
-    *this = ENumber(this->num * b2.den, this->den * b2.num);
+    *this = *this / b2;
     return *this;
   }
   
@@ -191,7 +196,7 @@ public:
   }
   
   ENumber abs() const{
-    return ENumber((num >0 ? num : -num), den);
+    return ENumber((num >0 ? num : -num), den, false);
   }
   
   //getting one by one digits
