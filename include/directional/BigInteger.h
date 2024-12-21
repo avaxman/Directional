@@ -281,12 +281,13 @@ public:
     
     //long long count = 0;
     int whileTest=0;
+    BigInteger diff; diff.digits.reserve(dividend.digits.size());
     while (left <= right) {
       //std::cout<<"left: "<<left<<" right:"<<right<<std::endl;
       long long mid = (left + right) / 2;
       //std::cout<<"mid: "<<mid<<std::endl;
       //std::cout<<"divisor * BigInteger(mid): "<<(divisor * BigInteger(mid)).to_string()<<std::endl;
-      BigInteger diff = dividend - divisor * mid;
+      diff = dividend - divisor * mid;
       
       //std::cout<<"mid: "<<mid<<std::endl;
       //std::cout<<"diff: "<<diff.to_string()<<std::endl;
@@ -337,11 +338,11 @@ public:
     quotient.digits.resize(dividend.digits.size());
     //std::cout<<"Dividing "<<dividend.to_string()<<" by "<<divisor.to_string()<<std::endl;
     BigInteger current;
+    BigInteger mod;
     for (int i = dividend.digits.size()-1; i>=0 ; i--) {
       current.digits.insert(current.digits.begin(), dividend.digits[i]);
       //current = current * BigInteger(BASE) + BigInteger(dividend.digits[i]);
       //std::cout<<"current: "<<current.to_string()<<std::endl;
-      BigInteger mod;
       quotient.digits[i] = current.single_digit_division(divisor, mod);  //updates current as the modulo
       current = mod;
       //quotient.digits[i] = (current.single_digit_division(divisor)).convert();
