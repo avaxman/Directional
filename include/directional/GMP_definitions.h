@@ -368,6 +368,14 @@ std::ostream& operator<<(std::ostream& os, const Line2& line) {
   return os;
 }
 
+
+struct LinePencil{
+  int minIsoValue, maxIsoValue;
+  EVector2 direction;
+  EVector2 p0, pVec;  //p0 is the position of the line at minValue. pVec is the vector between the origins of the lines
+};
+
+
 ENumber squaredDistance(const EVector3& v1, const EVector3& v2){
   ENumber sd(0);
   //assert("vectors are of different dimensions!" && v1.size()==v2.size());
@@ -469,6 +477,56 @@ int line_line_intersection(const Line2& line1,
   //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
   //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
   EVector2 diff = (line1.point+t1*line1.direction) - (line2.point+t2*line2.direction);
+  //diff.canonicalize();
+  assert("line_line_intersection is wrong!" && diff == EVector2());
+  //std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
+  //std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
+  return 1;
+  
+}
+
+
+//returns a generator for the grid of intersections, parameterized by p00 + pVec1*isoValue1 + pVec2*isoValue2,
+//txp00 is the t(1 or 2) of the p00 point in each respective line
+//dtx (1 or 2) is the dt going along each pVecx (1 or 2)
+//for iso1 and iso2 in the respective line pencil ranges
+//result = 2 is only acceptable if |lp2| = 1, not handling parallel full line pencils (shouldn't be unless the parameterization is degenerate).
+inline int linepencil_intersection(const LinePencil& lp1,
+                                   const LinePencil& lp2,
+                                   directional::EVector2& p00,
+                                   directional::EVector2& pVec1,
+                                   directional::EVector2& pVec2,
+                                   ENumber& t1p00,
+                                   ENumber& t2p00,
+                                   ENumber& dt1,
+                                   ENumber& dt2,
+                                   EInt& iso1Overlap){   //overlap line in lp1 matching that of lp2. ignored unless result==2
+  
+  
+  ENumber denom = (lp1.direction[0]*lp2.direction[1]-lp1.direction[1]*lp2.direction[0]);
+  if (denom==ENumber(0)){  //the two pencils are parallel; looking which line overlaps lp2
+    assert("linepencil_intersection: parallel line pencils must have |lp2|=1; parameterization must be degenerate! " && lp2.isoMinValue==lp2.isoMaxValue);
+    EVector2 pointVec = lp2.p0-lp1.p0;
+    ENumber pVecCrossDirection1 = lp1.pVec[0]*lp1.direction[1] - lp1.pVec[1]*lp1.direction[0];
+    assert("pVecCrossDirection1 shouldn't be zero! " && pVecCrossDirection1!=ENumber(0));
+    ENumber overlapIso = (pointVec[0]*lp1.direction[1]-pointVec[1]*lp1.direction[0]) /pVecCrossDirection1;
+    if (overlapIso.den==1){
+      iso1Overlap = overlapIso.num;
+      return ((iso1Overlap >= lp1.minIsoValue && iso1Overlap <= lp1.maxIsoValue) ? 2 : 0);  //only an overlap if integer and within range of lp1
+    } else return 0;  //not an integer; no overlap for certain
+  }
+  
+  //line pencils are next not overlapping; finding grid parameters
+  
+  //p00 is the intersection of both min isovalues
+  t1p00 = ((lp2.p0[0]-lp1.p0[0])*(lp2.direction[1])-(lp2.p0[1]-lp1.p0[1])*(lp2.direction[0]))/denom;
+  t2p00 = ((lp2.p0[0]-lp1.p0[0])*(lp1.direction[1])-(lp2.p0[1]-lp1.p0[1])*(lp1.direction[0]))/denom;
+  p00 = (lp1.p0+t1p00*lp1.direction);
+  //TODO: continue from here.
+  //std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
+  //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
+  //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
+  EVector2 diff = (lp1.p0 + t1p00 * lp1.direction) - (lp2.p0 + t2p00 * lp2.direction);
   //diff.canonicalize();
   assert("line_line_intersection is wrong!" && diff == EVector2());
   //std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
@@ -599,6 +657,58 @@ void line_triangle_intersection(const Line2& line,
   
 }
 
+void linepencil_triangle_intersection(const LinePencil& lp,
+                                      const std::vector<EVector2> triangle,
+                                      std::vector<bool>& intEdges,
+                                      std::vector<bool>& intFaces,
+                                      std::vector<ENumber>& inParams,
+                                      std::vector<ENumber>& outParams){
+  
+  inParams.resize(lp.maxIsoValue-lp.minIsoValue+1);
+  outParams.resize(lp.maxIsoValue-lp.minIsoValue+1);
+  intEdges.resize(lp.maxIsoValue-lp.minIsoValue+1);
+  intFaces.resize(lp.maxIsoValue-lp.minIsoValue+1);
+  for (int i=0;i<inParams.size();i++){
+    inParams[i] = ENumber(3276700);
+    outParams[i] = ENumber(-3276700);
+    intEdges[i]=intFaces[i]=false;
+  }
+  
+  directional::EVector2 p00, pVec1, pVec2;
+  ENumber t1p00, t2p00, dt1, dt2;
+  for (int i=0;i<3;i++){
+    LinePencil triEdgePencil;
+    triEdgePencil.minIsoValue = triEdgePencil.maxIsoValue = 0;
+    triEdgePencil.p0 = triangle[i];
+    triEdgePencil.direction = triangle[(i+1)%3] - triangle[i];
+    linepencil_intersection(lp, triEdgePencil, p00, pVec1, pVec2, t1p00, t2p00, dt1, dt2);
+    
+    Segment2 edgeSegment(triangle[i], triangle[(i+1)%3]);
+    std::vector<ENumber> result = line_segment_intersection(line, edgeSegment);
+    for (int j=0;j<result.size();j++){
+      inParam = (inParam < result[j] ? inParam : result[j]);
+      outParam = (outParam > result[j] ? outParam : result[j]);
+    }
+    if (result.size()==2){
+      std::cout<<"line triangle overlap!!!"<<std::endl;
+      intEdge=true;
+      intFace=false;
+      return;
+    }
+    if (result.size()==1)
+      intFace=true;
+  }
+  if (inParam==outParam)  //intersecting the triangle only by a vertex; ignored
+    intFace=intEdge=false;
+  /*if (intFace){
+   std::cout<<"Intersecting within the face with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
+   }*/
+  /*else if (intEdge){
+   std::cout<<"Intersecting an edge with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
+   } else std::cout<<"Line doesn't intersect triangle"<<std::endl;*/
+  
+}
+
 //according to this: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
 ENumber slope_function(const EVector2& vec){
   //predicates might be expensive, so precomputing
@@ -649,5 +759,11 @@ void div_mod(const EInt a, const EInt b, EInt& q, EInt& r){
   r = a - b * q;
 }
 }
+
+
+
+
+
+
 
 #endif //DIRECTIONAL_GMP_DEFINITIONS_H
