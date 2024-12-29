@@ -76,8 +76,8 @@ namespace directional{
         //mesh generation functions found in generate_mesh.h
         void arrange_on_triangle(const std::vector<EVector2>& triangle,
                                  const std::vector<std::pair<int, bool>>& triangleData,
-                                 const std::vector<Line2>& lines,
-                                 const std::vector<int>& lineData,
+                                 const std::vector<LinePencil>& linePencils,
+                                 const std::vector<int>& linePencilData,
                                  std::vector<EVector2>& V,
                                  FunctionDCEL& triDcel);
 

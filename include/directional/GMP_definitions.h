@@ -694,8 +694,9 @@ void linepencil_triangle_intersection(const LinePencil& lp,
         triEdgePencil.minIsoValue = triEdgePencil.maxIsoValue = 0;
         triEdgePencil.p0 = triangle[i];
         triEdgePencil.direction = triangle[(i+1)%3] - triangle[i];
-        linepencil_intersection(lp, triEdgePencil, p00, pVec1, pVec2, t1p00, t2p00, dt1, dt2);
-        
+        triEdgePencil.pVec[0] = -triEdgePencil.direction[1];
+        triEdgePencil.pVec[1] = triEdgePencil.direction[0];
+        result = linepencil_intersection(lp, triEdgePencil, t1p00, t2p00, dt1, dt2);
         Segment2 edgeSegment(triangle[i], triangle[(i+1)%3]);
         std::vector<ENumber> result = line_segment_intersection(line, edgeSegment);
         for (int j=0;j<result.size();j++){
