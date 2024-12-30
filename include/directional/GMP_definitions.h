@@ -498,10 +498,8 @@ int line_line_intersection(const Line2& line1,
 //result = 2 is only acceptable if |lp2| = 1, not handling parallel full line pencils (shouldn't be unless the parameterization is degenerate).
 inline int linepencil_intersection(const LinePencil& lp1,
                                    const LinePencil& lp2,
-                                   ENumber& t1p00,   //t1p00 and t2p00 are the locations of p00 on the respective lines
-                                   ENumber& t2p00,
-                                   ENumber& dt1,
-                                   ENumber& dt2,
+                                   Eigen::Matrix<ENumber, 2, 1> t00
+                                   Eigen::Matrix<ENumber, 2, 2> I2dt,    //t of lines is I2dt*[I1;I2]+t00
                                    EInt& iso1Overlap){   //overlap line in lp1 matching that of lp2. ignored unless result==2
     
     
@@ -522,28 +520,20 @@ inline int linepencil_intersection(const LinePencil& lp1,
     
     //p00 is the intersection of both min isovalues
     EVector2 p012 = lp2.p0-lp1.p0;
-    t1p00 = p012.cross(lp2.direction) / v1v2;
-    t2p00 = p012.cross(lp1.direction) / v1v2;
-    //TODO: continue from here.
-    //std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
-    //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
-    //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
-    EVector2 diff = (lp1.p0 + t1p00 * lp1.direction) - (lp2.p0 + t2p00 * lp2.direction);
-    //diff.canonicalize();
+    t00<<p012.cross(lp2.direction) / v1v2, p012.cross(lp1.direction) / v1v2;
+    EVector2 diff = (lp1.p0 + t00(0) * lp1.direction) - (lp2.p0 + t00(1) * lp2.direction);
     assert("line_pencil original point intersection is wrong!" && diff == EVector2());
-    //std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
-    //std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
     //computing the dts
-    dt1 = -lp1.pVec.cross(lp2.direction) / v1v2;
-    dt2 = lp2.pVec.cross(lp1.direction) / v1v2;
-    
+    I2dt<<-lp1.pVec.cross(lp2.direction), lp2.pVec.cross(lp2.direction),
+    -lp1.pVec.cross(lp1.direction), lp2.pVec.cross(lp1.direction);
+    I2dt.array()/=v1v2;
     //tests (expensive):
-    EVector2 p00 = (lp1.p0 + t1p00 * lp1.direction);
-    EVector2 gridPoiint = p00 + lp1.pVec*(2*dt1)+lp2.pVec*(3*dt2);
-    EVector2 diff1 = (gridPoint - (p00+lp1.pVec*2)).cross(lp1.direction);
-    EVector2 diff1 = (gridPoint - (p00+lp2.pVec*3)).cross(lp2.direction);
-    assert("line_pencil dts computation is wrong!" && diff1 == EVector2() && diff2 == EVector2());
-
+    Eigen::Matrix<Number, 2,1> ITest; ITest<<3,2;
+    Eigen::Matrix<ENumber, 2,1> gridPointtValues = t00 + I2dt*ITest;
+    EVector2 pLine1 = (lp1.p0 + lp1.pVec*(ITest(0))+ gridPointtValues(0) * lp1.direction);
+    EVector2 pLine2 = (lp2.p0 + lp2.pVec*(ITest(1))+ gridPointtValues(1) * lp2.direction);
+    diff = pLine1 - pLine2;
+    assert("line_pencil dts computation is wrong!" && diff == EVector2());
     return 1;
     
 }
@@ -696,7 +686,15 @@ void linepencil_triangle_intersection(const LinePencil& lp,
         triEdgePencil.direction = triangle[(i+1)%3] - triangle[i];
         triEdgePencil.pVec[0] = -triEdgePencil.direction[1];
         triEdgePencil.pVec[1] = triEdgePencil.direction[0];
-        result = linepencil_intersection(lp, triEdgePencil, t1p00, t2p00, dt1, dt2);
+        Eigen::Matrix<ENumber, 2, 1> t00;
+        Eigen::Matrix<ENumber, 2, 2> I2dt;
+        EInt iso1Overlap;
+        int lpResult = linepencil_intersection(lp, triEdgePencil, t00, I2dt, iso1Overlap);
+        if (lpResult==2){  //overlap of iso1Overlap isovalue with the segment
+            std::cout<<"line triangle overlap!!!"<<std::endl;
+            intEdge[iso1Overlap-lp.minIsoVale]=true;
+            return;  //there cannot be another overlap
+        }
         Segment2 edgeSegment(triangle[i], triangle[(i+1)%3]);
         std::vector<ENumber> result = line_segment_intersection(line, edgeSegment);
         for (int j=0;j<result.size();j++){
