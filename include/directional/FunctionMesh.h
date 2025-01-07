@@ -36,6 +36,7 @@
 #include <CGAL/number_utils.h>
 #include <CGAL/Arrangement_with_history_2.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Gmpq.h>
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Search_traits_2.h>
 #include <CGAL/Polyhedron_3.h>
