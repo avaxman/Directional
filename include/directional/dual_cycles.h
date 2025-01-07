@@ -184,8 +184,8 @@ namespace directional
       }
     }
     
-    for (int i=0;i<EV.rows();i++)
-      if (!((isBoundary(EV(i,0)))&&(isBoundary(EV(i,1)))))
+    for (int i=0;i<EF.rows();i++)
+      if ((EF(i,0) != -1)&&(EF(i,1) != -1))
         innerEdgesList.push_back(i);
     
     //summing up boundary loops
