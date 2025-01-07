@@ -299,7 +299,7 @@ public:
         return *this;
     }
     
-    ENumber cross(const EVector<Size>& evec){
+    ENumber cross(const EVector<Size>& evec) const{
         static_assert("This method only works for Size==2" && Size==2);
         return data[0]*evec.data[1] - data[1]*evec.data[0];
     }
@@ -366,6 +366,10 @@ public:
     }
     
     friend std::ostream& operator<<(std::ostream& os, const Line2& seg);
+    
+    ENumber point_param(const EVector2& p) const {  //if the point is not on the line, this is the parameter of the orthogonally-projected point
+        
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const Line2& line) {
@@ -375,9 +379,13 @@ std::ostream& operator<<(std::ostream& os, const Line2& line) {
 
 
 struct LinePencil{
-    int minIsoValue, maxIsoValue;
-    EVector2 direction;
-    EVector2 p0, pVec;  //p0 is the position of the line at minValue. pVec is the vector between the origins of the lines
+    int numLines;
+    EVector2 direction;   //the mutual direction along the line
+    EVector2 p0, pVec;  //p0 is the position of the first line. pVec is the vector between the origins of the lines (p0(I+1)-p0(I) = pvec)
+    
+    inline Line2 line(const int lineNum) const{
+        return Line2(p0 + pVec*ENumber(lineNum), direction);
+    }
 };
 
 
@@ -467,7 +475,7 @@ int line_line_intersection(const Line2& line1,
     if (v1v2==ENumber(0)){
         EVector2 pointVec = line1.point-line2.point;
         //std::cout<<"lines are parallel"<<std::endl;
-        return  (pointVec.cross(line1)==ENumber(0) ? 2 : 0);
+        return  (pointVec.cross(line1.direction)==ENumber(0) ? 2 : 0);
     }
     
     //std::cout<<"exact line2.point[0]-line1.point[0]: "<<(line2.point[0]-line1.point[0]).to_double()<<std::endl;
@@ -476,8 +484,8 @@ int line_line_intersection(const Line2& line1,
     //std::cout<<"exact (line2.point[0]-line1.point[0])*(line2.direction[1]): "<<((line2.point[0]-line1.point[0])*(line2.direction[1])).to_double()<<std::endl;
     //std::cout<<"double (line2.point[0]-line1.point[0])*(line2.direction[1]):  "<<(line2.point[0].to_double()-line1.point[0].to_double())*(line2.direction[1].to_double())<<std::endl;
     EVector2 p12 = line2.point-line1.point;
-    t1 = p12.cross(line2)/v1v2;
-    t2 = p12.cross(line1)/v1v2;
+    t1 = p12.cross(line2.direction)/v1v2;
+    t2 = p12.cross(line1.direction)/v1v2;
     //std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
     //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
     //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
@@ -498,21 +506,21 @@ int line_line_intersection(const Line2& line1,
 //result = 2 is only acceptable if |lp2| = 1, not handling parallel full line pencils (shouldn't be unless the parameterization is degenerate).
 inline int linepencil_intersection(const LinePencil& lp1,
                                    const LinePencil& lp2,
-                                   Eigen::Matrix<ENumber, 2, 1> t00
+                                   Eigen::Matrix<ENumber, 2, 1> t00,
                                    Eigen::Matrix<ENumber, 2, 2> I2dt,    //t of lines is I2dt*[I1;I2]+t00
                                    EInt& iso1Overlap){   //overlap line in lp1 matching that of lp2. ignored unless result==2
     
     
     ENumber v1v2 = lp1.direction.cross(lp2.direction);
     if (v1v2==ENumber(0)){  //the two pencils are parallel; looking which line overlaps lp2
-        assert("linepencil_intersection: parallel line pencils must have |lp2|=1; parameterization must be degenerate! " && lp2.isoMinValue==lp2.isoMaxValue);
+        assert("linepencil_intersection: parallel line pencils must have |lp2|=1; parameterization must be degenerate! " && lp2.numLines==1);
         EVector2 p012vec = lp2.p0-lp1.p0;
         ENumber pVecv1 = lp1.pVec.cross(lp1.direction);
-        assert("pVecCrossDirection1 shouldn't be zero! " && pVecCrossDirection1!=ENumber(0));
+        assert("pVecv1 shouldn't be zero! " && pVecv1!=ENumber(0));
         ENumber overlapIso = p012vec.cross(lp1.direction) / pVecv1;
         if (overlapIso.den==1){
-            iso1Overlap = overlapIso.num+lp1.minIsoValue;
-            return ((iso1Overlap >= lp1.minIsoValue && iso1Overlap <= lp1.maxIsoValue) ? 2 : 0);  //only an overlap if integer and within range of lp1
+            iso1Overlap = overlapIso.num;
+            return ((iso1Overlap >= 0 && iso1Overlap <= lp1.numLines) ? 2 : 0);  //only an overlap if integer and within range of lp1
         } else return 0;  //not an integer; no overlap for certain
     }
     
@@ -528,7 +536,7 @@ inline int linepencil_intersection(const LinePencil& lp1,
     -lp1.pVec.cross(lp1.direction), lp2.pVec.cross(lp1.direction);
     I2dt.array()/=v1v2;
     //tests (expensive):
-    Eigen::Matrix<Number, 2,1> ITest; ITest<<3,2;
+    Eigen::Matrix<ENumber, 2,1> ITest; ITest<<ENumber(3),ENumber(2);
     Eigen::Matrix<ENumber, 2,1> gridPointtValues = t00 + I2dt*ITest;
     EVector2 pLine1 = (lp1.p0 + lp1.pVec*(ITest(0))+ gridPointtValues(0) * lp1.direction);
     EVector2 pLine2 = (lp2.p0 + lp2.pVec*(ITest(1))+ gridPointtValues(1) * lp2.direction);
@@ -608,7 +616,7 @@ std::vector<ENumber> line_segment_intersection(const Line2& line,
         //std::cout<<"No intersection (lines parallel)"<<std::endl;
         return std::vector<ENumber>();
     } else if (intersectType==2) { //the entire segment is contained in the line
-        std::vector<ENumber> result(2); result[0]=ENumber(0); result[1]=ENumber(1);
+        std::vector<ENumber> result(2); result[0]=ENumber(0); result[1]=ENumber(1);   //This is wrong! should have been the line parameters
         std::cout<<"Entire segment is contained in line"<<std::endl;
         return result;
     } else { //(intersectType==1)
@@ -667,10 +675,10 @@ void linepencil_triangle_intersection(const LinePencil& lp,
                                       std::vector<ENumber>& inParams,
                                       std::vector<ENumber>& outParams){
     
-    inParams.resize(lp.maxIsoValue-lp.minIsoValue+1);
-    outParams.resize(lp.maxIsoValue-lp.minIsoValue+1);
-    intEdges.resize(lp.maxIsoValue-lp.minIsoValue+1);
-    intFaces.resize(lp.maxIsoValue-lp.minIsoValue+1);
+    inParams.resize(lp.numLines);
+    outParams.resize(lp.numLines);
+    intEdges.resize(lp.numLines);
+    intFaces.resize(lp.numLines);
     for (int i=0;i<inParams.size();i++){
         inParams[i] = ENumber(3276700);
         outParams[i] = ENumber(-3276700);
@@ -681,7 +689,7 @@ void linepencil_triangle_intersection(const LinePencil& lp,
     ENumber t1p00, t2p00, dt1, dt2;
     for (int i=0;i<3;i++){
         LinePencil triEdgePencil;
-        triEdgePencil.minIsoValue = triEdgePencil.maxIsoValue = 0;
+        triEdgePencil.numLines = 1;
         triEdgePencil.p0 = triangle[i];
         triEdgePencil.direction = triangle[(i+1)%3] - triangle[i];
         triEdgePencil.pVec[0] = -triEdgePencil.direction[1];
@@ -692,33 +700,41 @@ void linepencil_triangle_intersection(const LinePencil& lp,
         int lpResult = linepencil_intersection(lp, triEdgePencil, t00, I2dt, iso1Overlap);
         if (lpResult==2){  //overlap of iso1Overlap isovalue with the segment
             std::cout<<"line triangle overlap!!!"<<std::endl;
-            intEdge[iso1Overlap-lp.minIsoVale]=true;
-            return;  //there cannot be another overlap
+            intEdges[iso1Overlap.convert()]=true;
+            //updating only the params of this line, not those of the others who stay open
+            ENumber tSource = lp.line(iso1Overlap).point_param(triangle[i]);
+            ENumber tTarget = lp.line(iso1Overlap).point_param(triangle[(i+1)%3]);
+            if (tSource < tTarget){
+                inParams[iso1Overlap.convert()]=tSource; outParams[iso1Overlap]=tTarget;
+            } else {
+                inParams[iso1Overlap.convert()]=tTarget; outParams[iso1Overlap]=tSource;
+            }
+            //if (tsource==tTarget)  //intersecting the triangle edge only by a vertex; ignored
+            //    intFace[iso1Overlap]=intEdge[iso1Overlap]=false;
         }
-        Segment2 edgeSegment(triangle[i], triangle[(i+1)%3]);
-        std::vector<ENumber> result = line_segment_intersection(line, edgeSegment);
-        for (int j=0;j<result.size();j++){
-            inParam = (inParam < result[j] ? inParam : result[j]);
-            outParam = (outParam > result[j] ? outParam : result[j]);
+        if (lpResult==1){  //intersecting the triangle edge non-trivially
+            //generating the intersection t pairs for all lines
+            Eigen::Matrix<ENumber, 2, Eigen::Dynamic> IPairs(lp.numLines);
+            Eigen::Matrix<ENumber, 2, Eigen::Dynamic> tPairs(lp.numLines);
+            for (int j=0;j<lp.numLines;j++){
+                Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(j,0), ENumber(0);;
+                tPairs.col(j) = t00+I2dt*IPairs;  //can be replaced by a simple extraction from the matrix
+            }
+            ENumber tTriSource = point_on_line_param(triEdgePencil, triangle[i]);
+            ENumber tTriTarget = point_on_line_param(triEdgePencil, triangle[(i+1)%3]);
+            for (int j=0;j<lp.numLines;j++){
+                if ((tPairs(1)>=tTriSource)&&(tPairs(1)<=tTriTarget)){
+                    if (tPairs(0)>outParams[j]) outParams[j]=tPairs(0);
+                    if (tPairs(0)<inParams[j]) inParams[j]=tPairs(0);
+
+                }
+            }
         }
-        if (result.size()==2){
-            std::cout<<"line triangle overlap!!!"<<std::endl;
-            intEdge=true;
-            intFace=false;
-            return;
-        }
-        if (result.size()==1)
-            intFace=true;
     }
-    if (inParam==outParam)  //intersecting the triangle only by a vertex; ignored
-        intFace=intEdge=false;
-    /*if (intFace){
-     std::cout<<"Intersecting within the face with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
-     }*/
-    /*else if (intEdge){
-     std::cout<<"Intersecting an edge with parameters "<<inParam.get_d()<<"->"<<outParam.get_d()<<std::endl;
-     } else std::cout<<"Line doesn't intersect triangle"<<std::endl;*/
-    
+    //Setting everything that has nontrivial inParams->outParams and not intEdge to intFaces = true
+    for (int i=0;i<lp.numLines;i++)
+        if ((!intEdge[i])&&(inParams[i]!=outParams[i]))
+            intFaces[i]=true;
 }
 
 //according to this: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors

@@ -49,19 +49,20 @@ void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
     for (int i = 0; i < linePencils.size(); i++) {
         //checking for intersections with the triangle
         std::vector<ENumber> inParams, outParams;  //the parameters of intersection
-        std::vector<bool> intVertex, intEdge, intFace;
+        std::vector<bool> intVertices, intEdges, intFaces;
         linepencil_triangle_intersection(linePencils[i], triangle, intEdges, intFaces, inParams, outParams);
         //checking cases of intersection
-        for (int j=0;j<linePencils[i].maxIsoValue-linePencils.minIsoValue+1;j++)
-        if (!intEdges[j] && !intFaces[j])
-            continue;   //no (non-measure-zero) intersection
-        
-        HEData newData; newData.isFunction=true;
-        newData.origNFunctionIndex=lineData[i];
-        inData.push_back(newData);
-        EVector2 segSource = linePencils[i].p0 + linePencils[i].pVec*(double)j + linePencils[i].direction * inParam;
-        EVector2 segTarget = linePencils[i].p0 + linePencils[i].pVec*(double)j + lines[i].direction * outParam;
-        inSegments.push_back(Segment2(segSource, segTarget));
+        for (int j=0;j<linePencils[i].numLines;j++){
+            if (!intEdges[j] && !intFaces[j])
+                continue;   //no (non-measure-zero) intersection
+            
+            HEData newData; newData.isFunction=true;
+            newData.origNFunctionIndex=linePencilData[i];
+            inData.push_back(newData);
+            EVector2 segSource = linePencils[i].p0 + linePencils[i].pVec*ENumber(j,1) + linePencils[i].direction * inParams[j];
+            EVector2 segTarget = linePencils[i].p0 + linePencils[i].pVec*ENumber(j,1) + linePencils[i].direction * outParams[j];
+            inSegments.push_back(Segment2(segSource, segTarget));
+        }
         
         //std::cout<<"inParam: "<<inParam.get_d()<<std::endl;
         //std::cout<<"outParam: "<<outParam.get_d()<<std::endl;
@@ -457,7 +458,7 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
         }
         
         //Generating the parametric lines for the canonical triangle
-        vector<LinePencil> paramLines;
+        vector<LinePencil> linePencils;
         vector<int> linePencilData;
         vector<EVector2> isoDirections(mfiData.N);
         for (int funcIter = 0; funcIter < mfiData.N; funcIter++) {
@@ -532,16 +533,21 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
             LinePencil lp;
             lp.direction[0] = -gradVector[1];
             lp.direction[1] = gradVector[0];
-            lp.pVec = gradVector;  //that means not orthogonal!
+            //lp.pVec = gradVector;  //that means not orthogonal!
             if (gradVector[1] != ENumber(0)) {
                 lp.p0[0] = ENumber(0);
                 lp.p0[1] = -(x[0]* isoValues[0] + x[1]) / gradVector[1];
+                lp.pVec[0] = ENumber(0);
+                lp.pVec[1] = -x[0]/gradVector[1];
             } else {
                 lp.p0[1] = ENumber(0);
                 lp.p0[0] = -(x[0]* isoValues[0] + x[1]) / gradVector[0];
+                lp.pVec[1] = ENumber(0);
+                lp.pVec[0] = -x[0]/gradVector[0];
             }
-            lp.minIsoValue = isoValues[0];
-            lp.maxIsoValue = isoValues[isoValues.size()-1];
+            lp.numLines = isoValues.size();
+            //lp.minIsoValue = isoValues[0];
+            //lp.maxIsoValue = isoValues[isoValues.size()-1];
             linePencils.push_back(lp);
             linePencilData.push_back(funcIter);
             /*for (int isoIndex = 0; isoIndex < isoValues.size(); isoIndex++) {
@@ -565,7 +571,7 @@ void NFunctionMesher::generate_mesh(const unsigned long resolution = 1e7) {
         
         FunctionDCEL localArrDcel;
         vector<EVector2> localV;
-        arrange_on_triangle(ETriPoints2D, triangleData, linePencils, lineData, localV, localArrDcel);
+        arrange_on_triangle(ETriPoints2D, triangleData, linePencils, linePencilData, localV, localArrDcel);
         
         //vector<EVector3> ELocalV3D(localV.size());
         // MatrixXd localV3D(localV.size(), 3);
