@@ -142,6 +142,12 @@ int main()
   std::vector<int> constFaceslist;
   std::vector<Eigen::Vector3d> constVectorslist;
   for (int i=0;i<mesh.EF.rows();i++){
+    if ((mesh.EF(i,1)==-1)||(mesh.EF(i,0)==-1)){  //boundary
+      int face = (mesh.EF(i,1)==-1 ? mesh.EF(i,0) : mesh.EF(i,1));
+      constFaceslist.push_back(face);
+      constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+      continue;
+    }
     if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.5){
       constFaceslist.push_back(mesh.EF(i,0));
       constFaceslist.push_back(mesh.EF(i,1));
