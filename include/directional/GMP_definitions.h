@@ -381,7 +381,7 @@ std::ostream& operator<<(std::ostream& os, const Line2& line) {
 struct LinePencil{
     int numLines;
     EVector2 direction;   //the mutual direction along the line
-    EVector2 p0, pVec;  //p0 is the position of the first line. pVec is the vector between the origins of the lines (p0(I+1)-p0(I) = pvec)
+    EVector2 p0, pVec;  //p0 is the origin of the first line. pVec is the vector between the origins of the lines (p0(I+1)-p0(I) = pvec)
     
     inline Line2 line(const int lineNum) const{
         return Line2(p0 + pVec*ENumber(lineNum), direction);
