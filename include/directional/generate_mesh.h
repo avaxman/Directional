@@ -20,7 +20,7 @@
 #include <directional/dcel.h>
 #include <directional/GMP_definitions.h>
 #include <directional/NFunctionMesher.h>
-#include <operators/io_stream.hpp>
+//#include <operators/io_stream.hpp>
 
 
 namespace directional{
@@ -38,6 +38,7 @@ void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
                                           std::vector<EVector2>& V,
                                           FunctionDCEL& triDcel){
     
+    using namespace std;
     V = triangle;
     
     std::vector<HEData> inData;  //the lines that are inside
@@ -51,6 +52,22 @@ void NFunctionMesher::arrange_on_triangle(const std::vector<EVector2>& triangle,
         std::vector<ENumber> inParams, outParams;  //the parameters of intersection
         std::vector<bool> intVertices, intEdges, intFaces;
         linepencil_triangle_intersection(linePencils[i], triangle, intEdges, intFaces, inParams, outParams);
+        /*cout<<"inParams: ";
+        for (int i=0;i<inParams.size();i++)
+            cout<<inParams[i].to_double()<<",";
+        cout<<endl;
+        cout<<"outParams: ";
+        for (int i=0;i<outParams.size();i++)
+            cout<<outParams[i].to_double()<<",";
+        cout<<endl;
+        cout<<"intEdges: ";
+        for (int i=0;i<intEdges.size();i++)
+            cout<<intEdges[i]<<",";
+        cout<<endl;
+        cout<<"intFaces: ";
+        for (int i=0;i<intFaces.size();i++)
+            cout<<intFaces[i]<<",";*/
+        //cout<<endl;
         //checking cases of intersection
         for (int j=0;j<linePencils[i].numLines;j++){
             if (!intEdges[j] && !intFaces[j])
