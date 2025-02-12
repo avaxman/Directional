@@ -717,8 +717,8 @@ namespace directional
             //std::cout<<"Unifying halfedge "<<halfedges[heindex].prev<<" into halfedge "<<heindex<<" killing edge "<<halfedges[halfedges[heindex].prev].edge<<std::endl;
             vertices[halfedges[heindex].vertex].valid = false;
             halfedges[heindex].vertex = halfedges[halfedges[heindex].prev].vertex;
-            if (halfedges[heindex].data.prescribedAngle < 0.0)
-                halfedges[heindex].data.prescribedAngle = halfedges[halfedges[heindex].prev].data.prescribedAngle;
+            //if (halfedges[heindex].data.prescribedAngle < 0.0)
+            //    halfedges[heindex].data.prescribedAngle = halfedges[halfedges[heindex].prev].data.prescribedAngle;
             vertices[halfedges[heindex].vertex].halfedge = heindex;
 
             faces[halfedges[heindex].face].halfedge = halfedges[heindex].next;

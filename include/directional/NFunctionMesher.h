@@ -25,13 +25,15 @@ namespace directional{
         const TriMesh& origMesh;
         const MeshFunctionIsolinesData& mfiData;
 
-        struct HEData{
+        struct SegmentData{
             bool isFunction;
             int origHalfedge;
             int origNFunctionIndex;  //the original parameteric function assoicated with this edge
-            double prescribedAngle;  //the actual prescribed angle
+            int lineInPencil;
+            std::set<ENumber> intParams;
+            //double prescribedAngle;  //the actual prescribed angle
 
-            HEData():isFunction(false), origHalfedge(-1), origNFunctionIndex(-1),  prescribedAngle(-1.0){}
+            SegmentData():isFunction(false), origHalfedge(-1), origNFunctionIndex(-1),  lineInPencil(-1), intParams(){} //prescribedAngle(-1.0){}
         };
 
         struct VData{
@@ -39,7 +41,7 @@ namespace directional{
             EVector3 eCoords;
         };
 
-        typedef DCEL<VData,  HEData, bool, bool> FunctionDCEL;
+        typedef DCEL<VData,  SegmentData, bool, bool> FunctionDCEL;
         FunctionDCEL genDcel;
 
         //vertex quantities
@@ -82,7 +84,9 @@ namespace directional{
                                  FunctionDCEL& triDcel);
 
         void segment_arrangement(const std::vector<Segment2>& segments,
-                                 const std::vector<HEData>& data,
+                                 const std::vector<SegmentData>& data,
+                                 const Eigen::Matrix<ENumber, Eigen::Dynamic ,2> I2dts,
+                                 const Eigen::Matrix<ENumber, Eigen::Dynamic ,1> t00s,
                                  std::vector<EVector2>& V,
                                  FunctionDCEL& triDcel);
 

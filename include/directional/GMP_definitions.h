@@ -688,7 +688,8 @@ void linepencil_triangle_intersection(const LinePencil& lp,
                                       std::vector<bool>& intEdges,
                                       std::vector<bool>& intFaces,
                                       std::vector<ENumber>& inParams,
-                                      std::vector<ENumber>& outParams){
+                                      std::vector<ENumber>& outParams,
+                                      std::vector<std::vector<ENumber>>& triParams){
     
     using namespace std;
     inParams.resize(lp.numLines);
@@ -703,6 +704,7 @@ void linepencil_triangle_intersection(const LinePencil& lp,
     
     directional::EVector2 p00, pVec1, pVec2;
     ENumber t1p00, t2p00, dt1, dt2;
+    triParams.resize(3);
     for (int i=0;i<3;i++){
         LinePencil triEdgePencil;
         triEdgePencil.numLines = 1;
@@ -725,6 +727,8 @@ void linepencil_triangle_intersection(const LinePencil& lp,
             } else {
                 inParams[iso1Overlap.convert()]=tTarget; outParams[iso1Overlap.convert()]=tSource;
             }
+            triParams[i].push_back(ENumber(0));
+            triParams[i].push_back(ENumber(1));
             //if (tsource==tTarget)  //intersecting the triangle edge only by a vertex; ignored
             //    intFace[iso1Overlap]=intEdge[iso1Overlap]=false;
         }
@@ -735,7 +739,7 @@ void linepencil_triangle_intersection(const LinePencil& lp,
             Eigen::Matrix<ENumber, 2, Eigen::Dynamic> tPairs(2, lp.numLines);
             //cout<<"tPairs: "<<endl;
             for (int j=0;j<lp.numLines;j++){
-                Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(j,0), ENumber(0);
+                Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(j,0.0), ENumber(0);
                 tPairs.col(j) = t00+I2dt*currI;  //can be replaced by a simple extraction from the matrix
                 //cout<<tPairs(0,j).to_double()<<", "<<tPairs(1,j).to_double()<<endl;
                 //testing:
@@ -752,6 +756,7 @@ void linepencil_triangle_intersection(const LinePencil& lp,
             //cout<<"tTriTarget: "<<tTriTarget.to_double()<<endl;
             for (int j=0;j<lp.numLines;j++){
                 if ((tPairs(1,j)>=tTriSource)&&(tPairs(1,j)<=tTriTarget)){
+                    triParams[i].push_back(tPairs(1,j));
                     if (tPairs(0,j)>outParams[j]) outParams[j]=tPairs(0,j);
                     if (tPairs(0,j)<inParams[j]) inParams[j]=tPairs(0,j);
 

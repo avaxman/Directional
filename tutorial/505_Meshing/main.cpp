@@ -36,7 +36,7 @@ int main()
 
   directional::readOFF(TUTORIAL_DATA_PATH "/vase.off",meshWhole);
   ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[0], rawField[0]);
+  directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[0], rawField[0]);
   //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
   //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
 
