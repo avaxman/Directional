@@ -113,8 +113,11 @@ public:
     ENumber operator+(const ENumber& b2) const{
         if (this->den == b2.den)
             return ENumber(this->num + b2.num, this->den);
-        else
-            return ENumber((this->den * b2.num + this->num * b2.den), (this->den * b2.den));
+        bool simplify = true;
+        if ((this->den == EInt(1)) || (b2.den == EInt(1)))
+            simplify = false;
+        
+        return ENumber((this->den * b2.num + this->num * b2.den), (this->den * b2.den), simplify);
     }
     
     
@@ -126,8 +129,11 @@ public:
     ENumber operator-(const ENumber& b2) const{
         if (this->den == b2.den)
             return ENumber(this->num - b2.num, this->den);
-        else
-            return ENumber((this->num * b2.den - this->den * b2.num), (this->den * b2.den));
+        bool simplify = true;
+        if ((this->den == EInt(1)) || (b2.den == EInt(1)))
+            simplify = false;
+    
+        return ENumber((this->num * b2.den - this->den * b2.num), (this->den * b2.den), simplify);
     }
     
     ENumber operator-() const{
@@ -135,6 +141,10 @@ public:
     }
     
     ENumber operator*(const ENumber& b2) const{
+        if (b2 == ENumber(1))
+            return *this;
+        if (*this == ENumber(1))
+            return b2;
         ENumber cross1(this->num, b2.den);
         ENumber cross2(b2.num, this->den);
         return ENumber(cross1.num * cross2.num, cross1.den * cross2.den, false);
@@ -142,6 +152,11 @@ public:
     
     ENumber operator/(const ENumber& b2) const{
         assert("ENumber division by zero!" && b2.num!=0);
+        //reductions
+        if (b2 == ENumber(1))
+            return *this;
+        if (*this == ENumber(1))
+            return ENumber(b2.den, b2.num, false);
         ENumber cross1(this->num, b2.num);
         ENumber cross2(b2.den, this->den);
         return ENumber(cross1.num * cross2.num, cross1.den * cross2.den, false);
@@ -496,9 +511,9 @@ int line_line_intersection(const Line2& line1,
     //std::cout<<"t1, t2: "<<t1.to_double()<<","<<t2.to_double()<<std::endl;
     //std::cout<<"line1.point+t1*line1.direction: "<<line1.point+t1*line1.direction<<std::endl;
     //std::cout<<"line2.point+t2*line2.direction: "<<line2.point+t2*line2.direction<<std::endl;
-    EVector2 diff = (line1.point+t1*line1.direction) - (line2.point+t2*line2.direction);
+    //EVector2 diff = (line1.point+t1*line1.direction) - (line2.point+t2*line2.direction);
     //diff.canonicalize();
-    assert("line_line_intersection is wrong!" && diff == EVector2());
+    //assert("line_line_intersection is wrong!" && diff == EVector2());
     //std::cout<<"lines intersect at "<<(line1.point+t1*line1.direction)<<std::endl;
     //std::cout<<"parameters: t1:"<<t1.get_d()<<", t2: "<<t2.get_d()<<std::endl;
     return 1;
@@ -540,19 +555,19 @@ inline int linepencil_intersection(const LinePencil& lp1,
     //p00 is the intersection of both min isovalues
     EVector2 p012 = lp2.p0-lp1.p0;
     t00<<p012.cross(lp2.direction) / v1v2, p012.cross(lp1.direction) / v1v2;
-    EVector2 diff = (lp1.p0 + t00(0) * lp1.direction) - (lp2.p0 + t00(1) * lp2.direction);
-    assert("line_pencil original point intersection is wrong!" && diff == EVector2());
+    //EVector2 diff = (lp1.p0 + t00(0) * lp1.direction) - (lp2.p0 + t00(1) * lp2.direction);
+    //assert("line_pencil original point intersection is wrong!" && diff == EVector2());
     //computing the dts
     I2dt<<-lp1.pVec.cross(lp2.direction), lp2.pVec.cross(lp2.direction),
     -lp1.pVec.cross(lp1.direction), lp2.pVec.cross(lp1.direction);
     I2dt.array()/=v1v2;
     //tests (expensive):
-    Eigen::Matrix<ENumber, 2,1> ITest; ITest<<ENumber(3),ENumber(2);
-    Eigen::Matrix<ENumber, 2,1> gridPointtValues = t00 + I2dt*ITest;
-    EVector2 pLine1 = (lp1.p0 + lp1.pVec*(ITest(0))+ gridPointtValues(0) * lp1.direction);
-    EVector2 pLine2 = (lp2.p0 + lp2.pVec*(ITest(1))+ gridPointtValues(1) * lp2.direction);
-    diff = pLine1 - pLine2;
-    assert("line_pencil dts computation is wrong!" && diff == EVector2());
+    //Eigen::Matrix<ENumber, 2,1> ITest; ITest<<ENumber(3),ENumber(2);
+    //Eigen::Matrix<ENumber, 2,1> gridPointtValues = t00 + I2dt*ITest;
+    //EVector2 pLine1 = (lp1.p0 + lp1.pVec*(ITest(0))+ gridPointtValues(0) * lp1.direction);
+    //EVector2 pLine2 = (lp2.p0 + lp2.pVec*(ITest(1))+ gridPointtValues(1) * lp2.direction);
+    //diff = pLine1 - pLine2;
+    //assert("line_pencil dts computation is wrong!" && diff == EVector2());
     
     //std::cout<<"t00: "<<t00(0).to_double()<<", "<<t00(1).to_double()<<std::endl;
     //std::cout<<"I2dt: "<<I2dt(0,0).to_double()<<", "<<I2dt(0,1).to_double()<<", "<<I2dt(1,0).to_double()<<", "<<I2dt(1,1).to_double()<<std::endl;

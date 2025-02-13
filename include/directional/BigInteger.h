@@ -358,8 +358,8 @@ public:
         //std::cout<<"full long division dividend: "<<this->to_string()<<std::endl;
         //std::cout<<"full long division divisor: "<<other.to_string()<<std::endl;
         //std::cout<<"full long division quotient: "<<quotient.to_string()<<std::endl;
-        if ((other==-1)&&(this->digits.size()>1))
-            int kaka=8;
+        //if ((other==-1)&&(this->digits.size()>1))
+        //    int kaka=8;
         
         return quotient;
     }
@@ -439,6 +439,8 @@ public:
 BigInteger gcd(BigInteger a, BigInteger b) {
     int whileTest=0;
     if (b > a) std::swap(a,b);
+    if ((b==1)||(a==1))
+        return 1;
     while (b != BigInteger(0)) {
         BigInteger temp = b;
         b = a % b;
