@@ -40,7 +40,7 @@ int main()
   //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[1], rawField[1]);
   //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[2], rawField[2]);
 
-  bool verbose=false;
+  bool verbose=true;
   
   //combing and cutting
   viewer.init();

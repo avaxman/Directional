@@ -739,7 +739,9 @@ namespace directional{
             int Index1, Index2;
             ENumber Distance;
 
-            PointPair(int i1, int i2, ENumber d):Index1(i1), Index2(i2), Distance(d){}
+            PointPair(int i1, int i2, const EVector3& d):Index1(i1), Index2(i2){
+                Distance=d.max_abs();
+            }
             ~PointPair(){}
 
             const bool operator<(const PointPair& pp) const {
@@ -762,7 +764,7 @@ namespace directional{
             std::set<PointPair> PairSet;
             for (int i=0;i<Set1.size();i++)
                 for (int j=0;j<Set2.size();j++)
-                    PairSet.insert(PointPair(i,j,squaredDistance(Set1[i],Set2[j])));
+                    PairSet.insert(PointPair(i,j,Set1[i]-Set2[j]));
 
             if (Set1.size()!=Set2.size())  //should not happen anymore
                 std::cout<<"FindVertexMatch(): The two sets are of different sizes!! "<<std::endl;

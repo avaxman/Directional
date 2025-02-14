@@ -22,6 +22,7 @@ private:
             assert("trim(): while running too long! " && whileTest<10000);
         }
         if (digits.empty()) {
+            digits.push_back(0);
             negative = false;
         }
     }
@@ -40,6 +41,10 @@ public:
         }
         
         digits.clear();
+        if (value==0){
+            digits.push_back(0);
+            return;
+        }
         while (value > 0) {
             digits.push_back(value % BASE);
             value /= BASE;
@@ -108,9 +113,9 @@ public:
     
     BigInteger operator-() const {
         BigInteger result = *this;
-        if (!result.digits.empty()) {
+        if (result!=0)
             result.negative = !negative;
-        }
+        
         return result;
     }
     
@@ -419,14 +424,14 @@ public:
     std::string to_string() const {
         std::ostringstream oss;
         if (negative) oss << '-';
-        if (digits.empty()) {
-            oss << '0';
-        } else {
+        //if (digits.empty()) {
+        //    oss << '0';
+        //} else {
             oss << digits.back();
             for (size_t i = digits.size() - 1; i-- > 0;) {
                 oss << std::setw(DIGITS) << std::setfill('0') << digits[i];
             }
-        }
+        //}
         return oss.str();
     }
     

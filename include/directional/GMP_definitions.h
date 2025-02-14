@@ -211,15 +211,18 @@ namespace directional{
         }
         
         ENumber abs() const{
-            return ENumber((num >0 ? num : -num), den, false);
+            if (num==0) return *this;
+            return ENumber((num >=0 ? num : -num), den, false);
         }
         
         //getting one by one digits
         long double to_double(const int maxDigits = 12) const{
             EInt currNum = num;
             EInt currDen = den;
-            std::string mantissa = (num > 0 ? "+" : "-");
-            currNum = (num > 0 ? num : -num);
+            //if (num ==0)
+            //    int kaka=8;
+            std::string mantissa = (num >= 0 ? "+" : "-");
+            currNum = (num >= 0 ? num : -num);
             EInt quotient = currNum/currDen;
             EInt currRem = currNum - quotient * currDen;
             mantissa+=quotient.to_string() + ".";
@@ -324,6 +327,13 @@ namespace directional{
         ENumber cross(const EVector<Size>& evec) const{
             static_assert("This method only works for Size==2" && Size==2);
             return data[0]*evec.data[1] - data[1]*evec.data[0];
+        }
+        
+        ENumber max_abs() const{
+            ENumber maxAbs(-1);
+            for (int i=0;i<Size;i++)
+                if (data[i].abs()>maxAbs) maxAbs = data[i].abs();
+            return maxAbs;
         }
         
         ENumber operator*(const EVector<Size>& evec) const{
@@ -761,14 +771,14 @@ namespace directional{
                 Eigen::Matrix<ENumber, 2, Eigen::Dynamic> tPairs(2, lp.numLines);
                 //cout<<"tPairs: "<<endl;
                 for (int j=0;j<lp.numLines;j++){
-                    Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(j,0.0), ENumber(0);
-                    tPairs.col(j) = t00+I2dt*currI;  //can be replaced by a simple extraction from the matrix
+                    //Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(j,0.0), ENumber(0);
+                    tPairs.col(j) = t00+I2dt.col(0)*ENumber(j);//*currI;  //can be replaced by a simple extraction from the matrix
                     //cout<<tPairs(0,j).to_double()<<", "<<tPairs(1,j).to_double()<<endl;
                     //testing:
-                    Line2 l1 = lp.line(j);
-                    Line2 l2 = triEdgePencil.line(0);
-                    ENumber t1, t2;
-                    line_line_intersection(l1, l2, t1, t2);
+                    //Line2 l1 = lp.line(j);
+                    //Line2 l2 = triEdgePencil.line(0);
+                    //ENumber t1, t2;
+                    //line_line_intersection(l1, l2, t1, t2);
                     //cout<<"t1: "<<t1.to_double()<<" t2: "<<t2.to_double()<<endl;
                 }
                 ENumber tTriSource = triEdgePencil.line(0).point_param(triangle[i]);

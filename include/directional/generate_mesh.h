@@ -159,7 +159,7 @@ namespace directional{
         for (int i=0;i<segments.size();i++){
             tScales[i] = ENumber(1)/(*data[i].intParams.rbegin()-*data[i].intParams.begin());
             segDirections[i] = segments[i].target - segments[i].source;
-            std::cout<<"triangle edge"<<i<<std::endl;
+            //std::cout<<"triangle edge"<<i<<std::endl;
             for (ENumber intParam: data[i].intParams){
                 ENumber t = (intParam - *data[i].intParams.begin())*tScales[i];
                 arrVertices.push_back(segments[i].source + segDirections[i]*t);
@@ -170,8 +170,8 @@ namespace directional{
                 //else  //triangle segment
                 //    arrVertices.push_back(segments[i].source * (ENumber(1) - intParam) + segments[i].target * intParam);
                 SV[i].insert(std::pair<ENumber, int>(t, arrVertices.size()-1));
-                std::cout<<"New arrangement vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
-                std::cout<<"On segment "<<segments[i].source<<"->"<<segments[i].target<<std::endl;
+                //std::cout<<"New arrangement vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
+                //std::cout<<"On segment "<<segments[i].source<<"->"<<segments[i].target<<std::endl;
             }
         }
         
@@ -205,8 +205,8 @@ namespace directional{
                 
                 //for (int r=0;r<result.size();r++){
                 arrVertices.push_back(p1);
-                std::cout<<"New arrangement vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
-                std::cout<<"On segments "<<segments[i].source<<"->"<<segments[i].target<<" and "<<segments[j].source<<"->"<<segments[j].target<<std::endl;
+                //std::cout<<"New arrangement vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
+                //std::cout<<"On segments "<<segments[i].source<<"->"<<segments[i].target<<" and "<<segments[j].source<<"->"<<segments[j].target<<std::endl;
                 /*VS.push_back(std::vector<int>());
                  VS[arrVertices.size() - 1].push_back(i);
                  VS[arrVertices.size() - 1].push_back(j);*/
@@ -244,9 +244,9 @@ namespace directional{
         std::vector<std::pair<int, int>> arrEdges;
         std::vector<std::vector<SegmentData>> edgeData;
         for (int i=0;i<SV.size();i++){
-            std::cout<<"Enumerating segment i"<<std::endl;
+            //std::cout<<"Enumerating segment i"<<std::endl;
             for (std::set<std::pair<ENumber, int>>::iterator si = SV[i].begin(); si!=SV[i].end();si++){
-                std::cout<<si->first.to_double()<<",";
+                //std::cout<<si->first.to_double()<<",";
                 std::set<std::pair<ENumber, int>>::iterator nextsi = si;
                 nextsi++;
                 if (nextsi!=SV[i].end()) {
@@ -256,7 +256,7 @@ namespace directional{
                     edgeData.push_back(newEdgeData);
                 }
             }
-            std::cout<<std::endl;
+            //std::cout<<std::endl;
         }
         
         //unifying vertices with the same coordinates (necessary because some segments may intersect at the same point and segment overlaps
@@ -352,7 +352,7 @@ namespace directional{
             
         }
         
-        std::cout<<"Clean vertices and edges: "<<std::endl;
+        /*std::cout<<"Clean vertices and edges: "<<std::endl;
         for (int i=0;i<arrVertices.size();i++)
             std::cout<<"arrVertex "<<i<<": "<<arrVertices[i]<<std::endl;
         
@@ -361,7 +361,7 @@ namespace directional{
          std::cout <<" edge data" <<std::endl;
          for (int j=0;j<edgeData[i].size();j++)
          std::cout<<"isFunction: "<<edgeData[i][j].isFunction<<" origHalfedge: "<<edgeData[i][j].origHalfedge<<" function index :"<<edgeData[i][j].origNFunctionIndex<<std::endl;
-         }
+         }*/
         
         /*for (int i=0;i<triDcel.halfedges.size();i++) {
          std::cout << "halfedge " << i << " of edge " << triDcel.halfedges[i].edge << " isFunction: " <<
@@ -446,15 +446,15 @@ namespace directional{
             
             int currHE = -1;
             for (int s=0;s<edgeOrder.size();s++) {
-                bool outgoing = adjArrEdges[s].second;
-                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[s].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[s].first].halfedge].twin);
+                bool outgoing = adjArrEdges[edgeOrder[s]].second;
+                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[edgeOrder[s]].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[edgeOrder[s]].first].halfedge].twin);
                 int nexts = (s+1) % edgeOrder.size();
                 //std::set<std::pair<ENumber, int>>::iterator nextsi = si; nextsi++;
                 //if (nextsi==CCWSegments.end())
                 //    nextsi = CCWSegments.begin();
                 
-                outgoing = adjArrEdges[nexts].second;
-                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nexts].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nexts].first].halfedge].twin);
+                outgoing = adjArrEdges[edgeOrder[nexts]].second;
+                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[edgeOrder[nexts]].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[edgeOrder[nexts]].first].halfedge].twin);
                 triDcel.halfedges[outCurrHE].prev = triDcel.halfedges[outNextHE].twin;
                 triDcel.halfedges[triDcel.halfedges[outNextHE].twin].next = outCurrHE;
                 
@@ -515,7 +515,7 @@ namespace directional{
                 break;
             }
         }
-        std::cout<<"min signed face area "<<minSfa<<std::endl;
+        //std::cout<<"min signed face area "<<minSfa<<std::endl;
         assert("Didn't find outer face!" && outerFace!=-1);
         
         //invalidating outer face
