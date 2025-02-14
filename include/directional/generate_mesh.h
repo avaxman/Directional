@@ -133,7 +133,7 @@ namespace directional{
             }
         }
         
-        segment_arrangement(inSegments, inData, I2dts, t00s, linePencils, V, triDcel);
+        segment_arrangement(inSegments, inData, I2dts, t00s, V, triDcel);
     }
     
     
@@ -142,7 +142,6 @@ namespace directional{
                                               const std::vector<SegmentData>& data,
                                               const Eigen::Matrix<ENumber, Eigen::Dynamic ,2> I2dts,
                                               const Eigen::Matrix<ENumber, Eigen::Dynamic ,1> t00s,
-                                              const vector<LinePencil>& linePencils,
                                               std::vector<EVector2>& V,
                                               FunctionDCEL& triDcel) {
         
@@ -154,14 +153,22 @@ namespace directional{
         std::vector<std::set<std::pair<ENumber, int>>> SV(segments.size());  //set of coordinates of intersection per segment
         int linePencilSize = sqrt(I2dts.rows()/2);  //should be integer naturally
         std::vector<ENumber> tScales(segments.size());
+        std::vector<EVector2> segDirections(segments.size());
         
         //first unloading intersections with triangle - this assume they are the first intersections
         for (int i=0;i<segments.size();i++){
             tScales[i] = ENumber(1)/(*data[i].intParams.rbegin()-*data[i].intParams.begin());
+            segDirections[i] = segments[i].target - segments[i].source;
             //std::cout<<"triangle edge"<<i<<std::endl;
             for (ENumber intParam: data[i].intParams){
-                ENumber t = (intParam - *data[i].intParams.begin())*tScales[i]; 
-                arrVertices.push_back(segments[i].source * (ENumber(1) - t) + segments[i].target * t);
+                ENumber t = (intParam - *data[i].intParams.begin())*tScales[i];
+                arrVertices.push_back(segments[i].source + segDirections[i]*t);
+                //if (data[i].origNFunctionIndex!=-1)
+                    //arrVertices.push_back(linePencils[data[i].origNFunctionIndex].p0+
+                    //                      linePencils[data[i].origNFunctionIndex].pVec*EInt(data[i].lineInPencil)+
+                    //                      linePencils[data[i].origNFunctionIndex].direction*intParam);
+                //else  //triangle segment
+                //    arrVertices.push_back(segments[i].source * (ENumber(1) - intParam) + segments[i].target * intParam);
                 SV[i].insert(std::pair<ENumber, int>(t, arrVertices.size()-1));
                 //std::cout<<"New arrangement vertex at "<<arrVertices[arrVertices.size()-1]<<std::endl;
                 //std::cout<<"On segment "<<segments[i].source<<"->"<<segments[i].target<<std::endl;
@@ -178,7 +185,8 @@ namespace directional{
                 Eigen::Matrix<ENumber, 2, 2> I2dt = I2dts.block(data[i].origNFunctionIndex*2*linePencilSize+2*data[j].origNFunctionIndex, 0, 2, 2);
                 Eigen::Matrix<ENumber, 2, 1> t00 = t00s.segment(data[i].origNFunctionIndex*2*linePencilSize+2*data[j].origNFunctionIndex, 2);
                 Eigen::Matrix<ENumber, 2, 1> currI; currI<<ENumber(data[i].lineInPencil,0.0), ENumber(data[j].lineInPencil,0.0);
-                Eigen::Matrix<ENumber, 2, 1> t1t2 = I2dt*currI + t00;
+                Eigen::Matrix<ENumber, 2, 1> t1t2 = I2dt*currI+t00;
+                //t1t2<<I2dt(0,0)*currI(0)+I2dt(0,1)*currI(1) + t00(0),I2dt(1,0)*currI(0)+I2dt(1,1)*currI(1) + t00(1);
                 if ((t1t2(0)<*data[i].intParams.begin())||(t1t2(0)>*data[i].intParams.rbegin())||(t1t2(1)<*data[j].intParams.begin())||(t1t2(1)>*data[j].intParams.rbegin()))  //intersecting beyond the segment (and the triangle)
                     continue;
                 
@@ -187,7 +195,7 @@ namespace directional{
                 //std::vector<std::pair<ENumber, ENumber>> result = segment_segment_intersection(segments[i], segments[j]);
                 
                 //EXPENSIVE TEST
-                EVector2 p1 = segments[i].source * (ENumber(1) - t1) + segments[i].target * t1;
+                EVector2 p1 = segments[i].source + segDirections[i] * t1;
                 //EVector2 p2 = segments[j].source * (ENumber(1) - t2) + segments[j].target * t2;
                 
                 //assert("Both segment intersection points should be the same! " && p1==p2);
@@ -312,6 +320,7 @@ namespace directional{
             triDcel.vertices[i].ID = i;
         }
         
+        std::vector<EVector2> slopeVecs(arrEdges.size());
         for (int i=0;i<arrEdges.size();i++) {
             triDcel.edges[i].ID = i;
             
@@ -338,6 +347,8 @@ namespace directional{
             triDcel.halfedges[2*i].edge=triDcel.halfedges[2*i+1].edge = i;
             triDcel.halfedges[2*i].twin=2*i+1;
             triDcel.halfedges[2*i+1].twin=2*i;
+            //EVector2 edgeVec = arrVertices[arrEdges[i].second] - arrVertices[arrEdges[i].first];
+            //slopeVec[i] = slope_function(edgeVec);
             
         }
         
@@ -360,6 +371,7 @@ namespace directional{
          }*/
         
         //Orienting segments around each vertex by CCW order
+        double tolerance = 1e-7;
         for (int i=0;i<arrVertices.size();i++) {
             std::vector<std::pair<int,bool>> adjArrEdges;  //second is direction
             for (int j=0;j<arrEdges.size();j++) {
@@ -373,30 +385,76 @@ namespace directional{
              for (int k=0;k<adjArrEdges.size();k++)
              std::cout<<"Adjacent edge "<<adjArrEdges[k].first<<" with vertices "<<arrEdges[adjArrEdges[k].first].first<<","<<arrEdges[adjArrEdges[k].first].second<<std::endl;*/
             
-            std::set<std::pair<ENumber, int>> CCWSegments;
+            //doing the lazy thing first, since this is very unlikely to fail unless parameterization is very degenerate
+            std::set<std::pair<double, int>> dCCWSegments;
             //using this slope function: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
             for (int j=0;j<adjArrEdges.size();j++) {
-                EVector2 edgeVec = arrVertices[arrEdges[adjArrEdges[j].first].second] - arrVertices[arrEdges[adjArrEdges[j].first].first];
+                Eigen::RowVector2d edgeVec = arrVertices[arrEdges[adjArrEdges[j].first].second].to_double() - arrVertices[arrEdges[adjArrEdges[j].first].first].to_double();
                 edgeVec = (adjArrEdges[j].second ? edgeVec : -edgeVec);
-                ENumber slopeFunc = slope_function(edgeVec);
+                double slopeFunc = slope_function_double(edgeVec);
                 //std::cout<<"slope: "<<slopeFunc.get_d()<<" for edgeVec "<<edgeVec<<std::endl;
-                CCWSegments.insert(std::pair<ENumber, int>(slopeFunc, j));
+                dCCWSegments.insert(std::pair<double, int>(slopeFunc, j));
             }
+            //if two slopes are too close together, we use exact numbers
+            bool tooClose = false;
+            auto first = dCCWSegments.begin();
+            auto prev = first;
+            
+            for (auto it = std::next(first); it != dCCWSegments.end(); ++it) {
+                if (std::abs(prev->first - it->first)<tolerance) {
+                    std::cout<<"prev->first: "<<prev->first<<std::endl;
+                    std::cout<<"it->first: "<<it->first<<std::endl;
+                    std::cout<<"std::abs(prev->first - it->first): "<<std::abs(prev->first - it->first)<<std::endl;
+                    tooClose = true;
+                    break;
+                }
+                prev = it;
+            }
+            
+            // Cyclic check: last element vs first element
+            if ((prev->first < 7.0 +tolerance)&&(prev->first > 7.0 - tolerance)&&(first->first > -1.0 - tolerance)&&(first->first < -1.0 + tolerance)){
+                std::cout<<"prev->first: "<<prev->first<<std::endl;
+                std::cout<<"first->first: "<<first->first<<std::endl;
+                tooClose = true;
+            }
+            
+            std::vector<int> edgeOrder;
+            if (!tooClose){
+                for (auto it = dCCWSegments.begin(); it != dCCWSegments.end(); ++it)
+                    edgeOrder.push_back(it->second);
+            } else {
+                //doing everything in exact numbers
+                std::cout<<"resorting to slope_function() in exact numbers"<<std::endl;
+                std::set<std::pair<ENumber, int>> CCWSegments;
+                //using this slope function: https://math.stackexchange.com/questions/1450498/rational-ordering-of-vectors
+                for (int j=0;j<adjArrEdges.size();j++) {
+                    EVector2 edgeVec = arrVertices[arrEdges[adjArrEdges[j].first].second] - arrVertices[arrEdges[adjArrEdges[j].first].first];
+                    edgeVec = (adjArrEdges[j].second ? edgeVec : -edgeVec);
+                    ENumber slopeFunc = slope_function(edgeVec);
+                    //std::cout<<"slope: "<<slopeFunc.get_d()<<" for edgeVec "<<edgeVec<<std::endl;
+                    CCWSegments.insert(std::pair<ENumber, int>(slopeFunc, j));
+                }
+                for (auto it = CCWSegments.begin(); it != CCWSegments.end(); ++it)
+                    edgeOrder.push_back(it->second);
+            }
+            
+         
             //std::cout<<"Ordering of edges"<<std::endl;
             /*for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++)
              std::cout<<si->second<<",";
              std::cout<<std::endl;*/
             
             int currHE = -1;
-            for (std::set<std::pair<ENumber, int>>::iterator si = CCWSegments.begin(); si!=CCWSegments.end();si++) {
-                bool outgoing = adjArrEdges[si->second].second;
-                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[si->second].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[si->second].first].halfedge].twin);
-                std::set<std::pair<ENumber, int>>::iterator nextsi = si; nextsi++;
-                if (nextsi==CCWSegments.end())
-                    nextsi = CCWSegments.begin();
+            for (int s=0;s<edgeOrder.size();s++) {
+                bool outgoing = adjArrEdges[s].second;
+                int outCurrHE = (outgoing ? triDcel.edges[adjArrEdges[s].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[s].first].halfedge].twin);
+                int nexts = (s+1) % edgeOrder.size();
+                //std::set<std::pair<ENumber, int>>::iterator nextsi = si; nextsi++;
+                //if (nextsi==CCWSegments.end())
+                //    nextsi = CCWSegments.begin();
                 
-                outgoing = adjArrEdges[nextsi->second].second;
-                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nextsi->second].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nextsi->second].first].halfedge].twin);
+                outgoing = adjArrEdges[nexts].second;
+                int outNextHE = (outgoing ? triDcel.edges[adjArrEdges[nexts].first].halfedge  : triDcel.halfedges[triDcel.edges[adjArrEdges[nexts].first].halfedge].twin);
                 triDcel.halfedges[outCurrHE].prev = triDcel.halfedges[outNextHE].twin;
                 triDcel.halfedges[triDcel.halfedges[outNextHE].twin].next = outCurrHE;
                 
@@ -438,6 +496,7 @@ namespace directional{
         //Removing the outer face and deleting all associated halfedges
         //identifying it by the only polygon with negative signed area (expensive?)
         int outerFace=-1;
+        double minSfa = 32767.0;
         for (int f = 0;f<numFaces;f++){
             std::vector<EVector2> faceVectors;
             int beginHE = triDcel.faces[f].halfedge;
@@ -447,13 +506,16 @@ namespace directional{
                 //std::cout<<"face vector :"<<faceVectors[faceVectors.size()-1]<<std::endl;
                 currHE= triDcel.halfedges[currHE].next;
             }while(currHE!=beginHE);
-            ENumber sfa = signed_face_area(faceVectors);
+            double sfa = signed_face_area(faceVectors);
+            if (sfa<minSfa)
+                minSfa = sfa;
             //std::cout<<"Signed area of face "<<f<<": "<<sfa.get_d()<<std::endl;
-            if (sfa<ENumber(0)){
+            if (sfa<-100.0*tolerance){
                 outerFace=f;
                 break;
             }
         }
+        std::cout<<"min signed face area "<<minSfa<<std::endl;
         assert("Didn't find outer face!" && outerFace!=-1);
         
         //invalidating outer face
