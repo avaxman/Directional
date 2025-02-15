@@ -3,12 +3,12 @@
 #include <directional/read_raw_field.h>
 #include <directional/read_singularities.h>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 
 int N;
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField field;
 directional::DirectionalViewer viewer;
 
@@ -21,10 +21,8 @@ int main()
   directional::DirectionalViewer viewer;
   viewer.init();
   
-  viewer.set_mesh(mesh);
-  viewer.set_field(field);
-  //viewer.toggle_mesh_edges(false);
-
+  viewer.set_surface_mesh(mesh);
+  viewer.set_cartesian_field(field);
   viewer.launch();
 }
 

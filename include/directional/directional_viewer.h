@@ -30,15 +30,17 @@ namespace directional
 
     class DirectionalViewer{
     public:
-        std::vector<const TriMesh*> meshList;  //meshes that are being viewed
-        std::vector<const CartesianField*> fieldList;
+        std::vector<const TriMesh*> surfaceMeshList;  //meshes that are being viewed
+        //std::vector<const CartesianField*> fieldList;
+        
+        double avgEdgeLength;
 
         std::vector<polyscope::SurfaceMesh*> psSurfaceMeshList;
-        std::vector<polyscope::PointCloud*> psFieldSourceList;
-        std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psFieldList;
+        std::vector<polyscope::PointCloud*> psGlyphSourceList;
+        std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psGlyphList;
         std::vector<polyscope::PointCloud*> psSingList;
         std::vector<polyscope::CurveNetwork*> psStreamlineList;
-        std::vector<polyscope::CurveNetwork*> psSeamList;
+        std::vector<polyscope::CurveNetwork*> psEdgeHighlightList;
         std::vector<polyscope::SurfaceMesh*> psIsolineList;
         std::vector<directional::StreamlineData> slData;
         std::vector<directional::StreamlineState> slState;
@@ -63,22 +65,29 @@ namespace directional
             polyscope::state::userCallback = callbackFunc;
         }
 
-        void inline set_mesh(const TriMesh& mesh,
-                             const int meshNum=0,
-                             const std::string meshName="Mesh")
+        void inline set_surface_mesh(const TriMesh& mesh,
+                                     const int meshNum=0,
+                                     const std::string name="")
         {
-            if (meshList.size()<meshNum+1) {
-                meshList.resize(meshNum + 1);
+            if (psSurfaceMeshList.size()<meshNum+1) {
+                surfaceMeshList.resize(meshNum + 1);
                 psSurfaceMeshList.resize(meshNum + 1);
             }
 
-            meshList[meshNum]=&mesh;
-            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName + std::to_string(meshNum), mesh.V, mesh.F);
+            surfaceMeshList[meshNum]=&mesh;
+            std::string meshName;
+            if (name.empty())
+                meshName = "Mesh " + std::to_string(meshNum);
+            else
+                meshName = name;
+            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName, mesh.V, mesh.F);
 
             std::vector<int> permArr(mesh.EV.rows());
             for (int i=0;i<permArr.size();i++)
                 permArr[i]=i;
             psSurfaceMeshList[meshNum]->setEdgePermutation(permArr);
+            
+            avgEdgeLength = mesh.avgEdgeLength;
         }
 
         /*void inline set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -105,47 +114,67 @@ namespace directional
         void inline set_vertex_data(const Eigen::VectorXd& vertexData,
                                     const double minRange,
                                     const double maxRange,
-                                    const std::string dataName="",
+                                    const std::string name="",
                                     const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addVertexScalarQuantity("vertex data" + std::to_string(meshNum), vertexData);
+            std::string dataName;
+                if (name.empty())
+                    dataName = "Vertex data " + std::to_string(meshNum);
+            else
+                dataName = name;
+            polyscope::SurfaceVertexScalarQuantity* vertexQuantity = psSurfaceMeshList[meshNum]->addVertexScalarQuantity(dataName, vertexData);
+            vertexQuantity->setMapRange(std::pair<double, double>(minRange, maxRange));
         }
 
         void inline set_face_data(const Eigen::VectorXd& faceData,
                                   const double minRange,
                                   const double maxRange,
-                                  const std::string dataName="",
+                                  const std::string name="",
                                   const int meshNum=0)
         {
-            psSurfaceMeshList[meshNum]->addFaceScalarQuantity("face data" + std::to_string(meshNum), faceData);
+            std::string dataName;
+            if (name.empty())
+                dataName = "Face data " + std::to_string(meshNum);
+            else
+                dataName = name;
+            polyscope::SurfaceFaceScalarQuantity* faceQuantity = psSurfaceMeshList[meshNum]->addFaceScalarQuantity(dataName, faceData);
+            faceQuantity->setMapRange(std::pair<double, double>(minRange, maxRange));
         }
 
         void inline set_edge_data(const Eigen::VectorXd& edgeData,
                                   const double minRange,
                                   const double maxRange,
-                                  const std::string dataName="",
+                                  const std::string name="",
                                   const int meshNum=0)
         {
 
-            psSurfaceMeshList[meshNum]->addEdgeScalarQuantity("edge data" + std::to_string(meshNum), edgeData);
+            std::string dataName;
+            if (name.empty())
+                dataName = "Edge data " + std::to_string(meshNum);
+            else
+                dataName = name;
+            polyscope::SurfaceEdgeScalarQuantity* edgeQuantity = psSurfaceMeshList[meshNum]->addEdgeScalarQuantity(dataName, edgeData);
+            edgeQuantity->setMapRange(std::pair<double, double>(minRange, maxRange));
         }
 
-
-
-        //this function assumes face-based fields
-
         void inline highlight_faces(const Eigen::VectorXi& selectedFaces,
-                                    const int meshNum=0){
+                                    const int meshNum=0,
+                                    const std::string name=""){
 
             glm::vec3 defaultColorglm = psSurfaceMeshList[meshNum]->getSurfaceColor();
             Eigen::RowVector3d defaultColor; for (int i=0;i<3;i++) defaultColor(i)=defaultColorglm[i];
             Eigen::RowVector3d highlightColor = highlight_face_color();
-            Eigen::MatrixXd faceColors(meshList[meshNum]->F.rows(),3);
+            Eigen::MatrixXd faceColors(surfaceMeshList[meshNum]->F.rows(),3);
             faceColors.rowwise() = defaultColor;
             for (int i=0;i<selectedFaces.size();i++)
                 faceColors.row(selectedFaces(i))=highlightColor;
 
-            psSurfaceMeshList[meshNum]->addFaceColorQuantity("highlights " + std::to_string(meshNum), faceColors);
+            std::string highName;
+            if (name.empty())
+                highName = "highlights " + std::to_string(meshNum);
+            else
+                highName = name;
+            psSurfaceMeshList[meshNum]->addFaceColorQuantity(highName, faceColors);
         }
 
         /*void inline set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){
@@ -195,44 +224,53 @@ namespace directional
             set_field_colors(glyphColors, meshNum);
         }*/
 
-        void inline set_field(const CartesianField& _field,
-                              const std::string fieldName = "field",
-                              const int meshNum=0,
-                              const int fieldNum=0,
-                              const double sizeRatio = 0.3,
-                              const int sparsity=0)
-
+        void inline set_cartesian_field(const CartesianField& _field,
+                                        const std::string name = "",
+                                        const int fieldNum = 0,
+                                        const double sizeRatio = 0.3,
+                                        const int sparsity = 0,
+                                        const bool addSingularities = true,
+                                        const bool combedColors = false)
+        
         {
-            if (fieldList.size()<fieldNum+1) {
-                fieldList.resize(fieldNum + 1);
-                psFieldSourceList.resize(fieldNum + 1);
-                psFieldList.resize(fieldNum+1);
+            if (psGlyphSourceList.size()<fieldNum+1) {
+                //fieldList.resize(fieldNum + 1);
+                psGlyphSourceList.resize(fieldNum + 1);
+                psGlyphList.resize(fieldNum+1);
                 psSingList.resize(fieldNum+1);
             }
-
-            fieldList[fieldNum]=&_field;
-
-            Eigen::VectorXi sampledSpaces = samples_tangent_bundle(fieldList[fieldNum]->tb->sources,fieldList[fieldNum]->tb->adjSpaces, sparsity);
+            
+            Eigen::VectorXi sampledSpaces = samples_tangent_bundle(_field.tb->sources,_field.tb->adjSpaces, sparsity);
             Eigen::MatrixXd sampledSources, sampledField;
             Eigen::VectorXi three(3); three<<0,1,2;
-            Eigen::VectorXi threeN(3*fieldList[fieldNum]->N);
-            for (int i=0;i<fieldList[fieldNum]->N;i++)
+            Eigen::VectorXi threeN(3*_field.N);
+            for (int i=0;i<_field.N;i++)
                 threeN.segment(3*i,3)<<3*i,3*i+1,3*i+2;
-            directional::slice(fieldList[fieldNum]->tb->sources, sampledSpaces, three, sampledSources);
-            directional::slice(fieldList[fieldNum]->extField, sampledSpaces, threeN, sampledField);
-            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), sampledSources);
-            psFieldList[fieldNum].resize(fieldList[fieldNum]->N);
-            psFieldSourceList[fieldNum]->setPointRadius(10e-6);
-            psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
-            for (int i=0;i<fieldList[fieldNum]->N;i++) {
-                psFieldList[fieldNum][i] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string(fieldName) + std::to_string(fieldNum) + std::string("-") + std::to_string(i),
+            directional::slice(_field.tb->sources, sampledSpaces, three, sampledSources);
+            directional::slice(_field.extField, sampledSpaces, threeN, sampledField);
+            std::string fieldName;
+            if (name.empty())
+                fieldName = "Field " + std::to_string(fieldNum);
+            else
+                fieldName = name;
+            psGlyphSourceList[fieldNum] = polyscope::registerPointCloud(fieldName, sampledSources);
+            psGlyphList[fieldNum].resize(_field.N);
+            psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
+            psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
+            for (int i=0;i<_field.N;i++) {
+                psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                           sampledField.block(0, 3 * i, sampledField.rows(),
-                                                                                                                3));
-                psFieldList[fieldNum][i]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
+                                                                                                             3));
+                psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*avgEdgeLength, false);
+                psGlyphList[fieldNum][i]->setEnabled(true);
+                if (!combedColors)
+                    psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
             }
-
-            set_singularities(fieldList[fieldNum]->singLocalCycles,
-                              fieldList[fieldNum]->singIndices,
+            
+            if (addSingularities)
+                set_singularities(_field,
+                                  _field.singLocalCycles,
+                                  _field.singIndices,
                               fieldNum);
         }
 
@@ -246,9 +284,9 @@ namespace directional
                               const double sizeRatio = 0.1)
 
         {
-            if (psFieldList.size()<fieldNum+1) {
-                psFieldSourceList.resize(fieldNum + 1);
-                psFieldList.resize(fieldNum+1);
+            if (psGlyphList.size()<fieldNum+1) {
+                psGlyphSourceList.resize(fieldNum + 1);
+                psGlyphList.resize(fieldNum+1);
             }
 
             //creating barcentric template
@@ -290,16 +328,17 @@ namespace directional
                 }
             }
 
-            psFieldSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), sources);
-            psFieldList[fieldNum].resize(1);
-            psFieldSourceList[fieldNum]->setPointRadius(10e-6);
-            psFieldSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
-            psFieldList[fieldNum][0] = psFieldSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
-            psFieldList[fieldNum][0]->setVectorLengthScale(sizeRatio*meshList[meshNum]->avgEdgeLength, false);
+            psGlyphSourceList[fieldNum] = polyscope::registerPointCloud("sources" + std::to_string(fieldNum), sources);
+            psGlyphList[fieldNum].resize(1);
+            psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
+            psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
+            psGlyphList[fieldNum][0] = psGlyphSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
+            psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*avgEdgeLength, false);
             return field;
         }
 
-        void inline set_singularities(const Eigen::VectorXi& singElements,
+        void inline set_singularities(const CartesianField& field,
+                                      const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
                                       const int fieldNum=0,
                                       const double radiusRatio=1.25)
@@ -307,61 +346,61 @@ namespace directional
 
             Eigen::MatrixXd singSources(singElements.rows(),3);
             for (int i=0;i<singElements.size();i++)
-                singSources.row(i) = fieldList[fieldNum]->tb->cycleSources.row(singElements(i));
+                singSources.row(i) = field.tb->cycleSources.row(singElements(i));
 
-            psSingList[fieldNum] = polyscope::registerPointCloud("sings" + std::to_string(fieldNum), singSources);
-            psSingList[fieldNum]->addScalarQuantity("indices", singIndices.cast<double>());
+            psSingList[fieldNum] = polyscope::registerPointCloud("Singularities" + std::to_string(fieldNum), singSources);
+            psSingList[fieldNum]->addScalarQuantity("Indices", singIndices.cast<double>());
         }
 
-        void inline set_seams(const Eigen::VectorXi& combedMatching,
+        void inline highlight_edges(const Eigen::VectorXi& highlightEdges,
+                                    const std::string name = "",
                               const int meshNum=0,
-                              const int fieldNum=0,
                               const double widthRatio = 0.05)
         {
-            if (psSeamList.size()<fieldNum+1)
-                psSeamList.resize(fieldNum+1);
-            int numSeams = 0;
-            for (int i=0;i<combedMatching.size();i++)
-                if (combedMatching(i)!=0)
-                    numSeams++;
-            Eigen::MatrixXi seamEdges(numSeams, 2);
-            Eigen::MatrixXd seamNodes(2*numSeams, 3);
-            int seamIndex = 0;
-            for (int i=0;i<meshList[meshNum]->EV.rows();i++)
-                if (combedMatching(i)!=0) {
-                    seamEdges.row(seamIndex) << 2 * seamIndex, 2 * seamIndex + 1;
-                    seamNodes.row(2*seamIndex)<<meshList[meshNum]->V.row(meshList[meshNum]->EV(i,0));
-                    seamNodes.row(2*seamIndex+1)<<meshList[meshNum]->V.row(meshList[meshNum]->EV(i,1));
-                    seamIndex++;
-                }
+            if (psEdgeHighlightList.size()<meshNum+1)
+                psEdgeHighlightList.resize(meshNum+1);
+            
+            Eigen::MatrixXi seamEdges(highlightEdges.size(), 2);
+            Eigen::MatrixXd seamNodes(2*highlightEdges.size(), 3);
+            for (int i=0;i<highlightEdges.size();i++){
+                seamEdges.row(i) << 2 * i, 2 * i+ 1;
+                seamNodes.row(2*i)<<surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->EV(highlightEdges[i],0));
+                seamNodes.row(2*i+1)<<surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->EV(highlightEdges[i],1));
+            }
 
-            psSeamList[fieldNum] = polyscope::registerCurveNetwork("seams " + std::to_string(fieldNum), seamNodes, seamEdges);
-            psSeamList[fieldNum]->setColor(glm::vec3());
-            psSeamList[fieldNum]->setRadius(widthRatio*meshList[meshNum]->avgEdgeLength, false);
+            std::string highlightName;
+            if (name.empty())
+                highlightName = "Seams " + std::to_string(meshNum);
+            else
+                highlightName = name;
+            psEdgeHighlightList[meshNum] = polyscope::registerCurveNetwork(highlightName, seamNodes, seamEdges);
+            psEdgeHighlightList[meshNum]->setColor(glm::vec3());
+            psEdgeHighlightList[meshNum]->setRadius(widthRatio*surfaceMeshList[meshNum]->avgEdgeLength, false);
 
         }
 
-        void inline init_streamlines(const int meshNum=0,
+        void inline init_streamlines(const CartesianField& field,
+                                     const int fieldNum=0,
                                      const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
                                      const double distRatio=3.0)
         {
-            if (slData.size()<meshNum+1){
-                slData.resize(meshNum+1);
-                slState.resize(meshNum+1);
-                psStreamlineList.resize(meshNum+1);
+            if (slData.size()<fieldNum+1){
+                slData.resize(fieldNum+1);
+                slState.resize(fieldNum+1);
+                psStreamlineList.resize(fieldNum+1);
             }
             //assert(fieldList[meshNum]->tb->discTangType()==discTangTypeEnum::FACE_SPACES);
-            directional::streamlines_init(*fieldList[meshNum], seedLocations,distRatio,slData[meshNum], slState[meshNum]);
+            directional::streamlines_init(field, seedLocations,distRatio,slData[fieldNum], slState[fieldNum]);
         }
 
         void inline advance_streamlines(const double dTimeRatio,
-                                            const int meshNum=0,
+                                            const int fieldNum=0,
                                             const double widthRatio=0.05,
                                             const double colorAttenuationRate = 0.9){
 
-            double dTime = dTimeRatio*meshList[meshNum]->avgEdgeLength;
-            directional::streamlines_next(slData[meshNum], slState[meshNum],dTime);
-            double width = widthRatio*meshList[meshNum]->avgEdgeLength;
+            double dTime = dTimeRatio*avgEdgeLength;
+            directional::streamlines_next(slData[fieldNum], slState[fieldNum],dTime);
+            double width = widthRatio*avgEdgeLength;
             //TODO: attentuation
 
             //generating colors according to original elements and their time signature
@@ -384,17 +423,17 @@ namespace directional
 
             Eigen::MatrixXd VStream, CStream;
             Eigen::MatrixXi FStream;
-            Eigen::MatrixXd P1(slState[meshNum].segStart.size(),3), P2(slState[meshNum].segEnd.size(),3);
-            for (int i=0;i<slState[meshNum].segStart.size();i++){
-                P1.row(i)=slState[meshNum].segStart[i];
-                P2.row(i)=slState[meshNum].segEnd[i];
+            Eigen::MatrixXd P1(slState[fieldNum].segStart.size(),3), P2(slState[fieldNum].segEnd.size(),3);
+            for (int i=0;i<slState[fieldNum].segStart.size();i++){
+                P1.row(i)=slState[fieldNum].segStart[i];
+                P2.row(i)=slState[fieldNum].segEnd[i];
             }
             Eigen::MatrixXd nodes(P1.rows()+P2.rows(),3);
             nodes<<P1, P2;
             Eigen::MatrixXi edges(P1.rows(),2);
             edges.col(0) = Eigen::VectorXi::LinSpaced(P1.rows(), 0, P1.rows()-1);
             edges.col(1) = Eigen::VectorXi::LinSpaced(P2.rows(), P1.rows(), P1.rows()+P2.rows()-1);
-            psStreamlineList[meshNum] = polyscope::registerCurveNetwork("streamlines" + std::to_string(meshNum), nodes, edges);
+            psStreamlineList[fieldNum] = polyscope::registerCurveNetwork("Streamlines" + std::to_string(fieldNum), nodes, edges);
         }
 
         void inline set_isolines(const directional::TriMesh& cutMesh,
@@ -453,19 +492,19 @@ namespace directional
         }
 
 
-        void inline toggle_field(const bool active, const int fieldNum=0){
-            if (fieldNum+1>psFieldList.size())
+        void inline toggle_cartesian_field(const bool active, const int fieldNum=0){
+            if (fieldNum+1>psGlyphList.size())
                 return;  //just ignore the command
-            for (int i=0;i<psFieldList[fieldNum].size();i++)
-                psFieldList[fieldNum][i]->setEnabled(active);
+            for (int i=0;i<psGlyphList[fieldNum].size();i++)
+                psGlyphList[fieldNum][i]->setEnabled(active);
         }
 
         void inline toggle_singularities(const bool active, const int fieldNum=0){
             psSingList[fieldNum]->setEnabled(active);
         }
 
-        void inline toggle_seams(const bool active, const int fieldNum=0){
-            psSeamList[fieldNum]->setEnabled(active);
+        void inline toggle_edge_highlights(const bool active, const int fieldNum=0){
+            psEdgeHighlightList[fieldNum]->setEnabled(active);
         }
 
         void inline toggle_streamlines(const bool active, const int meshNum=0){
@@ -497,12 +536,12 @@ namespace directional
         }
 
         //Glyph colors
-        /*static Eigen::RowVector3d inline default_glyph_color(){
-            return Eigen::RowVector3d(0.0,0.2,1.0);
+        static glm::vec3 inline default_glyph_color(){
+            return glm::vec3(0.0,0.5,0.5);
         }
 
         //Glyphs in selected faces
-        static Eigen::RowVector3d inline selected_face_glyph_color(){
+        /*static Eigen::RowVector3d inline selected_face_glyph_color(){
             return Eigen::RowVector3d(223.0/255.0, 210.0/255.0, 16.0/255.0);
         }
 

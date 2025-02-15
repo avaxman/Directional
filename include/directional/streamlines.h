@@ -13,7 +13,7 @@
 #include <vector>
 //#include <igl/inline.h>
 #include <directional/CartesianField.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 
 
 namespace directional
@@ -26,7 +26,7 @@ namespace directional
   struct StreamlineData
   {
     directional::CartesianField field;
-    directional::IntrinsicFaceTangentBundle stb;  //the subdivision tangent bundle which is used for the streamlining
+    directional::PCFaceTangentBundle stb;  //the subdivision tangent bundle which is used for the streamlining
     const TriMesh* slMesh;
     Eigen::MatrixXd slField;  //raw extrinsic field extracted by sampling
     //      (N degrees stacked horizontally for each triangle)

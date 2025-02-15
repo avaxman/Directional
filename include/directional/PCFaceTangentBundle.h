@@ -5,8 +5,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef DIRECTIONAL_INTRINSIC_FACE_TANGENT_BUNDLE_H
-#define DIRECTIONAL_INTRINSIC_FACE_TANGENT_BUNDLE_H
+#ifndef DIRECTIONAL_PIECWISE_CONSTANT_FACE_TANGENT_BUNDLE_H
+#define DIRECTIONAL_PIECWISE_CONSTANT_FACE_TANGENT_BUNDLE_H
 
 #include <iostream>
 #include <Eigen/Geometry>
@@ -24,7 +24,7 @@ This class represents piecewise-constant face-based tangent bundles, where tange
 
 namespace directional{
 
-    class IntrinsicFaceTangentBundle : public TangentBundle{
+    class PCFaceTangentBundle : public TangentBundle{
     public:
 
         const TriMesh* mesh;
@@ -34,8 +34,8 @@ namespace directional{
         bool hasCochainSequence() const { return true; }
         bool hasEmbedding() const { return true; }
 
-        IntrinsicFaceTangentBundle(){}
-        ~IntrinsicFaceTangentBundle(){}
+        PCFaceTangentBundle(){}
+        ~PCFaceTangentBundle(){}
 
         void inline init(const TriMesh& _mesh){
 

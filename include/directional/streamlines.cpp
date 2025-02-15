@@ -16,7 +16,7 @@
 #include <directional/TriMesh.h>
 #include <directional/principal_matching.h>
 #include <directional/streamlines.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
 
 namespace Directional {
@@ -174,7 +174,7 @@ inline void directional::streamlines_init(const directional::CartesianField& fie
     assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES || field.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
     //
     if (field.tb->discTangType()==discTangTypeEnum::FACE_SPACES){
-        data.stb = *((IntrinsicFaceTangentBundle*)field.tb);
+        data.stb = *((PCFaceTangentBundle*)field.tb);
         data.slMesh=data.stb.mesh;
         data.field = field;
         data.slField=data.field.extField;
