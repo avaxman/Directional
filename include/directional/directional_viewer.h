@@ -80,7 +80,7 @@ namespace directional
                 meshName = "Mesh " + std::to_string(meshNum);
             else
                 meshName = name;
-            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName, mesh.V, mesh.F);
+            psSurfaceMeshList[meshNum]=polyscope::registerSurfaceMesh(meshName, mesh.V, mesh.F)->setSurfaceColor(default_face_color());
 
             std::vector<int> permArr(mesh.EV.rows());
             for (int i=0;i<permArr.size();i++)
@@ -163,11 +163,11 @@ namespace directional
 
             glm::vec3 defaultColorglm = psSurfaceMeshList[meshNum]->getSurfaceColor();
             Eigen::RowVector3d defaultColor; for (int i=0;i<3;i++) defaultColor(i)=defaultColorglm[i];
-            Eigen::RowVector3d highlightColor = highlight_face_color();
+            glm::vec3 highlightColor = highlight_face_color();
             Eigen::MatrixXd faceColors(surfaceMeshList[meshNum]->F.rows(),3);
             faceColors.rowwise() = defaultColor;
             for (int i=0;i<selectedFaces.size();i++)
-                faceColors.row(selectedFaces(i))=highlightColor;
+                faceColors.row(selectedFaces(i))<<highlightColor.x,highlightColor.y,highlightColor.z;
 
             std::string highName;
             if (name.empty())
@@ -341,15 +341,16 @@ namespace directional
                                       const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
                                       const int fieldNum=0,
-                                      const double radiusRatio=1.25)
+                                      const double radiusRatio=0.3,
+                                      const int indexRange = 1)
         {
 
             Eigen::MatrixXd singSources(singElements.rows(),3);
             for (int i=0;i<singElements.size();i++)
                 singSources.row(i) = field.tb->cycleSources.row(singElements(i));
 
-            psSingList[fieldNum] = polyscope::registerPointCloud("Singularities" + std::to_string(fieldNum), singSources);
-            psSingList[fieldNum]->addScalarQuantity("Indices", singIndices.cast<double>());
+            psSingList[fieldNum] = polyscope::registerPointCloud("Singularities" + std::to_string(fieldNum), singSources)->setPointRadius(radiusRatio*avgEdgeLength, false);
+            psSingList[fieldNum]->addScalarQuantity("Indices", singIndices.cast<double>())->setColorMap("coolwarm")->setMapRange(std::pair<double, double>(-indexRange,indexRange))->setEnabled(true);
         }
 
         void inline highlight_edges(const Eigen::VectorXi& highlightEdges,
@@ -529,15 +530,19 @@ namespace directional
         static Eigen::RowVector3d inline default_mesh_color(){
             return Eigen::RowVector3d::Constant(1.0);
         }*/
+        
+        static glm::vec3 inline default_face_color(){
+            return glm::vec3(243.0/255.0,241.0/255.0,216.0/255.0);
+        }
 
         //Color for faces that are selected for editing and constraints
-        static Eigen::RowVector3d inline highlight_face_color(){
-            return Eigen::RowVector3d(0.7,0.2,0.2);
+        static glm::vec3 inline highlight_face_color(){
+            return glm::vec3(0.7,0.2,0.2);
         }
 
         //Glyph colors
         static glm::vec3 inline default_glyph_color(){
-            return glm::vec3(0.0,0.5,0.5);
+            return glm::vec3(0.05,0.05,1.0);
         }
 
         //Glyphs in selected faces
