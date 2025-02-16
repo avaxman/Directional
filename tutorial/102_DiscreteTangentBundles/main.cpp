@@ -4,7 +4,7 @@
 #include <directional/CartesianField.h>
 #include <directional/TriMesh.h>
 #include <directional/IntrinsicVertexTangentBundle.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/read_raw_field.h>
 #include <directional/power_field.h>
 #include <directional/power_to_raw.h>
@@ -18,7 +18,7 @@ using namespace std;
 int N = 2;
 directional::TriMesh mesh;
 directional::IntrinsicVertexTangentBundle vtb;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField rawFaceField, powerFaceField;
 directional::CartesianField rawVertexField, powerVertexField;
 directional::DirectionalViewer viewer;
@@ -48,8 +48,8 @@ void callbackFunc()
 
     viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
     viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
-    viewer.toggle_field(viewingMode==FACE_FIELD,0);
-    viewer.toggle_field(viewingMode==VERTEX_FIELD,1);
+    viewer.toggle_cartesian_field(viewingMode==FACE_FIELD,0);
+    viewer.toggle_cartesian_field(viewingMode==VERTEX_FIELD,1);
 
     ImGui::PopItemWidth();
 }
@@ -85,10 +85,10 @@ int main(int argc, char *argv[])
     directional::principal_matching(rawVertexField);
 
  
-    viewer.set_mesh(mesh,0);
+    viewer.set_surface_mesh(mesh,0);
 
-    viewer.set_field(rawFaceField, "Face-Based Field",  0, 0);
-    viewer.set_field(rawVertexField, "Vertex-Based Field", 0, 1);
+    viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
+    viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
   
     // Update view
     viewer.launch();

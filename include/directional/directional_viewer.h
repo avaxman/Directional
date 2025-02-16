@@ -268,10 +268,7 @@ namespace directional
             }
             
             if (addSingularities)
-                set_singularities(_field,
-                                  _field.singLocalCycles,
-                                  _field.singIndices,
-                              fieldNum);
+                set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
         }
 
         Eigen::MatrixXd inline set_1form(const TriMesh* mesh,
@@ -340,17 +337,28 @@ namespace directional
         void inline set_singularities(const CartesianField& field,
                                       const Eigen::VectorXi& singElements,
                                       const Eigen::VectorXi& singIndices,
+                                      const std::string fieldName="",
                                       const int fieldNum=0,
-                                      const double radiusRatio=0.3,
-                                      const int indexRange = 1)
+                                      const double radiusRatio=0.3)
         {
-
+            assert("set_singularities(): singElements.size()!=singIndices.size()" && singElements.size()==singIndices.size());
             Eigen::MatrixXd singSources(singElements.rows(),3);
             for (int i=0;i<singElements.size();i++)
                 singSources.row(i) = field.tb->cycleSources.row(singElements(i));
+            
+            std::string singName;
+            if (fieldName.empty())
+                singName = "Singularities " + std::to_string(fieldNum);
+            else
+                singName = fieldName + "singularities";
 
-            psSingList[fieldNum] = polyscope::registerPointCloud("Singularities" + std::to_string(fieldNum), singSources)->setPointRadius(radiusRatio*avgEdgeLength, false);
-            psSingList[fieldNum]->addScalarQuantity("Indices", singIndices.cast<double>())->setColorMap("coolwarm")->setMapRange(std::pair<double, double>(-indexRange,indexRange))->setEnabled(true);
+            psSingList[fieldNum] = polyscope::registerPointCloud(singName, singSources)->setPointRadius(radiusRatio*avgEdgeLength, false);
+            std::vector<glm::vec3> singColors(singIndices.size());
+            for (int i=0;i<singIndices.size();i++)
+                singColors[i] = default_index_color(singIndices[i]);
+            
+            psSingList[fieldNum]->addColorQuantity("Indices", singColors)->setEnabled(true);
+            //psSingList[fieldNum]->addScalarQuantity("Indices", singIndices.cast<double>())->setColorMap("coolwarm")->setMapRange(std::pair<double, double>(-indexRange,indexRange))->setEnabled(true);
         }
 
         void inline highlight_edges(const Eigen::VectorXi& highlightEdges,
@@ -434,7 +442,7 @@ namespace directional
             Eigen::MatrixXi edges(P1.rows(),2);
             edges.col(0) = Eigen::VectorXi::LinSpaced(P1.rows(), 0, P1.rows()-1);
             edges.col(1) = Eigen::VectorXi::LinSpaced(P2.rows(), P1.rows(), P1.rows()+P2.rows()-1);
-            psStreamlineList[fieldNum] = polyscope::registerCurveNetwork("Streamlines" + std::to_string(fieldNum), nodes, edges);
+            psStreamlineList[fieldNum] = polyscope::registerCurveNetwork("Streamlines " + std::to_string(fieldNum), nodes, edges);
         }
 
         void inline set_isolines(const directional::TriMesh& cutMesh,
@@ -496,6 +504,7 @@ namespace directional
         void inline toggle_cartesian_field(const bool active, const int fieldNum=0){
             if (fieldNum+1>psGlyphList.size())
                 return;  //just ignore the command
+            psGlyphSourceList[fieldNum]->setEnabled(active);
             for (int i=0;i<psGlyphList[fieldNum].size();i++)
                 psGlyphList[fieldNum][i]->setEnabled(active);
         }
@@ -543,6 +552,23 @@ namespace directional
         //Glyph colors
         static glm::vec3 inline default_glyph_color(){
             return glm::vec3(0.05,0.05,1.0);
+        }
+        
+        //a dynamic range of 8, independent of N (so singularity indeices differentiated would be -4/N..4/N
+        static glm::vec3 inline default_index_color(const int index){
+            if (index<=-4)
+                return glm::vec3(0.0,0.0,0.0);
+            if (index>=4)
+                return glm::vec3(1.0,1.0,1.0);
+            switch(index){
+                case -3: return glm::vec3(1.0,1.0,0.0); break;
+                case -2: return glm::vec3(1.0,0.5,0.0); break;
+                case -1: return glm::vec3(1.0,0.0,0.0); break;
+                case 0: return default_face_color(); break;
+                case 1: return glm::vec3(0.0,1.0,0.0); break;
+                case 2: return glm::vec3(0.0,1.0,0.5); break;
+                case 3: return glm::vec3(0.0,1.0,1.0); break;
+            }
         }
 
         //Glyphs in selected faces

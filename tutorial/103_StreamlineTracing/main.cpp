@@ -4,12 +4,12 @@
 #include <directional/power_to_raw.h>
 #include <directional/directional_viewer.h>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/definitions.h>
 
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField field, powerField;
 directional::DirectionalViewer viewer;
 
@@ -19,11 +19,9 @@ int N = 3;
 int anim_t = 0;
 int anim_t_dir = 1;
 
-void callbackFunc() {
-    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
-    // instead of full width. Must have
-    // matching PopItemWidth() below.
-
+void callbackFunc()
+{
+    ImGui::PushItemWidth(100);
     if (advanceTracing) {
         viewer.advance_streamlines(0.5);
         if (ImGui::Button("stop tracing")) {
@@ -35,7 +33,6 @@ void callbackFunc() {
         }
 
     }
-
     ImGui::PopItemWidth();
 }
 
@@ -57,11 +54,9 @@ int main(int argc, char *argv[])
     directional::power_field(ftb, constFaces, constVectors, alignWeights ,N, powerField);
     directional::power_to_raw(powerField,N,field, true);
 
-    viewer.set_mesh(mesh);
-    viewer.set_field(field);
-    //Eigen::MatrixXd fieldColors=directional::DirectionalViewer::indexed_glyph_colors(field.extField);
-    //viewer.toggle_field(false);
-    viewer.init_streamlines(0, Eigen::VectorXi(), 3);
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(field);
+    viewer.init_streamlines(field, 0, Eigen::VectorXi(), 3);
     viewer.advance_streamlines(0.5);  //to get the initial step
     viewer.launch();
 }

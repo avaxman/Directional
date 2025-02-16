@@ -9,7 +9,7 @@
 #define DIRECTIONAL_CURL_MATRICES_H
 
 #include <cassert>
-#include <eigen/sparse>
+#include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/single_to_N_matrix.h>
 

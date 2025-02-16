@@ -8,12 +8,12 @@
 #include <directional/principal_matching.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 
 Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField pvFieldHard, pvFieldSoft, rawFieldHard, rawFieldSoft,constraintsField;
 Eigen::MatrixXd constVectors;
 
@@ -41,20 +41,20 @@ void recompute_field()
 
 void update_visualization()
 {
-    viewer.set_field(constraintsField,"",0, 0);
+    viewer.set_cartesian_field(constraintsField,"",0, 0);
     viewer.highlight_faces(constFaces,0);
     if (viewingMode==CONSTRAINTS) {
-        viewer.toggle_field(true, 0);
-        viewer.toggle_field(false, 1);
+        viewer.toggle_cartesian_field(true, 0);
+        viewer.toggle_cartesian_field(false, 1);
     }
     if (viewingMode==HARD_PRESCRIPTION){
-        viewer.set_field(rawFieldHard,"", 0, 1);
-        viewer.toggle_field(true, 1);
+        viewer.set_cartesian_field(rawFieldHard,"", 0, 1);
+        viewer.toggle_cartesian_field(true, 1);
     }
 
     if (viewingMode==SOFT_PRESCRIPTION){
-        viewer.set_field(rawFieldSoft,"", 0, 1);
-        viewer.toggle_field(true, 1);
+        viewer.set_cartesian_field(rawFieldSoft,"", 0, 1);
+        viewer.toggle_cartesian_field(true, 1);
     }
 
 }
@@ -157,7 +157,7 @@ int main()
 
   //triangle mesh setup
   viewer.init();
-  viewer.set_mesh(mesh,0);
+  viewer.set_surface_mesh(mesh,0);
   recompute_field();
   update_visualization();
   viewer.set_callback(callbackFunc);

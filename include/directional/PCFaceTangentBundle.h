@@ -78,13 +78,13 @@ namespace directional{
             invTangentSpaceMass = directional::sparse_diagonal(invFaceAreas);
 
             //The "harmonic" weights from [Brandt et al. 2020].
-            Eigen::VectorXd connMassVector = Eigen::VectorXd::Zero(mesh->EF.rows());
-            for (int i=0;i<mesh->EF.rows();i++){
-                if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
-                    continue;  //boundary edge
+            Eigen::VectorXd connMassVector = Eigen::VectorXd::Zero(mesh->innerEdges.size());
+            for (int i=0;i<mesh->innerEdges.size();i++){
+                //if ((mesh->EF(i,0)==-1)||(mesh->EF(i,1)==-1))
+                //    continue;  //boundary edge
 
-                double primalLengthSquared = (mesh->V.row(mesh->EV(i,0))-mesh->V.row(mesh->EV(i,1))).squaredNorm();
-                connMassVector(i) = 3.0*primalLengthSquared/(mesh->faceAreas(mesh->EF(i,0))+mesh->faceAreas(mesh->EF(i,1)));
+                double primalLengthSquared = (mesh->V.row(mesh->EV(mesh->innerEdges(i),0))-mesh->V.row(mesh->EV(mesh->innerEdges(i),1))).squaredNorm();
+                connMassVector(i) = 3.0*primalLengthSquared/(mesh->faceAreas(mesh->EF(mesh->innerEdges(i),0))+mesh->faceAreas(mesh->EF(mesh->innerEdges(i),1)));
             }
             connectionMass = directional::sparse_diagonal(connMassVector);
         }

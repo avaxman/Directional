@@ -12,7 +12,7 @@
 #include <Eigen/Core>
 #include <vector>
 #include <set>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/curl_matrices.h>
 #include <directional/sparse_block.h>
@@ -111,7 +111,7 @@ namespace directional {
 
         //TODO: hard constraints
 
-        SparseMatrix<double> C = directional::curl_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.matching, true, origField.N);
+        SparseMatrix<double> C = directional::curl_matrix_2D<double>(((directional::PCFaceTangentBundle*)(origField.tb))->mesh, origField.matching, true, origField.N);
         SparseMatrix<double> CR=C*R;
         SparseMatrix<double> CRt=CR.transpose();
         SparseMatrix<double> ER=E*R;
@@ -141,11 +141,11 @@ namespace directional {
         cout<<"(C*rawFieldVec).lpNorm<Infinity>() after: "<<(C*cfFieldVec).lpNorm<Infinity>()<<endl;
 
         curlFreeField=origField;
-        Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.N);
+        Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(((directional::PCFaceTangentBundle*)(origField.tb))->mesh, origField.N);
         curlFreeField.set_extrinsic_field(IE*cfFieldVec);
 
               //checking with extrinsic matrix
-        SparseMatrix<double> Cext = directional::curl_matrix_2D<double>(((directional::IntrinsicFaceTangentBundle*)(origField.tb))->mesh, origField.matching, false, origField.N);
+        SparseMatrix<double> Cext = directional::curl_matrix_2D<double>(((directional::PCFaceTangentBundle*)(origField.tb))->mesh, origField.matching, false, origField.N);
         cout<<"Extrinsic curl: "<<(Cext*IE*cfFieldVec).lpNorm<Infinity>()<<endl;
 
     }

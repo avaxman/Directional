@@ -8,7 +8,7 @@
 #ifndef DIRECTIONAL_EXTRINSIC_INTRINSIC_MATRICES_H
 #define DIRECTIONAL_EXTRINSIC_INTRINSIC_MATRICES_H
 
-#include <eigen/sparse>
+#include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/single_to_N_matrix.h>
 
