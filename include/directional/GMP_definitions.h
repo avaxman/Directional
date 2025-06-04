@@ -869,8 +869,8 @@ namespace directional{
     }
     
     ENumber triangle_area(const std::vector<EVector2>& tri){
-        EVector e12 = tri[1]-tri[0];
-        EVector e13 = tri[2]-tri[0];
+        EVector2 e12 = tri[1]-tri[0];
+        EVector2 e13 = tri[2]-tri[0];
         return (e12[0]*e13[1]-e13[0]*e12[1])/ENumber(2);
     }
     

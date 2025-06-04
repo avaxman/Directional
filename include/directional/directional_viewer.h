@@ -225,8 +225,8 @@ namespace directional
         }*/
 
         void inline set_cartesian_field(const CartesianField& _field,
-                                        const std::string name = "",
                                         const int fieldNum = 0,
+                                        const std::string name="",
                                         const double sizeRatio = 0.3,
                                         const int sparsity = 0,
                                         const bool addSingularities = true,

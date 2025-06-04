@@ -13,7 +13,7 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/tree.h>
 #include <directional/principal_matching.h>
@@ -120,7 +120,7 @@ namespace directional
 
         assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES && "setup_integration() only works with face-based fields");
 
-        const directional::TriMesh& meshWhole = *((IntrinsicFaceTangentBundle*)(field.tb))->mesh;
+        const directional::TriMesh& meshWhole = *((PCFaceTangentBundle*)(field.tb))->mesh;
         //cutting mesh and combing field.
         cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
         combing(field, combedField, intData.face2cut);

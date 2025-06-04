@@ -36,7 +36,7 @@ namespace directional
 
         //this only works on face-based fields for now
         assert(rawField.tb->discTangType()==discTangTypeEnum::FACE_SPACES && "This function only supports face-based fields for now.");
-        IntrinsicFaceTangentBundle* ftb = (IntrinsicFaceTangentBundle*)(rawField.tb);
+        PCFaceTangentBundle* ftb = (PCFaceTangentBundle*)(rawField.tb);
         rawField.matching.conservativeResize(ftb->mesh->EF.rows());
         rawField.matching.setConstant(-1);
         curlNorm.conservativeResize(ftb->mesh->EF.rows());

@@ -16,6 +16,7 @@
 #include <Eigen/Core>
 #include <directional/tree.h>
 #include <directional/TriMesh.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
@@ -47,7 +48,7 @@ namespace directional
         using namespace std;
 
         assert(field.tb->discTangType()==discTangTypeEnum::FACE_SPACES && "Integrate() only works with face-based fields");
-        const directional::TriMesh& meshWhole = *((IntrinsicFaceTangentBundle*)field.tb)->mesh;
+        const directional::TriMesh& meshWhole = *((PCFaceTangentBundle*)field.tb)->mesh;
 
         VectorXd edgeWeights = VectorXd::Constant(meshWhole.FE.maxCoeff() + 1, 1.0);
         //double length = igl::bounding_box_diagonal(wholeV) * intData.lengthRatio;

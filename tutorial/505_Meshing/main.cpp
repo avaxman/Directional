@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
