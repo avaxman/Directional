@@ -30,11 +30,14 @@ namespace directional
 
     class DirectionalViewer{
     public:
-        std::vector<const TriMesh*> surfaceMeshList;  //meshes that are being viewed
-        //std::vector<const CartesianField*> fieldList;
         
-        double avgEdgeLength;
+        //Directional quantities
+        std::vector<const TriMesh*> surfaceMeshList;  //meshes that are being viewed
+        std::vector<const CartesianField*> fieldList;
+        std::vector<directional::StreamlineData> slData;
+        std::vector<directional::StreamlineState> slState;
 
+        //Polyscope Quantities
         std::vector<polyscope::SurfaceMesh*> psSurfaceMeshList;
         std::vector<polyscope::PointCloud*> psGlyphSourceList;
         std::vector<std::vector<polyscope::PointCloudVectorQuantity*>> psGlyphList;
@@ -42,13 +45,8 @@ namespace directional
         std::vector<polyscope::CurveNetwork*> psStreamlineList;
         std::vector<polyscope::CurveNetwork*> psEdgeHighlightList;
         std::vector<polyscope::SurfaceMesh*> psIsolineList;
-        std::vector<directional::StreamlineData> slData;
-        std::vector<directional::StreamlineState> slState;
-
-        //std::vector<Eigen::MatrixXd> edgeVList;  //edge-diamond vertices list
-        //std::vector<Eigen::MatrixXi> edgeFList;  //edge-diamond faces list
-        //std::vector<Eigen::VectorXi> edgeFEList;  //edge-diamond faces->original mesh edges list
-
+        
+        
     public:
         DirectionalViewer(){}
         ~DirectionalViewer(){}
@@ -72,9 +70,10 @@ namespace directional
             if (psSurfaceMeshList.size()<meshNum+1) {
                 surfaceMeshList.resize(meshNum + 1);
                 psSurfaceMeshList.resize(meshNum + 1);
+                //avgEdgeLengths.resize(meshNum+1);
             }
 
-            surfaceMeshList[meshNum]=&mesh;
+            //surfaceMeshList[meshNum]=&mesh;
             std::string meshName;
             if (name.empty())
                 meshName = "Mesh " + std::to_string(meshNum);
@@ -87,7 +86,7 @@ namespace directional
                 permArr[i]=i;
             psSurfaceMeshList[meshNum]->setEdgePermutation(permArr);
             
-            avgEdgeLength = mesh.avgEdgeLength;
+            //avgEdgeLengths[meshNum] = mesh.avgEdgeLength;
         }
 
         /*void inline set_mesh_colors(const Eigen::MatrixXd& C=Eigen::MatrixXd(),
@@ -234,11 +233,13 @@ namespace directional
         
         {
             if (psGlyphSourceList.size()<fieldNum+1) {
-                //fieldList.resize(fieldNum + 1);
+                fieldList.resize(fieldNum + 1);
                 psGlyphSourceList.resize(fieldNum + 1);
                 psGlyphList.resize(fieldNum+1);
                 psSingList.resize(fieldNum+1);
             }
+            
+            fieldList[fieldNum] = &_field;
             
             Eigen::VectorXi sampledSpaces = samples_tangent_bundle(_field.tb->sources,_field.tb->adjSpaces, sparsity);
             Eigen::MatrixXd sampledSources, sampledField;
@@ -261,7 +262,7 @@ namespace directional
                 psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                           sampledField.block(0, 3 * i, sampledField.rows(),
                                                                                                              3));
-                psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*avgEdgeLength, false);
+                psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*_field.tb->avgAdjLength, false);
                 psGlyphList[fieldNum][i]->setEnabled(true);
                 if (!combedColors)
                     psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
@@ -330,7 +331,7 @@ namespace directional
             psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
             psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
             psGlyphList[fieldNum][0] = psGlyphSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
-            psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*avgEdgeLength, false);
+            psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*mesh->avgEdgeLength, false);
             return field;
         }
 
@@ -352,7 +353,7 @@ namespace directional
             else
                 singName = fieldName + "singularities";
 
-            psSingList[fieldNum] = polyscope::registerPointCloud(singName, singSources)->setPointRadius(radiusRatio*avgEdgeLength, false);
+            psSingList[fieldNum] = polyscope::registerPointCloud(singName, singSources)->setPointRadius(radiusRatio*field.tb->avgAdjLength, false);
             std::vector<glm::vec3> singColors(singIndices.size());
             for (int i=0;i<singIndices.size();i++)
                 singColors[i] = default_index_color(singIndices[i]);
@@ -389,7 +390,8 @@ namespace directional
         }
 
         void inline init_streamlines(const CartesianField& field,
-                                     const int fieldNum=0,
+                                     const int meshNum = 0,
+                                     const int fieldNum = 0,
                                      const Eigen::VectorXi& seedLocations=Eigen::VectorXi(),
                                      const double distRatio=3.0)
         {
@@ -403,13 +405,14 @@ namespace directional
         }
 
         void inline advance_streamlines(const double dTimeRatio,
+                                        const int meshNum = 0,
                                             const int fieldNum=0,
                                             const double widthRatio=0.05,
                                             const double colorAttenuationRate = 0.9){
 
-            double dTime = dTimeRatio*avgEdgeLength;
+            double dTime = dTimeRatio*surfaceMeshList[meshNum]->avgEdgeLength;
             directional::streamlines_next(slData[fieldNum], slState[fieldNum],dTime);
-            double width = widthRatio*avgEdgeLength;
+            double width = widthRatio*surfaceMeshList[meshNum]->avgEdgeLength;
             //TODO: attentuation
 
             //generating colors according to original elements and their time signature

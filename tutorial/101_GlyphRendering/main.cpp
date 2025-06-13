@@ -18,9 +18,8 @@ int main()
   ftb.init(mesh);
   directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
   directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
-  directional::DirectionalViewer viewer;
-  viewer.init();
   
+  viewer.init();
   viewer.set_surface_mesh(mesh);
   viewer.set_cartesian_field(field);
   viewer.launch();

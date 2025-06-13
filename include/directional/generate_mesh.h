@@ -550,7 +550,7 @@ namespace directional{
             
             //building small face overlays of one triangle and a few roughly surrounding hexes to retrieve the structure in the face
             vector<ENumber> triExactNFunction = exactNFunction[findex];
-            if (findex % 100 == 0){
+            if (findex % 1000 == 0){
                 auto end = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                 std::cout<<"Triangle "<<findex<<" exactNFunction:"<<std::endl;
