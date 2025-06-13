@@ -84,9 +84,7 @@ int main(int argc, char *argv[])
     directional::principal_matching(rawFaceField);
     directional::principal_matching(rawVertexField);
 
- 
     viewer.set_surface_mesh(mesh,0);
-
     viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
     viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
   

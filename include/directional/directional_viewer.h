@@ -224,8 +224,8 @@ namespace directional
         }*/
 
         void inline set_cartesian_field(const CartesianField& _field,
-                                        const int fieldNum = 0,
                                         const std::string name="",
+                                        const int fieldNum = 0,
                                         const double sizeRatio = 0.3,
                                         const int sparsity = 0,
                                         const bool addSingularities = true,
@@ -351,7 +351,7 @@ namespace directional
             if (fieldName.empty())
                 singName = "Singularities " + std::to_string(fieldNum);
             else
-                singName = fieldName + "singularities";
+                singName = fieldName + " singularities";
 
             psSingList[fieldNum] = polyscope::registerPointCloud(singName, singSources)->setPointRadius(radiusRatio*field.tb->avgAdjLength, false);
             std::vector<glm::vec3> singColors(singIndices.size());
