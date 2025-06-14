@@ -73,7 +73,7 @@ public:
             //avgEdgeLengths.resize(meshNum+1);
         }
         
-        //surfaceMeshList[meshNum]=&mesh;
+        surfaceMeshList[meshNum]=&mesh;
         std::string meshName;
         if (name.empty())
             meshName = "Mesh " + std::to_string(meshNum);
@@ -173,7 +173,7 @@ public:
             highName = "highlights " + std::to_string(meshNum);
         else
             highName = name;
-        psSurfaceMeshList[meshNum]->addFaceColorQuantity(highName, faceColors);
+        psSurfaceMeshList[meshNum]->addFaceColorQuantity(highName, faceColors)->setEnabled(true);
     }
     
     /*void inline set_selected_faces(const Eigen::VectorXi& selectedFaces, const int meshNum=0){

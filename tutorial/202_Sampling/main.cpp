@@ -1,7 +1,7 @@
 #include <directional/readOBJ.h>
 #include <directional/readDMAT.h>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/principal_matching.h>
 #include <directional/index_prescription.h>
@@ -10,7 +10,7 @@
 #include <directional/power_to_raw.h>
 
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField field;
 Eigen::VectorXi singVertices,singIndices;
 Eigen::VectorXi b;
@@ -27,7 +27,6 @@ directional::DirectionalViewer viewer;
 
 void update_directional_field()
 {
-
     using namespace Eigen;
     using namespace std;
     VectorXd rotationAngles;
@@ -48,60 +47,22 @@ void update_directional_field()
         for (int i=0;i<b.size();i++)
             bc.row(i)<<field.extField.block(b(i),0,1,3).normalized();
 
-        Eigen::VectorXd effort;
         directional::CartesianField powerField;
         directional::power_field(ftb, b, bc, Eigen::VectorXd::Constant(b.size(),-1), N,powerField);
         directional::power_to_raw(powerField, N, field,true);
         directional::principal_matching(field);
     }
 
-    viewer.set_field(field);
+    viewer.set_cartesian_field(field);
 
     if (viewingMode==TRIVIAL_ONE_SING)
-        viewer.set_singularities(singVertices, singIndices);
+        viewer.set_singularities(field, singVertices, singIndices);
 
     if ((viewingMode==TRIVIAL_PRINCIPAL_MATCHING)||(viewingMode==IMPLICIT_FIELD))
-        viewer.set_singularities(field.singLocalCycles, field.singIndices);
+        viewer.set_singularities(field, field.singLocalCycles, field.singIndices);
 
 }
 
-
-
-/*bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifiers)
-{
-  using namespace std;
-  switch(key)
-  {
-    case '1': viewingMode=TRIVIAL_ONE_SING; cout<<"Showing prescribed singularity "<<std::endl;
-      break;
-    case '2': viewingMode=TRIVIAL_PRINCIPAL_MATCHING; cout<<"Principal-matching singularities "<<std::endl;
-      break;
-    case '3': viewingMode=IMPLICIT_FIELD; cout<<"Field interpolated from constraints with principal singularities "<<std::endl;
-      break;
-      
-    case '4':{
-      singIndices[0]--;
-      singIndices[1]++;
-      cout<<"Prescribed singularity index: "<<singIndices[0]<<"/"<<N<<std::endl;
-      break;
-    }
-    case '5':{
-      singIndices[0]++;
-      singIndices[1]--;
-      cout<<"Prescribed singularity index: "<<singIndices[0]<<"/"<<N<<std::endl;
-      break;
-    }
-      
-    case '6':{
-      globalRotation+=igl::PI/16;
-      std::cout<<"globalRotation: " <<globalRotation<<std::endl;
-      break;
-    }
-    default: break;
-  }
-  update_directional_field();
-  return true;
-}*/
 
 void callbackFunc() {
     ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
@@ -173,8 +134,8 @@ int main()
 
     //viewing mesh
     viewer.init();
-    viewer.set_mesh(mesh);
-    viewer.set_field(field);
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(field);
     viewer.highlight_faces(b);
     viewer.set_callback(callbackFunc);
     update_directional_field();
