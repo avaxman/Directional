@@ -226,12 +226,11 @@ public:
     void inline set_cartesian_field(const CartesianField& _field,
                                     const std::string name="",
                                     const int fieldNum = 0,
-                                    const double sizeRatio = 0.3,
-                                    const int sparsity = 0,
-                                    const bool addSingularities = true,
-                                    const bool combedColors = false)
+                                    const int sparsity = 0)
     
     {
+        const double sizeRatio = 0.3;
+        //const bool combedColors = false;
         if (psGlyphSourceList.size()<fieldNum+1) {
             fieldList.resize(fieldNum + 1);
             psGlyphSourceList.resize(fieldNum + 1);
@@ -264,12 +263,12 @@ public:
                                                                                                          3));
             psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*_field.tb->avgAdjLength, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
-            if (!combedColors)
-                psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
+            //if (!combedColors)
+            psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
         }
         
-        if (addSingularities)
-            set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
+        //if (addSingularities)
+        set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
     }
     
     Eigen::MatrixXd inline set_1form(const TriMesh* mesh,
@@ -522,6 +521,8 @@ public:
         psStreamlineList[meshNum]->setEnabled(active);
     }
     
+    
+    
     /*void inline toggle_isolines(const bool active, const int meshNum=0){
      data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_faces=active;
      }
@@ -540,6 +541,19 @@ public:
      static Eigen::RowVector3d inline default_mesh_color(){
      return Eigen::RowVector3d::Constant(1.0);
      }*/
+    
+    void inline set_glyph_length(double lengthRatio, int fieldNum = 0){
+        for (int i=0;i<psGlyphList[fieldNum].size();i++)
+            psGlyphList[fieldNum][i]->setVectorLengthScale(lengthRatio*fieldList[fieldNum]->tb->avgAdjLength, false);
+    }
+    
+    void inline toggle_combed_colors(const bool isCombed, const bool signSymmetry=true, int fieldNum=0){
+        for (int i=0;i<psGlyphList[fieldNum].size();i++)
+            if (!isCombed)
+                psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
+            else
+                psGlyphList[fieldNum][i]->setVectorColor(indexed_glyph_colors(i, psGlyphList[fieldNum].size(), signSymmetry));
+    }
     
     static glm::vec3 inline default_face_color(){
         return glm::vec3(243.0/255.0,241.0/255.0,216.0/255.0);
@@ -607,36 +621,41 @@ public:
     
     
     //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
-    /*static Eigen::MatrixXd inline indexed_glyph_colors(const Eigen::MatrixXd& field, bool signSymmetry=true){
-     
-     Eigen::Matrix<double, 15,3> glyphPrincipalColors;
-     glyphPrincipalColors<< 0.0,0.5,1.0,
-     1.0,0.5,0.0,
-     0.0,1.0,0.5,
-     1.0,0.0,0.5,
-     0.5,0.0,1.0,
-     0.5,1.0,0.0,
-     1.0,0.5,0.5,
-     0.5,1.0,0.5,
-     0.5,0.5,1.0,
-     0.5,1.0,1.0,
-     1.0,0.5,1.0,
-     1.0,1.0,0.5,
-     0.0,1.0,1.0,
-     1.0,0.0,1.0,
-     1.0,1.0,0.0;
-     
-     Eigen::MatrixXd fullGlyphColors(field.rows(),field.cols());
-     int N = field.cols()/3;
-     for (int i=0;i<field.rows();i++)
-     for (int j=0;j<N;j++)
-     fullGlyphColors.block(i,3*j,1,3)<< (signSymmetry && (N%2==0) ? glyphPrincipalColors.row(j%(N/2)) : glyphPrincipalColors.row(j));
-     
-     return fullGlyphColors;
-     }
-     
-     //Jet-based singularity colors
-     static Eigen::MatrixXd inline default_singularity_colors(const int N){
+    static glm::vec3 inline indexed_glyph_colors(int vectorNum, int N, bool signSymmetry=true){
+        
+        assert("Vector number has to be between 0 and 14" && vectorNum>0 && vectorNum<15);
+        Eigen::Matrix<double, 15,3> glyphPrincipalColors;
+        glyphPrincipalColors<< 0.0,0.5,1.0,
+        1.0,0.5,0.0,
+        0.0,1.0,0.5,
+        1.0,0.0,0.5,
+        0.5,0.0,1.0,
+        0.5,1.0,0.0,
+        1.0,0.5,0.5,
+        0.5,1.0,0.5,
+        0.5,0.5,1.0,
+        0.5,1.0,1.0,
+        1.0,0.5,1.0,
+        1.0,1.0,0.5,
+        0.0,1.0,1.0,
+        1.0,0.0,1.0,
+        1.0,1.0,0.0;
+        
+        int row = (signSymmetry && (N%2==0) ? vectorNum % (N/2) : vectorNum);
+        
+        return(glm::vec3(glyphPrincipalColors(row,0),glyphPrincipalColors(row,1), glyphPrincipalColors(row,2)));
+        
+        
+        /*Eigen::MatrixXd fullGlyphColors(field.rows(),field.cols());
+         int N = field.cols()/3;
+         for (int i=0;i<field.rows();i++)
+         for (int j=0;j<N;j++)
+         fullGlyphColors.block(i,3*j,1,3)<<
+         return fullGlyphColors;*/
+    }
+    
+    //Jet-based singularity colors
+    /*static Eigen::MatrixXd inline default_singularity_colors(const int N){
      Eigen::MatrixXd fullColors;
      Eigen::VectorXd NList(2*N);
      for (int i=0;i<N;i++){
