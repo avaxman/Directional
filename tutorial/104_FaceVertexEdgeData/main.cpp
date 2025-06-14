@@ -4,12 +4,12 @@
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 
 int N;
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField field;
 Eigen::VectorXd vertexData, faceData, edgeData;
 
@@ -33,9 +33,8 @@ int main()
   directional::principal_matching(field);
   edgeData=field.effort.cwiseAbs2();
   viewer.init();
-  viewer.set_mesh(mesh);
-  viewer.set_field(field);
-  //viewer.toggle_mesh_edges(false);
+  viewer.set_surface_mesh(mesh);
+  viewer.set_cartesian_field(field);
   viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff());
   viewer.set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff());
   viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff());
