@@ -85,7 +85,7 @@ namespace directional
     }
 
     //TODO: only update effort.
-    principal_matching(combedField, false);
+    principal_matching(combedField);
   }
 }
 

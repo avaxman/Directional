@@ -170,7 +170,7 @@ public:
         
         std::string highName;
         if (name.empty())
-            highName = "highlights " + std::to_string(meshNum);
+            highName = "Face highlights " + std::to_string(meshNum);
         else
             highName = name;
         psSurfaceMeshList[meshNum]->addFaceColorQuantity(highName, faceColors)->setEnabled(true);
@@ -420,7 +420,7 @@ public:
         
         std::string highlightName;
         if (name.empty())
-            highlightName = "Seams " + std::to_string(meshNum);
+            highlightName = "Edge Highlights " + std::to_string(meshNum);
         else
             highlightName = name;
         psEdgeHighlightList[meshNum] = polyscope::registerCurveNetwork(highlightName, seamNodes, seamEdges);

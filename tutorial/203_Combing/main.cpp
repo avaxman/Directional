@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/read_raw_field.h>
 #include <directional/principal_matching.h>
@@ -11,7 +11,7 @@
 
 int N;
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField origField, combedField;
 directional::DirectionalViewer viewer;
 
@@ -24,17 +24,16 @@ void callbackFunc() {
     if (showCombed) {
         if (ImGui::Button("Show Original Field")) {
             showCombed=false;
-            viewer.set_field(origField);
-            //viewer.toggle_seams(false);
+            viewer.set_cartesian_field(origField);
         }
     } else {
         if (ImGui::Button("Show Combed Field")) {
             showCombed=true;
-            viewer.set_field(combedField);
-            //viewer.toggle_seams(true);
+            viewer.set_cartesian_field(combedField);
         }
 
     }
+    viewer.toggle_combed_colors(true, false);
 
     ImGui::PopItemWidth();
 }
@@ -54,13 +53,19 @@ int main()
     directional::combing(origField, combedField);
     Eigen::VectorXd edgeData=origField.effort;
     viewer.init();
-    viewer.set_mesh(mesh);
-    viewer.set_field(origField);
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(origField);
     showCombed = false;
-    viewer.set_seams(combedField.matching);
+    std::vector<int> HighlightedEdgesList;
+    std::for_each(combedField.matching.data(), combedField.matching.data() + combedField.matching.size(), [&, i = 0](int val) mutable {
+        if (val != 0) HighlightedEdgesList.push_back(i);
+        ++i;
+    });
+    Eigen::VectorXi HighlightedEdges = Eigen::Map<Eigen::VectorXi>(HighlightedEdgesList.data(), HighlightedEdgesList.size());
+    viewer.highlight_edges(HighlightedEdges, "Combing seams");
     //viewer.toggle_seams(false);
 
-    viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff());
+    viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), "Matching effort");
 
     viewer.set_callback(callbackFunc);
     viewer.launch();
