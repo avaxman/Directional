@@ -271,6 +271,47 @@ public:
         set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
     }
     
+    void inline set_raw_field(const Eigen::MatrixXd& sources,
+                              const Eigen::MatrixXd& rawField,
+                              const double vectorScale,
+                              const std::string name="",
+                              const int fieldNum = 0)
+    
+    {
+        const double sizeRatio = 0.3;
+        //const bool combedColors = false;
+        if (psGlyphSourceList.size()<fieldNum+1) {
+            //fieldList.resize(fieldNum + 1);
+            psGlyphSourceList.resize(fieldNum + 1);
+            psGlyphList.resize(fieldNum+1);
+            psSingList.resize(fieldNum+1);
+        }
+        
+        //fieldList[fieldNum] = &_field;
+        
+        std::string fieldName;
+        if (name.empty())
+            fieldName = "Field " + std::to_string(fieldNum);
+        else
+            fieldName = name;
+        psGlyphSourceList[fieldNum] = polyscope::registerPointCloud(fieldName, sources);
+        psGlyphList[fieldNum].resize(rawField.cols()/3);
+        psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
+        psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
+        for (int i=0;i<rawField.cols()/3;i++) {
+            psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
+                                                                                      rawField.block(0, 3 * i, rawField.rows(),
+                                                                                                         3));
+            psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*vectorScale, false);
+            psGlyphList[fieldNum][i]->setEnabled(true);
+            //if (!combedColors)
+            psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
+        }
+        
+        //if (addSingularities)
+        //set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
+    }
+    
     Eigen::MatrixXd inline set_1form(const TriMesh* mesh,
                                      const Eigen::VectorXd& oneForm,
                                      const std::string formName = "1-form",
@@ -623,7 +664,7 @@ public:
     //Colors by indices in each directional object. If the field is combed they will appear coherent across faces.
     static glm::vec3 inline indexed_glyph_colors(int vectorNum, int N, bool signSymmetry=true){
         
-        assert("Vector number has to be between 0 and 14" && vectorNum>0 && vectorNum<15);
+        assert("Vector number has to be between 0 and 14" && vectorNum>=0 && vectorNum<15);
         Eigen::Matrix<double, 15,3> glyphPrincipalColors;
         glyphPrincipalColors<< 0.0,0.5,1.0,
         1.0,0.5,0.0,
