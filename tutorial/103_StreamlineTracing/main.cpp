@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     viewer.set_surface_mesh(mesh);
     viewer.set_cartesian_field(field);
-    viewer.init_streamlines(field, 0, Eigen::VectorXi(), 3);
+    viewer.init_streamlines(field, 0);
     viewer.advance_streamlines(0.5);  //to get the initial step
     viewer.launch();
 }

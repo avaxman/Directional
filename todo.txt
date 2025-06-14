@@ -12,12 +12,12 @@ Required features
 
 Bugs & todos
 
-1. Single field rather than N into polyscope
-2. Save values not field classes in polyscope
-3. Use a bigint simple number type and write own rational ENumber
+1. Single field rather than N into polyscope - should put in as an option
+2. Save values not field classes in polyscope - not doing this, users can interface directly with polyscope.
+3. Use a bigint simple number type and write own rational ENumber - DONE
 4. Fix weird relengthing bug in polyscope
-5. Weird visualization bug of overriding in 102.
-6. subdivision-based streamline tracing for 1-forms
+5. Weird visualization bug of overriding in 102 - DONE
+6. subdivision-based streamline tracing - not only for 1-forms, for general interpolation schemes
 7. 103 crashes on release
 8. 1-form as Poisson disk sampling
 9. fix curl_matching
