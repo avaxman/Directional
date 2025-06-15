@@ -41,19 +41,20 @@ void recompute_field()
 
 void update_visualization()
 {
-    viewer.set_cartesian_field(constraintsField,"",0, 0);
-    viewer.highlight_faces(constFaces,0);
+    viewer.set_cartesian_field(constraintsField,"Constraints", 0);
+    viewer.toggle_field_highlight(true, 0);
+    viewer.highlight_faces(constFaces,"Constraint-face highlights", 0);
     if (viewingMode==CONSTRAINTS) {
         viewer.toggle_cartesian_field(true, 0);
         viewer.toggle_cartesian_field(false, 1);
     }
     if (viewingMode==HARD_PRESCRIPTION){
-        viewer.set_cartesian_field(rawFieldHard,"", 0, 1);
+        viewer.set_cartesian_field(rawFieldHard,"Hard interpolation",1);
         viewer.toggle_cartesian_field(true, 1);
     }
 
     if (viewingMode==SOFT_PRESCRIPTION){
-        viewer.set_cartesian_field(rawFieldSoft,"", 0, 1);
+        viewer.set_cartesian_field(rawFieldSoft,"Soft interpolation", 1);
         viewer.toggle_cartesian_field(true, 1);
     }
 

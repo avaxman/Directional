@@ -157,8 +157,8 @@ public:
     }
     
     void inline highlight_faces(const Eigen::VectorXi& selectedFaces,
-                                const int meshNum=0,
-                                const std::string name=""){
+                                const std::string name="",
+                                const int meshNum=0){
         
         glm::vec3 defaultColorglm = psSurfaceMeshList[meshNum]->getSurfaceColor();
         Eigen::RowVector3d defaultColor; for (int i=0;i<3;i++) defaultColor(i)=defaultColorglm[i];
@@ -301,7 +301,7 @@ public:
         for (int i=0;i<rawField.cols()/3;i++) {
             psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                       rawField.block(0, 3 * i, rawField.rows(),
-                                                                                                         3));
+                                                                                                     3));
             psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*vectorScale, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
             //if (!combedColors)
@@ -426,7 +426,30 @@ public:
         psEdgeHighlightList[meshNum] = polyscope::registerCurveNetwork(highlightName, seamNodes, seamEdges);
         psEdgeHighlightList[meshNum]->setColor(glm::vec3());
         psEdgeHighlightList[meshNum]->setRadius(widthRatio*surfaceMeshList[meshNum]->avgEdgeLength, false);
+    }
+    
+    void inline highlight_vertices(const Eigen::VectorXi& highlightVertices,
+                                   const std::string name = "",
+                                   const int meshNum = 0){
+        //TODO: boundary vertices
+        std::set<int> highlightFacesList;
+        //std::cout<<"surfaceMeshList[meshNum]->vertexValence: "<<surfaceMeshList[meshNum]->vertexValence<<std::endl;
+        for (int i=0;i<highlightVertices.size();i++)
+            for (int j=0;j<surfaceMeshList[meshNum]->vertexValence(highlightVertices(i));j++)
+                highlightFacesList.insert(surfaceMeshList[meshNum]->VF(highlightVertices[i], j));
         
+        Eigen::VectorXi highlightFaces(highlightFacesList.size());
+        int i = 0;
+        for (int val : highlightFacesList)
+            highlightFaces(i++) = val;
+        
+        std::string highlightName;
+        if (name.empty())
+            highlightName = "Vertex Highlights " + std::to_string(meshNum);
+        else
+            highlightName = name;
+        
+        highlight_faces(highlightFaces, highlightName, meshNum);
     }
     
     void inline init_streamlines(const CartesianField& field,
@@ -596,6 +619,14 @@ public:
                 psGlyphList[fieldNum][i]->setVectorColor(indexed_glyph_colors(i, psGlyphList[fieldNum].size(), signSymmetry));
     }
     
+    void inline toggle_field_highlight(const bool isHighlighted, int fieldNum = 0){
+        for (int i=0;i<psGlyphList[fieldNum].size();i++)
+            if (!isHighlighted)
+                psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
+            else
+                psGlyphList[fieldNum][i]->setVectorColor(default_vector_constraint_color());
+    }
+    
     static glm::vec3 inline default_face_color(){
         return glm::vec3(243.0/255.0,241.0/255.0,216.0/255.0);
     }
@@ -608,6 +639,10 @@ public:
     //Glyph colors
     static glm::vec3 inline default_glyph_color(){
         return glm::vec3(0.05,0.05,1.0);
+    }
+
+    static glm::vec3 inline default_vector_constraint_color(){
+        return glm::vec3(1.0,1.0,0.2);
     }
     
     //a dynamic range of 8, independent of N (so singularity indeices differentiated would be -4/N..4/N

@@ -7,14 +7,14 @@
 #include <directional/polyvector_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/curl_matching.h>
 #include <directional/extrinsic_intrinsic_matrices.h>
 
 Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField pvFieldSoft, rawFieldSoft,constraintsField, rawFieldOrig, pvFieldOrig;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd curlOrig,curlCF;
@@ -113,11 +113,12 @@ int main()
 
     //triangle mesh setup
     viewer.init();
-    viewer.set_mesh(mesh,0);
-    viewer.set_field(constraintsField,"Constraints",0, 0);
+    viewer.set_surface_mesh(mesh,0);
+    viewer.set_cartesian_field(constraintsField,"Constraints",0);
     viewer.highlight_faces(constFaces,0);
-    viewer.set_field(rawFieldOrig,"Original Field", 0, 0);
-    viewer.set_field(rawFieldSoft,"Curl-free Field", 0, 1);
+    viewer.toggle_field_highlight(0);
+    viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
+    viewer.set_cartesian_field(rawFieldSoft,"Curl-free Field", 2);
     //viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
     //viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
     viewer.launch();
