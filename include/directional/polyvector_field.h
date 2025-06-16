@@ -21,9 +21,12 @@
 #include <directional/project_curl.h>
 #include <directional/principal_matching.h>
 #include <directional/sparse_diagonal.h>
+#include <directional/polyvector_iterations_functions.h>
 
 namespace directional
 {
+
+typedef std::function<CartesianField&(const CartesianField&, const PolyVectorData& pvData)> IterationFunction;
 
 //Data for the precomputation of the PolyVector algorithm
 struct PolyVectorData{
@@ -40,10 +43,13 @@ public:
     double wSmooth;                 // Weight of smoothness
     double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
-    bool projectCurl;               // Project out the curl of the field
-    bool normalizeField;            // Normalize the field (per vector)
-    double implicitFactor;          // Implicit smoothing factor
+    //bool projectCurl;             // Project out the curl of the field
+    //bool normalizeField;          // Normalize the field (per vector)
+    double initImplicitFactor;          // Implicit smoothing factor
+    double currImplicitCoeff;
+    double implicitScheduler;        //How much to attenuate implicit factor by
     int numIterations;              //  Iterate energy reduction->(possibly)normalize->(possibly)project curl
+    int currIteration;
     
     Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
     Eigen::SparseMatrix<std::complex<double>> roSyMat;      //Rotational-symmetry energy
@@ -56,7 +62,7 @@ public:
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
     double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
-    PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalizeField(false), implicitFactor(0.1) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+    PolyVectorData():signSymmetry(true),  wSmooth(1.0), wRoSy(0.0), numIterations(0), projectCurl(false), normalizeField(false), implicitFactor(0.1), implicitScheduler(0.8), {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
 };
 
@@ -302,10 +308,14 @@ inline void polyvector_precompute(const directional::TangentBundle& tb,
 //  pvField: a POLYVECTOR_FIELD type cartesian field object
 
 inline void polyvector_field(const PolyVectorData& pvData,
+                             const std::vector<IterationFunction>& iterationFunctions,
                              directional::CartesianField& pvField)
 {
     using namespace std;
     using namespace Eigen;
+    
+    //Using a temporary pvData so it could be updated and given to the iteration functions if needed
+    PolyVectorData currPvData = pvData;
     
     //forming total energy matrix;
     SparseMatrix<complex<double>> totalUnreducedLhs =(pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat) * (pvData.wSmooth / pvData.totalSmoothWeight);
@@ -332,7 +342,7 @@ inline void polyvector_field(const PolyVectorData& pvData,
     
     pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
     pvField.set_intrinsic_field(intField);
-    
+        
     /*if (pvData.normalizeField){
         /*CartesianField rawField;
          polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
@@ -352,28 +362,31 @@ inline void polyvector_field(const PolyVectorData& pvData,
     
     //Doing reduce energy-renormalize-project curl iterations
     
-    complex<double> totalMass, implicitCoeff;
+    complex<double> totalMass;
     Eigen::SparseMatrix<complex<double>> implicitLhs;
     SimplicialLDLT<SparseMatrix<complex<double>>> reducProjSolver;
     
     if (pvData.numIterations != 0){
         totalMass = (RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0);
-        implicitCoeff = pvData.implicitFactor/totalMass;
-        cout<<"implicitCoeff: "<<implicitCoeff<<endl;
+        currPvData.currImplicitCoeff = pvData.initImplicitFactor/totalMass;
+        currPvData.currIteration = 0;
+        
+        //cout<<"implicitCoeff: "<<implicitCoeff<<endl;
         reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
         assert(reducProjSolver.info() == Success && "Reduction Projection solver failed!");
-
     }
     
     for (int i=0;i<pvData.numIterations;i++){
-        std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
-        implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  implicitCoeff*totalLhs;
+        
+        //An implicit reduction of the smooth-align-orth energy
+        //std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  currPvData.CurrImplicitCoeff*totalLhs;
         solver.compute(implicitLhs);
         assert(solver.info() == Success && "Implicit factorization failed!");
-        VectorXcd implicitRhs = implicitCoeff*totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
+        VectorXcd implicitRhs = currPvData.CurrImplicitCoeff*totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
         //std::cout<<"Before solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
         reducedDofs = solver.solve(implicitRhs);
-        std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        //std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
         //std::cout<<"After solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
 
         VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
@@ -388,8 +401,13 @@ inline void polyvector_field(const PolyVectorData& pvData,
         
         pvField.set_intrinsic_field(intField);
         
-        std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
-        if ((pvData.normalizeField)&&(i<=4)){
+        //running the iteration over the prescribed functions
+        for (int i=0;i<iterationFunctions.size();i++)
+            pvField = IterationFunctions[i](pvField, currPvData);
+        
+        
+        //std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
+        /*if ((pvData.normalizeField)&&(i<=4)){
             CartesianField rawField;
             polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
             directional::raw_to_polyvector(rawField, pvField);
@@ -398,17 +416,18 @@ inline void polyvector_field(const PolyVectorData& pvData,
             intField.block(0,1,intField.rows(), intField.cols()-1).setZero();
             intField.col(0) = intField.col(0).array() / intField.col(0).array().abs();
             pvField.set_intrinsic_field(intField);*/
-        }
+        //}
         
-        if (pvData.projectCurl){
+        /*if (pvData.projectCurl){
             CartesianField rawField, curlFreeField;
             polyvector_to_raw(pvField, rawField, pvData.N%2==0, false);
             directional::principal_matching(rawField);
             project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
             directional::raw_to_polyvector(curlFreeField,  pvField);
-        }
+        }*/
         
-        implicitCoeff*=1.1;
+        currPvData.CurrImplicitCoeff/=pvData.implicitScheduler;
+        currPvData.currIteration++;
         
         //recreating prevSolution with reducedDof
         //VectorXcd fullDofsBack(fullDofs.size());
@@ -432,8 +451,7 @@ inline void polyvector_field(const TangentBundle& tb,
                              const Eigen::VectorXd& alignWeights,
                              const int N,
                              directional::CartesianField& pvField,
-                             const bool projectCurl = false,
-                             const bool normalizeField = false,
+                             const std::vector<IterationFunction> iterationFunctions,
                              const int numIterations = 0)
 {
     PolyVectorData pvData;
@@ -454,7 +472,7 @@ inline void polyvector_field(const TangentBundle& tb,
     pvData.wRoSy = roSyWeight;
     pvField.init(tb,fieldTypeEnum::POLYVECTOR_FIELD,N);
     polyvector_precompute(tb,N,pvField,pvData);
-    polyvector_field(pvData, pvField);
+    polyvector_field(pvData, iterationFunctions, pvField);
 }
 
 
