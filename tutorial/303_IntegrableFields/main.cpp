@@ -81,12 +81,12 @@ int main()
     directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
 
     //testing extrinsic to intrinsic matrix
-    Eigen::VectorXd extVec = rawFieldOrig.flatten(false);
+    /*Eigen::VectorXd extVec = rawFieldOrig.flatten(false);
     Eigen::VectorXd intVec = rawFieldOrig.flatten(true);
     Eigen::SparseMatrix<double> EI = directional::face_extrinsic_to_intrinsic_matrix_2D<double>(&mesh, N);
     std::cout<<"IE difference: "<<(EI*extVec - intVec).cwiseAbs().maxCoeff()<<std::endl;
     Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(&mesh, N);
-    std::cout<<"IE difference: "<<(IE*intVec - extVec).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"IE difference: "<<(IE*intVec - extVec).cwiseAbs().maxCoeff()<<std::endl;*/
 
     //std::cout<<"Raw Field first: "<<rawFieldOrig.extField<<std::endl;
     //std::cout<<"Optimized Field first: "<<rawFieldSoft.extField.row(0)<<std::endl;
@@ -115,9 +115,10 @@ int main()
     viewer.init();
     viewer.set_surface_mesh(mesh,0);
     viewer.set_cartesian_field(constraintsField,"Constraints",0);
-    viewer.highlight_faces(constFaces,0);
-    viewer.toggle_field_highlight(0);
+    viewer.highlight_faces(constFaces,"Const Faces", 0);
+    viewer.toggle_field_highlight(true,0);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
+    //viewer.toggle_cartesian_field(false, 1);
     viewer.set_cartesian_field(rawFieldSoft,"Curl-free Field", 2);
     //viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
     //viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);

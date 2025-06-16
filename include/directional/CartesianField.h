@@ -83,6 +83,15 @@ namespace directional{
             } else extField=_extField;
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }
+        
+        Eigen::MatrixXcd inline get_complex_intrinsic_field(){
+            Eigen::MatrixXcd complexIntField(intField.rows(),intField.cols()/2);
+            for (int i=0;i<N;i++){
+                complexIntField.col(i).real() = intField.col(2*i);
+                complexIntField.col(i).imag() = intField.col(2*i+1);
+            }
+            return complexIntField;
+        }
 
 
         //giving a single vector version of the field
@@ -99,15 +108,15 @@ namespace directional{
         }
 
         //Giving a single complex version (for power fields and polyvectors)
-        Eigen::VectorXcd flatten_complex() const{
+       /* Eigen::VectorXcd flatten_complex() const{
             assert((fieldType==fieldTypeEnum::POWER_FIELD || fieldType==fieldTypeEnum::POLYVECTOR_FIELD) && "flatten(): the complex method is only good for PolyVector or Power fields");
             Eigen::VectorXcd vecField(intField.rows()*intField.cols()/2);
-            for (int i=0;i<intField.rows();i++)
-                for (int j=0;j<intField.cols();j+=2)
+            for (int j=0;j<intField.cols();j+=2)
+                for (int i=0;i<intField.rows();i++)
                     vecField(i*intField.cols()/2+j/2) = std::complex<double>(intField(i,j),intField(i,j+1));
 
             return vecField;
-        }
+        }*/
 
 
         //Directly setting the singularities of the the field (only at the local dual elements; not at generator or boundary cycles).

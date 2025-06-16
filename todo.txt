@@ -28,10 +28,11 @@ Bugs & todos
 13. set_field etc. naming conventions - DONE
 14. 301 add colored constraints and normalize button.
 15. 302 solve overriding visualization - 302 works but the button is still bad.
-16. tune coefficients and allow for implicit normalization with a coefficient.
+16. tune coefficients and allow for implicit normalization with a coefficient. - should do schedules
 17. add a GL tutorial in chapter 3 (just smooth-and-normalize)
-18. profile 303 to see why curl projection is so slow.
-19. add interaction in 303.
+18. profile 303 to see why curl projection is so slow. DONE
+19. 303 has hard noamlization
+19a. Should have normalization and curl free in a general iterative fashion
 20. 401 should allow choice of cycle.
 21. 501 excessive printing and valence 2 warnings
 22. 501 redundant mesh and wrong period of UV.
