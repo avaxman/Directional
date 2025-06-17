@@ -84,7 +84,7 @@ namespace directional{
             intField = tb->project_to_intrinsic(Eigen::VectorXi::LinSpaced(extField.rows(), 0,extField.rows()-1), extField);
         }
         
-        Eigen::MatrixXcd inline get_complex_intrinsic_field(){
+        Eigen::MatrixXcd inline get_complex_intrinsic_field() const{
             Eigen::MatrixXcd complexIntField(intField.rows(),intField.cols()/2);
             for (int i=0;i<N;i++){
                 complexIntField.col(i).real() = intField.col(2*i);

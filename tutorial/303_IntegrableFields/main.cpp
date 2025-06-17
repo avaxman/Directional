@@ -4,6 +4,8 @@
 #include <directional/write_raw_field.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
+#include <directional/polyvector_iteration_functions.h>
+#include <directional/PolyVectorData.h>
 #include <directional/polyvector_field.h>
 #include <directional/write_raw_field.h>
 #include <directional/directional_viewer.h>
@@ -15,7 +17,7 @@
 Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
 directional::PCFaceTangentBundle ftb;
-directional::CartesianField pvFieldSoft, rawFieldSoft,constraintsField, rawFieldOrig, pvFieldOrig;
+directional::CartesianField pvFieldCurlFree, rawFieldCurlFree,constraintsField, rawFieldOrig, pvFieldOrig;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd curlOrig,curlCF;
 
@@ -33,7 +35,7 @@ int main()
     // Load mesh
     directional::readOFF(TUTORIAL_DATA_PATH "/cheburashka.off", mesh);
     ftb.init(mesh);
-    pvFieldSoft.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
+    pvFieldCurlFree.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     pvFieldOrig.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
 
     //discovering and constraining sharp edges
@@ -73,13 +75,31 @@ int main()
     smoothWeight = 1.0;
     roSyWeight = 1.0;
     alignWeight = 1.0;
-
-    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldOrig, false, false);
-    directional::polyvector_field(ftb, constFaces, constVectors, smoothWeight, roSyWeight, alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0), N, pvFieldSoft, true, true, 25);
+    
+    directional::PolyVectorData pvData;
+    pvData.N = N;
+    pvData.tb = &ftb;
+    pvData.verbose = true;
+    pvData.constSpaces = constFaces;
+    pvData.constVectors = constVectors;
+    pvData.wAlignment = alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0);
+    pvData.wSmooth = smoothWeight;
+    pvData.wRoSy = roSyWeight;
+    
+    //Computing regular PolyuVector field without iterations
+    directional::polyvector_field(pvData, pvFieldOrig);
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
+    
+    //Iterating for a curl-free field
+    pvData.numIterations = 25;
+    std::vector<directional::PvIterationFunction> iterationFunctions;
+    iterationFunctions.push_back(directional::soft_rosy);
+    iterationFunctions.push_back(directional::curl_projection);
+    directional::polyvector_field(pvData, pvFieldCurlFree, iterationFunctions);
+    directional::polyvector_to_raw(pvFieldCurlFree, rawFieldCurlFree, N%2==0);
+    
     //std::cout<<rawFieldOrig.matching<<std::endl;
-    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
-
+   
     //testing extrinsic to intrinsic matrix
     /*Eigen::VectorXd extVec = rawFieldOrig.flatten(false);
     Eigen::VectorXd intVec = rawFieldOrig.flatten(true);
@@ -93,7 +113,7 @@ int main()
 
     directional::principal_matching(rawFieldOrig);
     //std:: cout<<"Max curl original: "<<curlOrig.cwiseAbs().maxCoeff()<<std::endl;
-    directional::principal_matching(rawFieldSoft);
+    directional::principal_matching(rawFieldCurlFree);
     //std:: cout<<"Max curl optimized: "<<curlCF.cwiseAbs().maxCoeff()<<std::endl;
 
       //Testing for curl
@@ -119,7 +139,7 @@ int main()
     viewer.toggle_field_highlight(true,0);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     //viewer.toggle_cartesian_field(false, 1);
-    viewer.set_cartesian_field(rawFieldSoft,"Curl-free Field", 2);
+    viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
     //viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
     //viewer.set_edge_data(curlCF, curlCF.cwiseAbs().minCoeff(), curlCF.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
     viewer.launch();

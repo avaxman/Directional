@@ -40,6 +40,7 @@ namespace directional{
         void inline init(const TriMesh& _mesh){
 
             intDimension = 2;
+            numSpaces = _mesh.F.rows();
             avgAdjLength = _mesh.avgEdgeLength;
             typedef std::complex<double> Complex;
             mesh = &_mesh;
