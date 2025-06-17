@@ -627,6 +627,11 @@ public:
                 psGlyphList[fieldNum][i]->setVectorColor(default_vector_constraint_color());
     }
     
+    void inline set_field_color(const glm::vec3 fieldColor, int fieldNum = 0){
+        for (int i=0;i<psGlyphList[fieldNum].size();i++)
+            psGlyphList[fieldNum][i]->setVectorColor(fieldColor);
+    }
+    
     static glm::vec3 inline default_face_color(){
         return glm::vec3(243.0/255.0,241.0/255.0,216.0/255.0);
     }

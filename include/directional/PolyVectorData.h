@@ -31,8 +31,6 @@ public:
     double wSmooth;                 // Weight of smoothness
     double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
-    //bool projectCurl;             // Project out the curl of the field
-    //bool normalizeField;          // Normalize the field (per vector)
     double initImplicitFactor;          // Implicit smoothing factor
     double currImplicitCoeff;
     double implicitScheduler;        //How much to attenuate implicit factor by
