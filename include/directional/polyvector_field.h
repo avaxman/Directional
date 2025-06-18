@@ -324,13 +324,11 @@ inline void polyvector_field(PolyVectorData& pvData,
     
     if (pvData.numIterations != 0){
         //approximating the smallest non-zero eigenvalues
-        Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(&mesh);
-        Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
-        directional::hodge_star_1_matrix(&mesh, hodgeStar, invHodgeStar, true);
-        lumped_voronoi_mass_matrix_2D(const TriMesh* mesh, const int N = 1)
-        double approxEig = (f.transpose()*d0.transpose()*hodgeStar*d0*f).coeff(0,0)/(f.transpose()*pvData.M*f).coeff(0,0)
+        complex<double> energy = (0.5 * reducedDofs.adjoint() * totalLhs* reducedDofs- reducedDofs.adjoint() * totalRhs).coeff(0,0);
+        complex<double> mass = (reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs).coeff(0,0);
+        double approxEig = std::abs(energy/mass);
         //totalMass = std::abs((RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0));
-        currPvData.currImplicitCoeff = pvData.initImplicitFactor/totalMass;
+        currPvData.currImplicitCoeff = pvData.initImplicitFactor/approxEig;
         currPvData.currIteration = 0;
         
         //cout<<"implicitCoeff: "<<implicitCoeff<<endl;
@@ -368,7 +366,7 @@ inline void polyvector_field(PolyVectorData& pvData,
         for (int i=0;i<iterationFunctions.size();i++)
             pvField = iterationFunctions[i](pvField, currPvData);
         
-        
+        //std::cout<<"pvField.intField: "<<pvField.intField<<std::endl;
         //std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
         /*if ((pvData.normalizeField)&&(i<=4)){
          CartesianField rawField;

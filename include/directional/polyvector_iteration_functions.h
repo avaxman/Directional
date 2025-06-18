@@ -34,6 +34,19 @@ CartesianField hard_normalization(const CartesianField& pvField, const PolyVecto
     return normPvField;
 }
 
+
+CartesianField hard_rosy(const CartesianField& pvField, const PolyVectorData& pvData){
+    Eigen::MatrixXcd rosyField = pvField.get_complex_intrinsic_field();
+    rosyField.block(0,1,rosyField.rows(), rosyField.cols()-1).setZero();
+    rosyField.col(0) = rosyField.col(0).array() / rosyField.col(0).array().abs();
+    //std::cout<<"rosyField: "<<rosyField<<std::endl;
+    CartesianField hardRosyField = pvField;
+    hardRosyField.set_intrinsic_field(rosyField);
+    return hardRosyField;
+}
+
+
+
 CartesianField soft_rosy(const CartesianField& pvField, const PolyVectorData& pvData){
     Eigen::MatrixXcd rosyField = pvField.get_complex_intrinsic_field();
     rosyField.block(0,1,rosyField.rows(), rosyField.cols()-1).setZero();
