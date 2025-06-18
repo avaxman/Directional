@@ -323,7 +323,13 @@ inline void polyvector_field(PolyVectorData& pvData,
     SimplicialLDLT<SparseMatrix<complex<double>>> reducProjSolver;
     
     if (pvData.numIterations != 0){
-        totalMass = std::abs((RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0));
+        //approximating the smallest non-zero eigenvalues
+        Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(&mesh);
+        Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
+        directional::hodge_star_1_matrix(&mesh, hodgeStar, invHodgeStar, true);
+        lumped_voronoi_mass_matrix_2D(const TriMesh* mesh, const int N = 1)
+        double approxEig = (f.transpose()*d0.transpose()*hodgeStar*d0*f).coeff(0,0)/(f.transpose()*pvData.M*f).coeff(0,0)
+        //totalMass = std::abs((RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0));
         currPvData.currImplicitCoeff = pvData.initImplicitFactor/totalMass;
         currPvData.currIteration = 0;
         
@@ -336,14 +342,14 @@ inline void polyvector_field(PolyVectorData& pvData,
         if (pvData.verbose)
             std::cout<<"Iteration no. "<<i<<std::endl;
         //An implicit reduction of the smooth-align-orth energy
-        //std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
         implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  currPvData.currImplicitCoeff*totalLhs;
         solver.compute(implicitLhs);
         assert(solver.info() == Success && "Implicit factorization failed!");
         VectorXcd implicitRhs = currPvData.currImplicitCoeff*totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
         //std::cout<<"Before solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
         reducedDofs = solver.solve(implicitRhs);
-        //std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
         //std::cout<<"After solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
         
         VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;

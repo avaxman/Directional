@@ -32,7 +32,7 @@ ViewingModes viewingMode=CONSTRAINTS;
 int main()
 {
     // Load mesh
-    directional::readOFF(TUTORIAL_DATA_PATH "/botanic-garden-bubble.off", mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/deckel_input.off", mesh);
     ftb.init(mesh);
     pvFieldGL.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     pvFieldOrig.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
@@ -40,11 +40,15 @@ int main()
     //discovering and constraining sharp edges
     std::vector<int> constFaceslist;
     std::vector<Eigen::Vector3d> constVectorslist;
-    for (int i=0;i<mesh.boundEdges.size();i++){
-        int edgeIndex = mesh.boundEdges(i);
-        int faceIndex = (mesh.EF(edgeIndex,0)<0 ? mesh.EF(edgeIndex,1) : mesh.EF(edgeIndex,0));
-        constFaceslist.push_back(faceIndex);
-        constVectorslist.push_back((mesh.V.row(mesh.EV(edgeIndex,0))-mesh.V.row(mesh.EV(edgeIndex,1))).normalized());
+    for (int i=0;i<mesh.EF.rows();i++){
+        int face1Index = mesh.EF(i,0);
+        int face2Index = mesh.EF(i,1);
+        if (mesh.faceNormals.row(face1Index).dot(mesh.faceNormals.row(face2Index))<0.1){
+            constFaceslist.push_back(face1Index);
+            constFaceslist.push_back(face2Index);
+            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+        }
     }
     
     constFaces.resize(constFaceslist.size());
@@ -69,12 +73,13 @@ int main()
     pvData.wAlignment = alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0);
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
-    pvData.initImplicitFactor = 10.0;
+    pvData.initImplicitFactor = 1.0;
     pvData.implicitScheduler = 1.0;
     
     //Computing regular PolyVector field without iterations
     directional::polyvector_field(pvData, pvFieldOrig);
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
+    directional::principal_matching(rawFieldOrig);
     
     //Iterating for a curl-free field
     pvData.numIterations = 10;
@@ -82,6 +87,7 @@ int main()
     iterationFunctions.push_back(directional::hard_normalization);
     directional::polyvector_field(pvData, pvFieldGL, iterationFunctions);
     directional::polyvector_to_raw(pvFieldGL, rawFieldGL, N%2==0);
+    directional::principal_matching(rawFieldGL);
     
     //Visualization
     viewer.init();
