@@ -17,7 +17,7 @@
 Eigen::VectorXi constFaces;
 directional::TriMesh mesh;
 directional::PCFaceTangentBundle ftb;
-directional::CartesianField pvFieldCurlFree, rawFieldCurlFree,constraintsField, rawFieldOrig, pvFieldOrig;
+directional::CartesianField pvFieldConjugate, rawFieldConjugate,constraintsField, rawFieldOrig, pvFieldOrig;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd curlOrig,curlCF;
 
@@ -33,21 +33,18 @@ ViewingModes viewingMode=CONSTRAINTS;
 int main()
 {
     // Load mesh
-    directional::readOFF(TUTORIAL_DATA_PATH "/cheburashka.off", mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/botanic-garden-bubble.off", mesh);
     ftb.init(mesh);
-    pvFieldCurlFree.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
+    pvFieldConjugate.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     pvFieldOrig.init(ftb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     
     //discovering and constraining sharp edges
     std::vector<int> constFaceslist;
     std::vector<Eigen::Vector3d> constVectorslist;
-    for (int i=0;i<mesh.EF.rows();i++){
-        if (mesh.faceNormals.row(mesh.EF(i,0)).dot(mesh.faceNormals.row(mesh.EF(i,1)))<0.1){
-            constFaceslist.push_back(mesh.EF(i,0));
-            constFaceslist.push_back(mesh.EF(i,1));
-            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
-            constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
-        }
+    for (int i=0;i<mesh.boundEdges.rows();i++){
+        int faceIndex = (mesh.EF(mesh.boundEdges(i),0)==-1 ? mesh.EF(mesh.boundEdges(i),1) : mesh.EF(mesh.boundEdges(i),0));
+        constFaceslist.push_back(faceIndex);
+        constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
     }
     
     constFaces.resize(constFaceslist.size());
@@ -76,16 +73,16 @@ int main()
     //Computing regular PolyuVector field without iterations
     directional::polyvector_field(pvData, pvFieldOrig);
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
-    directional::curl_matching(rawFieldOrig, curlOrig);
+    directional::principal_matching(rawFieldOrig);
     
-    //Iterating for a curl-free field
-    pvData.numIterations = 25;
+    //Iterating for a conjugate field
+    pvData.numIterations = 1;
     std::vector<directional::PvIterationFunction> iterationFunctions;
-    iterationFunctions.push_back(directional::soft_rosy);
-    iterationFunctions.push_back(directional::curl_projection);
-    directional::polyvector_field(pvData, pvFieldCurlFree, iterationFunctions);
-    directional::polyvector_to_raw(pvFieldCurlFree, rawFieldCurlFree, N%2==0);
-    directional::curl_matching(rawFieldCurlFree, curlCF);
+    iterationFunctions.push_back(directional::conjugate);
+    //iterationFunctions.push_back(directional::curl_projection);
+    directional::polyvector_field(pvData, pvFieldConjugate, iterationFunctions);
+    directional::polyvector_to_raw(pvFieldConjugate, rawFieldConjugate, N%2==0);
+    directional::principal_matching(rawFieldConjugate);
     
     //Visualization
     viewer.init();
@@ -95,9 +92,14 @@ int main()
     viewer.highlight_faces(constFaces,"Const Faces", 0);
     viewer.toggle_field_highlight(true,0);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
-    viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
+    //viewer.set_raw_field(mesh.barycenters, mesh.minFacePrincipalDirectionals, mesh.avgEdgeLength, "Min Curvature Field",  2);
+    viewer.set_cartesian_field(rawFieldOrig,"Conjugate Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
-    viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
-    viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
+    //viewer.set_raw_field(mesh.barycenters, mesh.maxFacePrincipalDirectionals, mesh.avgEdgeLength, "Max Curvature Field",  3);
+    //viewer.set_field_color({125.0, 107.0/255.0, 8.0/255.0}, 3);
+    //viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
+    //viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
+    //viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
+    //viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
     viewer.launch();
 }

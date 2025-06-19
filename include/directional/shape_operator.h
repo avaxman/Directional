@@ -11,7 +11,6 @@
 
 #include <Eigen/Core>
 #include <vector>
-#include <directional/TriMesh.h>
 
 /**********Computing principal curvatures and directions by estimating per-vertex shape operators
  Based on "Smooth Feature Lines on Surface Meshes" by Hildebrandt et al. 2005
@@ -20,45 +19,53 @@
 //TODO: find out what boundaries should actually do.
 namespace directional
 {
-    inline void shape_operator(const TriMesh& mesh,
-                               std::vector<Eigen::Matrix3d>& Se,
-                               std::vector<Eigen::Matrix3d>& Sv,
-                               std::vector<Eigen::Matrix3d>& Sf)
+inline void shape_operator(const Eigen::MatrixXd& V,
+                           const Eigen::MatrixXi& F,
+                           const Eigen::MatrixXi& EV,
+                           const Eigen::MatrixXi& EF,
+                           const Eigen::MatrixXd& faceNormals,
+                           const Eigen::MatrixXd& vertexNormals,
+                           std::vector<Eigen::Matrix3d>& Se,
+                           std::vector<Eigen::Matrix3d>& Sv,
+                           std::vector<Eigen::Matrix3d>& Sf)
 
-    {
-        using namespace Eigen;
-        MatrixXd e(mesh.EV.rows(),3);
-        MatrixXd Ne(mesh.EV.rows(),3);
-        VectorXd cosHalfTheta(mesh.EV.rows());
-        Se.resize(mesh.EV.rows());
-        Sv.resize(mesh.V.rows());
-        Sf.resize(mesh.F.rows());
-        VectorXd He(mesh.EV.rows());
-
-        for (int i=0;i<mesh.V.rows();i++)
-            Sv[i] = Matrix3d::Zero();
-
-        for (int i=0;i<mesh.EV.rows();i++) {
-            e.row(i) = mesh.V.row(mesh.EV(i, 1)) - mesh.V.row(mesh.EV(i, 0));
-            if (mesh.EF(i,1)!=-1)
-                Ne.row(i) = (mesh.faceNormals.row(mesh.EF(i,0))+mesh.faceNormals.row(mesh.EF(i,1))).normalized();
-            else
-                Ne.row(i) = mesh.faceNormals.row(mesh.EF(i,0));
-
-            //Assuming it's always positive?
-            cosHalfTheta(i) = (Ne.row(i).cross(mesh.faceNormals.row(mesh.EF(i,0)))).norm();
-            He(i) = 2* e.row(i).norm() * cosHalfTheta(i);
-            RowVector3d eNe = e.row(i).normalized().cross(Ne.row(i));
-            Se[i] = He * eNe.transpose() * eNe;
-            Sv[mesh.EV(i,0)] += 0.5 * Se[i] * Ne.row(i).dot(mesh.vertexNormals.row(mesh.EV(i,0)));
-            Sv[mesh.EV(i,1)] += 0.5 * Se[i] * Ne.row(i).dot(mesh.vertexNormals.row(mesh.EV(i,1)));
-
-            Sf[mesh.EF(i,0)] += 0.5 * Se[i] * Ne.row(i).dot(mesh.faceNormals.row(mesh.EV(i,0)));
-            Sf[mesh.EF(i,1)] += 0.5 * Se[i] * Ne.row(i).dot(mesh.faceNormals.row(mesh.EV(i,1)));
-
-        }
-
+{
+    using namespace Eigen;
+    MatrixXd e(EV.rows(),3);
+    MatrixXd Ne(EV.rows(),3);
+    VectorXd cosHalfTheta(EV.rows());
+    Se.resize(EV.rows());
+    Sv.resize(V.rows());
+    Sf.resize(F.rows());
+    //VectorXd He(V.rows());
+    
+    for (int i=0;i<V.rows();i++)
+        Sv[i] = Matrix3d::Zero();
+    
+    for (int i=0;i<EV.rows();i++) {
+        e.row(i) = V.row(EV(i, 1)) - V.row(EV(i, 0));
+        if (EF(i,1)!=-1)
+            Ne.row(i) = (faceNormals.row(EF(i,0))+faceNormals.row(EF(i,1))).normalized();
+        else
+            Ne.row(i) = faceNormals.row(EF(i,0));
+        
+        //Assuming it's always positive?
+        RowVector3d n = faceNormals.row(EF(i,0)).eval();
+        RowVector3d ne = Ne.row(i);
+        cosHalfTheta(i) = (ne.cross(n)).norm();
+        double He = 2* e.row(i).norm() * cosHalfTheta(i);
+        RowVector3d evec = e.row(i).normalized();
+        RowVector3d eNe = evec.cross(ne);
+        Se[i] = He * eNe.transpose() * eNe;
+        Sv[EV(i,0)] += 0.5 * Se[i] * (ne.dot(vertexNormals.row(EV(i,0))));
+        Sv[EV(i,1)] += 0.5 * Se[i] * (ne.dot(vertexNormals.row(EV(i,1))));
     }
+    
+    //averaging operator to faces
+    for (int i=0;i<F.rows();i++)
+        Sf[i] = (Sv[F(i,0)]+Sv[F(i,1)]+Sv[F(i,2)])/3.0;
+    
+}
 }
 
 

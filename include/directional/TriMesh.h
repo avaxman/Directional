@@ -12,10 +12,12 @@
 #include <vector>
 #include <set>
 #include <cassert>
+#include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <directional/gaussian_curvature.h>
 #include <directional/dcel.h>
+#include <directional/shape_operator.h>
 
 /***
  This class stores a general-purpose triangle mesh. The triangle mesh can be used to implement a tangent bundle in several ways
@@ -69,6 +71,10 @@ namespace directional{
         Eigen::MatrixXd VBx,VBy;  //local basis vectors per vertex
         Eigen::MatrixXd barycenters;
         Eigen::VectorXd GaussianCurvature;
+        std::vector<Eigen::Matrix3d> Se,Sv,Sf;
+        Eigen::MatrixXd minFacePrincipalDirectionals;
+        Eigen::MatrixXd maxFacePrincipalDirectionals;
+        Eigen::MatrixXd facePrincipalCurvatures;
 
         //Measures of the scale of a mesh
         double avgEdgeLength;
@@ -192,10 +198,62 @@ namespace directional{
                 FBy.row(i) = localy.normalized();
                 faceNormals.row(i) = localz.normalized();
             }
+            
+            //computing vertex normals by area-weighted aveage of face normals
+            vertexNormals=Eigen::MatrixXd::Zero(V.rows(),3);
+            for (int i=0;i<F.rows();i++)
+                for (int j=0;j<3;j++)
+                    vertexNormals.row(F(i,j)).array()+=faceNormals.row(i).array()*faceAreas(i);
+
+            vertexNormals.rowwise().normalize();
 
             //igl::triangle_triangle_adjacency(F, TT);
+            //Curvatures
             gaussian_curvature(V,F,isBoundaryVertex, GaussianCurvature);
+            directional::shape_operator(V, F, EV, EF, faceNormals, vertexNormals,Se, Sv, Sf);
+            //computing the principal directions for all faces
+            minFacePrincipalDirectionals.resize(F.rows(),3);
+            maxFacePrincipalDirectionals.resize(F.rows(),3);
+            facePrincipalCurvatures.resize(F.rows(),2);
+            for (int i=0;i<F.rows();i++){
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(Sf[i]);
+                assert("Eigendecomposition os shape operator failed" && eigensolver.info() == Eigen::Success);
+                int best_idx = 0;
+                double max_dot = std::abs(this->faceNormals.row(i).dot(eigensolver.eigenvectors().col(0)));
 
+                for (int i = 1; i < 3; ++i) {
+                    double dot = std::abs(this->faceNormals.row(i).dot(eigensolver.eigenvectors().col(i)));
+                    if (dot > max_dot) {
+                        max_dot = dot;
+                        best_idx = i;
+                    }
+                }
+                int minIndex, maxIndex;
+                minIndex = eigensolver.eigenvalues()((best_idx+1)%3)>=eigensolver.eigenvalues()((best_idx+2)%3) ? (best_idx+2)%3 : (best_idx+1)%3;
+                maxIndex = eigensolver.eigenvalues()((best_idx+1)%3)>=eigensolver.eigenvalues()((best_idx+2)%3) ? (best_idx+1)%3 : (best_idx+2)%3;
+                facePrincipalCurvatures.row(i)<<eigensolver.eigenvalues()(minIndex), eigensolver.eigenvalues()(maxIndex);
+                minFacePrincipalDirectionals.row(i) = eigensolver.eigenvectors().col(minIndex).transpose();
+                maxFacePrincipalDirectionals.row(i) = eigensolver.eigenvectors().col(maxIndex).transpose();
+                Eigen::RowVector3d operatorNormal = eigensolver.eigenvectors().col(best_idx).transpose();
+               
+                // Rotating frame (hopefully slightly) to fit the face normal
+                Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(operatorNormal, faceNormals.row(i));
+                Eigen::Matrix3d R = q.toRotationMatrix();
+
+                // Apply rotation to the eigenvectors
+                /*minFacePrincipalDirectionals.row(i) = (R * eigensolver.eigenvectors().col(minIndex)).transpose();
+                maxFacePrincipalDirectionals.row(i) = (R * eigensolver.eigenvectors().col(maxIndex)).transpose();
+                operatorNormal = (R * eigensolver.eigenvectors().col(best_idx)).transpose();*/
+                
+                //std::cout<<"operatorNormal - faceNormal.row(i):" <<operatorNormal - faceNormals.row(i)<<std::endl;
+                
+                /*std::cout << "Most codirectional eigenvector:\n"
+                              << eigensolver.eigenvectors().col(best_idx).transpose() << "\n";
+                    std::cout << "Corresponding eigenvalue: " << eigensolver.eigenvalues()(best_idx) << "\n";*/
+            }
+            
+            
+            
             //Average edge length
             double sumEdgeLength=0.0;
             for (int i=0;i<EV.rows();i++)
@@ -259,13 +317,7 @@ namespace directional{
                 }while(hebegin!=heiterate);
             }
 
-            //computing vertex normals by area-weighted aveage of face normals
-            vertexNormals=Eigen::MatrixXd::Zero(V.rows(),3);
-            for (int i=0;i<F.rows();i++)
-                for (int j=0;j<3;j++)
-                    vertexNormals.row(F(i,j)).array()+=faceNormals.row(i).array()*faceAreas(i);
 
-            vertexNormals.rowwise().normalize();
 
             //computing local basis that aligns with the first projected edge of each triangle
             VBx.resize(V.rows(),3);

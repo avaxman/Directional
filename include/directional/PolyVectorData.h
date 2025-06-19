@@ -48,7 +48,7 @@ public:
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
     double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
-    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), numIterations(0), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.1), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), numIterations(0), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.5), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
 };
 
