@@ -71,7 +71,7 @@ CartesianField curl_projection(const CartesianField& pvField, const PolyVectorDa
 
 Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen::MatrixXd& H){
     // Step 1: Perform eigen-decomposition of H (since it's symmetric)
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(H);
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(0.5*(H+H.transpose()));
     assert("directional:project_on_quadric(): Eigen decomposition failed!" && eigensolver.info() == Eigen::Success);
     
     Eigen::MatrixXd U = eigensolver.eigenvectors();
@@ -94,7 +94,7 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
             f  += zi * zi * si / denom2;
             df += -2.0 * zi * zi * si * si / denom3;
         }
-        std::cout<<"f: "<<f<<std::endl;
+        //std::cout<<"f: "<<f<<std::endl;
         if (std::abs(f) < tol) break;
         
         double step = f / df;
@@ -107,17 +107,26 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
     }
     
     //checking lambda is correct
-    double lambdasum = 0.0;
-    for (int i=0;i<y0.size();i++)
-        lambdasum+=z(i)*z(i)*sigma(i)/((1+sigma(i)*lambda)*(1+sigma(i)*lambda));
-    std::cout<<"lambdasum: "<<lambdasum<<std::endl;
+    //double lambdasum = 0.0;
+    //for (int i=0;i<y0.size();i++)
+    //    lambdasum+=z(i)*z(i)*sigma(i)/((1+sigma(i)*lambda)*(1+sigma(i)*lambda));
+    //std::cout<<"lambdasum: "<<lambdasum<<std::endl;
     Eigen::ArrayXd denom = (1.0 + lambda * sigma.array());
     Eigen::VectorXd z_scaled = (z.array() / denom).matrix();
     Eigen::VectorXd y = U * z_scaled;                                 // back to original coordinates
     
+    //Eigen::MatrixXd D = (sigma.array()/((1+sigma.array()*lambda)*(1+sigma.array()*lambda))).matrix().asDiagonal();
+    //std::cout<<"z.transpose() * D * z: "<<z.transpose()*D*z<<std::endl;
+    //Eigen::MatrixXd Sigma = sigma.asDiagonal();
+    //std::cout<<"z_scaled.transpose() * Sigma * z_scaled: "<<z_scaled.transpose()*Sigma*z_scaled<<std::endl;
+    //Eigen::MatrixXd UtHU = U.transpose()*H*U;
+    //std::cout<<"UtHU - Sigma: "<<UtHU - Sigma<<std::endl;
+    //std::cout<<"H - U*Sigma*U.transpose(): "<<H - U*Sigma*U.transpose()<<std::endl;
+    //std::cout << "H:" << H<<std::endl;
+    
     //checking
-    std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
-    std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
+    //std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
+    //std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
     
     return y.transpose(); // Return RowVectorXd
 }
@@ -136,8 +145,11 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
         Eigen::Matrix<double, 6,6> H; H.setZero();
         H.block(0,3,3,3) = G1;
         H.block(3,0,3,3) = G2;
+        //std::cout<<"extField.row(i) before: "<<extField.row(i)<<std::endl;
         Eigen::RowVectorXd y0(6); y0<<rawField.extField.row(i).head(6);
         extField.row(i).head(6)<<project_on_quadric(y0, H);
+        extField.row(i).tail(6) = - extField.row(i).head(6);
+        //std::cout<<"extField.row(i) after: "<<extField.row(i)<<std::endl;
     }
     rawField.set_extrinsic_field(extField);
     directional::raw_to_polyvector(rawField, conjugatePvField);

@@ -44,7 +44,7 @@ int main()
     for (int i=0;i<mesh.boundEdges.rows();i++){
         int faceIndex = (mesh.EF(mesh.boundEdges(i),0)==-1 ? mesh.EF(mesh.boundEdges(i),1) : mesh.EF(mesh.boundEdges(i),0));
         constFaceslist.push_back(faceIndex);
-        constVectorslist.push_back((mesh.V.row(mesh.EV(i,0))-mesh.V.row(mesh.EV(i,1))).normalized());
+        constVectorslist.push_back((mesh.V.row(mesh.EV(mesh.boundEdges(i),0))-mesh.V.row(mesh.EV(mesh.boundEdges(i),1))).normalized());
     }
     
     constFaces.resize(constFaceslist.size());
@@ -57,7 +57,7 @@ int main()
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 1.0;
+    roSyWeight = 10.0;
     alignWeight = 1.0;
     
     directional::PolyVectorData pvData;
@@ -76,7 +76,8 @@ int main()
     directional::principal_matching(rawFieldOrig);
     
     //Iterating for a conjugate field
-    pvData.numIterations = 1;
+    pvData.numIterations = 25;
+    pvData.initImplicitFactor = 1.0;
     std::vector<directional::PvIterationFunction> iterationFunctions;
     iterationFunctions.push_back(directional::conjugate);
     //iterationFunctions.push_back(directional::curl_projection);
@@ -93,7 +94,7 @@ int main()
     viewer.toggle_field_highlight(true,0);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     //viewer.set_raw_field(mesh.barycenters, mesh.minFacePrincipalDirectionals, mesh.avgEdgeLength, "Min Curvature Field",  2);
-    viewer.set_cartesian_field(rawFieldOrig,"Conjugate Field", 2);
+    viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
     //viewer.set_raw_field(mesh.barycenters, mesh.maxFacePrincipalDirectionals, mesh.avgEdgeLength, "Max Curvature Field",  3);
     //viewer.set_field_color({125.0, 107.0/255.0, 8.0/255.0}, 3);
