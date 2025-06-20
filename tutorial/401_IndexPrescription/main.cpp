@@ -3,6 +3,7 @@
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/index_prescription.h>
 #include <directional/rotation_to_raw.h>
 #include <directional/write_raw_field.h>
@@ -11,7 +12,7 @@
 
 
 directional::TriMesh mesh;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField field;
 Eigen::VectorXi cycleIndices, presSingVertices, presSingIndices;
 std::vector<Eigen::VectorXi> cycleFaces;
@@ -44,7 +45,7 @@ void update_field()
   directional::index_prescription(cycleIndices, N,globalRotation, ldltSolver, field, rotationAngles, linfError);
   std::cout<<"Index prescription linfError: "<<linfError<<std::endl;
   
-  viewer.set_field(field);
+  viewer.set_cartesian_field(field);
   viewer.highlight_faces(cycleFaces[currCycle]);
 
 }
@@ -66,7 +67,7 @@ void update_singularities()
     singIndices(i)=singIndicesList[i];
   }
   
-  viewer.set_singularities(singVertices, singIndices);
+  viewer.set_singularities(field, singVertices, singIndices);
 }
 
 
@@ -147,6 +148,32 @@ void callbackFunc() {
     }
 
     ImGui::PopItemWidth();
+    
+    viewer.psSurfaceMeshList[0]->setSelectionMode(polyscope::MeshSelectionMode::VerticesOnly);
+    
+    // get the mouse location from ImGui
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.MouseClicked[0]) { // if clicked
+        glm::vec2 screenCoords{io.MousePos.x, io.MousePos.y};
+        polyscope::PickResult pickResult = polyscope::pickAtScreenCoords(screenCoords);
+        
+        // check out pickResult.isHit, pickResult.structureName, pickResult.depth, etc
+        
+        // get additional information if we clicked on a mesh
+        if(pickResult.isHit && pickResult.structure == viewer.psSurfaceMeshList[0]) {
+            polyscope::SurfaceMeshPickResult meshPickResult =
+            viewer.psSurfaceMeshList[0]->interpretPickResult(pickResult);
+            
+            //Polyscope doesn't allow different color vectors, so we are setting two fields - one combed one not
+            if(meshPickResult.elementType == polyscope::MeshElement::VERTEX) {
+                std::cout << "clicked vertex " << meshPickResult.index << std::endl;
+                int currV = meshPickResult.index;
+                currCycle = field.tb->local2Cycle(currV);
+                viewer.highlight_faces(cycleFaces[currCycle]);
+                
+            }
+        }
+    }
 }
 
 
@@ -189,8 +216,8 @@ int main()
   
   //triangle mesh setup
   viewer.init();
-  viewer.set_mesh(mesh);
-  viewer.set_field(field);
+  viewer.set_surface_mesh(mesh);
+  viewer.set_cartesian_field(field);
   viewer.highlight_faces(cycleFaces[currCycle]);
   update_field();
   update_singularities();
