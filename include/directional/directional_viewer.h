@@ -44,7 +44,7 @@ public:
     std::vector<polyscope::PointCloud*> psSingList;
     std::vector<polyscope::CurveNetwork*> psStreamlineList;
     std::vector<polyscope::CurveNetwork*> psEdgeHighlightList;
-    std::vector<polyscope::SurfaceMesh*> psIsolineList;
+    std::vector<polyscope::CurveNetwork*> psIsolineList;
     
     
 public:
@@ -506,14 +506,15 @@ public:
         Eigen::MatrixXi edges(P1.rows(),2);
         edges.col(0) = Eigen::VectorXi::LinSpaced(P1.rows(), 0, P1.rows()-1);
         edges.col(1) = Eigen::VectorXi::LinSpaced(P2.rows(), P1.rows(), P1.rows()+P2.rows()-1);
-        psStreamlineList[fieldNum] = polyscope::registerCurveNetwork("Streamlines " + std::to_string(fieldNum), nodes, edges)->setRadius(width);
+        psStreamlineList[fieldNum] = polyscope::registerCurveNetwork("Streamlines " + std::to_string(fieldNum), nodes, edges)->setRadius(width, false);
     }
     
     void inline set_isolines(const directional::TriMesh& cutMesh,
                              const Eigen::MatrixXd& vertexFunction,
+                             const std::string name = "",
                              const int meshNum=0,
                              const int fieldNum=0,
-                             const double sizeRatio=0.1)
+                             const double sizeRatio=0.05)
     {
         
         if (psIsolineList.size()<fieldNum+1)
@@ -525,7 +526,8 @@ public:
         
         directional::branched_isolines(cutMesh.V, cutMesh.F, vertexFunction, isoV, isoE, isoOrigE, isoN, funcNum);
         
-        double l = sizeRatio*cutMesh.avgEdgeLength;
+       // double l = sizeRatio*cutMesh.avgEdgeLength;
+        double width = sizeRatio*fieldList[fieldNum]->tb->avgAdjLength;
         
         Eigen::MatrixXd VIso, CIso;
         Eigen::MatrixXi FIso;
@@ -536,9 +538,18 @@ public:
         for (int i=0;i<funcNum.size();i++)
             CFunc.row(i)=funcColors.row(funcNum(i));
         
-        directional::bar_chains(cutMesh, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
-        psIsolineList[fieldNum]=polyscope::registerSurfaceMesh("isolines "+std::to_string(fieldNum), VIso, FIso);
-        psIsolineList[fieldNum]->addFaceColorQuantity("branches "+std::to_string(fieldNum), CIso);
+        std::string isolineName;
+        if (name.empty())
+            isolineName = "Isolines m" + std::to_string(meshNum) + "-f" + std::to_string(fieldNum);
+        else
+            isolineName = name;
+        
+        psIsolineList[fieldNum] = polyscope::registerCurveNetwork(isolineName, isoV, isoE)->setRadius(width, false);
+        psIsolineList[fieldNum]->addEdgeColorQuantity("Function number", CFunc);
+        
+        //directional::bar_chains(cutMesh, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
+        //psIsolineList[fieldNum]=polyscope::registerSurfaceMesh("isolines "+std::to_string(fieldNum), VIso, FIso);
+        //psIsolineList[fieldNum]->addFaceColorQuantity("branches "+std::to_string(fieldNum), CIso);
     }
     
     void inline set_uv(const Eigen::MatrixXd UV,
@@ -652,7 +663,7 @@ public:
     static glm::vec3 inline default_glyph_color(){
         return glm::vec3(0.05,0.05,1.0);
     }
-
+    
     static glm::vec3 inline default_vector_constraint_color(){
         return glm::vec3(1.0,1.0,0.2);
     }
