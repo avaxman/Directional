@@ -16,15 +16,33 @@
 namespace directional
 {
 
-    //Wraps the libigl writeOBJ, but with a TriMesh object
-    bool writeOBJ(const std::string& fileName,
-                  const directional::TriMesh& mesh,
-                  const Eigen::MatrixXd& TC,
-                  const Eigen::MatrixXi& FTC)
-    {
-        //Eigen::MatrixXd emptyMat;
-        //return igl::writeOBJ(fileName, mesh.V, mesh.F, emptyMat, emptyMat, TC, FTC);
+bool writeOBJ(const std::string& fileName,
+              const directional::TriMesh& mesh,
+              const Eigen::MatrixXd& TC,
+              const Eigen::MatrixXi& FTC)
+{
+    std::ofstream out(fileName);
+    if (!out.is_open())
+        throw std::runtime_error("Failed to open file: " + fileName);
+    
+    for (int i = 0; i < mesh.V.rows(); ++i)
+        out << "v " << mesh.V(i, 0) << " " << mesh.V(i, 1) << " " << mesh.V(i, 2) << "\n";
+    
+    for (int i = 0; i < TC.rows(); ++i)
+        out << "vt " << TC(i, 0) << " " << TC(i, 1) << "\n";
+    
+    for (int i = 0; i < mesh.F.rows(); ++i) {
+        out << "f";
+        for (int j = 0; j < 3; ++j) {
+            int v_idx = mesh.F(i, j) + 1;    // OBJ is 1-based
+            int vt_idx = FTC(i, j) + 1;
+            out << " " << v_idx << "/" << vt_idx;
+        }
+        out << "\n";
     }
+    
+    out.close();
+}
 
 }
 

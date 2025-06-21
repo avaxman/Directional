@@ -125,8 +125,8 @@ namespace directional
         cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
         combing(field, combedField, intData.face2cut);
 
-        std::cout<<"intData.face2cut: "<<intData.face2cut<<endl;
-        std::cout<<"combedField.matching: "<<combedField.matching<<endl;
+       //std::cout<<"intData.face2cut: "<<intData.face2cut<<endl;
+       // std::cout<<"combedField.matching: "<<combedField.matching<<endl;
 
         //MatrixXi EFi,EH, FH;
         //MatrixXd FEs;

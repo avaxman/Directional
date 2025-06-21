@@ -494,7 +494,7 @@ namespace directional
                 }
             }
 
-            if (verbose) std::cout << "Mesh is clear according to given checks" << std::endl;
+            if (verbose) std::cout << "DCEL::check_consistency(): Mesh is clear according to given checks" << std::endl;
             return true;  //most likely the mesh is solid
 
         }

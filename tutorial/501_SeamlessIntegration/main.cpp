@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/writeOBJ.h>
@@ -17,7 +17,7 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField rawField, combedField;
 Eigen::MatrixXd cutUVFull, cutUVRot, cornerWholeUV;
 directional::DirectionalViewer viewer;
@@ -28,28 +28,10 @@ ViewingModes viewingMode=FIELD;
 //texture image
 Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G, texture_B;
 
-// Create a texture that hides the integer translation in the parametrization
-void setup_line_texture()
-{
-    unsigned size = 128;
-    unsigned size2 = size/2;
-    unsigned lineWidth = 5;
-    texture_B.setConstant(size, size, 0);
-    texture_G.setConstant(size, size, 0);
-    texture_R.setConstant(size, size, 0);
-    for (unsigned i=0; i<size; ++i)
-        for (unsigned j=size2-lineWidth; j<=size2+lineWidth; ++j)
-            texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
-    for (unsigned i=size2-lineWidth; i<=size2+lineWidth; ++i)
-        for (unsigned j=0; j<size; ++j)
-            texture_B(i,j) = texture_G(i,j) = texture_R(i,j) = 255;
-}
-
-
 void callbackFunc(){
     ImGui::PushItemWidth(100);
 
-    const char* items[] = { "Original field", "Rotationally seamless", "Fully seamless"};
+    /*const char* items[] = { "Original field", "Rotationally seamless", "Fully seamless"};
     static const char* current_item = NULL;
 
     if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
@@ -77,7 +59,7 @@ void callbackFunc(){
                 ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
         }
         ImGui::EndCombo();
-    }
+    }*/
 
     if (ImGui::Button("Save Textured OBJ File")){
         Eigen::MatrixXd emptyMat;
@@ -91,7 +73,7 @@ void callbackFunc(){
 
 int main()
 {
-    setup_line_texture();
+    //setup_line_texture();
     directional::readOFF(TUTORIAL_DATA_PATH "/horsers.off", meshWhole);
     ftb.init(meshWhole);
     directional::read_raw_field(TUTORIAL_DATA_PATH "/horsers-cf.rawfield", ftb, N, rawField);
@@ -106,15 +88,17 @@ int main()
 
     std::cout<<"Setting up Integration"<<std::endl;
     directional::setup_integration(rawField, intData, meshCut, combedField);
-    Eigen::VectorXi seams = Eigen::VectorXi::Zero(meshWhole.EV.rows());
+    std::vector<int> seamsList;
     for (int i=0;i<meshWhole.F.rows();i++){
-        int hebegin = meshWhole.FH(i);
-        int heiterate = hebegin;
-        for (int j=0;j<3;j++) {
-            seams(meshWhole.HE(heiterate)) = intData.face2cut(i, j);
-            heiterate = meshWhole.nextH(heiterate);
-        }
+        //int hebegin = meshWhole.FH(i);
+        //int heiterate = hebegin;
+        for (int j=0;j<3;j++)
+            if (intData.face2cut(i, j))
+                seamsList.push_back(meshWhole.FE(i,j));
+            //heiterate = meshWhole.nextH(heiterate);
     }
+    
+    Eigen::VectorXi seams = Eigen::VectorXi::Map(seamsList.data(), seamsList.size());
 
 
     intData.verbose=true;
@@ -134,12 +118,12 @@ int main()
 
     //viewer cut (texture) and whole (field) meshes
     viewer.init();
-    viewer.set_mesh(meshWhole,0);
-    viewer.set_mesh(meshCut,1);
-    viewer.set_field(combedField,"", 0,0);
-    viewer.set_seams(seams, 0);
-    //viewer.set_texture(texture_R,texture_G,texture_B,1);
-    //update_viewer();
+    viewer.set_surface_mesh(meshWhole, 0, "Original Mesh");
+    viewer.set_surface_mesh(meshCut, 1, "Cut Mesh");
+    viewer.set_cartesian_field(combedField);
+    viewer.highlight_edges(seams, "Seams");
+    viewer.set_uv(cutUVRot, "Rotationally Seamless UV", 1);
+    viewer.set_uv(cutUVFull, "Full Seamless UV", 1);
     viewer.set_callback(callbackFunc);
     viewer.launch();
 }

@@ -89,7 +89,7 @@ namespace directional{
         ~TriMesh(){}
 
         //computing a full HE structure
-        void inline compute_edge_quantities(){
+        void inline compute_edge_quantities(const bool verbose = false){
 
             struct ComparePairs {
                 bool operator()(const std::pair<std::pair<int, int>, int>& a, const std::pair<std::pair<int, int>, int>& b) const {
@@ -103,7 +103,7 @@ namespace directional{
 
             //This is done in the polyscope compatible fashion
             dcel.init(V, F);
-            bool consistency = dcel.check_consistency(true,true,true,true);
+            bool consistency = dcel.check_consistency(verbose,true,true,true);
             assert(consistency && "compute_edge_quantities(): Something is wrong with the DCEL!!");
             EV.resize(dcel.edges.size(),2);
             EF = Eigen::MatrixXi::Constant(dcel.edges.size(),2,-1);
@@ -241,9 +241,9 @@ namespace directional{
                 Eigen::Matrix3d R = q.toRotationMatrix();
 
                 // Apply rotation to the eigenvectors
-                /*minFacePrincipalDirectionals.row(i) = (R * eigensolver.eigenvectors().col(minIndex)).transpose();
+                minFacePrincipalDirectionals.row(i) = (R * eigensolver.eigenvectors().col(minIndex)).transpose();
                 maxFacePrincipalDirectionals.row(i) = (R * eigensolver.eigenvectors().col(maxIndex)).transpose();
-                operatorNormal = (R * eigensolver.eigenvectors().col(best_idx)).transpose();*/
+                operatorNormal = (R * eigensolver.eigenvectors().col(best_idx)).transpose();
                 
                 //std::cout<<"operatorNormal - faceNormal.row(i):" <<operatorNormal - faceNormals.row(i)<<std::endl;
                 
@@ -266,12 +266,13 @@ namespace directional{
                              const Eigen::MatrixXi& _F,
                              const Eigen::MatrixXi& _EV=Eigen::MatrixXi(),
                              const Eigen::MatrixXi& _FE=Eigen::MatrixXi(),
-                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi()) {
+                             const Eigen::MatrixXi& _EF=Eigen::MatrixXi(),
+                             const bool verbose = false) {
 
             V = _V;
             F = _F;
             if (_EV.rows() == 0) {
-                compute_edge_quantities();
+                compute_edge_quantities(verbose);
             } else {
                 EV = _EV;
                 FE = _FE;

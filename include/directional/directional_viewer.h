@@ -542,9 +542,16 @@ public:
     }
     
     void inline set_uv(const Eigen::MatrixXd UV,
+                       const std::string name="",
                        const int meshNum=0)
     {
-        psSurfaceMeshList[meshNum]->addVertexParameterizationQuantity("UV" + std::to_string(meshNum), UV);
+        std::string UVName;
+        if (name.empty())
+            UVName = "UV " + std::to_string(meshNum);
+        else
+            UVName = name;
+        std::pair<glm::vec3, glm::vec3> gridColors(glm::vec3({1.0,1.0,1.0}), glm::vec3({0.0,0.0,0.0}));
+        psSurfaceMeshList[meshNum]->addVertexParameterizationQuantity(UVName, UV, polyscope::ParamCoordsType::UNIT)->setStyle(polyscope::ParamVizStyle::GRID)->setGridColors(gridColors)->setCheckerSize(1.0);
     }
     
     /*void inline set_texture(const Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic>& R,
