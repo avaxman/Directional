@@ -13,7 +13,7 @@
 #include <utility>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include <directional/GMP_definitions.h>
+#include <directional/exact_geometric_definitions.h>
 #include <directional/dcel.h>
 #include <directional/setup_mesh_function_isolines.h>
 

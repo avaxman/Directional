@@ -3596,3 +3596,5 @@ include/directional/Deprecated/.idea/Deprecated.iml
 include/directional/Deprecated/.idea/modules.xml
 include/directional/Deprecated/.idea/vcs.xml
 include/directional/Deprecated/.idea/workspace.xml
+tutorial/data/vase-11-generated.off
+tutorial/data/vase-7-generated.off

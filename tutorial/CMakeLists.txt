@@ -1,19 +1,16 @@
 cmake_minimum_required(VERSION 3.20)
-
 project(Directional_tutorials)
 
 set(CMAKE_CXX_STANDARD 17)
-
-# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
 endif()
 
-
-### Choose which chapters to compile
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)
-#option(DIRECTIONAL_MESHER "Directional Mesher" ON)
+option(USE_GMP "Enable GMP support if found" ON)
+
+
 
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
@@ -26,83 +23,70 @@ message(STATUS "DIRECTIONAL_ROOT: ${DIRECTIONAL_ROOT}")
 
 include_directories(${DIRECTIONAL_SOURCE_DIR})
 include_directories(${DIRECTIONAL_EXTERNAL}/eigen)
-message("\n\n == CMAKE recursively building Polyscope\n")
-#set(POLYSCOPE_SOURCE_DIR ${DIRECTIONAL_EXTERNAL}/polyscope)
 
-# Create the build directory for Polyscope
-#set(POLYSCOPE_BUILD_DIR ${CMAKE_BINARY_DIR}/polyscope-build)
-#file(MAKE_DIRECTORY ${POLYSCOPE_BUILD_DIR})
-
-# add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope ${CMAKE_CURRENT_BINARY_DIR})
+# Polyscope
 add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope "polyscope")
 
-# define the path where all the input meshes are available
+# Output location
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
+file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+# Tutorial data path macro
+set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
 add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")
 
-# make a bin folder to host all the executables
-make_directory(${PROJECT_SOURCE_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-
-#if (DIRECTIONAL_MESHER)
-  #include(ExternalProject)
-
-  # Set the download and install directories
-  #set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
-
-  #et(DEFAULT_GMP_VERSION "6.3.0")
-
-  # Allow the user to specify the GMP version via command line or cache
-  #set(GMP_VERSION "${DEFAULT_GMP_VERSION}" CACHE STRING "GMP version")
-
-  # Define the URL based on the specified version
-  #set(GMP_URL "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.bz2")
-
-  # ExternalProject_Add for GMP
-  #ExternalProject_Add(
-  #        gmp
-  #        URL ${GMP_URL}
-  #        PREFIX ${EXTERNAL_INSTALL_LOCATION}/gmp
-  #        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
-  #        BUILD_COMMAND ${CMAKE_COMMAND} --build .
-  ##        INSTALL_COMMAND ${CMAKE_COMMAND} --install .
-  #        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-  #)
-
-  #set(GMP_DIR /usr/local/opt/gmp)
-
-  #find_package(GMP REQUIRED)
-
-  #set(GMP_INCLUDE_DIR /usr/local/opt/gmp/include)
-  #set(GMP_LIBRARIES /usr/local/opt/gmp/lib/libgmp.dylib)
-
-  # Include GMP headers
-  #include_directories(${GMP_INCLUDE_DIR})
-
-  # Set GMP library and include directories
-  #set(GMP_INCLUDE_DIR ${EXTERNAL_INSTALL_LOCATION}/gmp/include)
-  #set(GMP_LIB_DIR ${EXTERNAL_INSTALL_LOCATION}/gmp/lib)
-
-  # Add GMP include directory to the include paths
-  #include_directories(${GMP_INCLUDE_DIR})
-
-  # Add GMP library directory to link directories
-  #link_directories(${GMP_LIB_DIR})
-
-  #set(BIGINT_INCLUDE_DIR ${DIRECTIONAL_EXTERNAL}/BigInt/include)
-  #include_directories(${BIGINT_INCLUDE_DIR})
-#endif()
-
-
-# Store location of tutorial data directory
-set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
 add_library(tutorials INTERFACE)
 target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_DATA_PATH=\"${TUTORIAL_DATA_PATH}\"")
-target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/include)
-target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/imgui/imgui)
-target_include_directories(tutorials INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${POLYSCOPE_SOURCE_DIR}/deps/glm)
+target_include_directories(tutorials INTERFACE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${POLYSCOPE_SOURCE_DIR}/include
+    ${POLYSCOPE_SOURCE_DIR}/deps/imgui/imgui
+    ${POLYSCOPE_SOURCE_DIR}/deps/glm
+)
 target_compile_definitions(tutorials INTERFACE GLM_ENABLE_EXPERIMENTAL)
 
-# Chapter 1
+# ===== GMP Handling (Cross-platform) =====
+if(USE_GMP)
+    message(STATUS "Attempting to find GMP...")
+
+    find_path(GMP_INCLUDE_DIR
+        NAMES gmp.h
+        HINTS
+            $ENV{GMP_DIR}/include
+            ${CMAKE_PREFIX_PATH}/include
+            /usr/include
+            /usr/local/include
+            "C:/Program Files/GMP/include"
+    )
+
+    find_library(GMP_LIBRARIES
+        NAMES gmp libgmp
+        HINTS
+            $ENV{GMP_DIR}/lib
+            ${CMAKE_PREFIX_PATH}/lib
+            /usr/lib
+            /usr/local/lib
+            "C:/Program Files/GMP/lib"
+    )
+
+    if(GMP_INCLUDE_DIR AND GMP_LIBRARIES)
+        message(STATUS "GMP found:")
+        message(STATUS "  Include: ${GMP_INCLUDE_DIR}")
+        message(STATUS "  Library: ${GMP_LIBRARIES}")
+        add_compile_definitions(USE_GMP)
+        include_directories(${GMP_INCLUDE_DIR})
+        link_libraries(${GMP_LIBRARIES})
+    else()
+        message(WARNING "GMP not found. Disabling USE_GMP.")
+        set(USE_GMP OFF CACHE BOOL "Enable GMP support if found" FORCE)
+    endif()
+endif()
+
+if(USE_GMP)
+    add_compile_definitions(USE_GMP_ENABLED)
+endif()
+
+# ===== Chapters =====
 if(DIRECTIONAL_VIEWER)
   add_subdirectory("101_GlyphRendering")
   add_subdirectory("102_DiscreteTangentBundles")
@@ -128,9 +112,4 @@ if(DIRECTIONAL_VIEWER)
   add_subdirectory("603_HodgeDecomposition")
   add_subdirectory("604_HodgeBoundary")
   add_subdirectory("605_HarmonicFields")
-  # 
-  # add_subdirectory("604_HigherOrderFields")
-  # add_subdirectory("701_SubdivisionFields")
 endif()
-
-

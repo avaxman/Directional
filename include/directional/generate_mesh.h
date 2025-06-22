@@ -18,7 +18,7 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 #include <directional/dcel.h>
-#include <directional/GMP_definitions.h>
+#include <directional/exact_geometric_definitions.h>
 #include <directional/NFunctionMesher.h>
 //#include <operators/io_stream.hpp>
 
@@ -622,10 +622,10 @@ namespace directional{
                 
                 vector<EInt> isoValues;
                 EInt q, r;
-                div_mod(minFuncs[funcIter].num, minFuncs[funcIter].den, q, r);
-                EInt minIsoValue = q + (minFuncs[funcIter].num < 0 ? -1 : 0);
-                div_mod(maxFuncs[funcIter].num, maxFuncs[funcIter].den, q, r);
-                EInt maxIsoValue = q + (maxFuncs[funcIter].num < 0 ? 0 : 1);
+                div_mod(minFuncs[funcIter].num(), minFuncs[funcIter].den(), q, r);
+                EInt minIsoValue = q + (minFuncs[funcIter].num() < 0 ? -1 : 0);
+                div_mod(maxFuncs[funcIter].num(), maxFuncs[funcIter].den(), q, r);
+                EInt maxIsoValue = q + (maxFuncs[funcIter].num() < 0 ? 0 : 1);
                 for (EInt isoValue = minIsoValue; isoValue <= maxIsoValue; isoValue=isoValue+EInt(1))
                     isoValues.push_back(isoValue);
                 
