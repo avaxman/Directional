@@ -24,46 +24,6 @@ directional::CartesianField rawField[NUM_N], combedField[NUM_N];
 Eigen::MatrixXd NFunction[NUM_N], NCornerFunction[NUM_N];
 directional::DirectionalViewer viewer;
 
-//typedef enum {FIELD, INTEGRATION} ViewingModes;
-//ViewingModes viewingMode=FIELD;
-
-/*void update_viewer()
- {
- for (int i=0;i<NUM_N;i++){
- viewer.toggle_field(false,i);
- viewer.toggle_singularities(false,i);
- viewer.toggle_seams(false,i);
- viewer.toggle_isolines(false,i);
- }
- if (viewingMode==FIELD){
- viewer.toggle_field(true,currN);
- viewer.toggle_singularities(true,currN);
- viewer.toggle_seams(true,currN);
- viewer.toggle_isolines(false,currN);
- } else {
- viewer.toggle_field(false,currN);
- viewer.toggle_singularities(false,currN);
- viewer.toggle_seams(false,currN);
- viewer.toggle_isolines(true,currN);
- }
- }*/
-
-
-// Handle keyboard input
-/*bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
- {
- switch (key)
- {
- // Select vector
- case '1': viewingMode = FIELD; break;
- case '2': viewingMode = INTEGRATION; break;
- case '3': currN=(currN+1)%NUM_N; break;
- }
- update_viewer();
- return true;
- }*/
-
-
 int main()
 {
     directional::readOFF(TUTORIAL_DATA_PATH "/vase.off", meshWhole);

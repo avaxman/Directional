@@ -2,7 +2,7 @@
 #include <Eigen/Core>
 #include <directional/readOFF.h>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/read_raw_field.h>
 #include <directional/write_raw_field.h>
@@ -17,7 +17,7 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField rawField, combedField;
 Eigen::MatrixXd NFunctionSeams, NFunctionSings, NCornerFunc;
 
@@ -28,26 +28,6 @@ directional::DirectionalViewer viewer;
 
 typedef enum {FIELD, SEAMS_ROUNDING, SINGS_ROUNDING} ViewingModes;
 ViewingModes viewingMode=FIELD;
-
-/*void update_viewer()
-{
-  if (viewingMode==FIELD){
-    viewer.toggle_seams(true);
-    viewer.toggle_field(true);
-    viewer.toggle_singularities(true);
-    viewer.toggle_isolines(false);
-  } else if ((viewingMode==SEAMS_ROUNDING) || (viewingMode==SINGS_ROUNDING)){
-    viewer.toggle_seams(false);
-    viewer.toggle_field(false);
-    viewer.toggle_singularities(true);
-    viewer.toggle_isolines(true);
-  }
-  
-  if (viewingMode==SEAMS_ROUNDING)
-    viewer.set_isolines(meshCut, NFunctionSeams);
-  if (viewingMode==SINGS_ROUNDING)
-    viewer.set_isolines(meshCut, NFunctionSings);
-}*/
 
 void callbackFunc(){
     ImGui::PushItemWidth(100);
@@ -87,27 +67,8 @@ void callbackFunc(){
 }
 
 
-/*bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-      // Select vector
-    case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = SEAMS_ROUNDING; break;
-    case '3': viewingMode = SINGS_ROUNDING; break;
-  }
-  update_viewer();
-  return true;
-}*/
-
-
 int main()
 {
-  /*std::cout <<
-  "  1  Loaded field" << std::endl <<
-  "  2  Show integral-seams function" << std::endl <<
-  "  3  Show integral-singularity function" << std::endl;*/
-  
   directional::readOFF(TUTORIAL_DATA_PATH "/train-station.off", meshWhole);
   ftb.init(meshWhole);
   directional::read_raw_field(TUTORIAL_DATA_PATH "/train-station-5.rawfield", ftb, N, rawField);
@@ -119,12 +80,7 @@ int main()
   directional::IntegrationData intData(N);
   std::cout<<"Setting up Integration"<<std::endl;
   directional::setup_integration(rawField, intData, meshCut, combedField);
-  /*directional::cut_mesh_with_singularities(meshWhole, rawField.singLocalCycles, intData.face2cut);
-  Eigen::VectorXd seamFunc = Eigen::VectorXd::Zero(meshWhole.EV.rows());
-  for (int i=0;i<meshWhole.F.rows();i++)
-    for (int j=0;j<3;j++)
-      seamFunc(meshWhole.FE(i,j))+=intData.face2cut(i,j);*/
-
+  
   intData.verbose=false;
   intData.integralSeamless=true;
   intData.roundSeams=true;
@@ -140,10 +96,8 @@ int main()
   std::cout<<"Done!"<<std::endl;
 
   viewer.init();
-  viewer.set_mesh(meshWhole,0);
-  viewer.set_field(rawField);
-  viewer.set_seams(combedField.matching);
-  //viewer.set_edge_data(seamFunc, 0.0, 2.0);
+  viewer.set_surface_mesh(meshWhole);
+  viewer.set_cartesian_field(rawField);
   viewer.set_isolines(meshCut, NFunctionSings);
   viewer.set_callback(callbackFunc);
   viewer.launch();

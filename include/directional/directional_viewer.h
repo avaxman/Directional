@@ -545,7 +545,7 @@ public:
             isolineName = name;
         
         psIsolineList[fieldNum] = polyscope::registerCurveNetwork(isolineName, isoV, isoE)->setRadius(width, false);
-        psIsolineList[fieldNum]->addEdgeColorQuantity("Function number", CFunc);
+        psIsolineList[fieldNum]->addEdgeColorQuantity("Function number", CFunc)->setEnabled(true);
         
         //directional::bar_chains(cutMesh, isoV,isoE,isoOrigE, isoN,l,(funcNum.template cast<double>().array()+1.0)*l/1000.0,CFunc, VIso, FIso, CIso);
         //psIsolineList[fieldNum]=polyscope::registerSurfaceMesh("isolines "+std::to_string(fieldNum), VIso, FIso);
