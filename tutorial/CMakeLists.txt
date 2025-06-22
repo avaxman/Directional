@@ -13,7 +13,7 @@ endif()
 
 ### Choose which chapters to compile
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)
-option(DIRECTIONAL_MESHER "Directional Mesher" ON)
+#option(DIRECTIONAL_MESHER "Directional Mesher" ON)
 
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
@@ -43,7 +43,7 @@ add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")
 make_directory(${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 
-if (DIRECTIONAL_MESHER)
+#if (DIRECTIONAL_MESHER)
   #include(ExternalProject)
 
   # Set the download and install directories
@@ -88,9 +88,9 @@ if (DIRECTIONAL_MESHER)
   # Add GMP library directory to link directories
   #link_directories(${GMP_LIB_DIR})
 
-  set(BIGINT_INCLUDE_DIR ${DIRECTIONAL_EXTERNAL}/BigInt/include)
-  include_directories(${BIGINT_INCLUDE_DIR})
-endif()
+  #set(BIGINT_INCLUDE_DIR ${DIRECTIONAL_EXTERNAL}/BigInt/include)
+  #include_directories(${BIGINT_INCLUDE_DIR})
+#endif()
 
 
 # Store location of tutorial data directory
@@ -122,6 +122,7 @@ if(DIRECTIONAL_VIEWER)
   add_subdirectory("502_DifferentOrders")
   add_subdirectory("503_SeamsSingsRounding")
   add_subdirectory("504_LinearReductions")
+  add_subdirectory("505_Meshing")
   add_subdirectory("601_FaceBasedFEM")
   add_subdirectory("602_DiscreteExteriorCalculus")
   add_subdirectory("603_HodgeDecomposition")
@@ -132,6 +133,4 @@ if(DIRECTIONAL_VIEWER)
   # add_subdirectory("701_SubdivisionFields")
 endif()
 
-if(DIRECTIONAL_MESHER)
-  add_subdirectory("505_Meshing")
-endif()
+

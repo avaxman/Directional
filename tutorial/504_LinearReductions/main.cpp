@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
-#include <directional/IntrinsicFaceTangentBundle.h>
+#include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/readOFF.h>
 #include <directional/read_raw_field.h>
@@ -14,7 +14,7 @@
 
 int N;
 directional::TriMesh meshWhole, meshCut;
-directional::IntrinsicFaceTangentBundle ftb;
+directional::PCFaceTangentBundle ftb;
 directional::CartesianField rawField, combedField;
 Eigen::MatrixXd NFunctionSign, NFunctionTri, NCornerFunc;
 directional::DirectionalViewer viewer;
@@ -26,32 +26,12 @@ typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
 ViewingModes viewingMode=FIELD;
 
 
-/*void update_viewer()
-{
-  if (viewingMode==FIELD){
-    viewer.toggle_seams(true);
-    viewer.toggle_field(true);
-    viewer.toggle_singularities(true);
-    viewer.toggle_isolines(false);
-  } else if ((viewingMode==SIGN_SYMMETRY) || (viewingMode==TRI_SYMMETRY)){
-    viewer.toggle_seams(false);
-    viewer.toggle_field(false);
-    viewer.toggle_singularities(true);
-    viewer.toggle_isolines(true);
-  }
-  
-  if (viewingMode==SIGN_SYMMETRY)
-    viewer.set_isolines(meshCut, NFunctionSign);
-  if (viewingMode==TRI_SYMMETRY)
-    viewer.set_isolines(meshCut, NFunctionTri);
-}*/
-
 void callbackFunc(){
-    ImGui::PushItemWidth(100);
-
-    const char* items[] = { "Original field", "Sign Symmetry", "Triangular Symmetry"};
+    
+    const char* items[] = {"Sign Symmetry", "Triangular Symmetry"};
     static const char* current_item = NULL;
 
+    ImGui::PushItemWidth(300);
     if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(items); n++)
@@ -60,13 +40,10 @@ void callbackFunc(){
             if (ImGui::Selectable(items[n], is_selected)) {
                 switch (n) {
                     case 0:
-                        viewingMode = FIELD;
-                        break;
-                    case 1:
                         viewingMode = SIGN_SYMMETRY;
                         viewer.set_isolines(meshCut, NFunctionSign);
                         break;
-                    case 2:
+                    case 1:
                         viewingMode = TRI_SYMMETRY;
                         viewer.set_isolines(meshCut, NFunctionTri);
                         break;
@@ -82,21 +59,6 @@ void callbackFunc(){
 
     ImGui::PopItemWidth();
 }
-
-// Handle keyboard input
-/*bool key_down(igl::opengl::glfw::Viewer& viewer, int key, int modifiers)
-{
-  switch (key)
-  {
-      // Select vector
-    case '1': viewingMode = FIELD; break;
-    case '2': viewingMode = SIGN_SYMMETRY; break;
-    case '3': viewingMode = TRI_SYMMETRY; break;
-  }
-  update_viewer();
-  return true;
-}*/
-
 
 int main()
 {
@@ -127,9 +89,9 @@ int main()
     std::cout<<"Done!"<<std::endl;
 
     viewer.init();
-    viewer.set_mesh(meshWhole,0);
-    viewer.set_field(rawField);
-    viewer.set_seams(combedField.matching);
+    viewer.set_surface_mesh(meshWhole,0);
+    viewer.set_cartesian_field(rawField);
+    //viewer.set_seams(combedField.matching);
     viewer.set_isolines(meshCut, NFunctionSign);
     viewer.set_callback(callbackFunc);
     viewer.launch();
