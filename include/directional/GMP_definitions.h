@@ -14,9 +14,6 @@
 #include <utility>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-//#include <BigInt.hpp>
-//#include <functions/math.hpp>
-//#include <operators/arithmetic_assignment.hpp>
 #include <directional/BigInteger.h>
 
 
@@ -489,7 +486,7 @@ namespace directional{
             int nextVertex=nextVertexQueue.front();
             nextVertexQueue.pop_front();
             if (components[nextVertex]==-1) {  //first components
-                std::cout << "New component " << numComponents << " seed vertex " << nextVertex << std::endl;
+                //std::cout << "New component " << numComponents << " seed vertex " << nextVertex << std::endl;
                 components[nextVertex] = numComponents++;
             }
             
@@ -497,7 +494,7 @@ namespace directional{
             for (int i=0;i<VV[nextVertex].size();i++){
                 if (components[VV[nextVertex][i]]==-1){
                     components[VV[nextVertex][i]]=components[nextVertex];
-                    std::cout<<"adding vertex "<<VV[nextVertex][i]<<" to component "<<components[nextVertex]<<std::endl;
+                    //std::cout<<"adding vertex "<<VV[nextVertex][i]<<" to component "<<components[nextVertex]<<std::endl;
                     nextVertexQueue.push_front(VV[nextVertex][i]);
                 } else assert(components[VV[nextVertex][i]]==components[nextVertex]);
             }
