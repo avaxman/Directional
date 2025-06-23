@@ -74,9 +74,9 @@ namespace directional{
                 std::cerr << "project_exact(): Solving failed!" << std::endl;
                 std::abort();
             }
-            std::cout << "Ax - b: " << (A * x - b).template lpNorm<Eigen::Infinity>() << std::endl;
+            //std::cout << "Ax - b: " << (A * x - b).template lpNorm<Eigen::Infinity>() << std::endl;
             prevCochain = x.head(M.rows());
-            std::cout<<"d*prevCochain - cochain error :"<<(d*prevCochain - cochain).cwiseAbs().maxCoeff()<<std::endl;
+            //std::cout<<"d*prevCochain - cochain error :"<<(d*prevCochain - cochain).cwiseAbs().maxCoeff()<<std::endl;
             //nextCochain = -x.tail(d.rows());
         }
         exactCochain = d * prevCochain;

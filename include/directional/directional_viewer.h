@@ -337,8 +337,8 @@ public:
                         baryCoords.push_back(Eigen::RowVector3d(baryRange(i), baryRange(j), baryRange(k)));
         
         for (int i=0;i<baryCoords.size();i++){
-            baryCoords[i] = Eigen::RowVector3d::Ones()*baryOffset/3.0+baryCoords[i]*(1.0-baryOffset);
-            std::cout<<baryCoords[i]<<std::endl;
+            baryCoords[i] = Eigen::RowVector3d::Ones()*baryOffset+baryCoords[i]*(1.0-3.0*baryOffset);
+            //std::cout<<baryCoords[i]<<std::endl;
         }
         
         Eigen::MatrixXd sources(surfaceMeshList[meshNum]->F.rows()*baryCoords.size(),3);
