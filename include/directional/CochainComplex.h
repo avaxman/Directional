@@ -42,15 +42,15 @@ namespace directional{
         if (!gaugeFixing) {
             Eigen::SparseMatrix<NumberType> A = d.adjoint() * M * d;
             Eigen::Vector<NumberType, Eigen::Dynamic> b = d.adjoint() * M * cochain;
-            Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+            Eigen::SimplicialLDLT<Eigen::SparseMatrix<NumberType>> solver;
             solver.compute(A);
-            assert("project_exact(): Decomposition failed!" && solver.info() == Eigen::Success);
+            assert(solver.info() == Eigen::Success && "project_exact(): Decomposition failed!");
             prevCochain = solver.solve(b);
-            assert("project_exact(): Solver failed!" && solver.info() == Eigen::Success);
+            assert(solver.info() == Eigen::Success && "project_exact(): Solver failed!");
 
         } else {
             Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
-            std::cout<<"orderMat: "<<orderMat<<std::endl;
+            //std::cout<<"orderMat: "<<orderMat<<std::endl;
             std::vector<Eigen::SparseMatrix<NumberType>> matVec;
             matVec.push_back(M);
             matVec.push_back(d.adjoint());
@@ -62,11 +62,19 @@ namespace directional{
             b.head(M.rows()).setZero();
             b.tail(d.rows())=cochain;
 
-            Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+            Eigen::SparseLU<Eigen::SparseMatrix<NumberType>> solver;
             solver.compute(A);
-            assert("project_exact(): Decomposition failed!" && solver.info() == Eigen::Success);
+            
+            if (solver.info() != Eigen::Success) {
+                std::cerr << "project_exact(): Decomposition failed!" << std::endl;
+                std::abort();
+            }
             Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);
-            assert("project_exact(): Solver failed!" && solver.info() == Eigen::Success);
+            if (solver.info() != Eigen::Success) {
+                std::cerr << "project_exact(): Solving failed!" << std::endl;
+                std::abort();
+            }
+            std::cout << "Ax - b: " << (A * x - b).template lpNorm<Eigen::Infinity>() << std::endl;
             prevCochain = x.head(M.rows());
             std::cout<<"d*prevCochain - cochain error :"<<(d*prevCochain - cochain).cwiseAbs().maxCoeff()<<std::endl;
             //nextCochain = -x.tail(d.rows());
@@ -99,7 +107,7 @@ namespace directional{
         b.head(M.rows()).setZero();
         b.tail(d.rows())=MNext*d*cochain;
 
-        Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+        Eigen::SparseLU<Eigen::SparseMatrix<NumberType>> solver;
         solver.compute(A);
         assert("project_next(): Decomposition failed!" && solver.info() == Eigen::Success);
         Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);

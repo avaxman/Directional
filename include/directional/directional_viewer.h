@@ -312,13 +312,12 @@ public:
         //set_singularities(_field,  _field.singLocalCycles, _field.singIndices, name, fieldNum);
     }
     
-    Eigen::MatrixXd inline set_1form(const TriMesh* mesh,
-                                     const Eigen::VectorXd& oneForm,
+    Eigen::MatrixXd inline set_1form(const Eigen::VectorXd& oneForm,
                                      const std::string formName = "1-form",
                                      const int meshNum=0,
                                      const int fieldNum=0,
                                      const int samplingRate = 2,
-                                     const double baryOffset = 0.1,
+                                     const double baryOffset = 0.2,
                                      const double sizeRatio = 0.1)
     
     {
@@ -342,27 +341,29 @@ public:
             std::cout<<baryCoords[i]<<std::endl;
         }
         
-        Eigen::MatrixXd sources(mesh->F.rows()*baryCoords.size(),3);
-        Eigen::MatrixXd field(mesh->F.rows()*baryCoords.size(),3);
-        for (int f=0;f<mesh->F.rows();f++) {
-            Eigen::RowVector3d n = mesh->faceNormals.row(f);
-            Eigen::RowVector3d e01 = mesh->V.row(mesh->F(f,1)) - mesh->V.row(mesh->F(f,0));
-            Eigen::RowVector3d e12 = mesh->V.row(mesh->F(f,2)) - mesh->V.row(mesh->F(f,1));
-            Eigen::RowVector3d e20 = mesh->V.row(mesh->F(f,0)) - mesh->V.row(mesh->F(f,2));
+        Eigen::MatrixXd sources(surfaceMeshList[meshNum]->F.rows()*baryCoords.size(),3);
+        Eigen::MatrixXd field(surfaceMeshList[meshNum]->F.rows()*baryCoords.size(),3);
+        for (int f=0;f<surfaceMeshList[meshNum]->F.rows();f++) {
+            Eigen::RowVector3d n = surfaceMeshList[meshNum]->faceNormals.row(f);
+            Eigen::RowVector3d e01 = surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,1)) - surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,0));
+            Eigen::RowVector3d e12 = surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,2)) - surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,1));
+            Eigen::RowVector3d e20 = surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,0)) - surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f,2));
             
-            Eigen::RowVector3d gB0 = n.cross(e12)/(2*mesh->faceAreas(f));
-            Eigen::RowVector3d gB1 = n.cross(e20)/(2*mesh->faceAreas(f));
-            Eigen::RowVector3d gB2 = n.cross(e01)/(2*mesh->faceAreas(f));
+            Eigen::RowVector3d gB0 = n.cross(e12)/(2*surfaceMeshList[meshNum]->faceAreas(f));
+            Eigen::RowVector3d gB1 = n.cross(e20)/(2*surfaceMeshList[meshNum]->faceAreas(f));
+            Eigen::RowVector3d gB2 = n.cross(e01)/(2*surfaceMeshList[meshNum]->faceAreas(f));
             for (int i = 0; i < baryCoords.size(); i++) {
-                sources.row(baryCoords.size()*f+i) = mesh->V.row(mesh->F(f, 0)) * baryCoords[i](0) +
-                mesh->V.row(mesh->F(f, 1)) *baryCoords[i](1) +
-                mesh->V.row(mesh->F(f, 2)) * baryCoords[i](2);
+                sources.row(baryCoords.size()*f+i) =surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f, 0)) * baryCoords[i](0) +
+                surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f, 1)) *baryCoords[i](1) +
+                surfaceMeshList[meshNum]->V.row(surfaceMeshList[meshNum]->F(f, 2)) * baryCoords[i](2);
                 
                 Eigen::RowVector3d whit01 = baryCoords[i](0)*gB1 - baryCoords[i](1)*gB0;
                 Eigen::RowVector3d whit12 = baryCoords[i](1)*gB2 - baryCoords[i](2)*gB1;
                 Eigen::RowVector3d whit20 = baryCoords[i](2)*gB0 - baryCoords[i](0)*gB2;
                 
-                field.row(baryCoords.size()*f+i) = oneForm(mesh->FE(f,0))*mesh->FEs(f,0)*whit01 + oneForm(mesh->FE(f,1))*mesh->FEs(f,1)*whit12 + oneForm(mesh->FE(f,2))*mesh->FEs(f,2)*whit20;
+                field.row(baryCoords.size()*f+i) = oneForm(surfaceMeshList[meshNum]->FE(f,0))*surfaceMeshList[meshNum]->FEs(f,0)*whit01 +
+                oneForm(surfaceMeshList[meshNum]->FE(f,1))*surfaceMeshList[meshNum]->FEs(f,1)*whit12 +
+                oneForm(surfaceMeshList[meshNum]->FE(f,2))*surfaceMeshList[meshNum]->FEs(f,2)*whit20;
             }
         }
         
@@ -371,7 +372,7 @@ public:
         psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
         psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
         psGlyphList[fieldNum][0] = psGlyphSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
-        psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*mesh->avgEdgeLength, false);
+        psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*surfaceMeshList[meshNum]->avgEdgeLength, false);
         return field;
     }
     
