@@ -18,10 +18,10 @@
 namespace directional {
 
     template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> div_matrix_2D(const TriMesh* mesh,
-                                                  const bool isIntrinsic,
-                                                  const int N,
-                                                  const int d){
+    Eigen::SparseMatrix<NumberType> div_matrix_2D(const TriMesh& mesh,
+                                                  const bool isIntrinsic = false,
+                                                  const int N = 1,
+                                                  const int d = 1){
 
         assert("This method is currently defined only for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> G = directional::conf_gradient_matrix_2D<NumberType>(mesh,isIntrinsic,N,d);

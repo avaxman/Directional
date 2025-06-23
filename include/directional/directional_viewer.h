@@ -226,10 +226,10 @@ public:
     void inline set_cartesian_field(const CartesianField& _field,
                                     const std::string name="",
                                     const int fieldNum = 0,
-                                    const int sparsity = 0)
+                                    const int sparsity = 0,
+                                    double maxLengthRatio = 1.0)
     
     {
-        const double sizeRatio = 0.3;
         //const bool combedColors = false;
         if (psGlyphSourceList.size()<fieldNum+1) {
             fieldList.resize(fieldNum + 1);
@@ -261,7 +261,7 @@ public:
             psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                       sampledField.block(0, 3 * i, sampledField.rows(),
                                                                                                          3));
-            psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*_field.tb->avgAdjLength, false);
+            psGlyphList[fieldNum][i]->setVectorLengthScale(maxLengthRatio*_field.tb->avgAdjLength, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
             //if (!combedColors)
             psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
