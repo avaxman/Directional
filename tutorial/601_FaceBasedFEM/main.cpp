@@ -37,8 +37,6 @@ int main()
     Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
     Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
 
-    //std::cout<<"Gv*confVec: "<<Gv*confVec<<std::endl;
-
     //demonstrating the exact sequences
     std::cout<<"max abs curl of exact field (should be numerically zero): "<<(C*Gv*confVec).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<(D*J*Ge*nonConfVec).cwiseAbs().maxCoeff()<<std::endl;
