@@ -47,7 +47,6 @@ int main()
 
     Eigen::VectorXd harmVec = 10.0*harmBasis.col(0);
     Eigen::RowVector3d COM = mesh.V.colwise().mean();
-    std::cout<<"COM: "<<COM<<std::endl;
     Eigen::VectorXd vertexVec(mesh.dcel.vertices.size()), midEdgeVec(mesh.dcel.edges.size());
     for (int i=0;i<mesh.dcel.vertices.size();i++)
         vertexVec[i] = 3.0*cos((mesh.V(i,0)-COM(1))/4.0)*cos((mesh.V(i,2)-COM(2))/4.0);
@@ -61,13 +60,17 @@ int main()
     midEdgeVec.array()/=midEdgeVec.mean();
 
     origField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    origField.set_extrinsic_field(IE*(harmVec + G*vertexVec +  iMx*C.adjoint()*midEdgeVec));
+    Eigen::VectorXd gradientGT = G*vertexVec;
+    gradientGT.array()/=sqrt((gradientGT.transpose()*Mx*gradientGT).coeff(0,0));
+    Eigen::VectorXd rotCogradientGT = iMx*C.adjoint()*midEdgeVec;
+    rotCogradientGT.array()/=sqrt((rotCogradientGT.transpose()*Mx*rotCogradientGT).coeff(0,0));
+    origField.set_extrinsic_field(IE*(harmVec + gradientGT +  rotCogradientGT));
 
     std::cout<<"before hodge decomposition"<<std::endl;
     directional::hodge_decomposition<double>(G, C, Mx, Mc, origField.flatten(true), vertexFunction, gradFieldVec, rotCogradFieldVec, diamondForm, harmFieldVec);
     std::cout<<"after hodge decomposition"<<std::endl;
-    std::cout<<"Exact reproduction (numerically zero): "<<(gradFieldVec - G*vertexVec).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Coexact reproduction (numerically zero): "<<(rotCogradFieldVec - iMx*C.adjoint()*midEdgeVec).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"Exact reproduction (numerically zero): "<<(gradFieldVec -gradientGT).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"Coexact reproduction (numerically zero): "<<(rotCogradFieldVec - rotCogradientGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Harmonic reproduction (numerically zero): "<<(harmFieldVec - harmVec).cwiseAbs().maxCoeff()<<std::endl;
 
     gradField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);

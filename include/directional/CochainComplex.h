@@ -177,7 +177,7 @@ void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
         // Apply Q to ei to get the i-th harmonic field
         Eigen::VectorXd col = qr.matrixQ() * ei;
         //Normalizing col according to the mass matrix
-        col.array()/=(col.adjoint()*M*col).coeff(0,0);
+        col.array()/=sqrt((col.adjoint()*M*col).coeff(0,0));
         harmFields.col(i) = col;
     }
 
