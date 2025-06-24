@@ -115,6 +115,93 @@ void project_coexact(const Eigen::SparseMatrix<NumberType> d,
     nextCochain = -x.tail(d.rows());
 }
 
+#include <Eigen/Sparse>
+#include <Eigen/Dense>
+#include <iostream>
+
+// Solve A = H^T H (sparse), M mass matrix (dense or sparse), k eigenvectors near zero
+// maxIters and tol control convergence
+template<typename Scalar>
+void computeSmallestEigenvectors(
+    const Eigen::SparseMatrix<Scalar>& H,
+    const Eigen::SparseMatrix<Scalar>& M,
+    int k,
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& eigenvectors,
+    int maxIters = 1000,
+    double tol = 1e-8)
+{
+    using Vec = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
+    int n = H.cols();
+
+    // Compute A = H^T * H
+    Eigen::SparseMatrix<Scalar> A = H.transpose() * H;
+
+    // Solver for (A + sigma I) x = b
+    Scalar sigma = 1e-4; // small positive shift to stabilize inverse
+    Eigen::SparseMatrix<Scalar> Ashift = A;
+    for (int i = 0; i < Ashift.outerSize(); ++i)
+        for (typename Eigen::SparseMatrix<Scalar>::InnerIterator it(Ashift, i); it; ++it)
+            if (it.row() == it.col())
+                it.valueRef() += sigma;
+
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<Scalar>> solver;
+    solver.compute(Ashift);
+    if (solver.info() != Eigen::Success) {
+        std::cerr << "Decomposition failed\n";
+        return;
+    }
+
+    eigenvectors.resize(n, k);
+    std::vector<Vec> vecs(k);
+
+    // Initialize random vectors
+    for (int i = 0; i < k; ++i) {
+        vecs[i] = Vec::Random(n);
+        // Optional: M-orthonormalize initial vecs[i] here
+    }
+
+    for (int iter = 0; iter < maxIters; ++iter) {
+        bool converged = true;
+        for (int i = 0; i < k; ++i) {
+            // Solve (A + sigma I) y = x
+            Vec y = solver.solve(vecs[i]);
+            if (solver.info() != Eigen::Success) {
+                std::cerr << "Solve failed at iteration " << iter << "\n";
+                return;
+            }
+
+            // Orthogonalize y against previous vectors with respect to M
+            for (int j = 0; j < i; ++j) {
+                Scalar dot = vecs[j].transpose() * M * y;
+                y -= dot * vecs[j];
+            }
+
+            // Normalize y with respect to M-inner product
+            Scalar norm = std::sqrt(y.transpose() * M * y);
+            if (norm < tol) {
+                std::cerr << "Near zero vector detected, reinitializing\n";
+                y = Vec::Random(n);
+                norm = std::sqrt(y.transpose() * M * y);
+            }
+            y /= norm;
+
+            // Check convergence
+            Scalar diff = (y - vecs[i]).norm();
+            if (diff > tol)
+                converged = false;
+
+            vecs[i] = y;
+        }
+        if (converged) break;
+    }
+
+    // Copy results to output matrix
+    for (int i = 0; i < k; ++i) {
+        eigenvectors.col(i) = vecs[i];
+    }
+}
+
+
 //computes the hodge decomposition of a cochain, where
 //cochain = exactCochain + coexactCochain + harmCochain and where
 // exactCochain = d*prevCochain,
@@ -146,8 +233,8 @@ template<typename NumberType>
 void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
                       const Eigen::SparseMatrix<NumberType> dNext,
                       const Eigen::SparseMatrix<NumberType> M,
+                      const int bettiNumber,
                       Eigen::Matrix<NumberType, Eigen::Dynamic, Eigen::Dynamic>& harmFields,
-                      int& bettiNumber,
                       const bool orthogonalize = true) {
 
     std::vector<Eigen::SparseMatrix<NumberType>> matVec;
@@ -159,6 +246,7 @@ void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
     Eigen::SparseMatrix<NumberType> H;
     directional::sparse_block(matOrder, matVec, H);
 
+    /*std::cout<<"Decomposition "<<std::endl;
     Eigen::SparseQR<Eigen::SparseMatrix<NumberType>, Eigen::COLAMDOrdering<int>> qr;
     qr.compute(H.adjoint());
     assert(qr.info() == Eigen::Success && "harmonic_field(): Decomposition failed!");
@@ -169,6 +257,7 @@ void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
     const int Qcols = qr.matrixQ().cols();
     harmFields.resize(Qcols, bettiNumber);
 
+    std::cout<<"Extracting field "<<std::endl;
     for (int i = 0; i < bettiNumber; ++i) {
         // Construct a standard basis vector e_{Qcols - bettiNumber + i}
         Eigen::VectorXd ei = Eigen::VectorXd::Zero(Qcols);
@@ -179,7 +268,9 @@ void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
         //Normalizing col according to the mass matrix
         col.array()/=sqrt((col.adjoint()*M*col).coeff(0,0));
         harmFields.col(i) = col;
-    }
+    }*/
+    
+    computeSmallestEigenvectors(H, M, bettiNumber, harmFields);
 
     //std::cout << "harmFields.cols(): " << harmFields.cols() << std::endl;
 }
