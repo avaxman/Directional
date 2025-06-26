@@ -2,7 +2,7 @@ Features
 
 1. Setting and getting properties in the viewer rather than parameters in the setting functions
 2. Exploring a good coefficient for GL
-3. be verbose in the projection functions as well
+3. Be verbose in the projection functions as well
 
 
 Backend
@@ -18,4 +18,5 @@ Bugs
 4. Setting several fields with the same name to the same number adds them up.
 5. Check I'm not looking at absolute values in scalar field visualization when not needed
 6. Something is wrong with 305 in general, principal directions are kinda bad.
+7. highlight_vertices doesn't really work with boundaries
 

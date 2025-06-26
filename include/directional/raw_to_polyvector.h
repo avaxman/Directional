@@ -50,6 +50,7 @@ namespace directional{
         int jump = ((signSymmetry)&&(N%2==0) ? 2 : 1);
         Eigen::MatrixXcd actualPVField(pvField.rows(), 1);
         actualPVField.col(0)=-actualRoots.col(0);
+        //std::cout<<"actualRoots: "<<actualRoots<<std::endl;
         for (int i=1;i<actualN;i++)
             multiply_polynomials(actualPVField, -actualRoots.col(i));
 

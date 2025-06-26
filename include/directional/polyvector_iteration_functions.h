@@ -13,6 +13,7 @@
 #include <Eigen/SparseCholesky>
 #include <iostream>
 #include <directional/TangentBundle.h>
+#include <directional/IntrinsicVertexTangentBundle.h>
 #include <directional/CartesianField.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
@@ -125,8 +126,8 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
     //std::cout << "H:" << H<<std::endl;
     
     //checking
-    std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
-    std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
+    //std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
+    //std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
     
     return y.transpose(); // Return RowVectorXd
 }
@@ -134,26 +135,32 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
 
 //Projecting a 2^2 Rosy field to a conjugate field
 CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pvData){
-    assert("directional::conjugate(): This method only works on symmetric 2^2 fields on faces!" && pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::FACE_SPACES);
+    assert("directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!" && pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
     CartesianField rawField, conjugatePvField;
     polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
     Eigen::MatrixXd extField = rawField.extField;
-    PCFaceTangentBundle* tb =(PCFaceTangentBundle*)pvField.tb;
-    for (int i=0;i<tb->mesh->F.rows();i++){
-        Eigen::Matrix3d G1 =tb->mesh->facePrincipalCurvatures(i,0)*tb->mesh->minFacePrincipalDirectionals.row(i).transpose()*tb->mesh->minFacePrincipalDirectionals.row(i);
-        Eigen::Matrix3d G2 =tb->mesh->facePrincipalCurvatures(i,1)*tb->mesh->maxFacePrincipalDirectionals.row(i).transpose()*tb->mesh->maxFacePrincipalDirectionals.row(i);
+    IntrinsicVertexTangentBundle* tb =(IntrinsicVertexTangentBundle*)pvField.tb;
+    Eigen::VectorXd conjugacy(tb->mesh->V.rows());
+    Eigen::VectorXd conjugacyBefore(tb->mesh->V.rows());
+    for (int i=0;i<tb->mesh->V.rows();i++){
+        Eigen::Matrix3d G1 =tb->mesh->vertexPrincipalCurvatures(i,0)*tb->mesh->minVertexPrincipalDirections.row(i).transpose()*tb->mesh->minVertexPrincipalDirections.row(i);
+        Eigen::Matrix3d G2 =tb->mesh->vertexPrincipalCurvatures(i,1)*tb->mesh->maxVertexPrincipalDirections.row(i).transpose()*tb->mesh->maxVertexPrincipalDirections.row(i);
         Eigen::Matrix<double, 6,6> H; H.setZero();
         H.block(0,3,3,3) = G1;
         H.block(3,0,3,3) = G2;
-        //std::cout<<"extField.row(i) before: "<<extField.row(i)<<std::endl;
+        //std::cout<<"extField.row(i) before: "<<extField.row(i).head(6)<<std::endl;
         Eigen::RowVectorXd y0(6); y0<<rawField.extField.row(i).head(6);
+        conjugacyBefore(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
         extField.row(i).head(6)<<project_on_quadric(y0, H);
+        //std::cout<<"extField.row(i) after: "<<extField.row(i).head(6)<<std::endl;
         extField.row(i).tail(6) = - extField.row(i).head(6);
         //checking conjugacy
-        double conjugacy = extField.row(i).head(3)*tb->mesh->Sf[i]*extField.row(i).segment(3,3).transpose();
-        std:: cout<<"conjugacy: "<<conjugacy<<std::endl;
+        conjugacy(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
+        //std:: cout<<"conjugacy: "<<conjugacy<<std::endl;
         //std::cout<<"extField.row(i) after: "<<extField.row(i)<<std::endl;
     }
+    std:: cout<<"conjugacy before: "<<conjugacyBefore.cwiseAbs().maxCoeff()<<std::endl;
+    std:: cout<<"conjugacy after: "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
     rawField.set_extrinsic_field(extField);
     directional::raw_to_polyvector(rawField, conjugatePvField);
     return conjugatePvField;

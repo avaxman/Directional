@@ -72,8 +72,21 @@ inline void shape_operator(const Eigen::MatrixXd& V,
     }*/
     
     //averaging operator to faces
-    for (int i=0;i<F.rows();i++)
-        Sf[i] = (Sv[F(i,0)]+Sv[F(i,1)]+Sv[F(i,2)])/3.0;
+    for (int i=0;i<F.rows();i++){
+        SelfAdjointEigenSolver<Matrix3d> esA(Sv[F(i,0)]), esB(Sv[F(i,1)]), esC(Sv[F(i,2)]);
+        Matrix3d Qsum = esA.eigenvectors() + esB.eigenvectors() + esC.eigenvectors();
+
+        // Step 2: orthogonalize the averaged frame
+        JacobiSVD<Matrix3d> svd(Qsum, ComputeFullU | ComputeFullV);
+        Matrix3d Qavg = svd.matrixU() * svd.matrixV().transpose();
+
+        // Step 3: average eigenvalues
+        Vector3d eval_avg = (esA.eigenvalues() + esB.eigenvalues() + esC.eigenvalues()) / 3.0;
+
+        // Step 4: reconstruct tensor
+        Sf[i] = Qavg * eval_avg.asDiagonal() * Qavg.transpose();
+         //Sf[i] = (Sv[F(i,0)]+Sv[F(i,1)]+Sv[F(i,2)])/3.0;
+    }
     
     //checking min and max curvatures
     
