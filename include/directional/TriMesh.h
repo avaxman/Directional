@@ -217,21 +217,31 @@ namespace directional{
             facePrincipalCurvatures.resize(F.rows(),2);
             for (int i=0;i<F.rows();i++){
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(Sf[i]);
+                std::cout<<"Sf[i]: "<<Sf[i]<<std::endl;
                 assert("Eigendecomposition os shape operator failed" && eigensolver.info() == Eigen::Success);
+                std::cout<<"Eigenvalues: "<<eigensolver.eigenvalues()<<std::endl;
+                std::cout<<"EigenVectors:"<<eigensolver.eigenvectors()<<std::endl;
+                std::cout<<"face normal: "<<faceNormals.row(i)<<std::endl;
                 int best_idx = 0;
-                double max_dot = std::abs(this->faceNormals.row(i).dot(eigensolver.eigenvectors().col(0)));
+                double max_dot = std::abs(faceNormals.row(i).dot(eigensolver.eigenvectors().col(0)));
 
                 for (int i = 1; i < 3; ++i) {
-                    double dot = std::abs(this->faceNormals.row(i).dot(eigensolver.eigenvectors().col(i)));
+                    double dot = std::abs(faceNormals.row(i).dot(eigensolver.eigenvectors().col(i)));
                     if (dot > max_dot) {
                         max_dot = dot;
                         best_idx = i;
                     }
                 }
+                std::cout<<"max_dot: "<<max_dot<<std::endl;
+                std::cout<<"eigensolver.eigenvalues()(best_idx): "<<eigensolver.eigenvalues()(best_idx)<<std::endl;
+                
+        
                 int minIndex, maxIndex;
                 minIndex = eigensolver.eigenvalues()((best_idx+1)%3)>=eigensolver.eigenvalues()((best_idx+2)%3) ? (best_idx+2)%3 : (best_idx+1)%3;
                 maxIndex = eigensolver.eigenvalues()((best_idx+1)%3)>=eigensolver.eigenvalues()((best_idx+2)%3) ? (best_idx+1)%3 : (best_idx+2)%3;
+                std::cout<<"MinIndex, maxIndex: "<<minIndex<<","<<maxIndex<<std::endl;
                 facePrincipalCurvatures.row(i)<<eigensolver.eigenvalues()(minIndex), eigensolver.eigenvalues()(maxIndex);
+                std::cout<<"facePrincipalCurvatures.row(i): "<<facePrincipalCurvatures.row(i)<<std::endl;
                 minFacePrincipalDirectionals.row(i) = eigensolver.eigenvectors().col(minIndex).transpose();
                 maxFacePrincipalDirectionals.row(i) = eigensolver.eigenvectors().col(maxIndex).transpose();
                 Eigen::RowVector3d operatorNormal = eigensolver.eigenvectors().col(best_idx).transpose();

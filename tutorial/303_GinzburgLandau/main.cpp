@@ -72,8 +72,8 @@ int main()
     pvData.constVectors = constVectors;
     pvData.wAlignment = alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0);
     pvData.wSmooth = smoothWeight;
-    pvData.wRoSy = roSyWeight;
-    pvData.initImplicitFactor = 5.0;
+    pvData.wRoSy = -1.0;  //Perfect RoSy
+    pvData.initImplicitFactor = 0.2;
     pvData.implicitScheduler = 1.0;
     
     //Computing regular PolyVector field without iterations
@@ -81,13 +81,12 @@ int main()
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
     directional::principal_matching(rawFieldOrig);
     
-    //Iterating for a curl-free field
-    pvData.numIterations = 25;
+    //Iterating for a smoothest perfect-RoSy field
+    pvData.numIterations = 100;
     std::vector<directional::PvIterationFunction> iterationFunctions;
     iterationFunctions.push_back(directional::hard_rosy);
     directional::polyvector_field(pvData, pvFieldGL, iterationFunctions);
     directional::polyvector_to_raw(pvFieldGL, rawFieldGL, N%2==0);
-    //std::cout<<"pvFieldGL.intField: "<<pvFieldGL.intField<<std::endl;
     directional::principal_matching(rawFieldGL);
     
     //Visualization

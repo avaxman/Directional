@@ -1,0 +1,21 @@
+Features
+
+1. Setting and getting properties in the viewer rather than parameters in the setting functions
+2. Exploring a good coefficient for GL
+3. be verbose in the projection functions as well
+
+
+Backend
+
+1. Remove the normalization option from power_to_raw (should be a pure conversion method)
+
+
+Bugs
+
+1. When scaling vector lengths, it pops to the non-prescribed value
+2. Fix streamlines stopping
+3. Empty GUI box opens with a callback.
+4. Setting several fields with the same name to the same number adds them up.
+5. Check I'm not looking at absolute values in scalar field visualization when not needed
+6. Something is wrong with 305 in general, principal directions are kinda bad.
+

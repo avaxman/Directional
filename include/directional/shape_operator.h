@@ -33,7 +33,7 @@ inline void shape_operator(const Eigen::MatrixXd& V,
     using namespace Eigen;
     MatrixXd e(EV.rows(),3);
     MatrixXd Ne(EV.rows(),3);
-    VectorXd cosHalfTheta(EV.rows());
+    //VectorXd cosHalfTheta(EV.rows());
     Se.resize(EV.rows());
     Sv.resize(V.rows());
     Sf.resize(F.rows());
@@ -52,8 +52,9 @@ inline void shape_operator(const Eigen::MatrixXd& V,
         //Assuming it's always positive?
         RowVector3d n = faceNormals.row(EF(i,0)).eval();
         RowVector3d ne = Ne.row(i);
-        cosHalfTheta(i) = (ne.cross(n)).norm();
-        double He = 2* e.row(i).norm() * cosHalfTheta(i);
+        //RowVector3d normalizede = e/e.norm();
+        //cosHalfTheta(i) = (ne.cross(n)).dot(e);
+        double He = 2*  (n.cross(ne)).dot(e.row(i)); //e.row(i).norm() * cosHalfTheta(i);
         RowVector3d evec = e.row(i).normalized();
         RowVector3d eNe = evec.cross(ne);
         Se[i] = He * eNe.transpose() * eNe;
@@ -61,9 +62,21 @@ inline void shape_operator(const Eigen::MatrixXd& V,
         Sv[EV(i,1)] += 0.5 * Se[i] * (ne.dot(vertexNormals.row(EV(i,1))));
     }
     
+    //checking min and max curvatures
+    /*for (int i=0;i<V.rows();i++){
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(Sv[i]);
+        assert("Eigendecomposition os shape operator failed" && eigensolver.info() == Eigen::Success);
+        std::cout<<"Eigenvalues: "<<eigensolver.eigenvalues()<<std::endl;
+        std::cout<<"EigenVectors:"<<eigensolver.eigenvectors()<<std::endl;
+        std::cout<<"Vertex normal: "<<vertexNormals.row(i)<<std::endl;
+    }*/
+    
     //averaging operator to faces
     for (int i=0;i<F.rows();i++)
         Sf[i] = (Sv[F(i,0)]+Sv[F(i,1)]+Sv[F(i,2)])/3.0;
+    
+    //checking min and max curvatures
+    
     
 }
 }

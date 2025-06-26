@@ -125,8 +125,8 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
     //std::cout << "H:" << H<<std::endl;
     
     //checking
-    //std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
-    //std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
+    std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
+    std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
     
     return y.transpose(); // Return RowVectorXd
 }
@@ -149,6 +149,9 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
         Eigen::RowVectorXd y0(6); y0<<rawField.extField.row(i).head(6);
         extField.row(i).head(6)<<project_on_quadric(y0, H);
         extField.row(i).tail(6) = - extField.row(i).head(6);
+        //checking conjugacy
+        double conjugacy = extField.row(i).head(3)*tb->mesh->Sf[i]*extField.row(i).segment(3,3).transpose();
+        std:: cout<<"conjugacy: "<<conjugacy<<std::endl;
         //std::cout<<"extField.row(i) after: "<<extField.row(i)<<std::endl;
     }
     rawField.set_extrinsic_field(extField);

@@ -18,7 +18,6 @@
 #include <directional/CartesianField.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
-#include <directional/project_curl.h>
 #include <directional/principal_matching.h>
 #include <directional/sparse_diagonal.h>
 #include <directional/polyvector_iteration_functions.h>
@@ -339,23 +338,20 @@ inline void polyvector_field(PolyVectorData& pvData,
     for (int i=0;i<pvData.numIterations;i++){
         if (pvData.verbose)
             std::cout<<"Iteration no. "<<i<<std::endl;
-        //An implicit reduction of the smooth-align-orth energy
-        std::cout<<"smoothness before: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        
+        //An implicit step to reduce the energy
+        if (pvData.verbose)
+            std::cout<<"Energy before implicit step: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
         implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  currPvData.currImplicitCoeff*totalLhs;
         solver.compute(implicitLhs);
         assert(solver.info() == Success && "Implicit factorization failed!");
         VectorXcd implicitRhs = currPvData.currImplicitCoeff*totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
-        //std::cout<<"Before solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
         reducedDofs = solver.solve(implicitRhs);
-        std::cout<<"smoothness after: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
-        //std::cout<<"After solution error is: "<<(implicitLhs*reducedDofs-implicitRhs).cwiseAbs().maxCoeff()<<std::endl;
-        
+        if (pvData.verbose)
+            std::cout<<"Energy after implicit step: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+       
         VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
-        //testing projection back:
-        //VectorXcd reducedDofsTest = reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
-        //std::cout<<"Reduced difference: "<<(reducedDofsTest - reducedDofs).cwiseAbs().maxCoeff()<<std::endl;
-        //std::cout<<"reducedDofsTest/reducedDofs: "<<(reducedDofsTest.array() / reducedDofs.array()).cwiseAbs().head(5)<<std::endl;
-        //std::cout<<"reducedDofs: "<<reducedDofs.head(5)<<std::endl;
+       
         MatrixXcd intField(pvData.tb->numSpaces, pvData.N);
         for (int i=0;i<pvData.N;i++)
             intField.col(i) = fullDofs.segment(i*pvData.tb->numSpaces,pvData.tb->numSpaces);
@@ -366,37 +362,14 @@ inline void polyvector_field(PolyVectorData& pvData,
         for (int i=0;i<iterationFunctions.size();i++)
             pvField = iterationFunctions[i](pvField, currPvData);
         
-        //std::cout<<"pvField.intField: "<<pvField.intField<<std::endl;
-        //std::cout<<"Iterating reducing curl, iteration "<<i<<std::endl;
-        /*if ((pvData.normalizeField)&&(i<=4)){
-         CartesianField rawField;
-         polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
-         directional::raw_to_polyvector(rawField, pvField);
-         
-         /*intField = pvField.get_complex_intrinsic_field();
-         intField.block(0,1,intField.rows(), intField.cols()-1).setZero();
-         intField.col(0) = intField.col(0).array() / intField.col(0).array().abs();
-         pvField.set_intrinsic_field(intField);*/
-        //}
-        
-        /*if (pvData.projectCurl){
-         CartesianField rawField, curlFreeField;
-         polyvector_to_raw(pvField, rawField, pvData.N%2==0, false);
-         directional::principal_matching(rawField);
-         project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeField);
-         directional::raw_to_polyvector(curlFreeField,  pvField);
-         }*/
-        
         currPvData.currImplicitCoeff/=pvData.implicitScheduler;
         currPvData.currIteration++;
         
         //recreating prevSolution with reducedDof
-        //VectorXcd fullDofsBack(fullDofs.size());
         for (int i = 0; i < pvField.intField.cols() / 2; ++i) {
             fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).real() = pvField.intField.col(2 * i);
             fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).imag() = pvField.intField.col(2 * i + 1);
         }
-        //td::cout<<"fullDof difference: "<<(fullDofsBack - fullDofs).cwiseAbs().maxCoeff()<<std::endl;
         reducedDofs = reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
         
     }

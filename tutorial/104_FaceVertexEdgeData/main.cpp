@@ -35,9 +35,9 @@ int main()
   viewer.init();
   viewer.set_surface_mesh(mesh);
   viewer.set_cartesian_field(field);
-  viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff());
-  viewer.set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff());
-  viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff());
+  viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff(), "x of normal");
+  viewer.set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff(), "sin(y)");
+  viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), "principal effort");
   viewer.launch();
 }
 

@@ -227,7 +227,7 @@ public:
                                     const std::string name="",
                                     const int fieldNum = 0,
                                     const int sparsity = 0,
-                                    double maxLengthRatio = 1.0)
+                                    double maxLengthRatio = 0.3)
     
     {
         //const bool combedColors = false;

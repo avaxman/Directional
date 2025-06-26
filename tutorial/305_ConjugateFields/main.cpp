@@ -19,15 +19,10 @@ directional::TriMesh mesh;
 directional::PCFaceTangentBundle ftb;
 directional::CartesianField pvFieldConjugate, rawFieldConjugate,constraintsField, rawFieldOrig, pvFieldOrig;
 Eigen::MatrixXd constVectors;
-Eigen::VectorXd curlOrig,curlCF;
-
 double smoothWeight, roSyWeight, alignWeight;
-
 directional::DirectionalViewer viewer;
-
 int N = 4;
-typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
-ViewingModes viewingMode=CONSTRAINTS;
+
 
 
 int main()
@@ -57,7 +52,7 @@ int main()
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 10.0;
+    roSyWeight = 1.0;
     alignWeight = 1.0;
     
     directional::PolyVectorData pvData;
@@ -77,10 +72,9 @@ int main()
     
     //Iterating for a conjugate field
     pvData.numIterations = 25;
-    pvData.initImplicitFactor = 1.0;
+    pvData.initImplicitFactor = 0.05;
     std::vector<directional::PvIterationFunction> iterationFunctions;
-    iterationFunctions.push_back(directional::conjugate);
-    //iterationFunctions.push_back(directional::curl_projection);
+    //iterationFunctions.push_back(directional::conjugate);
     directional::polyvector_field(pvData, pvFieldConjugate, iterationFunctions);
     directional::polyvector_to_raw(pvFieldConjugate, rawFieldConjugate, N%2==0);
     directional::principal_matching(rawFieldConjugate);
@@ -93,14 +87,16 @@ int main()
     viewer.highlight_faces(constFaces,"Const Faces", 0);
     viewer.toggle_field_highlight(true,0);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
-    //viewer.set_raw_field(mesh.barycenters, mesh.minFacePrincipalDirectionals, mesh.avgEdgeLength, "Min Curvature Field",  2);
     viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 2);
+    directional::CartesianField prinField;
+    prinField.init(ftb, directional::fieldTypeEnum::RAW_FIELD,N);
+    Eigen::MatrixXd extField(mesh.F.rows(), 3*N);
+    extField<<mesh.minFacePrincipalDirectionals, mesh.maxFacePrincipalDirectionals, -mesh.minFacePrincipalDirectionals, -mesh.maxFacePrincipalDirectionals;
+    prinField.set_extrinsic_field(extField);
+    viewer.set_cartesian_field(prinField,"Principal directions Field", 2);
+    viewer.set_face_data(mesh.facePrincipalCurvatures.col(0), mesh.facePrincipalCurvatures.col(0).minCoeff(), mesh.facePrincipalCurvatures.col(0).maxCoeff(), "Min curvature", 0);
+    viewer.set_face_data(mesh.facePrincipalCurvatures.col(1), mesh.facePrincipalCurvatures.col(1).minCoeff(), mesh.facePrincipalCurvatures.col(1).maxCoeff(), "Max curvature", 0);
+    viewer.set_face_data((mesh.facePrincipalCurvatures.col(1)-mesh.facePrincipalCurvatures.col(0)).cwiseAbs(), mesh.facePrincipalCurvatures.col(0).minCoeff(), mesh.facePrincipalCurvatures.col(1).maxCoeff(), "umbilic", 0);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
-    //viewer.set_raw_field(mesh.barycenters, mesh.maxFacePrincipalDirectionals, mesh.avgEdgeLength, "Max Curvature Field",  3);
-    //viewer.set_field_color({125.0, 107.0/255.0, 8.0/255.0}, 3);
-    //viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
-    //viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
-    //viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
-    //viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
     viewer.launch();
 }

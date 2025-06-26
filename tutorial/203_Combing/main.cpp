@@ -20,7 +20,6 @@ bool showCombed=false;
 
 void callbackFunc() {
     ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
-
     if (showCombed) {
         if (ImGui::Button("Show Original Field")) {
             showCombed=false;
@@ -34,7 +33,6 @@ void callbackFunc() {
 
     }
     viewer.toggle_combed_colors(true, false);
-
     ImGui::PopItemWidth();
 }
 
@@ -46,7 +44,6 @@ int main()
     directional::readOBJ(TUTORIAL_DATA_PATH "/lilium.obj", mesh);
     ftb.init(mesh);
     directional::read_raw_field(TUTORIAL_DATA_PATH "/lilium.rawfield", ftb, N, origField);
-    std::cout<<"Showing raw field"<<std::endl;
 
     //computing the principal matching and then combing the field to trivialize the matching anywhere but a set of seams
     directional::principal_matching(origField);
@@ -63,10 +60,7 @@ int main()
     });
     Eigen::VectorXi HighlightedEdges = Eigen::Map<Eigen::VectorXi>(HighlightedEdgesList.data(), HighlightedEdgesList.size());
     viewer.highlight_edges(HighlightedEdges, "Combing seams");
-    //viewer.toggle_seams(false);
-
     viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), "Matching effort");
-
     viewer.set_callback(callbackFunc);
     viewer.launch();
 }

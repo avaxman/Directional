@@ -20,21 +20,20 @@ Eigen::VectorXd alignWeights;
 directional::DirectionalViewer viewer;
 
 int N = 4;
-bool normalized = false;
-bool zeroPressed = false;
+bool normalizeField = false;
 bool viewFieldHard = true;
 
 void recompute_field(){
-    directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard);
-    directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft);
+    directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard, normalizeField);
+    directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft, normalizeField);
 }
 
 void update_visualization()
 {
-    directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField,normalized);
+    directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField);
     
     directional::principal_matching(rawField);
-    viewer.set_cartesian_field(rawField,"Power field");//, Eigen::MatrixXd(), 0.9, 0,  20.0);
+    viewer.set_cartesian_field(rawField,"Power field");
     
     //Ghost mesh just showing field, to compare against constraints
     Eigen::MatrixXd constraintIntField = Eigen::MatrixXd::Zero(powerFieldHard.intField.rows(),2);
@@ -46,10 +45,7 @@ void update_visualization()
     constraintPowerField.set_intrinsic_field(constraintIntField);
     
     directional::power_to_raw(constraintPowerField, N, constraintRawField);
-    viewer.set_cartesian_field(constraintRawField,"Constraints", 1);//,0.9, 0, 10.0);
-    //viewer.toggle_mesh(false,0);
-    viewer.toggle_cartesian_field(true,0);
-    viewer.toggle_cartesian_field(true,1);
+    viewer.set_cartesian_field(constraintRawField, "Constraints", 1);
     viewer.highlight_vertices(constVertices);
     
 }
@@ -58,15 +54,16 @@ void callbackFunc()
 {
     viewer.psSurfaceMeshList[0]->setSelectionMode(polyscope::MeshSelectionMode::FacesOnly);
     
-    // get the mouse location from ImGui
+    if (ImGui::Checkbox("Normalize Field", &normalizeField)){
+        recompute_field();
+        update_visualization();
+    }
+    
     ImGuiIO& io = ImGui::GetIO();
     if (io.MouseClicked[0]) { // if clicked
         glm::vec2 screenCoords{io.MousePos.x, io.MousePos.y};
         polyscope::PickResult pickResult = polyscope::pickAtScreenCoords(screenCoords);
-        
-        // check out pickResult.isHit, pickResult.structureName, pickResult.depth, etc
-        
-        // get additional information if we clicked on a mesh
+
         if(pickResult.isHit && pickResult.structure == viewer.psSurfaceMeshList[0]) {
             polyscope::SurfaceMeshPickResult meshPickResult =
             viewer.psSurfaceMeshList[0]->interpretPickResult(pickResult);
@@ -112,8 +109,6 @@ void callbackFunc()
 
 int main()
 {
-    
-    // Load mesh
     directional::readOBJ(TUTORIAL_DATA_PATH "/rocker-arm2500.obj", mesh);
     vtb.init(mesh);
     powerFieldHard.init(vtb, directional::fieldTypeEnum::POWER_FIELD, N);
@@ -124,10 +119,7 @@ int main()
     viewer.init();
     viewer.set_surface_mesh(mesh,0);
     viewer.set_callback(callbackFunc);
-    viewer.launch();
-    
     recompute_field();
     update_visualization();
-    
     viewer.launch();
 }

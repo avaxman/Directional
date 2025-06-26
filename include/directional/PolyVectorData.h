@@ -24,7 +24,7 @@ public:
     Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
     
     int N;                          // Degree of field
-    TangentBundle* tb;              //The tangent bundle on which the field is defined
+    const TangentBundle* tb;              //The tangent bundle on which the field is defined
     bool verbose;                   //whether to output anything
     bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
     bool perfectRoSy;               // Whether the field must be perfect rotationally-symmetric (but not unit).

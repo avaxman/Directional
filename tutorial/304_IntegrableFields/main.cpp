@@ -97,7 +97,7 @@ int main()
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
-    viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Original Abs Curl", 0);
-    viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff(), "Optimized Abs Curl", 0);
+    viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0, "Original Abs Curl", 0);  //to increase sensitivity
+    viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0, "Optimized Abs Curl", 0);
     viewer.launch();
 }
