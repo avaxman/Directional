@@ -262,15 +262,13 @@ inline void polyvector_precompute(directional::CartesianField& pvField,
 //  pvField: a POLYVECTOR_FIELD type cartesian field object
 
 inline void polyvector_field(PolyVectorData& pvData,
-                             directional::CartesianField& pvField,
-                             const std::vector<PvIterationFunction>& iterationFunctions = {})
+                             directional::CartesianField& pvField)
 {
     using namespace std;
     using namespace Eigen;
     
     //Using a temporary pvData so it could be updated and given to the iteration functions if needed
     polyvector_precompute(pvField,pvData);
-    PolyVectorData currPvData = pvData;
     
     //forming total energy matrix;
     SparseMatrix<complex<double>> totalUnreducedLhs =(pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat) * (pvData.wSmooth / pvData.totalSmoothWeight);
@@ -280,16 +278,15 @@ inline void polyvector_field(PolyVectorData& pvData,
         totalUnreducedLhs=totalUnreducedLhs+(pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight;
     VectorXcd totalUnreducedRhs= (pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignRhs)/pvData.totalConstrainedWeight;
     
-    SparseMatrix<complex<double>> totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
-    VectorXcd totalRhs = pvData.reducMat.adjoint()*(totalUnreducedRhs - totalUnreducedLhs*pvData.reducRhs);
+    pvData.totalLhs = pvData.reducMat.adjoint()*totalUnreducedLhs*pvData.reducMat;
+    pvData.totalRhs = pvData.reducMat.adjoint()*(totalUnreducedRhs - totalUnreducedLhs*pvData.reducRhs);
     
     //Initial solution (or only solution if numIterations = 0)
     SimplicialLDLT<SparseMatrix<complex<double>>> solver;
-    solver.compute(totalLhs);
-    VectorXcd reducedDofs = solver.solve(totalRhs);
+    solver.compute(pvData.totalLhs);
+    pvData.reducedDofs = solver.solve(pvData.totalRhs);
     assert(solver.info() == Success && "PolyVector solver failed!");
-    VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
-    
+    VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
     
     MatrixXcd intField(pvData.tb->numSpaces, pvData.N);
     for (int i=0;i<pvData.N;i++)
@@ -298,61 +295,48 @@ inline void polyvector_field(PolyVectorData& pvData,
     pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
     pvField.set_intrinsic_field(intField);
     
-    /*if (pvData.normalizeField){
-     /*CartesianField rawField;
-     polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
-     raw_to_polyvector(rawField,  pvField);
-     intField = pvField.intField;
-     intField.block(1,0,intField.rows(), intField.cols()-1).setZero();
-     intField.col(0) = intField.col(0).array() / intField.col(0).array().abs();
-     pvField.set_intrinsic_field(intField);
-     }*/
-    
-    //testing raw_to_polyvector
-    /*CartesianField rawField, pvField2;
-     polyvector_to_raw(pvField, rawField);
-     directional::raw_to_polyvector(rawField, pvField2);
-     
-     std::cout<<"raw_to_polyvector(polyvector_to_raw()) test: "<<(pvField.intField-pvField2.intField).cwiseAbs().maxCoeff()<<std::endl;*/
-    
-    //Doing reduce energy-renormalize-project curl iterations
-    
     double totalMass;
-    Eigen::SparseMatrix<complex<double>> implicitLhs;
-    SimplicialLDLT<SparseMatrix<complex<double>>> reducProjSolver;
-    
-    if (pvData.numIterations != 0){
+    if (pvData.iterationMode){
         //approximating the smallest non-zero eigenvalues
-        complex<double> energy = (0.5 * reducedDofs.adjoint() * totalLhs* reducedDofs- reducedDofs.adjoint() * totalRhs).coeff(0,0);
-        complex<double> mass = (reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs).coeff(0,0);
+        complex<double> energy = (0.5 * pvData.reducedDofs.adjoint() * pvData.totalLhs* pvData.reducedDofs- pvData.reducedDofs.adjoint() * pvData.totalRhs).coeff(0,0);
+        complex<double> mass = (pvData.reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs).coeff(0,0);
         double approxEig = std::abs(energy/mass);
-        //totalMass = std::abs((RowVectorXcd::Ones(pvData.M.rows()) * pvData.M * VectorXcd::Ones(pvData.M.cols())).coeff(0,0));
-        currPvData.currImplicitCoeff = pvData.initImplicitFactor/approxEig;
-        currPvData.currIteration = 0;
+        pvData.currImplicitCoeff = pvData.initImplicitFactor/approxEig;
+        pvData.currIteration = 0;
         
         //cout<<"implicitCoeff: "<<implicitCoeff<<endl;
-        reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
-        assert(reducProjSolver.info() == Success && "Reduction Projection solver failed!");
+        pvData.reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
+        assert(pvData.reducProjSolver.info() == Success && "Reduction Projection solver failed!");
+        
+        pvData.implicitSolver.compute(pvData.implicitLhs);
+        assert(implicitSolver.info() == Success && "Implicit factorization failed!");
     }
     
-    for (int i=0;i<pvData.numIterations;i++){
+    
+}
+
+inline void polyvector_iterate(PolyVectorData& pvData,
+                               directional::CartesianField& pvField,
+                               std::vector<directional::PvIterationFunction> iterationFunctions,
+                               const int numIterations=1){
+    
+    assert(pvData.iterationMode && "polyvector_iterate(): Iteration mode has not been set");
+    for (int i=0;i<numIterations;i++){
         if (pvData.verbose)
-            std::cout<<"Iteration no. "<<i<<std::endl;
+            std::cout<<"Iteration no. "<<pvData.currIteration<<std::endl;
         
         //An implicit step to reduce the energy
         if (pvData.verbose)
-            std::cout<<"Energy before implicit step: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
-        implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  currPvData.currImplicitCoeff*totalLhs;
-        solver.compute(implicitLhs);
-        assert(solver.info() == Success && "Implicit factorization failed!");
-        VectorXcd implicitRhs = currPvData.currImplicitCoeff*totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * reducedDofs;
-        reducedDofs = solver.solve(implicitRhs);
+            std::cout<<"Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        pvData.implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  pvData.currImplicitCoeff*pvData.totalLhs;
+        pvData.implicitRhs = pvData.currImplicitCoeff*pvData.totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs;
+        pvData.reducedDofs = pvData.implicitSolver.solve(pvData.implicitRhs);
         if (pvData.verbose)
-            std::cout<<"Energy after implicit step: "<<(totalLhs*reducedDofs-totalRhs).cwiseAbs().maxCoeff()<<std::endl;
-       
-        VectorXcd fullDofs = pvData.reducMat*reducedDofs+pvData.reducRhs;
-       
-        MatrixXcd intField(pvData.tb->numSpaces, pvData.N);
+            std::cout<<"Energy after implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
+        
+        Eigen::VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
+        
+        Eigen::MatrixXcd intField(pvData.tb->numSpaces, pvData.N);
         for (int i=0;i<pvData.N;i++)
             intField.col(i) = fullDofs.segment(i*pvData.tb->numSpaces,pvData.tb->numSpaces);
         
@@ -360,78 +344,19 @@ inline void polyvector_field(PolyVectorData& pvData,
         
         //running the iteration over the prescribed functions
         for (int i=0;i<iterationFunctions.size();i++)
-            pvField = iterationFunctions[i](pvField, currPvData);
+            pvField = iterationFunctions[i](pvField, pvData);
         
-        currPvData.currImplicitCoeff/=pvData.implicitScheduler;
-        currPvData.currIteration++;
+        pvData.currImplicitCoeff/=pvData.implicitScheduler;
+        pvData.currIteration++;
         
         //recreating prevSolution with reducedDof
         for (int i = 0; i < pvField.intField.cols() / 2; ++i) {
             fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).real() = pvField.intField.col(2 * i);
             fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).imag() = pvField.intField.col(2 * i + 1);
         }
-        reducedDofs = reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
-        
+        pvData.reducedDofs = pvData.reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
     }
 }
-
-
-// minimal version without auxiliary data
-/*inline void polyvector_field(const TangentBundle& tb,
-                             const Eigen::VectorXi& constSpaces,
-                             const Eigen::MatrixXd& constVectors,
-                             const double smoothWeight,
-                             const double roSyWeight,
-                             const Eigen::VectorXd& alignWeights,
-                             const int N,
-                             directional::CartesianField& pvField,
-                             const std::vector<IterationFunction> iterationFunctions,
-                             const int numIterations = 0)
-{
-    PolyVectorData pvData;
-    if (constSpaces.size()!=0) {
-        pvData.constSpaces = constSpaces;
-        pvData.constVectors = constVectors;
-        pvData.wAlignment = alignWeights;
-        pvData.projectCurl = projectCurl;
-        pvData.normalizeField = normalizeField;
-        pvData.numIterations = numIterations;
-    }else{
-        pvData.constSpaces.resize(1); pvData.constSpaces(0)=0;
-        Eigen::RowVector2d intConstVector; intConstVector<<1.0,0.0;
-        pvData.constVectors = tb.project_to_extrinsic(pvData.constSpaces, intConstVector);
-        pvData.wAlignment = Eigen::VectorXd::Constant(pvData.constSpaces.size(),-1.0);
-    }
-    pvData.wSmooth = smoothWeight;
-    pvData.wRoSy = roSyWeight;
-    pvField.init(tb,fieldTypeEnum::POLYVECTOR_FIELD,N);
-    polyvector_precompute(tb,N,pvField,pvData);
-    polyvector_field(pvData, iterationFunctions, pvField);
-}*/
-
-
-//A version with default parameters (in which alignment is hard by default).
-/*inline void polyvector_field(const TangentBundle& tb,
-                             const PolyVectorData& pvData,
-                             directional::CartesianField& pvField)
-{
-    
-    //PolyVectorData pvData;
-    //in case the const spaces is zero, using a single const space which is default, just to offset the smoothest field rotation null-space
-    if (pvData.constSpaces.size()==0) {
-        pvData.constSpaces.resize(1); pvData.constSpaces(0)=0;
-        Eigen::RowVector2d intConstVector; intConstVector<<1.0,0.0;
-        pvData.constVectors = tb.project_to_extrinsic(pvData.constSpaces, intConstVector);
-        pvData.wAlignment = Eigen::VectorXd::Constant(pvData.constSpaces.size(),-1.0);
-    }
-    /*pvData.wAlignment = Eigen::VectorXd::Constant(constSpaces.size(),-1.0);
-    pvData.wSmooth = 1.0;
-    pvData.wRoSy = 0.0;
-    pvData.normalizeField = pvData.projectCurl = false;
-    pvData.numIterations = 0;
-    polyvector_precompute(tb, N, pvField,pvData);
-    polyvector_field(pvData, pvField);
-}*/
 
 }
 

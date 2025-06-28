@@ -34,7 +34,7 @@ public:
     double initImplicitFactor;          // Implicit smoothing factor
     double currImplicitCoeff;
     double implicitScheduler;        //How much to attenuate implicit factor by
-    int numIterations;              //  Iterate energy reduction->(possibly)normalize->(possibly)project curl
+    int iterationMode;              //  making it possible to iterate energy reduction -> some custom projection function
     int currIteration;
     
     Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
@@ -48,7 +48,16 @@ public:
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
     double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
-    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), numIterations(0), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.5), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+    //state-machine solvers and vectors
+    Eigen::SparseMatrix<std::complex<double>> totalLhs;
+    Eigen::VectorXcd totalRhs;
+    Eigen::VectorXcd reducedDofs;
+    Eigen::SparseMatrix<std::complex<double>> implicitLhs;
+    Eigen::VectorXcd implicitRhs;
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> reducProjSolver;
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> implicitSolver;
+    
+    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), iterationMode(false), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.5), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
 };
 

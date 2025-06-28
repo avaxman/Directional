@@ -82,10 +82,12 @@ int main()
     directional::principal_matching(rawFieldOrig);
     
     //Iterating for a smoothest perfect-RoSy field
-    pvData.numIterations = 100;
+    pvData.iterationMode = true;
+    int numIterations = 100;
     std::vector<directional::PvIterationFunction> iterationFunctions;
     iterationFunctions.push_back(directional::hard_rosy);
-    directional::polyvector_field(pvData, pvFieldGL, iterationFunctions);
+    directional::polyvector_field(pvData, pvFieldGL);
+    directional::polyvector_iterate(pvData, pvFieldGL, iterationFunctions, numIterations);
     directional::polyvector_to_raw(pvFieldGL, rawFieldGL, N%2==0);
     directional::principal_matching(rawFieldGL);
     
