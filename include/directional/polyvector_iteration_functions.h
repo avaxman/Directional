@@ -136,6 +136,9 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
 //Projecting a 2^2 Rosy field to a conjugate field
 CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pvData){
     assert("directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!" && pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
+    
+    //if (pvData.currIteration>10)
+    //    return pvField;  //Debugging the implicit smoothing
     CartesianField rawField, conjugatePvField;
     polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
     Eigen::MatrixXd extField = rawField.extField;

@@ -79,11 +79,13 @@ int main()
     directional::curl_matching(rawFieldOrig, curlOrig);
     
     //Iterating for a curl-free field
-    pvData.numIterations = 25;
+    int numIterations = 25;
+    pvData.iterationMode = true;
     std::vector<directional::PvIterationFunction> iterationFunctions;
     iterationFunctions.push_back(directional::soft_rosy);
     iterationFunctions.push_back(directional::curl_projection);
-    directional::polyvector_field(pvData, pvFieldCurlFree, iterationFunctions);
+    directional::polyvector_field(pvData, pvFieldCurlFree);
+    directional::polyvector_iterate(pvData, pvFieldCurlFree, iterationFunctions, numIterations);
     directional::polyvector_to_raw(pvFieldCurlFree, rawFieldCurlFree, N%2==0);
     directional::curl_matching(rawFieldCurlFree, curlCF);
     

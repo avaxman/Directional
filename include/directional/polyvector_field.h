@@ -297,6 +297,7 @@ inline void polyvector_field(PolyVectorData& pvData,
     
     double totalMass;
     if (pvData.iterationMode){
+        std::cout<<"Iteration Mode"<<std::endl;
         //approximating the smallest non-zero eigenvalues
         complex<double> energy = (0.5 * pvData.reducedDofs.adjoint() * pvData.totalLhs* pvData.reducedDofs- pvData.reducedDofs.adjoint() * pvData.totalRhs).coeff(0,0);
         complex<double> mass = (pvData.reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs).coeff(0,0);
@@ -304,15 +305,14 @@ inline void polyvector_field(PolyVectorData& pvData,
         pvData.currImplicitCoeff = pvData.initImplicitFactor/approxEig;
         pvData.currIteration = 0;
         
-        //cout<<"implicitCoeff: "<<implicitCoeff<<endl;
+        cout<<"pvData.currImplicitCoeff: "<<pvData.currImplicitCoeff<<endl;
         pvData.reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
         assert(pvData.reducProjSolver.info() == Success && "Reduction Projection solver failed!");
         
+        pvData.implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  pvData.currImplicitCoeff*pvData.totalLhs;
         pvData.implicitSolver.compute(pvData.implicitLhs);
-        assert(implicitSolver.info() == Success && "Implicit factorization failed!");
+        assert(pvData.implicitSolver.info() == Success && "Implicit factorization failed!");
     }
-    
-    
 }
 
 inline void polyvector_iterate(PolyVectorData& pvData,
@@ -328,7 +328,6 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         //An implicit step to reduce the energy
         if (pvData.verbose)
             std::cout<<"Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
-        pvData.implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  pvData.currImplicitCoeff*pvData.totalLhs;
         pvData.implicitRhs = pvData.currImplicitCoeff*pvData.totalRhs + pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs;
         pvData.reducedDofs = pvData.implicitSolver.solve(pvData.implicitRhs);
         if (pvData.verbose)
@@ -346,7 +345,13 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         for (int i=0;i<iterationFunctions.size();i++)
             pvField = iterationFunctions[i](pvField, pvData);
         
-        pvData.currImplicitCoeff/=pvData.implicitScheduler;
+        pvData.currImplicitCoeff*=pvData.implicitScheduler;
+        if (std::abs(pvData.implicitScheduler-1.0)>10e-6){
+            std::cout<<"implicitCoeff: "<<pvData.currImplicitCoeff<<std::endl;
+            pvData.implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  pvData.currImplicitCoeff*pvData.totalLhs;
+            pvData.implicitSolver.compute(pvData.implicitLhs);
+            assert(pvData.implicitSolver.info() == Eigen::Success && "Implicit factorization failed!");
+        }
         pvData.currIteration++;
         
         //recreating prevSolution with reducedDof

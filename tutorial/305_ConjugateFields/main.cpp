@@ -69,7 +69,7 @@ int main()
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 100.0;
+    roSyWeight = 10.0;
     alignWeight = 0.001;
     
     
@@ -90,7 +90,9 @@ int main()
     //Iterating for a conjugate field
     pvData.iterationMode = true;
     pvData.initImplicitFactor = 1.0;
+    pvData.implicitScheduler = 0.9;
     iterationFunctions.push_back(directional::conjugate);
+    directional::polyvector_field(pvData, pvFieldConjugate);
     rawFieldConjugate = rawFieldOrig;
     
     //Visualization
