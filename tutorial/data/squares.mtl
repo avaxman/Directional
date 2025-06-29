@@ -5,10 +5,10 @@
 
 newmtl material_0
 Ka 0.200000 0.200000 0.200000
-Kd 0.000000 0.000000 0.000000
+Kd 1.0 1.0 1.0
 Ks 1.000000 1.000000 1.000000
 Tr 0.000000
 illum 2
 Ns 0.000000
-map_Kd squares.png
+map_Kd black_square.png
 

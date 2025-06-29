@@ -136,6 +136,7 @@ void callbackFunc() {
                 currCycle++;
             else
                 currCycle = field.tb->cycles.rows() - mesh.numGenerators;
+            std::cout<<"Current generator cycle: "<<currCycle<<std::endl;
             viewer.highlight_faces(cycleFaces[currCycle]);
         }
     }

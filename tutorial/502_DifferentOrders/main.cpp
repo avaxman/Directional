@@ -14,7 +14,7 @@
 #include <directional/branched_isolines.h>
 #include <directional/directional_viewer.h>
 
-#define NUM_N 2
+#define NUM_N 4
 
 int N[NUM_N];
 int currN = 0;
@@ -28,13 +28,14 @@ int main()
 {
     directional::readOFF(TUTORIAL_DATA_PATH "/vase.off", meshWhole);
     ftb.init(meshWhole);
-    //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-2.rawfield", ftb, N[0], rawField[0]);
-    //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[1], rawField[1]);
-    //directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[2], rawField[2]);
-    directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[0], rawField[0]);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-2.rawfield", ftb, N[0], rawField[0]);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-4.rawfield", ftb, N[1], rawField[1]);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-7.rawfield", ftb, N[2], rawField[2]);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/vase-11.rawfield", ftb, N[3], rawField[3]);
     
     //combing and cutting
     viewer.init();
+    viewer.set_surface_mesh(meshWhole);
     for (int i=0;i<NUM_N;i++){
         directional::principal_matching(rawField[i]);
         
@@ -62,11 +63,15 @@ int main()
         directional::integrate(combedField[i],  intData, meshCut[i], NFunction[i],NCornerFunction[i]);
         
         std::cout<<"Done!"<<std::endl;
-        viewer.set_surface_mesh(meshWhole);
-        viewer.set_cartesian_field(combedField[i], "", i);
+        viewer.set_cartesian_field(combedField[i], std::to_string(N[i]) + "-field", i);
         //viewer.highlight_edges(seams, "Seams", i);
-        viewer.set_isolines(meshCut[i],NFunction[i],"", i, i, 0.05);
-        viewer.set_surface_mesh(meshCut[i], 1);
+        viewer.set_isolines(meshCut[i],NFunction[i],std::to_string(N[i]) + "-function",  i, 0.05);
+        if (i!=0){
+            viewer.toggle_cartesian_field(false, i);
+            viewer.toggle_singularities(false, i);
+            viewer.toggle_isolines(false, i);
+        }
+        //viewer.set_surface_mesh(meshCut[i], 1);
     }
     
     viewer.launch();

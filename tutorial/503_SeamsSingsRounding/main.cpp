@@ -26,16 +26,25 @@ Eigen::VectorXi funcNumSeams, funcNumSings;
 
 directional::DirectionalViewer viewer;
 
-typedef enum {FIELD, SEAMS_ROUNDING, SINGS_ROUNDING} ViewingModes;
-ViewingModes viewingMode=FIELD;
+typedef enum {SEAMS_ROUNDING, SINGS_ROUNDING} ViewingModes;
+ViewingModes viewingMode=SEAMS_ROUNDING;
 
 void callbackFunc(){
     ImGui::PushItemWidth(100);
 
-    const char* items[] = { "Original field", "Rounding seams", "Rounding Singularities"};
+    const char* items[] = {"Rounding seams", "Rounding Singularities"};
     static const char* current_item = NULL;
-
-    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    
+    static float combo_width = 0.0f;
+    if (combo_width == 0.0f) {
+        ImGuiStyle& style = ImGui::GetStyle();
+        for (auto& item : items)
+            combo_width = std::max(combo_width, ImGui::CalcTextSize(item).x);
+        combo_width += style.FramePadding.x * 5.0 + ImGui::GetFontSize() + style.ItemInnerSpacing.x;
+    }
+    
+    ImGui::PushItemWidth(combo_width);
+    if (ImGui::BeginCombo("Viewing Mode", current_item)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(items); n++)
         {
@@ -43,13 +52,10 @@ void callbackFunc(){
             if (ImGui::Selectable(items[n], is_selected)) {
                 switch (n) {
                     case 0:
-                        viewingMode = FIELD;
-                        break;
-                    case 1:
                         viewingMode = SEAMS_ROUNDING;
                         viewer.set_isolines(meshCut, NFunctionSeams);
                         break;
-                    case 2:
+                    case 1:
                         viewingMode = SINGS_ROUNDING;
                         viewer.set_isolines(meshCut, NFunctionSings);
                         break;
@@ -98,7 +104,7 @@ int main()
   viewer.init();
   viewer.set_surface_mesh(meshWhole);
   viewer.set_cartesian_field(rawField);
-  viewer.set_isolines(meshCut, NFunctionSings);
+viewer.set_isolines(meshCut, NFunctionSeams);
   viewer.set_callback(callbackFunc);
   viewer.launch();
 }

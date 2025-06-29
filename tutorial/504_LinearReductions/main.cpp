@@ -22,8 +22,8 @@ directional::DirectionalViewer viewer;
 Eigen::MatrixXd P1Sign, P2Sign, P1Tri, P2Tri;
 Eigen::VectorXi funcNumSign, funcNumTri;
 
-typedef enum {FIELD, SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
-ViewingModes viewingMode=FIELD;
+typedef enum {SIGN_SYMMETRY, TRI_SYMMETRY} ViewingModes;
+ViewingModes viewingMode=SIGN_SYMMETRY;
 
 
 void callbackFunc(){
@@ -32,7 +32,16 @@ void callbackFunc(){
     static const char* current_item = NULL;
 
     ImGui::PushItemWidth(300);
-    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
+    static float combo_width = 0.0f;
+    if (combo_width == 0.0f) {
+        ImGuiStyle& style = ImGui::GetStyle();
+        for (auto& item : items)
+            combo_width = std::max(combo_width, ImGui::CalcTextSize(item).x);
+        combo_width += style.FramePadding.x * 5.0 + ImGui::GetFontSize() + style.ItemInnerSpacing.x;
+    }
+    
+    ImGui::PushItemWidth(combo_width);
+    if (ImGui::BeginCombo("Viewing Mode", current_item)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(items); n++)
         {

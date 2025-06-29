@@ -513,7 +513,7 @@ public:
     void inline set_isolines(const directional::TriMesh& cutMesh,
                              const Eigen::MatrixXd& vertexFunction,
                              const std::string name = "",
-                             const int meshNum=0,
+                             //const int meshNum=0,
                              const int fieldNum=0,
                              const double sizeRatio=0.05)
     {
@@ -541,7 +541,7 @@ public:
         
         std::string isolineName;
         if (name.empty())
-            isolineName = "Isolines m" + std::to_string(meshNum) + "-f" + std::to_string(fieldNum);
+            isolineName = "Isolines field " + std::to_string(fieldNum);
         else
             isolineName = name;
         
@@ -588,8 +588,8 @@ public:
         if (fieldNum+1>psGlyphList.size())
             return;  //just ignore the command
         psGlyphSourceList[fieldNum]->setEnabled(active);
-        for (int i=0;i<psGlyphList[fieldNum].size();i++)
-            psGlyphList[fieldNum][i]->setEnabled(active);
+        //for (int i=0;i<psGlyphList[fieldNum].size();i++)
+        //    psGlyphList[fieldNum][i]->setEnabled(active);
     }
     
     void inline toggle_singularities(const bool active, const int fieldNum=0){
@@ -600,8 +600,12 @@ public:
         psEdgeHighlightList[fieldNum]->setEnabled(active);
     }
     
-    void inline toggle_streamlines(const bool active, const int meshNum=0){
-        psStreamlineList[meshNum]->setEnabled(active);
+    void inline toggle_streamlines(const bool active, const int fieldNum=0){
+        psStreamlineList[fieldNum]->setEnabled(active);
+    }
+    
+    void inline toggle_isolines(const bool active, const int fieldNum=0){
+        psIsolineList[fieldNum]->setEnabled(active);
     }
     
     

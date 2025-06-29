@@ -31,40 +31,10 @@ Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> texture_R, texture_G,
 void callbackFunc(){
     ImGui::PushItemWidth(100);
 
-    /*const char* items[] = { "Original field", "Rotationally seamless", "Fully seamless"};
-    static const char* current_item = NULL;
-
-    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
-    {
-        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-        {
-            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
-            if (ImGui::Selectable(items[n], is_selected)){
-                switch (n){
-                    case 0:
-                        viewingMode = FIELD;
-                        break;
-                    case 1:
-                        viewingMode = ROT_INTEGRATION;
-                        viewer.set_uv(cutUVRot,1);
-                        break;
-                    case 2:
-                        viewingMode = FULL_INTEGRATION;
-                        viewer.set_uv(cutUVFull,1);
-                        break;
-                }
-            }
-            current_item = items[n];
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-        }
-        ImGui::EndCombo();
-    }*/
-
     if (ImGui::Button("Save Textured OBJ File")){
         Eigen::MatrixXd emptyMat;
-        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, meshCut.F);
-        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, meshCut.F);
+        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-rot-seamless.obj", meshCut, cutUVRot, meshCut.F, "squares.mtl", "material_0");
+        directional::writeOBJ(TUTORIAL_DATA_PATH "/horsers-param-full-seamless.obj", meshCut, cutUVFull, meshCut.F, "squares.mtl", "material_0");
     }
 
     ImGui::PopItemWidth();

@@ -95,7 +95,7 @@ void callbackFunc() {
     }
     
     ImGui::PushItemWidth(combo_width);
-    if (ImGui::BeginCombo("ViewingMode", current_item)) // The second parameter is the label previewed before opening the combo.
+    if (ImGui::BeginCombo("Viewing Mode", current_item)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(items); n++)
         {

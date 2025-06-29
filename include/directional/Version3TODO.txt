@@ -3,7 +3,9 @@ Features
 1. Setting and getting properties in the viewer rather than parameters in the setting functions
 2. Exploring a good coefficient for GL
 3. Be verbose in the projection functions as well
-
+4. Draw principal directions in 305 in different colors to min/max
+5. Changing saved data to another folder
+6. GUI adaptations for 505
 
 Backend
 
@@ -17,6 +19,6 @@ Bugs
 3. Empty GUI box opens with a callback.
 4. Setting several fields with the same name to the same number adds them up.
 5. Check I'm not looking at absolute values in scalar field visualization when not needed
-6. Something is wrong with 305 in general, principal directions are kinda bad.
+6. Check 305 again, perhaps on a better mesh
 7. highlight_vertices doesn't really work with boundaries
 
