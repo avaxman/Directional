@@ -60,7 +60,7 @@ namespace directional {
                                                                 const int N=1,
                                                                 const int d=1){
         assert("Currently only works for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> M1 = sparse_diagonal((isInverse ? mesh.faceAreas : 1.0/(mesh.faceAreas.array())));
+        Eigen::SparseMatrix<NumberType> M1 = sparse_diagonal((isInverse ? 1.0/(mesh.faceAreas.array()) : mesh.faceAreas));
         return single_to_N_matrix(M1, (isIntrinsic ? 2 : 3)*N, 1, 1);
     }
 

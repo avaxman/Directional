@@ -210,7 +210,7 @@ namespace directional{
             
             midEdges.resize(EV.rows(), 3);
             for (int i=0;i<EV.rows();i++)
-                midEdges.row(i) = (V.row(EV(i,0))+V.row(EV(i,0)))/2.0;
+                midEdges.row(i) = (V.row(EV(i,0))+V.row(EV(i,1)))/2.0;
 
             //igl::triangle_triangle_adjacency(F, TT);
             //Curvatures
