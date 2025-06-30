@@ -70,6 +70,7 @@ namespace directional{
         Eigen::MatrixXd FBx,FBy;  //local basis vectors per face
         Eigen::MatrixXd VBx,VBy;  //local basis vectors per vertex
         Eigen::MatrixXd barycenters;
+        Eigen::MatrixXd midEdges;
         Eigen::VectorXd GaussianCurvature;
         std::vector<Eigen::Matrix3d> Se,Sv,Sf;
         Eigen::MatrixXd minFacePrincipalDirections, minVertexPrincipalDirections;
@@ -206,6 +207,10 @@ namespace directional{
                     vertexNormals.row(F(i,j)).array()+=faceNormals.row(i).array()*faceAreas(i);
 
             vertexNormals.rowwise().normalize();
+            
+            midEdges.resize(EV.rows(), 3);
+            for (int i=0;i<EV.rows();i++)
+                midEdges.row(i) = (V.row(EV(i,0))+V.row(EV(i,0)))/2.0;
 
             //igl::triangle_triangle_adjacency(F, TT);
             //Curvatures

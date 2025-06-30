@@ -122,6 +122,7 @@ public:
         else
             dataName = name;
         polyscope::SurfaceVertexScalarQuantity* vertexQuantity = psSurfaceMeshList[meshNum]->addVertexScalarQuantity(dataName, vertexData);
+        vertexQuantity->setEnabled(true);
         vertexQuantity->setMapRange(std::pair<double, double>(minRange, maxRange));
     }
     
@@ -153,6 +154,7 @@ public:
         else
             dataName = name;
         polyscope::SurfaceEdgeScalarQuantity* edgeQuantity = psSurfaceMeshList[meshNum]->addEdgeScalarQuantity(dataName, edgeData);
+        edgeQuantity->setEnabled(true);
         edgeQuantity->setMapRange(std::pair<double, double>(minRange, maxRange));
     }
     
@@ -278,7 +280,7 @@ public:
                               const int fieldNum = 0)
     
     {
-        const double sizeRatio = 0.3;
+        //const double sizeRatio = 0.3;
         //const bool combedColors = false;
         if (psGlyphSourceList.size()<fieldNum+1) {
             //fieldList.resize(fieldNum + 1);
@@ -295,14 +297,14 @@ public:
         else
             fieldName = name;
         psGlyphSourceList[fieldNum] = polyscope::registerPointCloud(fieldName, sources);
-        psGlyphList[fieldNum].resize(rawField.cols()/3);
+        psGlyphList[fieldNum].resize(rawField.cols()/3); 
         psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
         psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
         for (int i=0;i<rawField.cols()/3;i++) {
             psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                       rawField.block(0, 3 * i, rawField.rows(),
                                                                                                      3));
-            psGlyphList[fieldNum][i]->setVectorLengthScale(sizeRatio*vectorScale, false);
+            psGlyphList[fieldNum][i]->setVectorLengthScale(vectorScale, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
             //if (!combedColors)
             psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
@@ -513,7 +515,6 @@ public:
     void inline set_isolines(const directional::TriMesh& cutMesh,
                              const Eigen::MatrixXd& vertexFunction,
                              const std::string name = "",
-                             //const int meshNum=0,
                              const int fieldNum=0,
                              const double sizeRatio=0.05)
     {
@@ -596,6 +597,12 @@ public:
         psSingList[fieldNum]->setEnabled(active);
     }
     
+    void inline toggle_raw_field(const bool active, const int fieldNum=0){
+        if (fieldNum+1>psGlyphList.size())
+            return;  //just ignore the command
+        psGlyphSourceList[fieldNum]->setEnabled(active);
+    }
+    
     void inline toggle_edge_highlights(const bool active, const int fieldNum=0){
         psEdgeHighlightList[fieldNum]->setEnabled(active);
     }
@@ -609,25 +616,11 @@ public:
     }
     
     
-    
-    /*void inline toggle_isolines(const bool active, const int meshNum=0){
-     data_list[NUMBER_OF_SUBMESHES*meshNum+ISOLINES_MESH].show_faces=active;
-     }
-     
-     void inline toggle_texture(const bool active, const int meshNum=0){
-     data_list[NUMBER_OF_SUBMESHES*meshNum].show_texture=active;
-     }*/
-    
-    //disabling the original mesh
     void inline toggle_edge_data(const bool active, const int meshNum=0){
         //TODO: save edge data somewhere
     }
     
-    //static functions for default values
-    /*//Mesh colors
-     static Eigen::RowVector3d inline default_mesh_color(){
-     return Eigen::RowVector3d::Constant(1.0);
-     }*/
+
     
     void inline set_glyph_length(double lengthRatio, int fieldNum = 0){
         for (int i=0;i<psGlyphList[fieldNum].size();i++)

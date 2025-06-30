@@ -10,8 +10,6 @@ endif()
 option(DIRECTIONAL_VIEWER "Directional Viewer" ON)
 option(USE_GMP "Enable GMP support if found" ON)
 
-
-
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
@@ -27,23 +25,32 @@ include_directories(${DIRECTIONAL_EXTERNAL}/eigen)
 # Polyscope
 add_subdirectory(${DIRECTIONAL_EXTERNAL}/polyscope "polyscope")
 
-# Output location
+# Tutorial data path and output path (create dirs if needed)
+set(TUTORIAL_DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/data" CACHE PATH "location of tutorial data resources")
+set(TUTORIAL_OUTPUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/output" CACHE PATH "location of tutorial outputs")
+
+file(MAKE_DIRECTORY "${TUTORIAL_DATA_PATH}")
+file(MAKE_DIRECTORY "${TUTORIAL_OUTPUT_PATH}")
+
+# Set runtime output dir and create
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
-file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
-# Tutorial data path macro
-set(TUTORIAL_DATA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data CACHE PATH "location of tutorial data resources")
-add_compile_definitions(DATA_PATH="${PROJECT_SOURCE_DIR}/data")
-
+# Interface library for tutorial targets
 add_library(tutorials INTERFACE)
-target_compile_definitions(tutorials INTERFACE "-DTUTORIAL_DATA_PATH=\"${TUTORIAL_DATA_PATH}\"")
-target_include_directories(tutorials INTERFACE 
+
+target_compile_definitions(tutorials INTERFACE
+  "-DTUTORIAL_DATA_PATH=\\\"${TUTORIAL_DATA_PATH}\\\""
+  "-DTUTORIAL_OUTPUT_PATH=\\\"${TUTORIAL_OUTPUT_PATH}\\\""
+  GLM_ENABLE_EXPERIMENTAL
+)
+
+target_include_directories(tutorials INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${POLYSCOPE_SOURCE_DIR}/include
     ${POLYSCOPE_SOURCE_DIR}/deps/imgui/imgui
     ${POLYSCOPE_SOURCE_DIR}/deps/glm
 )
-target_compile_definitions(tutorials INTERFACE GLM_ENABLE_EXPERIMENTAL)
 
 # ===== GMP Handling (Cross-platform) =====
 if(USE_GMP)

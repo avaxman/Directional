@@ -104,7 +104,6 @@ namespace directional {
         assert("Currently only works for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> J(2*mesh.F.rows(), 2*mesh.F.rows());
         std::vector<Eigen::Triplet<NumberType>> JTris;
-        Eigen::SparseMatrix<NumberType> EI = face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
         for (int i=0;i<mesh.F.rows();i++){
             JTris.push_back(Eigen::Triplet<NumberType>(2*i,2*i, 0.0));
             JTris.push_back(Eigen::Triplet<NumberType>(2*i+1,2*i+1, 0.0));
@@ -112,9 +111,16 @@ namespace directional {
             JTris.push_back(Eigen::Triplet<NumberType>(2*i,2*i+1, -1.0));
         }
         J.setFromTriplets(JTris.begin(), JTris.end());
-        if (N==1)
-            return EI.adjoint()*J*EI;
-        return EI.adjoint()*single_to_N_matrix(J, N, 2, 2)*EI;
+        if (!isIntrinsic){
+            Eigen::SparseMatrix<NumberType> EI = face_extrinsic_to_intrinsic_matrix_2D<NumberType>(mesh, N, d);
+            if (N==1)
+                return EI.adjoint()*J*EI;
+            return EI.adjoint()*single_to_N_matrix(J, N, 2, 2)*EI;
+        } else {
+            if (N==1)
+                return J;
+            return single_to_N_matrix(J, N, 2, 2);
+        }
     }
 
 }

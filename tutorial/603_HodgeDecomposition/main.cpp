@@ -35,9 +35,9 @@ int main()
     Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(mesh);
 
     Eigen::MatrixXd harmBasis;
-    int bettiNumber;
+    int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - (mesh.F.rows()-1);
     std::cout<<"Extracting the basis of harmonic fields..."<<std::endl;
-    directional::cohomology_basis(G, C, Mx,  harmBasis, bettiNumber);
+    directional::cohomology_basis(G, C, Mx,  bettiNumber, harmBasis);
     //std::cout<<"Euler characteristic: "<<mesh.V.rows()-mesh.EV.rows()+mesh.F.rows()<<std::endl;
     //std::cout<<"Betti number: "<<bettiNumber<<std::endl;
     //std::cout<<"harmBasis: "<<harmBasis.block(0,0,20,harmBasis.cols())<<std::endl;

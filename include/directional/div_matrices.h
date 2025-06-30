@@ -25,8 +25,8 @@ namespace directional {
 
         assert("This method is currently defined only for d==1" && d==1);
         Eigen::SparseMatrix<NumberType> G = directional::conf_gradient_matrix_2D<NumberType>(mesh,isIntrinsic,N,d);
-        Eigen::SparseMatrix<NumberType> Mx = directional::face_vectors_mass_matrix_2D<NumberType>(mesh, isIntrinsic, N, d);
-        return (G.adjoint()*Mx);
+        Eigen::SparseMatrix<NumberType> Mx = directional::face_vectors_mass_matrix_2D<NumberType>(mesh, isIntrinsic, false, N, d);
+        return (-G.adjoint()*Mx);
     }
 }
 
