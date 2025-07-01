@@ -14,15 +14,13 @@
 directional::TriMesh mesh;
 directional::PCFaceTangentBundle ftb;
 Eigen::VectorXd gradFieldVec, rotCogradFieldVec, harmFieldVec, vertexFunction, diamondForm;
-directional::CartesianField origField, gradField, rotCogradField, harmField;
 directional::DirectionalViewer viewer;
 
 
 int main()
 {
     directional::readOFF(TUTORIAL_DATA_PATH "/1146164.off",mesh);
-    //directional::readOBJ(TUTORIAL_DATA_PATH "/torus.obj",mesh);
-    
+   
     ftb.init(mesh);
 
     //TODO: create the actual field
@@ -38,57 +36,55 @@ int main()
     int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - (mesh.F.rows()-1);
     std::cout<<"Extracting the basis of harmonic fields..."<<std::endl;
     directional::cohomology_basis(G, C, Mx,  bettiNumber, harmBasis);
-    //std::cout<<"Euler characteristic: "<<mesh.V.rows()-mesh.EV.rows()+mesh.F.rows()<<std::endl;
-    //std::cout<<"Betti number: "<<bettiNumber<<std::endl;
-    //std::cout<<"harmBasis: "<<harmBasis.block(0,0,20,harmBasis.cols())<<std::endl;
-
-    std::cout<<"divergence of harmonic basis (numerically zero): "<<(G.adjoint()*Mx*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"curl of harmonic basis (numerically zero): "<<(C*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
-
-    Eigen::VectorXd harmVec = 10.0*harmBasis.col(0);
+   
+    Eigen::VectorXd harmGT = harmBasis.col(0);
     Eigen::RowVector3d COM = mesh.V.colwise().mean();
     Eigen::VectorXd vertexVec(mesh.dcel.vertices.size()), midEdgeVec(mesh.dcel.edges.size());
     for (int i=0;i<mesh.dcel.vertices.size();i++)
-        vertexVec[i] = 3.0*cos((mesh.V(i,0)-COM(1))/4.0)*cos((mesh.V(i,2)-COM(2))/4.0);
+        vertexVec[i] = (mesh.V.row(i)-mesh.V.row(296)).norm();
 
-    vertexVec.array()/=vertexVec.mean();
-
-    for (int i=0;i<mesh.dcel.edges.size();i++){
-        Eigen::RowVector3d midEdgePointCOM = 0.5*(mesh.V.row(mesh.EV(i,0))+mesh.V.row(mesh.EV(i,1))) - COM;
-        midEdgeVec[i] = sin(midEdgePointCOM(0)/4.0)+sin(midEdgePointCOM(1)/4.0)+sin(midEdgePointCOM(2)/4.0);
-    }
-    midEdgeVec.array()/=midEdgeVec.mean();
-
-    origField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
+    for (int i=0;i<mesh.dcel.edges.size();i++)
+        midEdgeVec[i] = sin(mesh.midEdges(i,0)/2.0)+sin(mesh.midEdges(i,1)/2.0)+sin(mesh.midEdges(i, 2)/2.0);
+    
+    //Doing an artifical composition and decomposition. For results to be meaningful, the fields must be of more or less the same magnitude, so normalizing them.
     Eigen::VectorXd gradientGT = G*vertexVec;
     gradientGT.array()/=sqrt((gradientGT.transpose()*Mx*gradientGT).coeff(0,0));
-    Eigen::VectorXd rotCogradientGT = iMx*C.adjoint()*midEdgeVec;
+    Eigen::VectorXd rotCogradientGT = -iMx*C.adjoint()*midEdgeVec;    //This is equivalent to J*Ge*midEdgeVec
     rotCogradientGT.array()/=sqrt((rotCogradientGT.transpose()*Mx*rotCogradientGT).coeff(0,0));
-    origField.set_extrinsic_field(IE*(harmVec + gradientGT +  rotCogradientGT));
-
-    std::cout<<"before hodge decomposition"<<std::endl;
-    directional::hodge_decomposition<double>(G, C, Mx, Mc, origField.flatten(true), vertexFunction, gradFieldVec, rotCogradFieldVec, diamondForm, harmFieldVec);
-    std::cout<<"after hodge decomposition"<<std::endl;
+    Eigen::VectorXd origFieldVec = harmGT + gradientGT +  rotCogradientGT;
+    directional::hodge_decomposition<double>(G, C, Mx, Mc, origFieldVec, vertexFunction, gradFieldVec, rotCogradFieldVec, diamondForm, harmFieldVec);
     std::cout<<"Exact reproduction (numerically zero): "<<(gradFieldVec -gradientGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Coexact reproduction (numerically zero): "<<(rotCogradFieldVec - rotCogradientGT).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Harmonic reproduction (numerically zero): "<<(harmFieldVec - harmVec).cwiseAbs().maxCoeff()<<std::endl;
+    std::cout<<"Harmonic reproduction (numerically zero): "<<(harmFieldVec - harmGT).cwiseAbs().maxCoeff()<<std::endl;
 
-    gradField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    gradField.set_extrinsic_field((const Eigen::VectorXd)(IE*gradFieldVec));
-    //std::cout<<"exactField.extField: "<<exactField.extField<<std::endl;
-    rotCogradField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    rotCogradField.set_extrinsic_field((const Eigen::VectorXd)(IE*rotCogradFieldVec));
-    harmField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
-    harmField.set_extrinsic_field((const Eigen::VectorXd)(IE*harmVec));
+    
+    //Visualization
+    Eigen::MatrixXd gradField(mesh.F.rows(),3), origField(mesh.F.rows(),3), rotCogradField(mesh.F.rows(),3), harmField(mesh.F.rows(),3);
+    gradFieldVec = IE*gradFieldVec;
+    rotCogradFieldVec = IE*rotCogradFieldVec;
+    harmFieldVec = IE*harmFieldVec;
+    origFieldVec = IE*origFieldVec;
+    for (int i=0;i<mesh.F.rows();i++){
+        gradField.row(i) = gradFieldVec.segment(3*i,3).transpose();
+        rotCogradField.row(i) = rotCogradFieldVec.segment(3*i,3).transpose();
+        harmField.row(i) = harmFieldVec.segment(3*i,3).transpose();
+        origField.row(i) = origFieldVec.segment(3*i,3).transpose();
+    }
+    
+    std::cout<<"(origField - harmField - rotCogradField - gradField).cwiseAbs().maxCoeff(): "<<(origField - harmField - rotCogradField - gradField).cwiseAbs().maxCoeff()<<std::endl;
    
-    //triangle mesh setup
     viewer.init();
     viewer.set_surface_mesh(mesh);
-    viewer.set_cartesian_field(origField,"Original Field", 0, 0, 2.0);
     viewer.set_vertex_data(vertexFunction, vertexFunction.minCoeff(), vertexFunction.maxCoeff(),"Vertex Function", 0);
-    viewer.set_cartesian_field(gradField,"Gradient Field", 1, 0, 2.0);
+    viewer.toggle_vertex_data(false);
     viewer.set_edge_data(diamondForm, diamondForm.minCoeff(), diamondForm.maxCoeff(),"Diamond Function", 0);
-    viewer.set_cartesian_field(rotCogradField,"Rotated Cogradient Field", 2, 0, 2.0);
-    viewer.set_cartesian_field(harmField,"Harmonic Field", 3, 0, 2.0);
+    viewer.toggle_edge_data(false);
+    viewer.set_raw_field(mesh.barycenters, origField, mesh.avgEdgeLength, "Original Field", 0);
+    viewer.set_raw_field(mesh.barycenters, gradField, mesh.avgEdgeLength, "Gradient Field", 1);
+    viewer.toggle_raw_field(false, 1);
+    viewer.set_raw_field(mesh.barycenters, rotCogradField, mesh.avgEdgeLength, "Rotated Cogradient Field", 2);
+    viewer.toggle_raw_field(false, 2);
+    viewer.set_raw_field(mesh.barycenters, harmField, mesh.avgEdgeLength, "Harmonic Field", 3);
+    viewer.toggle_raw_field(false, 2);
     viewer.launch();
 }

@@ -22,9 +22,9 @@ int main()
     Eigen::VectorXd z2(mesh.dcel.faces.size());
     //giving a 2-form of constant (pointwise curl).
     for (int i=0;i<mesh.dcel.faces.size();i++)
-        z2[i] = mesh.faceAreas(i)*sin(mesh.barycenters(i,0)/40.0)*cos(mesh.barycenters(i,1)/40.0); //sin(midEdgePoint(1)/20.0)*cos(midEdgePoint(2)/20.0);
+        z2[i] = mesh.faceAreas(i)*sin(mesh.barycenters(i,0)/40.0)*cos(mesh.barycenters(i,1)/40.0);
     
-    //making it physical curl
+    //making it a physical curl quantity
     z2.array()-=z2.mean();
     
     Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh);
@@ -45,17 +45,11 @@ int main()
             maxAbsValue = std::max(maxAbsValue, std::abs(it.value()));
     
     std::cout<<"exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
-            
     directional::project_exact(d1, hodgeStar, z2, z1Diag, z2Exact, true);
-
     std::cout<<"Reproducing the original curl (z2Diag): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
-
     directional::project_exact(d1, M1, z2, z1, z2Exact, true);
-
     std::cout<<"Reproducing the original curl (z2): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
-    
     std::cout<<"Difference between z1 and z1Diag: "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
-
 
     //triangle mesh setup
     viewer.init();

@@ -615,6 +615,9 @@ public:
         psIsolineList[fieldNum]->setEnabled(active);
     }
     
+    void inline toggle_vertex_data(const bool active, const int meshNum=0){
+        //TODO: save edge data somewhere
+    }
     
     void inline toggle_edge_data(const bool active, const int meshNum=0){
         //TODO: save edge data somewhere
