@@ -262,8 +262,8 @@ public:
         for (int i=0;i<_field.N;i++) {
             psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                       sampledField.block(0, 3 * i, sampledField.rows(),
-                                                                                                         3));
-            psGlyphList[fieldNum][i]->setVectorLengthScale(maxLengthRatio*_field.tb->avgAdjLength, false);
+                                                                                                         3).array()*maxLengthRatio*_field.tb->avgAdjLength, polyscope::VectorType::AMBIENT);
+            //psGlyphList[fieldNum][i]->setVectorLengthScale(maxLengthRatio*_field.tb->avgAdjLength, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
             //if (!combedColors)
             psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
@@ -303,8 +303,8 @@ public:
         for (int i=0;i<rawField.cols()/3;i++) {
             psGlyphList[fieldNum][i] = psGlyphSourceList[fieldNum]->addVectorQuantity("Vector " + std::to_string(i),
                                                                                       rawField.block(0, 3 * i, rawField.rows(),
-                                                                                                     3));
-            psGlyphList[fieldNum][i]->setVectorLengthScale(vectorScale, false);
+                                                                                                     3).array()*vectorScale, polyscope::VectorType::AMBIENT);
+            //psGlyphList[fieldNum][i]->setVectorLengthScale(vectorScale, false);
             psGlyphList[fieldNum][i]->setEnabled(true);
             //if (!combedColors)
             psGlyphList[fieldNum][i]->setVectorColor(default_glyph_color());
@@ -373,8 +373,8 @@ public:
         psGlyphList[fieldNum].resize(1);
         psGlyphSourceList[fieldNum]->setPointRadius(10e-6);
         psGlyphSourceList[fieldNum]->setPointRenderMode(polyscope::PointRenderMode::Quad);
-        psGlyphList[fieldNum][0] = psGlyphSourceList[fieldNum]->addVectorQuantity(std::string(formName),field);
-        psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*surfaceMeshList[meshNum]->avgEdgeLength, false);
+        psGlyphList[fieldNum][0] = psGlyphSourceList[fieldNum]->addVectorQuantity(std::string(formName),field.array()*sizeRatio*surfaceMeshList[meshNum]->avgEdgeLength, polyscope::VectorType::AMBIENT);
+        //psGlyphList[fieldNum][0]->setVectorLengthScale(sizeRatio*surfaceMeshList[meshNum]->avgEdgeLength, false);
         return field;
     }
     

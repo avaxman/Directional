@@ -26,7 +26,7 @@ void callbackFunc() {
         currHarmBasis = (currHarmBasis + 1)%harmBasis.cols();
         //std::cout<<"currHarmBasis: "<<currHarmBasis<<std::endl;
         harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
-        viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 5.0);
+        viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 50.0);
         //std::cout<<"after set field"<<std::endl;
     }
     ImGui::SameLine();
@@ -34,7 +34,7 @@ void callbackFunc() {
         currHarmBasis = (currHarmBasis + harmBasis.cols() - 1)%harmBasis.cols();
         //std::cout<<"currHarmBasis: "<<currHarmBasis<<std::endl;
         harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
-        viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 5.0);
+        viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 50.0);
     }
 
     ImGui::PopItemWidth();
@@ -45,8 +45,6 @@ int main()
 {
     directional::readOBJ(TUTORIAL_DATA_PATH "/129110__sf.obj",mesh);
     ftb.init(mesh);
-
-    //TODO: create the actual field
 
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(mesh, true);
@@ -59,10 +57,10 @@ int main()
     int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - (mesh.F.rows()-1);
     std::cout<<"Computing cohomology basis..."<<std::endl;
     directional::cohomology_basis(G, C, Mx,  bettiNumber, harmBasis);
-
+    std::cout<<"bettiNumber: "<<bettiNumber<<std::endl;
     std::cout<<"divergence of harmonic basis: "<<(G.adjoint()*Mx*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"curl of harmonic basis: "<<(C*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"bettiNumber: "<<bettiNumber<<std::endl;
+    
 
     viewer.init();
     viewer.set_callback(&callbackFunc);
@@ -71,6 +69,6 @@ int main()
     harmField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
     harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
     //std::cout<<"after set extrinsic field "<<std::endl;
-    viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 5.0);
+    viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 50.0);
     viewer.launch();
 }

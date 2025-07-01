@@ -57,7 +57,6 @@ int main()
     std::cout<<"Coexact reproduction (numerically zero): "<<(rotCogradFieldVec - rotCogradientGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Harmonic reproduction (numerically zero): "<<(harmFieldVec - harmGT).cwiseAbs().maxCoeff()<<std::endl;
 
-    
     //Visualization
     Eigen::MatrixXd gradField(mesh.F.rows(),3), origField(mesh.F.rows(),3), rotCogradField(mesh.F.rows(),3), harmField(mesh.F.rows(),3);
     gradFieldVec = IE*gradFieldVec;
@@ -71,20 +70,18 @@ int main()
         origField.row(i) = origFieldVec.segment(3*i,3).transpose();
     }
     
-    std::cout<<"(origField - harmField - rotCogradField - gradField).cwiseAbs().maxCoeff(): "<<(origField - harmField - rotCogradField - gradField).cwiseAbs().maxCoeff()<<std::endl;
-   
     viewer.init();
     viewer.set_surface_mesh(mesh);
     viewer.set_vertex_data(vertexFunction, vertexFunction.minCoeff(), vertexFunction.maxCoeff(),"Vertex Function", 0);
     viewer.toggle_vertex_data(false);
     viewer.set_edge_data(diamondForm, diamondForm.minCoeff(), diamondForm.maxCoeff(),"Diamond Function", 0);
     viewer.toggle_edge_data(false);
-    viewer.set_raw_field(mesh.barycenters, origField, mesh.avgEdgeLength, "Original Field", 0);
-    viewer.set_raw_field(mesh.barycenters, gradField, mesh.avgEdgeLength, "Gradient Field", 1);
+    viewer.set_raw_field(mesh.barycenters, origField, 20.0*mesh.avgEdgeLength, "Original Field", 0);
+    viewer.set_raw_field(mesh.barycenters, gradField, 20.0*mesh.avgEdgeLength, "Gradient Field", 1);
     viewer.toggle_raw_field(false, 1);
-    viewer.set_raw_field(mesh.barycenters, rotCogradField, mesh.avgEdgeLength, "Rotated Cogradient Field", 2);
+    viewer.set_raw_field(mesh.barycenters, rotCogradField, 20.0*mesh.avgEdgeLength, "Rotated Cogradient Field", 2);
     viewer.toggle_raw_field(false, 2);
-    viewer.set_raw_field(mesh.barycenters, harmField, mesh.avgEdgeLength, "Harmonic Field", 3);
+    viewer.set_raw_field(mesh.barycenters, harmField, 20.0*mesh.avgEdgeLength, "Harmonic Field", 3);
     viewer.toggle_raw_field(false, 2);
     viewer.launch();
 }
