@@ -38,10 +38,6 @@ void callbackFunc() {
 }
 
 
-
-
-
-
 int main()
 {
     // Load mesh
@@ -97,16 +93,18 @@ int main()
     
     //Visualization
     viewer.init();
-    viewer.set_surface_mesh(mesh,0);
-    viewer.set_raw_field(constSources, constVectors, mesh.avgEdgeLength, "Constraints",  0);
+    viewer.set_surface_mesh(mesh);
+    viewer.highlight_vertices(constVertices);
+    viewer.set_raw_field(constSources, constVectors, "Constraints",  0, mesh.avgEdgeLength);
     viewer.set_field_color(directional::DirectionalViewer::default_vector_constraint_color());
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
+    viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 2);
+    
     Eigen::MatrixXd extField(mesh.V.rows(), 3*N);
     extField<<mesh.minVertexPrincipalDirections, mesh.maxVertexPrincipalDirections, -mesh.minVertexPrincipalDirections, -mesh.maxVertexPrincipalDirections;
-    viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 2);
-    viewer.set_raw_field(mesh.V, extField,1.0, "Principal directions Field", 3);
-    viewer.set_vertex_data(mesh.vertexPrincipalCurvatures.col(0), mesh.vertexPrincipalCurvatures.col(0).minCoeff(), mesh.vertexPrincipalCurvatures.col(0).maxCoeff(), "Min curvature", 0);
-    viewer.set_vertex_data(mesh.vertexPrincipalCurvatures.col(1), mesh.vertexPrincipalCurvatures.col(1).minCoeff(), mesh.vertexPrincipalCurvatures.col(1).maxCoeff(), "Max curvature", 0);
+    viewer.set_raw_field(mesh.V, extField, "Principal directions Field", 3, 1.0);
+    viewer.set_surface_vertex_data(mesh.vertexPrincipalCurvatures.col(0), "Min curvature", 0);
+    viewer.set_surface_vertex_data(mesh.vertexPrincipalCurvatures.col(1), "Max curvature", 0);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0/255.0}, 2);
     viewer.set_callback(callbackFunc);
     viewer.launch();

@@ -14,14 +14,16 @@ directional::DirectionalViewer viewer;
 
 int main()
 {
-  directional::readOFF(TUTORIAL_DATA_PATH "/bumpy.off",mesh);
-  ftb.init(mesh);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
-  directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
-  
-  viewer.init();
-  viewer.set_surface_mesh(mesh);
-  viewer.set_cartesian_field(field);
-  viewer.launch();
+    directional::readOFF(TUTORIAL_DATA_PATH "/bumpy.off",mesh);
+    ftb.init(mesh);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
+    directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
+    
+    viewer.init();
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(field);
+    viewer.launch();
+    
+    return 0;
 }
 

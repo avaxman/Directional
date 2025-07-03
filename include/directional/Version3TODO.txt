@@ -14,7 +14,6 @@ Backend
 
 Bugs
 
-1. When scaling vector lengths, it pops to the non-prescribed value
 2. Fix streamlines stopping
 5. Check I'm not looking at absolute values in scalar field visualization when not needed
 6. Check 305 again, perhaps on a better mesh

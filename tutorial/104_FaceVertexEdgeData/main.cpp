@@ -18,26 +18,27 @@ directional::DirectionalViewer viewer;
 
 int main()
 {
-
-  directional::readOFF(TUTORIAL_DATA_PATH "/eight.off", mesh);
-  ftb.init(mesh);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/eight.rawfield", ftb, N, field);
- 
-  //Face data - the x component of the face normals
-  faceData=mesh.faceNormals.col(0);
-  
-  //vertex data: sin(z coordinate)
-  vertexData=sin(10.0*mesh.V.col(2).array());
-  
-  //Edge data - the (squared) effort of the field (under principal matching)
-  directional::principal_matching(field);
-  edgeData=field.effort.cwiseAbs2();
-  viewer.init();
-  viewer.set_surface_mesh(mesh);
-  viewer.set_cartesian_field(field);
-  viewer.set_face_data(faceData, faceData.minCoeff(),  faceData.maxCoeff(), "x of normal");
-  viewer.set_vertex_data(vertexData, vertexData.minCoeff(),  vertexData.maxCoeff(), "sin(y)");
-  viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), "principal effort");
-  viewer.launch();
+    
+    directional::readOFF(TUTORIAL_DATA_PATH "/eight.off", mesh);
+    ftb.init(mesh);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/eight.rawfield", ftb, N, field);
+    
+    //Face data - the x component of the face normals
+    faceData=mesh.faceNormals.col(0);
+    
+    //vertex data: sin(z coordinate)
+    vertexData=sin(10.0*mesh.V.col(2).array());
+    
+    //Edge data - the (squared) effort of the field (under principal matching)
+    directional::principal_matching(field);
+    edgeData=field.effort.cwiseAbs2();
+    
+    viewer.init();
+    viewer.set_surface_mesh(mesh);
+    viewer.set_cartesian_field(field);
+    viewer.set_surface_face_data(faceData, "x of normal");
+    viewer.set_surface_vertex_data(vertexData, "sin(y)");
+    viewer.set_surface_edge_data(edgeData, "principal effort");
+    viewer.launch();
 }
 

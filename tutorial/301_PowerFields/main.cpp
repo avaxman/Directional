@@ -23,7 +23,8 @@ int N = 4;
 bool normalizeField = false;
 bool viewFieldHard = true;
 
-void recompute_field(){
+void recompute_field()
+{
     directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard, normalizeField);
     directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft, normalizeField);
 }
@@ -63,7 +64,7 @@ void callbackFunc()
     if (io.MouseClicked[0]) { // if clicked
         glm::vec2 screenCoords{io.MousePos.x, io.MousePos.y};
         polyscope::PickResult pickResult = polyscope::pickAtScreenCoords(screenCoords);
-
+        
         if(pickResult.isHit && pickResult.structure == viewer.psSurfaceMeshList[0]) {
             polyscope::SurfaceMeshPickResult meshPickResult =
             viewer.psSurfaceMeshList[0]->interpretPickResult(pickResult);
@@ -117,7 +118,7 @@ int main()
     constVectors.resize(0, 3);
     
     viewer.init();
-    viewer.set_surface_mesh(mesh,0);
+    viewer.set_surface_mesh(mesh);
     viewer.set_callback(callbackFunc);
     recompute_field();
     update_visualization();

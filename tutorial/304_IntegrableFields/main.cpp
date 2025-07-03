@@ -91,15 +91,17 @@ int main()
     
     //Visualization
     viewer.init();
-    viewer.set_surface_mesh(mesh,0);
-    viewer.set_raw_field(constSources, constVectors, mesh.avgEdgeLength, "Constraints",  0);
+    viewer.set_surface_mesh(mesh);
+    viewer.set_raw_field(constSources, constVectors, "Constraints", 0, mesh.avgEdgeLength);
     viewer.set_field_color(directional::DirectionalViewer::default_vector_constraint_color());
     viewer.highlight_faces(constFaces,"Const Faces", 0);
-    viewer.toggle_field_highlight(true,0);
+    viewer.toggle_field_highlight(true);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
-    viewer.set_edge_data(curlOrig, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0, "Original Abs Curl", 0);  //to increase sensitivity
-    viewer.set_edge_data(curlCF, curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0, "Optimized Abs Curl", 0);
+   
+    //Setting both curl views to the same range to increase sensitivity and be comparable
+    viewer.set_surface_edge_data(curlOrig,  "Original Abs Curl", 0)->setMapRange(std::pair<double, double>(curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0));
+    viewer.set_surface_edge_data(curlCF, "Optimized Abs Curl", 0)->setMapRange(std::pair<double, double>(curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0));
     viewer.launch();
 }

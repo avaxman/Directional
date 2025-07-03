@@ -31,26 +31,20 @@ ViewingModes viewingMode=FACE_FIELD;
 void callbackFunc()
 {
     ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
-    // instead of full width. Must have
-    // matching PopItemWidth() below.
-
-    if (viewingMode==FACE_FIELD) {
-        if (ImGui::Button("Toggle Vertex Field")) {
+    
+    if (viewingMode==FACE_FIELD)
+        if (ImGui::Button("Toggle Vertex Field"))
             viewingMode=VERTEX_FIELD;
-        }
-    }
-
-    if (viewingMode==VERTEX_FIELD) {
-        if (ImGui::Button("Toggle Face Field")) {
+    
+    if (viewingMode==VERTEX_FIELD)
+        if (ImGui::Button("Toggle Face Field"))
             viewingMode=FACE_FIELD;
-        }
-    }
-
+    
     viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
     viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
     viewer.toggle_cartesian_field(viewingMode==FACE_FIELD,0);
     viewer.toggle_cartesian_field(viewingMode==VERTEX_FIELD,1);
-
+    
     ImGui::PopItemWidth();
 }
 
@@ -61,10 +55,10 @@ int main(int argc, char *argv[])
     directional::readOBJ(TUTORIAL_DATA_PATH "/elephant.obj", mesh);
     viewer.init();
     viewer.set_callback(&callbackFunc);
-
+    
     ftb.init(mesh);
     vtb.init(mesh);
-
+    
     Eigen::VectorXi constFaces, constVertices;
     Eigen::MatrixXd constVectors;
     constFaces.resize(1);
@@ -73,24 +67,21 @@ int main(int argc, char *argv[])
     constVectors<<mesh.V.row(mesh.F(0,2))-mesh.V.row(mesh.F(0,1));
     constVertices.resize(1);
     constVertices<<mesh.F(0,1);
-
+    
     directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
     directional::power_field(ftb, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
-
+    
     //computing power fields
     directional::power_to_raw(powerFaceField, N, rawFaceField,true);
     directional::power_to_raw(powerVertexField, N, rawVertexField,true);
-  
+    
     directional::principal_matching(rawFaceField);
     directional::principal_matching(rawVertexField);
-
-    viewer.set_surface_mesh(mesh,0);
+    
+    viewer.set_surface_mesh(mesh);
     viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
     viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
-  
-    // Update view
     viewer.launch();
-
+    
     return 0;
-
 }

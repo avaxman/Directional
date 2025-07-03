@@ -71,29 +71,6 @@ void update_singularities()
 }
 
 
-/*bool mouse_down(igl::opengl::glfw::Viewer& _viewer, int key, int modifiers)
-{
-  if ((key != 0)||(!_select))
-    return false;
-  int fid;
-  Eigen::Vector3d bc;
-  
-  // Cast a ray in the view direction starting from the mouse position
-  double x = viewer.current_mouse_x;
-  double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-  if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y), viewer.core().view,
-                               viewer.core().proj, viewer.core().viewport, mesh.V, mesh.F, fid, bc))
-  {
-    Eigen::Vector3d::Index maxCol;
-    bc.maxCoeff(&maxCol);
-    int currVertex=mesh.F(fid, maxCol);
-    currCycle=field.tb->local2Cycle(currVertex);
-    viewer.set_selected_faces(cycleFaces[currCycle]);
-    return true;
-  }
-  return false;
-};*/
-
 void callbackFunc() {
 
     ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
@@ -142,7 +119,7 @@ void callbackFunc() {
     }
 
     if (ImGui::Button("Save field")){
-        if (directional::write_raw_field(TUTORIAL_DATA_PATH "/index-prescription.rawfield", field))
+        if (directional::write_raw_field(TUTORIAL_OUTPUT_PATH "/index-prescription.rawfield", field))
             std::cout << "Saved raw field" << std::endl;
         else
             std::cout << "Unable to save raw field. Error: " << errno << std::endl;

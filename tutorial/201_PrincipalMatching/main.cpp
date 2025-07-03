@@ -51,11 +51,12 @@ void callbackFunc()
                     zeroInFace(i)=(mesh.EF(mesh.FE(currF,i),0)==currF ? field.matching(mesh.FE(currF,i)) : -field.matching(mesh.FE(currF,i)));
                     zeroInFace(i) = (zeroInFace(i)+field.N)%N;
                     //reordering the vectors in the rawfield
-                    sourcesCombed.row(i+1)<<mesh.barycenters.row(otherFaces(i))+0.001*mesh.faceNormals.row(otherFaces(i));  //to avoid z-fighting. A bit hackish!
+                    sourcesCombed.row(i+1)<<mesh.barycenters.row(otherFaces(i))+0.001*mesh.faceNormals.row(otherFaces(i));  //to avoid z-fighting with the uncombed field
                     rawFieldCombed.row(i+1)<<field.extField.row(otherFaces(i)).segment(3*zeroInFace(i),3*field.N-3*zeroInFace(i)),field.extField.row(otherFaces(i)).segment(0,3*zeroInFace(i));
                     
                 }
-                viewer.set_raw_field(sourcesCombed, rawFieldCombed, mesh.avgEdgeLength, "Combed Field",  1);
+                //Visualizing a local field just of combed directionals
+                viewer.set_raw_field(sourcesCombed, rawFieldCombed, "Combed Field",  1, 0.3*mesh.avgEdgeLength);
                 viewer.toggle_combed_colors(true, false, 1);
             }
         }

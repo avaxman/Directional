@@ -25,30 +25,6 @@ int N = 4;
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
-
-void recompute_field()
-{
-    directional::PolyVectorData pvData;
-    pvData.N = N;
-    pvData.tb = &ftb;
-    pvData.verbose = true;
-    pvData.constSpaces = constFaces;
-    pvData.constVectors = constVectors;
-    pvData.wAlignment =Eigen::VectorXd::Constant(constFaces.size(),-1);
-    pvData.wSmooth = smoothWeight;
-    pvData.wRoSy = roSyWeight;
-    directional::polyvector_field(pvData, pvFieldHard);
-    pvData.wAlignment = alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0);
-    directional::polyvector_field(pvData, pvFieldSoft);
-    
-    directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
-    directional::principal_matching(rawFieldHard);
-    
-    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
-    directional::principal_matching(rawFieldSoft);
-    
-}
-
 void update_visualization()
 {
     viewer.set_cartesian_field(constraintsField,"Constraints", 0);
@@ -67,6 +43,34 @@ void update_visualization()
         viewer.set_cartesian_field(rawFieldSoft,"PolyVector Field", 1);
         viewer.toggle_cartesian_field(true, 1);
     }
+}
+
+
+void recompute_field()
+{
+    directional::PolyVectorData pvData;
+    pvData.N = N;
+    pvData.tb = &ftb;
+    pvData.verbose = true;
+    pvData.constSpaces = constFaces;
+    pvData.constVectors = constVectors;
+    
+    pvData.wSmooth = smoothWeight;
+    pvData.wRoSy = roSyWeight;
+    
+    //Hard alignment
+    pvData.wAlignment =Eigen::VectorXd::Constant(constFaces.size(),-1);
+    directional::polyvector_field(pvData, pvFieldHard);
+    
+    //Soft alignment
+    pvData.wAlignment = alignWeight*Eigen::VectorXd::Constant(constFaces.size(),1.0);
+    directional::polyvector_field(pvData, pvFieldSoft);
+    
+    directional::polyvector_to_raw(pvFieldHard, rawFieldHard, N%2==0);
+    directional::principal_matching(rawFieldHard);
+    
+    directional::polyvector_to_raw(pvFieldSoft, rawFieldSoft, N%2==0);
+    directional::principal_matching(rawFieldSoft);
     
 }
 
@@ -122,7 +126,7 @@ void callbackFunc() {
     }
     
     if (ImGui::Button("Save Raw Field"))
-        directional::write_raw_field(TUTORIAL_DATA_PATH "/polyvector.rawfield", (viewingMode==HARD_PRESCRIPTION ? rawFieldHard : rawFieldSoft));
+        directional::write_raw_field(TUTORIAL_OUTPUT_PATH "/polyvector.rawfield", (viewingMode==HARD_PRESCRIPTION ? rawFieldHard : rawFieldSoft));
     
     ImGui::PopItemWidth();
 }
@@ -177,7 +181,7 @@ int main()
     
     //triangle mesh setup
     viewer.init();
-    viewer.set_surface_mesh(mesh,0);
+    viewer.set_surface_mesh(mesh);
     recompute_field();
     update_visualization();
     viewer.set_callback(callbackFunc);

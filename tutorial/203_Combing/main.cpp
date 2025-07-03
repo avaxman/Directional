@@ -30,7 +30,7 @@ void callbackFunc() {
             showCombed=true;
             viewer.set_cartesian_field(combedField);
         }
-
+        
     }
     viewer.toggle_combed_colors(true, false);
     ImGui::PopItemWidth();
@@ -40,11 +40,11 @@ void callbackFunc() {
 
 int main()
 {
-
+    
     directional::readOBJ(TUTORIAL_DATA_PATH "/lilium.obj", mesh);
     ftb.init(mesh);
     directional::read_raw_field(TUTORIAL_DATA_PATH "/lilium.rawfield", ftb, N, origField);
-
+    
     //computing the principal matching and then combing the field to trivialize the matching anywhere but a set of seams
     directional::principal_matching(origField);
     directional::combing(origField, combedField);
@@ -60,7 +60,7 @@ int main()
     });
     Eigen::VectorXi HighlightedEdges = Eigen::Map<Eigen::VectorXi>(HighlightedEdgesList.data(), HighlightedEdgesList.size());
     viewer.highlight_edges(HighlightedEdges, "Combing seams");
-    viewer.set_edge_data(edgeData, edgeData.minCoeff(),  edgeData.maxCoeff(), "Matching effort");
+    viewer.set_surface_edge_data(edgeData, "Matching effort");
     viewer.set_callback(callbackFunc);
     viewer.launch();
 }

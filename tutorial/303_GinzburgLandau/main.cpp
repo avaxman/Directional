@@ -76,7 +76,7 @@ int main()
     pvData.initImplicitFactor = 0.2;
     pvData.implicitScheduler = 1.0;
     
-    //Computing regular PolyVector field without iterations
+    //Computing a regular PolyVector field without iterations
     directional::polyvector_field(pvData, pvFieldOrig);
     directional::polyvector_to_raw(pvFieldOrig, rawFieldOrig, N%2==0);
     directional::principal_matching(rawFieldOrig);
@@ -93,11 +93,11 @@ int main()
     
     //Visualization
     viewer.init();
-    viewer.set_surface_mesh(mesh,0);
-    viewer.set_raw_field(constSources, constVectors, mesh.avgEdgeLength, "Constraints",  0);
+    viewer.set_surface_mesh(mesh);
+    viewer.set_raw_field(constSources, constVectors, "Constraints", 0, mesh.avgEdgeLength);
     viewer.set_field_color(directional::DirectionalViewer::default_vector_constraint_color());
-    viewer.highlight_faces(constFaces,"Const Faces", 0);
-    viewer.toggle_field_highlight(true,0);
+    viewer.highlight_faces(constFaces,"Const Faces");
+    viewer.toggle_field_highlight(true);
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     viewer.set_cartesian_field(rawFieldGL,"Ginzburg-Landau Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
