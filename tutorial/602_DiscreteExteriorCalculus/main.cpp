@@ -18,7 +18,7 @@ directional::DirectionalViewer viewer;
 int main()
 {
     directional::readOBJ(TUTORIAL_DATA_PATH "/697224__sf.obj",mesh);
-
+    
     Eigen::VectorXd z2(mesh.dcel.faces.size());
     //giving a 2-form of constant (pointwise curl).
     for (int i=0;i<mesh.dcel.faces.size();i++)
@@ -44,19 +44,18 @@ int main()
         for (Eigen::SparseMatrix<double>::InnerIterator it(diff, k); it; ++it)
             maxAbsValue = std::max(maxAbsValue, std::abs(it.value()));
     
-    std::cout<<"exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
+    std::cout<<"Exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
     directional::project_exact(d1, hodgeStar, z2, z1Diag, z2Exact, true);
     std::cout<<"Reproducing the original curl (z2Diag): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
     directional::project_exact(d1, M1, z2, z1, z2Exact, true);
     std::cout<<"Reproducing the original curl (z2): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
-    std::cout<<"Difference between z1 and z1Diag: "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
-
-    //triangle mesh setup
+    std::cout<<"Difference between z1 and z1Diag (small, not zero): "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
+    
     viewer.init();
     viewer.set_surface_mesh(mesh);
-    viewer.set_face_data(z2, z2.minCoeff(), z2.maxCoeff(),"Integrated face curl", 0);
-    Eigen::MatrixXd formField = viewer.set_1form(z1,"Coexact field", 0, 0, 2, 0.2, 1.0);
-    Eigen::MatrixXd formFieldDiag = viewer.set_1form(z1Diag,"Coexact field diag", 0, 1, 2, 0.2, 1.0);
-
+    viewer.set_surface_face_data(z2, "Integrated face curl", 0);
+    Eigen::MatrixXd formField = viewer.set_1form(z1,"Coexact field", 0, 0, 1.0, 2, 0.2);
+    Eigen::MatrixXd formFieldDiag = viewer.set_1form(z1Diag,"Coexact field diag", 0, 1, 1.0, 2, 0.2);
+    
     viewer.launch();
 }

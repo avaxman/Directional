@@ -5,6 +5,10 @@ Features
 3. Be verbose in the projection functions as well
 4. Draw principal directions in 305 in different colors to min/max
 5. move all functions to absolute vector sizes - still not great
+6. verbositity in integer rounding
+7. Header file cleanup and name changes
+8. verbosity in the isoline mesher
+9. 603 still has a sign problem with non-conforming.
 
 Backend
 

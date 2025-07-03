@@ -42,18 +42,6 @@ int main()
         directional::IntegrationData intData(N[i]);
         std::cout<<"Setting up Integration N="<<N[i]<<std::endl;
         directional::setup_integration(rawField[i], intData, meshCut[i], combedField[i]);
-        std::vector<int> seamsList;
-        for (int i=0;i<meshWhole.F.rows();i++){
-            //int hebegin = meshWhole.FH(i);
-            //int heiterate = hebegin;
-            for (int j=0;j<3;j++)
-                if (intData.face2cut(i, j))
-                    seamsList.push_back(meshWhole.FE(i,j));
-            //heiterate = meshWhole.nextH(heiterate);
-        }
-        
-        Eigen::VectorXi seams = Eigen::VectorXi::Map(seamsList.data(), seamsList.size());
-        
         
         intData.verbose=false;
         intData.integralSeamless=true;
@@ -64,14 +52,12 @@ int main()
         
         std::cout<<"Done!"<<std::endl;
         viewer.set_cartesian_field(combedField[i], std::to_string(N[i]) + "-field", i);
-        //viewer.highlight_edges(seams, "Seams", i);
         viewer.set_isolines(meshCut[i],NFunction[i],std::to_string(N[i]) + "-function",  i, 0.05);
         if (i!=0){
             viewer.toggle_cartesian_field(false, i);
             viewer.toggle_singularities(false, i);
             viewer.toggle_isolines(false, i);
         }
-        //viewer.set_surface_mesh(meshCut[i], 1);
     }
     
     viewer.launch();

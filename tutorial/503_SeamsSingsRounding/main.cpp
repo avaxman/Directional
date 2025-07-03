@@ -31,7 +31,7 @@ ViewingModes viewingMode=SEAMS_ROUNDING;
 
 void callbackFunc(){
     ImGui::PushItemWidth(100);
-
+    
     const char* items[] = {"Rounding seams", "Rounding Singularities"};
     static const char* current_item = NULL;
     
@@ -44,11 +44,11 @@ void callbackFunc(){
     }
     
     ImGui::PushItemWidth(combo_width);
-    if (ImGui::BeginCombo("Viewing Mode", current_item)) // The second parameter is the label previewed before opening the combo.
+    if (ImGui::BeginCombo("Viewing Mode", current_item))
     {
         for (int n = 0; n < IM_ARRAYSIZE(items); n++)
         {
-            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            bool is_selected = (current_item == items[n]); 
             if (ImGui::Selectable(items[n], is_selected)) {
                 switch (n) {
                     case 0:
@@ -60,53 +60,53 @@ void callbackFunc(){
                         viewer.set_isolines(meshCut, NFunctionSings);
                         break;
                 }
-
+                
                 current_item = items[n];
-            }// You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+            }
             if (is_selected)
                 ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
     }
-
+    
     ImGui::PopItemWidth();
 }
 
 
 int main()
 {
-  directional::readOFF(TUTORIAL_DATA_PATH "/train-station.off", meshWhole);
-  ftb.init(meshWhole);
-  directional::read_raw_field(TUTORIAL_DATA_PATH "/train-station-5.rawfield", ftb, N, rawField);
-  
-  //combing and cutting
-  directional::principal_matching(rawField);
-  directional::combing(rawField, combedField);
-
-  directional::IntegrationData intData(N);
-  std::cout<<"Setting up Integration"<<std::endl;
-  directional::setup_integration(rawField, intData, meshCut, combedField);
-  
-  intData.verbose=false;
-  intData.integralSeamless=true;
-  intData.roundSeams=true;
+    directional::readOFF(TUTORIAL_DATA_PATH "/train-station.off", meshWhole);
+    ftb.init(meshWhole);
+    directional::read_raw_field(TUTORIAL_DATA_PATH "/train-station-5.rawfield", ftb, N, rawField);
     
-  std::cout<<"Seams-rounding Integrating..."<<std::endl;
-  directional::integrate(combedField, intData, meshCut,  NFunctionSeams,NCornerFunc);
-  std::cout<<"Done!"<<std::endl;
-  
-  intData.roundSeams=false;
-  directional::setup_integration(rawField, intData, meshCut,combedField);
-  std::cout<<"Singularity-rounding integration..."<<std::endl;
-  directional::integrate(combedField,  intData, meshCut, NFunctionSings,NCornerFunc);
-  std::cout<<"Done!"<<std::endl;
-
-  viewer.init();
-  viewer.set_surface_mesh(meshWhole);
-  viewer.set_cartesian_field(rawField);
-viewer.set_isolines(meshCut, NFunctionSeams);
-  viewer.set_callback(callbackFunc);
-  viewer.launch();
+    //combing and cutting
+    directional::principal_matching(rawField);
+    directional::combing(rawField, combedField);
+    
+    directional::IntegrationData intData(N);
+    std::cout<<"Setting up Integration"<<std::endl;
+    directional::setup_integration(rawField, intData, meshCut, combedField);
+    
+    intData.verbose=false;
+    intData.integralSeamless=true;
+    intData.roundSeams=true;
+    
+    std::cout<<"Seams-rounding Integrating..."<<std::endl;
+    directional::integrate(combedField, intData, meshCut,  NFunctionSeams,NCornerFunc);
+    std::cout<<"Done!"<<std::endl;
+    
+    intData.roundSeams=false;
+    directional::setup_integration(rawField, intData, meshCut,combedField);
+    std::cout<<"Singularity-rounding integration..."<<std::endl;
+    directional::integrate(combedField,  intData, meshCut, NFunctionSings,NCornerFunc);
+    std::cout<<"Done!"<<std::endl;
+    
+    viewer.init();
+    viewer.set_surface_mesh(meshWhole);
+    viewer.set_cartesian_field(rawField);
+    viewer.set_isolines(meshCut, NFunctionSeams);
+    viewer.set_callback(callbackFunc);
+    viewer.launch();
 }
 
 

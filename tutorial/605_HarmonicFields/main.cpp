@@ -36,7 +36,7 @@ void callbackFunc() {
         harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
         viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 50.0);
     }
-
+    
     ImGui::PopItemWidth();
 }
 
@@ -45,7 +45,7 @@ int main()
 {
     directional::readOBJ(TUTORIAL_DATA_PATH "/129110__sf.obj",mesh);
     ftb.init(mesh);
-
+    
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(mesh, true);
     Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh, Eigen::VectorXi(), true);
@@ -53,7 +53,7 @@ int main()
     Eigen::SparseMatrix<double> iMx = directional::face_vectors_mass_matrix_2D<double>(mesh, true, true);
     Eigen::SparseMatrix<double> Mc = directional::edge_diamond_mass_matrix_2D<double>(mesh, true);
     IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(mesh);
-
+    
     int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - (mesh.F.rows()-1);
     std::cout<<"Computing cohomology basis..."<<std::endl;
     directional::cohomology_basis(G, C, Mx,  bettiNumber, harmBasis);
@@ -61,14 +61,11 @@ int main()
     std::cout<<"divergence of harmonic basis: "<<(G.adjoint()*Mx*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"curl of harmonic basis: "<<(C*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
     
-
     viewer.init();
     viewer.set_callback(&callbackFunc);
     viewer.set_surface_mesh(mesh);
-    //std::cout<<"before set extrinsic field "<<std::endl;
     harmField.init(ftb, directional::fieldTypeEnum::RAW_FIELD, 1);
     harmField.set_extrinsic_field(IE*harmBasis.col(currHarmBasis));
-    //std::cout<<"after set extrinsic field "<<std::endl;
     viewer.set_cartesian_field(harmField, "Harmonic Field", 0, 0, 50.0);
     viewer.launch();
 }

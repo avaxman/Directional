@@ -18,13 +18,12 @@ directional::DirectionalViewer viewer;
 
 int main()
 {
-    
     directional::readOBJ(TUTORIAL_DATA_PATH "/60745__sf.obj",mesh);
     ftb.init(mesh);
     
     Eigen::VectorXd confVec(mesh.dcel.vertices.size()), nonConfVec(mesh.dcel.edges.size());
     for (int i=0;i<mesh.dcel.vertices.size();i++)
-        confVec[i] = 10.0*sin(mesh.V(i,2)/20.0);
+        confVec[i] = 50.0*sin(mesh.V(i,2)/20.0);
     for (int i=0;i<mesh.dcel.edges.size();i++)
         nonConfVec[i] = (mesh.midEdges.row(i)-mesh.midEdges.row(17160)).norm();
     
@@ -49,10 +48,10 @@ int main()
     
     viewer.init();
     viewer.set_surface_mesh(mesh);
-    viewer.set_edge_data(nonConfVec, nonConfVec.minCoeff(), nonConfVec.maxCoeff(),"Non-Conforming Function");
-    viewer.set_vertex_data(confVec, confVec.minCoeff(), confVec.maxCoeff(),"Conforming Function");
-    viewer.set_raw_field(mesh.barycenters, gradRawField, 1.0*mesh.avgEdgeLength, "Gradient field", 0);
-    viewer.set_raw_field(mesh.barycenters, rotCogradRawField, 1.0*mesh.avgEdgeLength, "Rot. Cogradient field", 1);
+    viewer.set_surface_edge_data(nonConfVec, "Non-Conforming Function");
+    viewer.set_surface_vertex_data(confVec ,"Conforming Function");
+    viewer.set_raw_field(mesh.barycenters, gradRawField, "Gradient field", 0, 1.0*mesh.avgEdgeLength);
+    viewer.set_raw_field(mesh.barycenters, rotCogradRawField,  "Rot. Cogradient field", 1, 1.0*mesh.avgEdgeLength);
     viewer.toggle_raw_field(false, 1);
     viewer.launch();
 }

@@ -34,6 +34,8 @@ namespace directional{
         Eigen::MatrixXi cutF;   //Cut mesh faces
         Eigen::VectorXi integerVars;    //variables within vertexNFunction that are integer
         double exactResolution;         //rounding-off resolution for vertexNFunction
+        
+        bool verbose;   //Whether to print anything
 
         MeshFunctionIsolinesData():exactResolution(10e-9){}
         ~MeshFunctionIsolinesData(){}

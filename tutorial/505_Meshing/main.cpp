@@ -66,6 +66,7 @@ int main()
         directional::setup_mesh_function_isolines(meshCut[i], intData, mfiData);
         
         //meshing and saving
+        mfiData.verbose = true;
         directional::mesh_function_isolines(meshWhole, mfiData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
         
         viewer.set_surface_mesh(meshWhole);
