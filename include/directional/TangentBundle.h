@@ -23,7 +23,6 @@
 
 namespace directional{
 
-
 enum class discTangTypeEnum {BASE_CLASS, FACE_SPACES, VERTEX_SPACES};
 enum class boundCondTypeEnum {DIRICHLET, NEUMANN};
 
@@ -49,12 +48,11 @@ public:
     
     //Geometry
     //the connection between adjacent tangent space. That is, a field is parallel between adjaspaces(i,0) and adjSpaces(i,1) when complex(intField.row(adjSpaceS(i,0))*connection(i))=complex(intField.row(adjSpaceS(i,1))
-    Eigen::VectorXcd connection;                        //#V, Metric connection between adjacent spaces
-    Eigen::SparseMatrix<double> connectionMass;                     //The mass matrix of connections, of size #adjSpaces
+    Eigen::VectorXcd connection;                                    //#V, Metric connection between adjacent spaces
+    Eigen::SparseMatrix<double> connectionMass;                     //The mass matrix of connections, of size #adjSpaces x #adjSpaces
     Eigen::SparseMatrix<double> tangentSpaceMass;                   //The inner-product mass for vectors in tangent spaces, of size #V (self masses) + #E (adjSpaces masses;  optional, usually for high-order fields)
     Eigen::SparseMatrix<double> invTangentSpaceMass;
-    double avgAdjLength;                                    //The average distance between adjacent spaces
-    
+    double avgAdjLength;                                            //The average distance between adjacent spaces
     
     //Extrinsic components
     Eigen::MatrixXd sources;  //the source point of the extrinsic vectors

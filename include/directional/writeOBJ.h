@@ -16,6 +16,16 @@
 namespace directional
 {
 
+/***Writing an OBJ file
+Input:
+fileName:     Name of file
+mesh:         Surface mesh
+TC:           Texture coordinates
+FTC:          Per face (so |F|x3) indices into TC to associate texture to corners
+mtlFileName:  name of MTL file that associates with the texture
+textureName:  texture name inside the MTL file.
+***/
+
 bool writeOBJ(const std::string& fileName,
               const directional::TriMesh& mesh,
               const Eigen::MatrixXd& TC,
@@ -26,23 +36,23 @@ bool writeOBJ(const std::string& fileName,
     std::ofstream out(fileName);
     if (!out.is_open())
         throw std::runtime_error("Failed to open file: " + fileName);
-
+    
     // Write reference to MTL file if provided
     if (!mtlFileName.empty())
         out << "mtllib " << mtlFileName << "\n";
-
+    
     // Use material if name is provided
     if (!textureName.empty())
         out << "usemtl " << textureName << "\n";
-
+    
     // Write vertices
     for (int i = 0; i < mesh.V.rows(); ++i)
         out << "v " << mesh.V(i, 0) << " " << mesh.V(i, 1) << " " << mesh.V(i, 2) << "\n";
-
+    
     // Write texture coordinates
     for (int i = 0; i < TC.rows(); ++i)
         out << "vt " << TC(i, 0) << " " << TC(i, 1) << "\n";
-
+    
     // Write faces with texture indices
     for (int i = 0; i < mesh.F.rows(); ++i) {
         out << "f";
@@ -53,10 +63,10 @@ bool writeOBJ(const std::string& fileName,
         }
         out << "\n";
     }
-
+    
     out.close();
     return true;
 }
 }
 
-#endif /* writeOBJ_h */
+#endif

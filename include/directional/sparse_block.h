@@ -1,10 +1,11 @@
-// This file is part of SaddlePoint, a simple library for Eigen-based sparse nonlinear optimization
+// This file is part of Directional, a library for directional field processing.
 //
-// Copyright (C) 2021 Amir Vaxman <avaxman@gmail.com>
+// Copyright (C) 2025 Amir Vaxman <avaxman@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+
 #ifndef SADDLEPOINT_SPARSE_BLOCK_H
 #define SADDLEPOINT_SPARSE_BLOCK_H
 #include <Eigen/Core>
@@ -16,18 +17,26 @@
 
 
 namespace directional
-  {
-  
-  template <typename Scalar>
-  void sparse_block(const Eigen::MatrixXi& blockIndices,
-                    const std::vector<Eigen::SparseMatrix<Scalar>>& blockMats,
-                    Eigen::SparseMatrix<Scalar>& result){
+{
 
+/***Computing a block sparse matrix
+ Input:
+ blockIndices:      A matrix in the structure of the blocks, giving the block index in order (e.g. [0 1;2 3] means putting four blocks from blockMat in that order in the matrix
+ blockMats:         The blocks in order.
+ Output:
+ result:                The resulting sparse matrix, where its size depends on the blocks put in.
+ ***/
+
+template <typename Scalar>
+void sparse_block(const Eigen::MatrixXi& blockIndices,
+                  const std::vector<Eigen::SparseMatrix<Scalar>>& blockMats,
+                  Eigen::SparseMatrix<Scalar>& result){
+    
     //assessing dimensions
     Eigen::VectorXi blockRowOffsets=Eigen::VectorXi::Zero(blockIndices.rows());
     Eigen::VectorXi blockColOffsets=Eigen::VectorXi::Zero(blockIndices.cols());
     for (int i=1;i<blockIndices.rows();i++)
-      blockRowOffsets(i)=blockRowOffsets(i-1)+ blockMats[blockIndices(i-1,0)].rows();
+        blockRowOffsets(i)=blockRowOffsets(i-1)+ blockMats[blockIndices(i-1,0)].rows();
     
     for (int i=1;i<blockIndices.cols();i++)
         blockColOffsets(i)=blockColOffsets(i-1)+ blockMats[blockIndices(0,i-1)].cols();
@@ -37,7 +46,7 @@ namespace directional
     
     result.conservativeResize(rowSize, colSize);
     std::vector<Eigen::Triplet<Scalar>> resultTriplets;
-
+    
     for (int i=0;i<blockIndices.rows();i++){
         for (int j=0;j<blockIndices.cols();j++){
             int currMat = blockIndices(i,j);
@@ -46,14 +55,14 @@ namespace directional
                     resultTriplets.push_back(Eigen::Triplet<Scalar>(blockRowOffsets(i)+it.row(),blockColOffsets(j)+it.col(),it.value()));
         }
     }
-
+    
     result.setFromTriplets(resultTriplets.begin(), resultTriplets.end());
     
-  }
-  
-  
-  
-  }
+}
+
+
+
+}
 
 
 #endif
