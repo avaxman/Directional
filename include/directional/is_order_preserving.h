@@ -17,20 +17,20 @@ IGL_INLINE void is_order_preserving(const Eigen::MatrixXd& V,
                                     Eigen::VectorXi& isOrderPreserving,
                                     Eigen::MatrixXd& products)
 {
-  Eigen::MatrixXd normals;
-  igl::per_face_normals(V,F, normals);
-  int N=rawField.cols()/3;
-  products.conservativeResize(rawField.rows(), N);
-  isOrderPreserving=Eigen::VectorXi::Constant(rawField.rows(),1);
-  for (int i=0;i<rawField.rows();i++){
-    for (int j=0;j<N;j++){
-      Eigen::RowVector3d v1=rawField.block(i,3*j,1,3);
-      Eigen::RowVector3d v2=rawField.block(i,3*((j+1)%N),1,3);
-      products(i,j)=normals.row(i).dot(v1.cross(v2));
-      if (products(i,j)<=0.0)
-        isOrderPreserving(i)=0;
+    Eigen::MatrixXd normals;
+    igl::per_face_normals(V,F, normals);
+    int N=rawField.cols()/3;
+    products.conservativeResize(rawField.rows(), N);
+    isOrderPreserving=Eigen::VectorXi::Constant(rawField.rows(),1);
+    for (int i=0;i<rawField.rows();i++){
+        for (int j=0;j<N;j++){
+            Eigen::RowVector3d v1=rawField.block(i,3*j,1,3);
+            Eigen::RowVector3d v2=rawField.block(i,3*((j+1)%N),1,3);
+            products(i,j)=normals.row(i).dot(v1.cross(v2));
+            if (products(i,j)<=0.0)
+                isOrderPreserving(i)=0;
+        }
     }
-  }
 }
 
 }

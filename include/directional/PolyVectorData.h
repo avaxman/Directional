@@ -15,7 +15,7 @@ namespace directional
 {
 
 
-//Data for the precomputation of the PolyVector algorithm
+//Data structure for the extended PolyVector algorithm
 struct PolyVectorData{
 public:
     
@@ -24,18 +24,18 @@ public:
     Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
     
     int N;                          // Degree of field
-    const TangentBundle* tb;              //The tangent bundle on which the field is defined
+    const TangentBundle* tb;        //The tangent bundle on which the field is defined
     bool verbose;                   //whether to output anything
     bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
     bool perfectRoSy;               // Whether the field must be perfect rotationally-symmetric (but not unit).
     double wSmooth;                 // Weight of smoothness
     double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
-    double initImplicitFactor;          // Implicit smoothing factor
-    double currImplicitCoeff;
-    double implicitScheduler;        //How much to attenuate implicit factor by
-    int iterationMode;              //  making it possible to iterate energy reduction -> some custom projection function
-    int currIteration;
+    double initImplicitFactor;      // Implicit smoothing factor
+    double currImplicitCoeff;       //The current implicit coeff in the given iteration
+    double implicitScheduler;       //How much to attenuate implicit factor by
+    int iterationMode;              //Making it possible to iterate energy reduction -> some custom projection function
+    int currIteration;              //The current iteration
     
     Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
     Eigen::SparseMatrix<std::complex<double>> roSyMat;      //Rotational-symmetry energy
@@ -49,13 +49,13 @@ public:
     double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
     
     //state-machine solvers and vectors
-    Eigen::SparseMatrix<std::complex<double>> totalLhs;
-    Eigen::VectorXcd totalRhs;
-    Eigen::VectorXcd reducedDofs;
-    Eigen::SparseMatrix<std::complex<double>> implicitLhs;
-    Eigen::VectorXcd implicitRhs;
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> reducProjSolver;
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> implicitSolver;
+    Eigen::SparseMatrix<std::complex<double>> totalLhs;             //The total left-hand-side of the system
+    Eigen::VectorXcd totalRhs;                                      //The total right-hand side
+    Eigen::VectorXcd reducedDofs;                                   //The net solution in the minimal independent degrees of freedom
+    Eigen::SparseMatrix<std::complex<double>> implicitLhs;          //The implicit system left-hand-side
+    Eigen::VectorXcd implicitRhs;                                   //The implicit right-hand side
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> reducProjSolver;           //The solver for the reduced dofs from the full dofs (in Least squares)
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> implicitSolver;            //The solver for the implicit system
     
     PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), iterationMode(false), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.5), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}

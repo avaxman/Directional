@@ -29,11 +29,11 @@ namespace directional
 
 // Precalculate the operators needed for PolyVector computation according to the user-prescribed parameters. Must be called whenever any of them changes
 // Input:
-//  tb:     underlying tangent bundle
-//  N:      degree of the field
+//  pvField: POLYVECTOR_FIELD cartesian field initalized with the tangent bundle
+//  pvData: the details of the algorithm
 //
 // Output:
-//  pvField: POLYVECTOR_FIELD cartesian field initalized with the tangent bundle
+//  pvField: the computer field (returned in the input parameter)
 //  pvData:  Updated structure with all operators
 inline void polyvector_precompute(directional::CartesianField& pvField,
                                   PolyVectorData& pvData)
@@ -260,7 +260,6 @@ inline void polyvector_precompute(directional::CartesianField& pvField,
 //  PolyVectorData: The data structure which should have been initialized with polyvector_precompute()
 // Outputs:
 //  pvField: a POLYVECTOR_FIELD type cartesian field object
-
 inline void polyvector_field(PolyVectorData& pvData,
                              directional::CartesianField& pvField)
 {
@@ -315,9 +314,17 @@ inline void polyvector_field(PolyVectorData& pvData,
     }
 }
 
+// Computes iterations of the extended PolyVector algorithm, which includes a single implicit step and running the set of projection iteration functions by order once.
+// Inputs:
+//  pvData: The data structure which should have been initialized with polyvector_precompute()
+//  pvField: The current POLYVECTOR_FIELD type cartesian field object
+//  iterationFunctions: the iteration functions, as objects of type PvIterationFunction (see examples in polyvector_iteration_functions.h)
+//  numIterations: how many iterations (of everyting) to run
+// Outputs:
+//  pvField: a POLYVECTOR_FIELD type cartesian field object
 inline void polyvector_iterate(PolyVectorData& pvData,
                                directional::CartesianField& pvField,
-                               std::vector<directional::PvIterationFunction> iterationFunctions,
+                               const std::vector<directional::PvIterationFunction> iterationFunctions,
                                const int numIterations=1){
     
     assert(pvData.iterationMode && "polyvector_iterate(): Iteration mode has not been set");
@@ -347,7 +354,8 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         
         pvData.currImplicitCoeff*=pvData.implicitScheduler;
         if (std::abs(pvData.implicitScheduler-1.0)>10e-6){
-            std::cout<<"implicitCoeff: "<<pvData.currImplicitCoeff<<std::endl;
+            if (pvData.verbose)
+                std::cout<<"Current implicitCoeff: "<<pvData.currImplicitCoeff<<std::endl;
             pvData.implicitLhs = pvData.reducMat.adjoint()*pvData.M*pvData.reducMat +  pvData.currImplicitCoeff*pvData.totalLhs;
             pvData.implicitSolver.compute(pvData.implicitLhs);
             assert(pvData.implicitSolver.info() == Eigen::Success && "Implicit factorization failed!");

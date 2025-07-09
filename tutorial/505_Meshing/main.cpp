@@ -9,7 +9,8 @@
 #include <directional/combing.h>
 #include <directional/setup_integration.h>
 #include <directional/integrate.h>
-#include <directional/mesh_function_isolines.h>
+#include <directional/setup_mesher.h>
+#include <directional/mesher.h>
 #include <directional/directional_viewer.h>
 #include "polygonal_write_OFF.h"
 
@@ -62,12 +63,12 @@ int main()
         std::cout<<"Done!"<<std::endl;
         
         //setting up mesh data from integration data
-        directional::MeshFunctionIsolinesData mfiData;
-        directional::setup_mesh_function_isolines(meshCut[i], intData, mfiData);
+        directional::MesherData mData;
+        directional::setup_mesher(meshCut[i], intData, mData);
         
         //meshing and saving
         mfiData.verbose = true;
-        directional::mesh_function_isolines(meshWhole, mfiData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+        directional::mesh_function_isolines(meshWhole, mData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
         
         viewer.set_surface_mesh(meshWhole);
         viewer.toggle_mesh(false);

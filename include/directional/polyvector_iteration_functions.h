@@ -24,6 +24,9 @@
 
 namespace directional{
 
+
+//This file contains a collection of functions that can be used in the "local" or "projection" steps of the extended polyvector algorithm.
+
 typedef std::function<CartesianField(const CartesianField&, const PolyVectorData&)> PvIterationFunction;
 
 
@@ -35,19 +38,18 @@ CartesianField hard_normalization(const CartesianField& pvField, const PolyVecto
     return normPvField;
 }
 
-
+//Projects the field into the nearest RoSy field
 CartesianField hard_rosy(const CartesianField& pvField, const PolyVectorData& pvData){
     Eigen::MatrixXcd rosyField = pvField.get_complex_intrinsic_field();
     rosyField.block(0,1,rosyField.rows(), rosyField.cols()-1).setZero();
     rosyField.col(0) = rosyField.col(0).array() / rosyField.col(0).array().abs();
-    //std::cout<<"rosyField: "<<rosyField<<std::endl;
     CartesianField hardRosyField = pvField;
     hardRosyField.set_intrinsic_field(rosyField);
     return hardRosyField;
 }
 
 
-
+//A single implicit step (with the pvData state coefficients) that makes the current field more RoSy.
 CartesianField soft_rosy(const CartesianField& pvField, const PolyVectorData& pvData){
     Eigen::MatrixXcd rosyField = pvField.get_complex_intrinsic_field();
     rosyField.block(0,1,rosyField.rows(), rosyField.cols()-1).setZero();
@@ -59,6 +61,7 @@ CartesianField soft_rosy(const CartesianField& pvField, const PolyVectorData& pv
     return softRosyField;
 }
 
+//Projects the field onto the nearest curl-free field.
 CartesianField curl_projection(const CartesianField& pvField, const PolyVectorData& pvData){
     assert(pvData.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES && "Projecting curl only works for face-based fields for now!");
     CartesianField rawField, curlFreeFieldRaw, curlFreeFieldPv;
@@ -69,11 +72,11 @@ CartesianField curl_projection(const CartesianField& pvField, const PolyVectorDa
     return curlFreeFieldPv;
 }
 
-
+//Projects a vector on a quadric (used for the conjugacy projection)
 Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen::MatrixXd& H){
     // Step 1: Perform eigen-decomposition of H (since it's symmetric)
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(0.5*(H+H.transpose()));
-    assert("directional:project_on_quadric(): Eigen decomposition failed!" && eigensolver.info() == Eigen::Success);
+    assert(eigensolver.info() == Eigen::Success && "directional:project_on_quadric(): Eigen decomposition failed!");
     
     Eigen::MatrixXd U = eigensolver.eigenvectors();
     Eigen::VectorXd sigma = eigensolver.eigenvalues();
@@ -95,7 +98,6 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
             f  += zi * zi * si / denom2;
             df += -2.0 * zi * zi * si * si / denom3;
         }
-        //std::cout<<"f: "<<f<<std::endl;
         if (std::abs(f) < tol) break;
         
         double step = f / df;
@@ -107,27 +109,9 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
             throw std::runtime_error("Newton-Raphson diverged");
     }
     
-    //checking lambda is correct
-    //double lambdasum = 0.0;
-    //for (int i=0;i<y0.size();i++)
-    //    lambdasum+=z(i)*z(i)*sigma(i)/((1+sigma(i)*lambda)*(1+sigma(i)*lambda));
-    //std::cout<<"lambdasum: "<<lambdasum<<std::endl;
     Eigen::ArrayXd denom = (1.0 + lambda * sigma.array());
     Eigen::VectorXd z_scaled = (z.array() / denom).matrix();
     Eigen::VectorXd y = U * z_scaled;                                 // back to original coordinates
-    
-    //Eigen::MatrixXd D = (sigma.array()/((1+sigma.array()*lambda)*(1+sigma.array()*lambda))).matrix().asDiagonal();
-    //std::cout<<"z.transpose() * D * z: "<<z.transpose()*D*z<<std::endl;
-    //Eigen::MatrixXd Sigma = sigma.asDiagonal();
-    //std::cout<<"z_scaled.transpose() * Sigma * z_scaled: "<<z_scaled.transpose()*Sigma*z_scaled<<std::endl;
-    //Eigen::MatrixXd UtHU = U.transpose()*H*U;
-    //std::cout<<"UtHU - Sigma: "<<UtHU - Sigma<<std::endl;
-    //std::cout<<"H - U*Sigma*U.transpose(): "<<H - U*Sigma*U.transpose()<<std::endl;
-    //std::cout << "H:" << H<<std::endl;
-    
-    //checking
-    //std::cout<<"y0.transpose() * H * y0: "<<y0 * H * y0.transpose()<<std::endl;
-    //std::cout<<"y.transpose() * H * y: "<<y.transpose() * H * y<<std::endl;
     
     return y.transpose(); // Return RowVectorXd
 }
@@ -135,10 +119,8 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
 
 //Projecting a 2^2 Rosy field to a conjugate field
 CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pvData){
-    assert("directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!" && pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES);
+    assert(pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES&& "directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!");
     
-    //if (pvData.currIteration>10)
-    //    return pvField;  //Debugging the implicit smoothing
     CartesianField rawField, conjugatePvField;
     polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
     Eigen::MatrixXd extField = rawField.extField;
@@ -151,19 +133,17 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
         Eigen::Matrix<double, 6,6> H; H.setZero();
         H.block(0,3,3,3) = G1;
         H.block(3,0,3,3) = G2;
-        //std::cout<<"extField.row(i) before: "<<extField.row(i).head(6)<<std::endl;
         Eigen::RowVectorXd y0(6); y0<<rawField.extField.row(i).head(6);
         conjugacyBefore(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
         extField.row(i).head(6)<<project_on_quadric(y0, H);
-        //std::cout<<"extField.row(i) after: "<<extField.row(i).head(6)<<std::endl;
         extField.row(i).tail(6) = - extField.row(i).head(6);
         //checking conjugacy
         conjugacy(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
-        //std:: cout<<"conjugacy: "<<conjugacy<<std::endl;
-        //std::cout<<"extField.row(i) after: "<<extField.row(i)<<std::endl;
     }
-    std:: cout<<"conjugacy before: "<<conjugacyBefore.cwiseAbs().maxCoeff()<<std::endl;
-    std:: cout<<"conjugacy after: "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
+    if (pvData.verbose){
+        std:: cout<<"conjugacy before conjugate(): "<<conjugacyBefore.cwiseAbs().maxCoeff()<<std::endl;
+        std:: cout<<"conjugacy after  conjugate(): "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
+    }
     rawField.set_extrinsic_field(extField);
     directional::raw_to_polyvector(rawField, conjugatePvField);
     return conjugatePvField;

@@ -37,7 +37,7 @@ struct MesherData{
     
     bool verbose;                               //Printing output for the process
     
-    MesherData():exactResolution(10e-9){}
+    MesherData():exactResolution(10e-9), verbose(false){}
     ~MesherData(){}
     
 };
@@ -51,8 +51,8 @@ struct MesherData{
  mesherData:    MesherData object suitable to pass to the mesher
  ***/
 void setup_mesher(const directional::TriMesh& meshCut,
-                                  const IntegrationData& intData,
-                                  MesherData& mesherData){
+                  const IntegrationData& intData,
+                  MesherData& mesherData){
     
     mesherData.cutV=meshCut.V;
     mesherData.cutF=meshCut.F;

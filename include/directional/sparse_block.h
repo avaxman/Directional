@@ -6,8 +6,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef SADDLEPOINT_SPARSE_BLOCK_H
-#define SADDLEPOINT_SPARSE_BLOCK_H
+#ifndef DIRECTIONAL_SPARSE_BLOCK_H
+#define DIRECTIONAL_SPARSE_BLOCK_H
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <string>
