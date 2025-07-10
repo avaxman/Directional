@@ -1,15 +1,17 @@
+// This file is part of Directional, a library for directional field processing.
+// Copyright (C) 2025 Amir Vaxman <avaxman@gmail.com>
 //
-//  ENumber_internal.h
-//  Directional_tutorials
-//
-//  Created by avaxman on 22/06/2025.
-//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 
 #ifndef DIRECTIONAL_ENUMBER_INTERNAL_HEADER_FILE
 #define DIRECTIONAL_ENUMBER_INTERNAL_HEADER_FILE
 
 #include <Eigen/Dense>
 #include <directional/BigInteger.h>
+
+//This class provides a "home-made" exact rational number type, using the other home-made Big integer type, which together can autonomously function if GMP is not installed in the system. Warning: it's slow-ish, so GMP is recommended.
 
 typedef BigInteger EInt;
 

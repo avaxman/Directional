@@ -19,16 +19,23 @@
 
 namespace directional{
 
-//Computues the classical conforming gradient matrix from P^d polynomial scalar conforming fields to X^{d-1} piecewise polynomial fields
+//Computues the classical conforming gradient matrix from P^d polynomial scalar conforming fields to X^{d-1} piecewise polynomial fields on triangle meshes
 //this allows for N-functions as well going to N-fields (of the appropriate polynomial degree).
 //the result is always extrinsic (i.e., does not take into account any tangent bundle intrinsic parameterization).
+//Input:
+//  mesh:             The triangle mesh
+//  isIntrinsic:      Whether the gradient produces intrinsic (2D) fields or extrinsic (3D).
+//  N:                the degree of the field (N=1: standard gradient matrix)
+//  d:                the polynomial degree (not currently active)
+//Output:
+//  A sparse matrix of either rowsize 3N (extrinsic of 2N (intrinsic) in standard raw format, and |V| columns (for mesh vertices).
 template<typename NumberType>
 Eigen::SparseMatrix<NumberType> conf_gradient_matrix_2D(const TriMesh& mesh,
                                                         const bool isIntrinsic=false,
                                                         const int N=1,
                                                         const int d=1){
     
-    assert("Currently only implemented for d=1" && d==1);
+    assert(d==1 && "Currently only implemented for d=1");
     
     Eigen::SparseMatrix<NumberType> G1(3*mesh.F.rows(), mesh.V.rows());
     std::vector<Eigen::Triplet<NumberType>> GTris;
@@ -41,11 +48,8 @@ Eigen::SparseMatrix<NumberType> conf_gradient_matrix_2D(const TriMesh& mesh,
         Eigen::Matrix3d ep; ep<<n.cross(e12), n.cross(e20), n.cross(e01);
         double faceArea = mesh.faceAreas(i);
         for (int j=0;j<3;j++)
-            for (int k=0;k<3;k++) {
-                //std::cout<<"("<<3 * i + k<<","<<mesh.F(i, j)<<","<<ep(j, k) / (2.0 * faceArea)<<")"<<std::endl;
+            for (int k=0;k<3;k++)
                 GTris.push_back(Eigen::Triplet<NumberType>(3 * i + k, mesh.F(i, j), ep(j, k) / (2.0 * faceArea)));
-            }
-        
     }
     G1.setFromTriplets(GTris.begin(), GTris.end());
     if (isIntrinsic){
@@ -54,14 +58,14 @@ Eigen::SparseMatrix<NumberType> conf_gradient_matrix_2D(const TriMesh& mesh,
     } else return (N==1 ? G1 : single_to_N_matrix(G1, N, 3, 1));
 }
 
-//The non-conforming Crouzeix-Raviart gradient matrix
+//The non-conforming Crouzeix-Raviart gradient matrix, where the difference is working on edge-based (pointwise) qnatities, and thus matrix has coumn size |E|.
 template<typename NumberType>
 Eigen::SparseMatrix<NumberType> non_conf_gradient_matrix_2D(const TriMesh& mesh,
                                                             const bool isIntrinsic = false,
                                                             const int N=1,
                                                             const int d=1){
     
-    assert("Currently only implemented for d=1" && d==1);
+    assert(d==1 && "Currently only implemented for d=1");
     Eigen::SparseMatrix<NumberType> G1(3*N*mesh.F.rows(), mesh.EV.rows());
     std::vector<Eigen::Triplet<NumberType>> GTris;
     for (int i=0;i<mesh.F.rows();i++){
@@ -75,7 +79,6 @@ Eigen::SparseMatrix<NumberType> non_conf_gradient_matrix_2D(const TriMesh& mesh,
         for (int j=0;j<3;j++)
             for (int k=0;k<3;k++)
                 GTris.push_back(Eigen::Triplet<NumberType>(3*i+k, mesh.FE(i,j), -ep(j,k)/(faceArea)));
-        
     }
     G1.setFromTriplets(GTris.begin(), GTris.end());
     if (isIntrinsic){
@@ -86,4 +89,4 @@ Eigen::SparseMatrix<NumberType> non_conf_gradient_matrix_2D(const TriMesh& mesh,
 }
 }
 
-#endif //DIRECTIONAL_GRADIENT_MATRIX_H
+#endif

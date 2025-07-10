@@ -23,32 +23,32 @@
 
 namespace directional
 {
-  
-  
-  // Creating non-conforming mid-edge mesh, where the faces are between the midedges of each original face. This is generally only for visualization
-  // Input:
-  //  VMesh:      #V x 3 conforming mesh vertices
-  //  FMesh:      #F x 3 conforming mesh faces
-  //  EV:         #E x 2 edges to vertices indices
-  //  EF:         #E x 2 edges to faces indices
-  //  FE:         #F x 3 faces to edges indices
-  // Output:
-  //  Gv:    #3f x V Conforming gradient matrix, returning vector of xyzxyz per face gradient vectors
-  //  Ge:    #3f x V Non-conforming gradient of the same style, but for mid-edge functions
-  //  J:    #3F x 3F rotation operator [Nx] per face
-  //  C:  Curl operator which is basically (JGe)^T * Mchi
-  //  C:  Divergence operator which is basically Gv^T * Mchi
-  
-  IGL_INLINE void hodge_decomposition(const Eigen::MatrixXd& V,
-                                      const Eigen::MatrixXi& F,
-                                      const Eigen::MatrixXi& EV,
-                                      const Eigen::MatrixXi& FE,
-                                      const Eigen::MatrixXi& EF,
-                                      const Eigen::MatrixXd& rawField,
-                                      Eigen::VectorXd& exactFunc,
-                                      Eigen::VectorXd& coexactFunc,
-                                      Eigen::MatrixXd& harmField)
-  {
+
+
+// Creating non-conforming mid-edge mesh, where the faces are between the midedges of each original face. This is generally only for visualization
+// Input:
+//  VMesh:      #V x 3 conforming mesh vertices
+//  FMesh:      #F x 3 conforming mesh faces
+//  EV:         #E x 2 edges to vertices indices
+//  EF:         #E x 2 edges to faces indices
+//  FE:         #F x 3 faces to edges indices
+// Output:
+//  Gv:    #3f x V Conforming gradient matrix, returning vector of xyzxyz per face gradient vectors
+//  Ge:    #3f x V Non-conforming gradient of the same style, but for mid-edge functions
+//  J:    #3F x 3F rotation operator [Nx] per face
+//  C:  Curl operator which is basically (JGe)^T * Mchi
+//  C:  Divergence operator which is basically Gv^T * Mchi
+
+IGL_INLINE void hodge_decomposition(const Eigen::MatrixXd& V,
+                                    const Eigen::MatrixXi& F,
+                                    const Eigen::MatrixXi& EV,
+                                    const Eigen::MatrixXi& FE,
+                                    const Eigen::MatrixXi& EF,
+                                    const Eigen::MatrixXd& rawField,
+                                    Eigen::VectorXd& exactFunc,
+                                    Eigen::VectorXd& coexactFunc,
+                                    Eigen::MatrixXd& harmField)
+{
     
     using namespace Eigen;
     using namespace std;
@@ -58,7 +58,7 @@ namespace directional
     
     VectorXd rawFieldVec(3*F.rows(),1);
     for (int i=0;i<F.rows();i++)
-      rawFieldVec.segment(3*i,3)=rawField.row(i).transpose();
+        rawFieldVec.segment(3*i,3)=rawField.row(i).transpose();
     
     directional::FEM_suite(V, F, EV, FE, EF, Gv, Ge, J, C, D);
     directional::FEM_masses(V, F, EV, FE, EF, MvVec, MeVec, MfVec, MchiVec);
@@ -97,9 +97,9 @@ namespace directional
     
     harmField.resize(F.rows(),3);
     for (int i=0;i<F.rows();i++)
-      for (int j=0;j<3;j++)
-        harmField(i,j)=harmFieldVec(3*i+j);
-  }
+        for (int j=0;j<3;j++)
+            harmField(i,j)=harmFieldVec(3*i+j);
+}
 }
 
 #endif

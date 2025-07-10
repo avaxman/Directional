@@ -1,9 +1,12 @@
+// This file is part of Directional, a library for directional field processing.
+// Copyright (C) 2025 Amir Vaxman <avaxman@gmail.com>
 //
-// Created by Amir Vaxman on 20.04.24.
-//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef DIRECTIONAL_ENUMBER_DEFINITIONS_H
-#define DIRECTIONAL_ENUMBER_DEFINITIONS_H
+#ifndef DIRECTIONAL_EXACT_GEOMETRIC_DEFINITIONS_H
+#define DIRECTIONAL_EXACT_GEOMETRIC_DEFINITIONS_H
 
 #include <set>
 #include <math.h>
@@ -21,6 +24,7 @@
 #endif
 
 
+//This header file concentrates geometric operations on vectors, segments, lines, and arrangement in exact rational numbers.
 namespace directional{
     
     template <size_t Size>

@@ -17,17 +17,25 @@
 
 namespace directional {
 
-    template<typename NumberType>
-    Eigen::SparseMatrix<NumberType> div_matrix_2D(const TriMesh& mesh,
-                                                  const bool isIntrinsic = false,
-                                                  const int N = 1,
-                                                  const int d = 1){
-
-        assert("This method is currently defined only for d==1" && d==1);
-        Eigen::SparseMatrix<NumberType> G = directional::conf_gradient_matrix_2D<NumberType>(mesh,isIntrinsic,N,d);
-        Eigen::SparseMatrix<NumberType> Mx = directional::face_vectors_mass_matrix_2D<NumberType>(mesh, isIntrinsic, false, N, d);
-        return (-G.adjoint()*Mx);
-    }
+//Produces the divergence operator on vector fields, as the adjoint of the conforming face-based gradient matrix.
+//Input:
+//mesh:         a triangle mesh
+//isIntrinsic:  whether the input field is intrinsic (2D) or extrinsic (3D) in every face
+//N:            the order of the field
+//d:            the polynomial order (inactive)
+//Output:
+//A |V|x2N if intrinsic or |V|x3N if extrinsic divergence matrix.
+template<typename NumberType>
+Eigen::SparseMatrix<NumberType> div_matrix_2D(const TriMesh& mesh,
+                                              const bool isIntrinsic = false,
+                                              const int N = 1,
+                                              const int d = 1){
+    
+    assert(d==1 && "This method is currently defined only for d==1");
+    Eigen::SparseMatrix<NumberType> G = directional::conf_gradient_matrix_2D<NumberType>(mesh,isIntrinsic,N,d);
+    Eigen::SparseMatrix<NumberType> Mx = directional::face_mass_matrix_2D<NumberType>(mesh, false, (isIntrinsic ? 2*N : 3*N), d);
+    return (-G.adjoint()*Mx);  //Note the sign! True divergence is like that. See tutorial for explanation.
+}
 }
 
 #endif

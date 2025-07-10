@@ -32,7 +32,7 @@ class DirectionalViewer{
 public:
     
     //Directional quantities
-    std::vector<const TriMesh*> surfaceMeshList;  //meshes that are being viewed
+    std::vector<const TriMesh*> surfaceMeshList;
     std::vector<const CartesianField*> fieldList;
     std::vector<directional::StreamlineData> slData;
     std::vector<directional::StreamlineState> slState;
@@ -530,9 +530,9 @@ public:
      }*/
     
     /*void inline set_glyph_length(double unitToEdgeLengthRatio, int fieldNum = 0){
-        for (int i=0;i<psGlyphList[fieldNum].size();i++)
-            psGlyphList[fieldNum][i]->setVectorLengthScale(unitToEdgeLengthRatio*fieldList[fieldNum]->tb->avgAdjLength, false);
-    }*/
+     for (int i=0;i<psGlyphList[fieldNum].size();i++)
+     psGlyphList[fieldNum][i]->setVectorLengthScale(unitToEdgeLengthRatio*fieldList[fieldNum]->tb->avgAdjLength, false);
+     }*/
     
     void inline toggle_combed_colors(const bool isCombed, const bool signSymmetry=true, int fieldNum=0){
         for (int i=0;i<psGlyphList[fieldNum].size();i++)
@@ -702,7 +702,7 @@ public:
         } else return Eigen::VectorXi::LinSpaced(sources.rows(),0,sources.rows()-1);
     }
     
-};  //of DirectionalViewer class
+};
 
 }
 

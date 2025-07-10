@@ -16,14 +16,24 @@
 
 namespace directional {
 
+//Produces the non-conforming (Edge-based) curl operator on vector fields, by the finite-volume integral over flaps.
+//Input:
+//  mesh:         a triangle mesh
+//  isIntrinsic:  whether the input field is intrinsic (2D) or extrinsic (3D) in every face
+//  N:            the order of the field
+//  d:            the polynomial order (inactive)
+//  matching:     the matching of the vector field (so to get branched curl)
+//Output:
+//  A |Ei|x2N if intrinsic or |Ei|x3N if extrinsic curl matrix (this ignores boundaries)
 template<typename NumberType>
 Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh& mesh,
-                                               const Eigen::VectorXi& _matching=Eigen::VectorXi(),
                                                const bool isIntrinsic=false,
                                                const int N = 1,
-                                               const int d = 1){
+                                               const int d = 1,
+                                               const Eigen::VectorXi& _matching=Eigen::VectorXi())
+{
     
-    assert("This method is currently defined only for d==1" && d==1);
+    assert(d==1 && "This method is currently defined only for d==1");
     Eigen::VectorXi matching;
     if (_matching.size()==0)
         matching = Eigen::VectorXi::Zero(mesh.innerEdges.size());
@@ -71,10 +81,7 @@ Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh& mesh,
     }
     
     singleCurlMatrix.setFromTriplets(singleCurlMatTris.begin(), singleCurlMatTris.end());
-    
-    //if (N==1)
     return singleCurlMatrix;
-    //else return single_to_N_matrix(singleCurlMatrix, N, 1, (isIntrinsic ? 2 : 3));
 }
 }
 
