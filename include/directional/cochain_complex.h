@@ -88,15 +88,15 @@ void project_coexact(const Eigen::SparseMatrix<NumberType> d,
                      const Eigen::SparseMatrix<NumberType> M,
                      const Eigen::SparseMatrix<NumberType> MNext,
                      const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
+                     const int k,
                      Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
-                     Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain
-                     double k = 1){
+                     Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
     
     Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
     std::vector<Eigen::SparseMatrix<NumberType>> matVec;
     matVec.push_back(M);
     matVec.push_back(d.adjoint()*MNext.adjoint());
-    matVec.push_back(Mext*d);
+    matVec.push_back(MNext*d);
     matVec.push_back(Eigen::SparseMatrix<NumberType>(MNext.rows(), d.rows()));
     Eigen::SparseMatrix<NumberType> A;
     directional::sparse_block(orderMat, matVec, A);
@@ -110,8 +110,8 @@ void project_coexact(const Eigen::SparseMatrix<NumberType> d,
     Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);
     assert("project_next(): Solver failed!" && solver.info() == Eigen::Success);
     coexactCochain = x.head(M.rows());
-    double sign = (k%2==0 ? 1 : -1);  //it will actually be a -1 for odd k since x is in the left-hand side
-    nextCochain = sign*x.tail(d.rows());
+    double sign = (k%2==0 ? 1 : -1);
+    nextCochain = -sign*x.tail(d.rows());   //The extra minus since x is part of the left-hand side
 }
 
 // Solve A = H^T H (sparse), M mass matrix (dense or sparse), k eigenvectors near zero
@@ -120,10 +120,10 @@ template<typename Scalar>
 void computeSmallestEigenvectors(
                                  const Eigen::SparseMatrix<Scalar>& H,
                                  const Eigen::SparseMatrix<Scalar>& M,
-                                 int k,
+                                 const int k,
                                  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& eigenvectors,
-                                 int maxIters = 1000,
-                                 double tol = 1e-8)
+                                 const int maxIters = 1000,
+                                 const double tol = 1e-8)
 {
     using Vec = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
     int n = H.cols();
@@ -200,21 +200,23 @@ void computeSmallestEigenvectors(
 //computes the hodge decomposition of a cochain, where
 //cochain = exactCochain + coexactCochain + harmCochain and where
 // exactCochain = d*prevCochain,
-// coexactCochain = M^{-1}*dNext*MNext*nextCochain
+// coexactCochain = (-1)^k*M^{-1}*dNext*MNext*nextCochain
 // and harmCochain is the remainder.
 template<typename NumberType>
 void hodge_decomposition(const Eigen::SparseMatrix<NumberType> d,
                          const Eigen::SparseMatrix<NumberType> dNext,
                          const Eigen::SparseMatrix<NumberType> M,
+                         const Eigen::SparseMatrix<NumberType> MNext,
                          const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
-                         Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
+                         const int k,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& exactCochain,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
-                         Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain,
-                         Eigen::Vector<NumberType, Eigen::Dynamic>& harmCochain){
+                         Eigen::Vector<NumberType, Eigen::Dynamic>& harmCochain,
+                         Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
+                         Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
     
     project_exact(d, M, cochain, prevCochain, exactCochain);
-    project_coexact(dNext, M, cochain, coexactCochain, nextCochain);
+    project_coexact(dNext, M, MNext, cochain, k, coexactCochain, nextCochain);
     harmCochain = cochain - exactCochain - coexactCochain;
 }
 
@@ -264,6 +266,8 @@ void cohomology_basis(const Eigen::SparseMatrix<NumberType> d,
     computeSmallestEigenvectors(H, M, bettiNumber, harmFields);
     
     
+}
+
 }
 
 

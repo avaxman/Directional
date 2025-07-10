@@ -27,7 +27,7 @@ template<typename NumberType>
 Eigen::SparseMatrix<NumberType> conf_mass_matrix_2D(const TriMesh& mesh,
                                                     const int dim = 1,
                                                     const int deg = 1) {
-    assert("Currently only implemented for d=1" && d == 1);
+    assert(deg == 1 && "Currently only implemented for deg=1");
     Eigen::SparseMatrix<NumberType> M1(mesh.V.rows(), mesh.V.rows());
     std::vector<Eigen::Triplet<NumberType>> MTris;
     for (int i = 0; i < mesh.F.rows(); i++) {
@@ -37,7 +37,7 @@ Eigen::SparseMatrix<NumberType> conf_mass_matrix_2D(const TriMesh& mesh,
                                                            mesh.faceAreas(i) * (j == k ? 1.0 / 6.0 : 1.0 / 12.0)));
     }
     M1.setFromTriplets(MTris.begin(), MTris.end());
-    if (N==1)
+    if (dim==1)
         return M1;
     return single_to_N_matrix(M1, dim, 1, 1);
 }
@@ -56,7 +56,7 @@ Eigen::SparseMatrix<NumberType> lumped_voronoi_mass_matrix_2D(const TriMesh& mes
             MTris.push_back(Eigen::Triplet<NumberType>(mesh.F(i, j), mesh.F(i, j), mesh.faceAreas(i) / 3.0));
     }
     M1.setFromTriplets(MTris.begin(), MTris.end());
-    if (N==1)
+    if (dim==1)
         return M1;
     return single_to_N_matrix(M1, dim, 1, 1);
 }
@@ -89,9 +89,9 @@ Eigen::SparseMatrix<NumberType> face_mass_matrix_2D(const TriMesh& mesh,
 //Mass matrix for quantities on edge diamond regions, which is the area of the diamond
 template<typename NumberType>
 Eigen::SparseMatrix<NumberType> edge_diamond_mass_matrix_2D(const TriMesh& mesh,
-                                                            const bool isInverse = false;
-                                                            const int deg=1,
-                                                            const int dim=1){
+                                                            const bool isInverse = false,
+                                                            const int dim=1,
+                                                            const int deg=1){
     assert(dim==1 && "Currently only works for dim==1");
     Eigen::SparseMatrix<NumberType> M1(mesh.EV.rows(), mesh.EV.rows());
     std::vector<Eigen::Triplet<NumberType>> MTris;
