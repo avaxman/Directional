@@ -23,7 +23,7 @@ class NFunctionMesher {
 public:
     
     const TriMesh& origMesh;
-    const Mesher& mData;
+    const MesherData& mData;
     
     struct SegmentData{
         bool isFunction;
@@ -192,7 +192,7 @@ public:
         using namespace std;
         using namespace Eigen;
         
-        if (!genDcel.check_consistency(verbose, false, false, false))
+        if (!genDcel.check_consistency(mData.verbose, false, false, false))
             return false;
         
         int MaxOrigHE=-3276700.0;
@@ -287,7 +287,7 @@ public:
             
             vector<pair<int, int> > CurrMatches;
             if ((!PointSet1.empty())&&(!PointSet2.empty()))
-                CurrMatches=FindVertexMatch(verbose, PointSet1, PointSet2);
+                CurrMatches=FindVertexMatch(mData.verbose, PointSet1, PointSet2);
             
             for (int j=0;j<CurrMatches.size();j++){
                 CurrMatches[j].first =VertexSets1[i][CurrMatches[j].first];
@@ -308,14 +308,14 @@ public:
         for (int i=0;i<VertexMatches.size();i++)
             MaxDist=std::max(MaxDist, (genDcel.vertices[VertexMatches[i].first].data.coords-genDcel.vertices[VertexMatches[i].second].data.coords).squaredNorm());
         
-        if (verbose)
+        if (mData.verbose)
             std::cout<<"Max matching distance: "<<MaxDist<<endl;
         
         //vector<int> Transvertices(vertices.size());
         TransVertices.resize(genDcel.vertices.size());
         int NumNewVertices = connectedComponents(VertexMatches, TransVertices);
         
-        if (!genDcel.check_consistency(verbose, false, false, false))
+        if (!genDcel.check_consistency(mData.verbose, false, false, false))
             return false;
         
         vector<bool> transClaimed(NumNewVertices);
@@ -346,7 +346,7 @@ public:
         }
         
         
-        if (!genDcel.check_consistency(verbose, true, false, false))
+        if (!genDcel.check_consistency(mData.verbose, true, false, false))
             return false;
         
         //twinning up halfedges
@@ -358,9 +358,9 @@ public:
             set<FunctionDCEL::TwinFinder>::iterator Twinit=Twinning.find(FunctionDCEL::TwinFinder(0,genDcel.halfedges[genDcel.halfedges[i].next].vertex,
                                                                                                   genDcel.halfedges[i].vertex));
             if (Twinit!=Twinning.end()){
-                if ((genDcel.halfedges[Twinit->index].twin!=-1)&&(verbose))
+                if ((genDcel.halfedges[Twinit->index].twin!=-1)&&(mData.verbose))
                     std::cout<<"warning: halfedge "<<Twinit->index<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
-                if ((genDcel.halfedges[i].twin!=-1)&&(verbose))
+                if ((genDcel.halfedges[i].twin!=-1)&&(mData.verbose))
                     std::cout<<"warning: halfedge "<<i<<" is already twinned to halfedge "<<genDcel.halfedges[Twinit->index].twin<<std::endl;
                 genDcel.halfedges[Twinit->index].twin=i;
                 genDcel.halfedges[i].twin=Twinit->index;
@@ -391,7 +391,7 @@ public:
          }*/
         
         
-        if (!genDcel.check_consistency(verbose, true, true, true))
+        if (!genDcel.check_consistency(mData.verbose, true, true, true))
             return false;
         
         //removing triangle components
@@ -557,7 +557,7 @@ public:
                 genDcel.vertices[genDcel.halfedges[i].vertex].halfedge=i;
         
         
-        if (!genDcel.check_consistency(verbose, true, true, true))
+        if (!genDcel.check_consistency(mData.verbose, true, true, true))
             return false;
         
         for (int i=0;i<Valences.size();i++)
@@ -572,14 +572,14 @@ public:
             }
         }
         
-        if (!genDcel.check_consistency(verbose, true, true, true))
+        if (!genDcel.check_consistency(mData.verbose, true, true, true))
             return false;
         
         //remove non-valid components
         genDcel.clean_mesh();
         
         //checking if mesh is valid
-        if (!genDcel.check_consistency(verbose, true, true, true))
+        if (!genDcel.check_consistency(mData.verbose, true, true, true))
             return false;
         
         return true;
@@ -700,7 +700,7 @@ public:
         
     }
     
-    NFunctionMesher(const TriMesh& _origMesh, const MeshFunctionIsolinesData& _mData ):origMesh(_origMesh), mData(_mData){}
+    NFunctionMesher(const TriMesh& _origMesh, const MesherData& _mData ):origMesh(_origMesh), mData(_mData){}
     ~NFunctionMesher(){}
     
 private:

@@ -111,7 +111,7 @@ inline void project_curl(const CartesianField& origField,
     
     //TODO: hard constraints
     
-    SparseMatrix<double> C = directional::curl_matrix_2D<double>(*((directional::PCFaceTangentBundle*)(origField.tb))->mesh, origField.matching, true, origField.N);
+    SparseMatrix<double> C = directional::curl_matrix_2D<double>(*((directional::PCFaceTangentBundle*)(origField.tb))->mesh,  true, origField.N, 1, origField.matching);
     SparseMatrix<double> CR=C*R;
     SparseMatrix<double> CRt=CR.transpose();
     SparseMatrix<double> ER=E*R;
@@ -145,17 +145,17 @@ inline void project_curl(const CartesianField& origField,
     curlFreeField.set_extrinsic_field(IE*cfFieldVec);
     
     //checking with extrinsic matrix
-    SparseMatrix<double> Cext = directional::curl_matrix_2D<double>(*((directional::PCFaceTangentBundle*)(origField.tb))->mesh, origField.matching, false, origField.N);
+    SparseMatrix<double> Cext = directional::curl_matrix_2D<double>(*((directional::PCFaceTangentBundle*)(origField.tb))->mesh, false, origField.N, 1, origField.matching);
     VectorXd v = Cext * IE * cfFieldVec;
     
     Eigen::Index maxIndex;
     double maxAbsVal = v.cwiseAbs().maxCoeff(&maxIndex);
     
     /*cout << "Extrinsic curl max abs: " << maxAbsVal << endl;
-    cout << "At index: " << maxIndex << endl;
-    cout << "Actual value: " << v[maxIndex] << endl;
-    cout << "2D value: " << (C*cfFieldVec)[maxIndex] <<endl;
-    cout<<"Extrinsic curl: "<<(Cext*IE*cfFieldVec).lpNorm<Infinity>()<<endl;*/
+     cout << "At index: " << maxIndex << endl;
+     cout << "Actual value: " << v[maxIndex] << endl;
+     cout << "2D value: " << (C*cfFieldVec)[maxIndex] <<endl;
+     cout<<"Extrinsic curl: "<<(Cext*IE*cfFieldVec).lpNorm<Infinity>()<<endl;*/
     
 }
 };

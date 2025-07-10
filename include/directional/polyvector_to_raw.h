@@ -9,15 +9,13 @@
 #define DIRECTIONAL_POLYVECTOR_TO_RAW_H
 
 #include <iostream>
+#include <numbers>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <Eigen/SparseCholesky>
 #include <Eigen/Eigenvalues>
-#include <directional/definitions.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
-
-
 
 
 namespace directional {
@@ -141,7 +139,7 @@ inline bool polyvector_to_raw(const Eigen::MatrixXd& pvField,
     roots.col(0).array() = (-actualPVField.col(0).array()).pow(1.0 / (double) actualN);
     for (int i = 1; i < actualN; i++)
         roots.col(i).array() =
-        roots.col(i - 1).array() * std::exp(std::complex<double>(0, 2.0 * directional::PI / (double) actualN));
+        roots.col(i - 1).array() * std::exp(std::complex<double>(0, 2.0 * std::numbers::pi / (double) actualN));
     
     MatrixXd rootError = MatrixXd::Constant(actualPVField.rows(), actualN, 1000.0);
     double maxError = 1000.0;

@@ -58,15 +58,15 @@ bool mesher(const directional::TriMesh& origMesh,
     Eigen::MatrixXd genFEs, genCEdges, genVEdges;
     
     bool success;
-    if (mData.verbose)
+    if (mData.verbose){
         std::cout<<"Cleaning Mesh"<<std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
-    success = functionMesher.simplify_mesh(verbose, mfiData.N);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout<<"Mesh simplification time: "<< duration.count()/1e+6 << " seconds" << std::endl;
-    else{
-        success = functionMesher.simplify_mesh(verbose, mfiData.N);
+        auto start = std::chrono::high_resolution_clock::now();
+        success = functionMesher.simplify_mesh();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout<<"Mesh simplification time: "<< duration.count()/1e+6 << " seconds" << std::endl;
+    }else{
+        success = functionMesher.simplify_mesh();
     }
     
     if (success){

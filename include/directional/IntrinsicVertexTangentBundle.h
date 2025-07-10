@@ -9,6 +9,7 @@
 #define DIRECTIONAL_INTRINSIC_VERTEX_TANGENT_BUNDLE_H
 
 #include <iostream>
+#include <numbers>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
 #include <directional/sparse_diagonal.h>
@@ -59,7 +60,7 @@ public:
         //creating vertex tangent lookup table
         tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff());
         for (int i=0;i<mesh->V.rows();i++){
-            double totalTangentSum = (mesh->isBoundaryVertex(i) ? directional::PI : 2.0*directional::PI);
+            double totalTangentSum = (mesh->isBoundaryVertex(i) ? std::numbers::pi : 2.0*std::numbers::pi);
             double angleSum =  totalTangentSum - mesh->GaussianCurvature(i);
             tangentStartAngles.col(0).setZero();  //the first angle
             Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);

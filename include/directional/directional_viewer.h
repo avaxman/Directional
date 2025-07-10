@@ -15,8 +15,9 @@
 #include <directional/streamlines.h>
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
-#include <directional/bar_chain.h>
+#include <directional/matrix_slice.h>
 #include <directional/branched_isolines.h>
+#include <directional/sparse_identity.h>
 
 /***
  This class implements the Directional viewer, as an extension and wrapper around polyscope.
@@ -158,8 +159,8 @@ public:
         Eigen::VectorXi threeN(3*_field.N);
         for (int i=0;i<_field.N;i++)
             threeN.segment(3*i,3)<<3*i,3*i+1,3*i+2;
-        directional::slice(_field.tb->sources, sampledSpaces, three, sampledSources);
-        directional::slice(_field.extField, sampledSpaces, threeN, sampledField);
+        directional::matrix_slice(_field.tb->sources, sampledSpaces, three, sampledSources);
+        directional::matrix_slice(_field.extField, sampledSpaces, threeN, sampledField);
         std::string fieldName;
         if (name.empty())
             fieldName = "Field " + std::to_string(fieldNum);
@@ -660,7 +661,7 @@ public:
             SparseMatrix<int> adjMat(sources.rows(),sources.rows());
             adjMat.setFromTriplets(adjTris.begin(), adjTris.end());
             SparseMatrix<int> newAdjMat(sources.rows(),sources.rows()),matMult;
-            directional::speye(sources.rows(), sources.rows(), matMult);
+            directional::sparse_identity(sources.rows(), sources.rows(), matMult);
             for (int i=0;i<sparsity;i++){
                 matMult=matMult*adjMat;
                 newAdjMat+=matMult;

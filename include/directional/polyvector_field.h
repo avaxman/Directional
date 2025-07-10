@@ -296,7 +296,8 @@ inline void polyvector_field(PolyVectorData& pvData,
     
     double totalMass;
     if (pvData.iterationMode){
-        std::cout<<"Iteration Mode"<<std::endl;
+        if (pvData.verbose)
+            std::cout<<"Iteration Mode"<<std::endl;
         //approximating the smallest non-zero eigenvalues
         complex<double> energy = (0.5 * pvData.reducedDofs.adjoint() * pvData.totalLhs* pvData.reducedDofs- pvData.reducedDofs.adjoint() * pvData.totalRhs).coeff(0,0);
         complex<double> mass = (pvData.reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs).coeff(0,0);
@@ -304,7 +305,8 @@ inline void polyvector_field(PolyVectorData& pvData,
         pvData.currImplicitCoeff = pvData.initImplicitFactor/approxEig;
         pvData.currIteration = 0;
         
-        cout<<"pvData.currImplicitCoeff: "<<pvData.currImplicitCoeff<<endl;
+        if (pvData.verbose)
+            cout<<"initial implicit coefficient: "<<pvData.currImplicitCoeff<<endl;
         pvData.reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
         assert(pvData.reducProjSolver.info() == Success && "Reduction Projection solver failed!");
         

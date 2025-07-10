@@ -80,20 +80,23 @@ void project_exact(const Eigen::SparseMatrix<NumberType> d,
 
 //We solve for the closest coexact field and its generator nextChain
 // coexactCochain = argmin |coexactCochain|^2 s.t. di*cochain = di*coexactCochain with the metric of Mi (i = cochainNum)
-// nextCochain is the (i+1) form such that cocexactCochain = -M^{-1}*d1^T*nextCochain (codifferential)
-// Note the sign! the is the canonical definition so that the sign of nextCochain will correspond to the natural generator of the curl.
+// nextCochain is the (i+1) form such that cocexactCochain = -M^{-1}*d1^T*MNext*nextCochain (codifferential)
+// k is the order of the differential k-form (k = 1 by default, meaning a 1-form)
+// Note the sign! the is the canonical definition so that the we have codiff*nextCochain = coexactCochain, where codiff = (-1)^k*invHodge*d^T*MNext
 template<typename NumberType>
 void project_coexact(const Eigen::SparseMatrix<NumberType> d,
                      const Eigen::SparseMatrix<NumberType> M,
+                     const Eigen::SparseMatrix<NumberType> MNext,
                      const Eigen::Vector<NumberType, Eigen::Dynamic>& cochain,
                      Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
-                     Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
+                     Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain
+                     double k = 1){
     
     Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
     std::vector<Eigen::SparseMatrix<NumberType>> matVec;
     matVec.push_back(M);
-    matVec.push_back(d.adjoint());
-    matVec.push_back(d);
+    matVec.push_back(d.adjoint()*MNext.adjoint());
+    matVec.push_back(Mext*d);
     matVec.push_back(Eigen::SparseMatrix<NumberType>(MNext.rows(), d.rows()));
     Eigen::SparseMatrix<NumberType> A;
     directional::sparse_block(orderMat, matVec, A);
@@ -107,7 +110,8 @@ void project_coexact(const Eigen::SparseMatrix<NumberType> d,
     Eigen::Vector<NumberType, Eigen::Dynamic> x = solver.solve(b);
     assert("project_next(): Solver failed!" && solver.info() == Eigen::Success);
     coexactCochain = x.head(M.rows());
-    nextCochain = x.tail(d.rows());
+    double sign = (k%2==0 ? 1 : -1);  //it will actually be a -1 for odd k since x is in the left-hand side
+    nextCochain = sign*x.tail(d.rows());
 }
 
 // Solve A = H^T H (sparse), M mass matrix (dense or sparse), k eigenvectors near zero

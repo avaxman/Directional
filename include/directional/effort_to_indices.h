@@ -10,8 +10,8 @@
 
 #include <vector>
 #include <cmath>
+#include <numbers>
 #include <Eigen/Core>
-#include <directional/definitions.h>
 #include <directional/dual_cycles.h>
 #include <directional/CartesianField.h>
 
@@ -34,7 +34,7 @@ inline void effort_to_indices(const Eigen::SparseMatrix<double>& basisCycles,
                               Eigen::VectorXi& indices)
 {
     using namespace std;
-    Eigen::VectorXd dIndices = ((basisCycles * effort + (double)N*cycleCurvature).array() / (2.0*directional::PI));  //this should already be an integer up to numerical precision
+    Eigen::VectorXd dIndices = ((basisCycles * effort + (double)N*cycleCurvature).array() / (2.0*std::numbers::pi));  //this should already be an integer up to numerical precision
     
     indices.conservativeResize(dIndices.size());
     for (int i=0;i<indices.size();i++) {

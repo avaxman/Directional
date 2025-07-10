@@ -8,7 +8,7 @@
 #ifndef DIRECTIONAL_ROTATION_TO_RAW_H
 #define DIRECTIONAL_ROTATION_TO_RAW_H
 
-#include <directional/definitions.h>
+#include <numbers>
 #include <directional/CartesianField.h>
 
 namespace directional
@@ -68,7 +68,7 @@ inline void rotation_to_raw(const TangentBundle& tb,
     
     MatrixXd intField(complexField.rows(),2*N);
     for (int j=0;j<N;j++){
-        VectorXcd currComplexField = complexField.array()*exp(Complex(0,2*j*directional::PI/N));
+        VectorXcd currComplexField = complexField.array()*exp(Complex(0,2*j*std::numbers::pi/N));
         intField.block(0,2*j,intField.rows(),2)<<currComplexField.array().real(),currComplexField.array().imag();
     }
     //constructing raw intField

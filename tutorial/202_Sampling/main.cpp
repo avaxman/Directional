@@ -1,3 +1,4 @@
+#include <numbers>
 #include <directional/readOBJ.h>
 #include <directional/readDMAT.h>
 #include <directional/TriMesh.h>
@@ -80,7 +81,7 @@ void callbackFunc() {
         update_directional_field();
     }
     if (ImGui::Button("Global Rotation")) {
-        globalRotation += directional::PI / 16;
+        globalRotation += std::numbers::pi / 16;
         update_directional_field();
     }
     const char* items[] = { "Prescribed singularity", "Principal-matching singularities", "Interpolated Field"};

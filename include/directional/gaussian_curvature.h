@@ -8,9 +8,8 @@
 #ifndef DIRECTIONAL_GAUSSIAN_CURVATURE_H
 #define DIRECTIONAL_GAUSSIAN_CURVATURE_H
 
-#include <directional/definitions.h>
 #include <Eigen/Core>
-
+#include <numbers>
 
 namespace directional
 {
@@ -28,7 +27,7 @@ inline void gaussian_curvature(const Eigen::MatrixXd& V,
     
     G.resize(V.rows());
     for (int i=0;i<V.rows();i++)
-        G(i)=(isBoundaryVertex(i) ? directional::PI : 2.0*directional::PI);
+        G(i)=(isBoundaryVertex(i) ? std::numbers::pi : 2.0*std::numbers::pi);
     
     for (int i=0;i<F.rows();i++) {
         for (int j = 0; j < 3; j++) {

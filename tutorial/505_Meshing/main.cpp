@@ -59,7 +59,6 @@ int main()
         
         std::cout<<"Solving integration for N="<<N[i]<<std::endl;
         directional::integrate(combedField[i],  intData, meshCut[i], NFunction[i],NCornerFunction[i]);
-        
         std::cout<<"Done!"<<std::endl;
         
         //setting up mesh data from integration data
@@ -67,8 +66,10 @@ int main()
         directional::setup_mesher(meshCut[i], intData, mData);
         
         //meshing and saving
-        mfiData.verbose = true;
-        directional::mesh_function_isolines(meshWhole, mData,  verbose, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+        mData.verbose = false;
+        std::cout<<"Meshing N="<<N[i]<<std::endl;
+        directional::mesher(meshWhole, mData, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+        std::cout<<"Done!"<<std::endl;
         
         viewer.set_surface_mesh(meshWhole);
         viewer.toggle_mesh(false);

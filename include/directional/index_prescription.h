@@ -11,7 +11,7 @@
 #include <Eigen/Core>
 #include <vector>
 #include <cmath>
-#include <directional/definitions.h>
+#include <numbers>
 #include <directional/CartesianField.h>
 #include <directional/rotation_to_raw.h>
 
@@ -40,7 +40,7 @@ inline void index_prescription(const Eigen::VectorXi& cycleIndices,
     using namespace Eigen;
     using namespace std;
     
-    VectorXd cycleNewCurvature = cycleIndices.cast<double>()*(2.0*directional::PI/(double)N);
+    VectorXd cycleNewCurvature = cycleIndices.cast<double>()*(2.0*std::numbers::pi/(double)N);
     
     //Initialize solver if never before
     if (!ldltSolver.rows())

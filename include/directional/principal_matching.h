@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <cmath>
+#include <numbers>
 #include <Eigen/Core>
 #include <directional/effort_to_indices.h>
 #include <directional/TangentBundle.h>
@@ -74,7 +75,7 @@ inline void principal_matching(directional::CartesianField& field, const bool is
             currEffort+= arg(vecjgc / transvecjfc);
         }
         
-        field.matching(i)=indexMinFromZero-round((currEffort-field.effort(i))/(2.0*directional::PI));
+        field.matching(i)=indexMinFromZero-round((currEffort-field.effort(i))/(2.0*std::numbers::pi));
     }
     
     //Getting final singularities and their indices

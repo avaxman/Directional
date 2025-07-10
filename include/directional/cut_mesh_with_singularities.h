@@ -12,7 +12,6 @@
 #include <Eigen/Core>
 #include <vector>
 #include <set>
-#include <directional/shortest_path.h>
 
 namespace directional {
 // Given a mesh and the singularities of a polyvector field, cut the mesh

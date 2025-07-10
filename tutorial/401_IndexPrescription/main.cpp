@@ -1,4 +1,5 @@
 #include <iostream>
+#include <numbers>
 #include <Eigen/Core>
 #include <directional/readOBJ.h>
 #include <directional/TriMesh.h>
@@ -88,7 +89,7 @@ void callbackFunc() {
         update_singularities();
     }
     if (ImGui::Button("Global Rotation")) {
-        globalRotation += directional::PI / 10;
+        globalRotation += std::numbers::pi / 10;
         update_field();
         update_singularities();
     }

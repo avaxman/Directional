@@ -54,26 +54,18 @@ int main()
     std::cout<<"curlNorm max: "<<curlNorm.maxCoeff()<<std::endl;
     
     directional::IntegrationData intData(N);
-    //cut_mesh_with_singularities(meshWhole, rawField.singLocalCycles, intData.face2cut);
+    intData.verbose=true;
     
     std::cout<<"Setting up Integration"<<std::endl;
     directional::setup_integration(rawField, intData, meshCut, combedField);
     std::vector<int> seamsList;
-    for (int i=0;i<meshWhole.F.rows();i++){
-        //int hebegin = meshWhole.FH(i);
-        //int heiterate = hebegin;
+    for (int i=0;i<meshWhole.F.rows();i++)
         for (int j=0;j<3;j++)
             if (intData.face2cut(i, j))
                 seamsList.push_back(meshWhole.FE(i,j));
-        //heiterate = meshWhole.nextH(heiterate);
-    }
-    
+       
     Eigen::VectorXi seams = Eigen::VectorXi::Map(seamsList.data(), seamsList.size());
-    
-    
-    intData.verbose=true;
     intData.integralSeamless=false;
-    
     std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
     directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
     //Extracting the UV from [U,V,-U, -V];

@@ -6,7 +6,6 @@
 #include <directional/TriMesh.h>
 #include <directional/PCFaceTangentBundle.h>
 #include <directional/CartesianField.h>
-#include <directional/definitions.h>
 
 directional::TriMesh mesh;
 directional::PCFaceTangentBundle ftb;

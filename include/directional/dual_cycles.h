@@ -11,8 +11,9 @@
 #include <vector>
 #include <set>
 #include <unordered_map>
-#include <directional/index_operations.h>
-#include <directional/definitions.h>
+#include <numbers>
+#include <directional/set_diff.h>
+#include <directional/matrix_slice.h>
 #include "tree.h"
 
 
@@ -82,12 +83,12 @@ inline void dual_cycles(const TriMesh& mesh,
         VectorXi fullIndices = VectorXi::LinSpaced(mesh.EV.rows(), 0, mesh.EV.rows() - 1);
         VectorXi reducedEFIndices, inFullIndices;
         MatrixXi reducedEF;
-        directional::setdiff(fullIndices, primalTreeEdges, reducedEFIndices, inFullIndices);
+        directional::set_diff(fullIndices, primalTreeEdges, reducedEFIndices, inFullIndices);
         VectorXi Two = VectorXi::LinSpaced(2, 0, 1);
         
         //cout<<"mesh.EF: "<<mesh.EF<<endl;
         //cout<<"reducedEFIndices: "<<reducedEFIndices<<endl;
-        directional::slice(mesh.EF, reducedEFIndices, Two, reducedEF);
+        directional::matrix_slice(mesh.EF, reducedEFIndices, Two, reducedEF);
         //cout<<"reducedEF: "<<reducedEF<<endl;
         tree(reducedEF, dualTreeEdges, dualTreeFathers);
         //converting dualTreeEdges from reducedEF to EF
@@ -277,9 +278,9 @@ inline void dual_cycles(const TriMesh& mesh,
     
     for (int i=0;i<cornerSets.size();i++){
         if (isBigCycle(i))
-            cycleCurvature(i)=directional::PI*(double)(vertexSets[i].size());
+            cycleCurvature(i)=std::numbers::pi*(double)(vertexSets[i].size());
         else
-            cycleCurvature(i)=2.0*directional::PI;
+            cycleCurvature(i)=2.0*std::numbers::pi;
         for (set<int>::iterator si=cornerSets[i].begin();si!=cornerSets[i].end();si++)
             cycleCurvature(i)-=allAngles(*si);
     }
