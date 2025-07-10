@@ -10,6 +10,7 @@
 
 #include <eigen/sparse>
 #include <directional/TriMesh.h>
+#include <directional/mass_matrices.h>
 
 
 namespace directional {
@@ -147,7 +148,13 @@ void hodge_star_1_matrix(const TriMesh& mesh,
     invHodgeStar = directional::sparse_diagonal(invWeights);
 }
 
-
+template<typename NumberType>
+void hodge_star_2_matrix(const TriMesh& mesh,
+                         Eigen::SparseMatrix<NumberType>& hodgeStar,
+                         Eigen::SparseMatrix<NumberType>& invHodgeStar) {
+    hodgeStar = directional::face_mass_matrix_2D<NumberType>(mesh, false, 1);
+    invHodgeStar = directional::face_mass_matrix_2D<NumberType>(mesh, true, 1);
 }
 
+}
 #endif

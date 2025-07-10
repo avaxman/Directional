@@ -4,7 +4,7 @@
 #include <directional/TriMesh.h>
 #include <directional/CartesianField.h>
 #include <directional/directional_viewer.h>
-#include <directional/CochainComplex.h>
+#include <directional/cochain_complex.h>
 #include <directional/gradient_matrices.h>
 #include <directional/curl_matrices.h>
 #include <directional/mass_matrices.h>
@@ -48,15 +48,15 @@ int main()
     
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(mesh, true);
-    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh, Eigen::VectorXi(), true);
-    Eigen::SparseMatrix<double> Mx = directional::face_vectors_mass_matrix_2D<double>(mesh, true);
-    Eigen::SparseMatrix<double> iMx = directional::face_vectors_mass_matrix_2D<double>(mesh, true, true);
-    Eigen::SparseMatrix<double> Mc = directional::edge_diamond_mass_matrix_2D<double>(mesh, true);
+    Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh, true);
+    Eigen::SparseMatrix<double> Mx = directional::face_mass_matrix_2D<double>(mesh);
+    Eigen::SparseMatrix<double> iMx = directional::face_mass_matrix_2D<double>(mesh, true);
+    //Eigen::SparseMatrix<double> Mc = directional::edge_diamond_mass_matrix_2D<double>(mesh, true);
     IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(mesh);
     
     int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - (mesh.F.rows()-1);
     std::cout<<"Computing cohomology basis..."<<std::endl;
-    directional::cohomology_basis(G, C, Mx,  bettiNumber, harmBasis);
+    directional::cohomology_basis(G, C, Mx, bettiNumber, harmBasis);
     std::cout<<"bettiNumber: "<<bettiNumber<<std::endl;
     std::cout<<"divergence of harmonic basis: "<<(G.adjoint()*Mx*harmBasis).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"curl of harmonic basis: "<<(C*harmBasis).cwiseAbs().maxCoeff()<<std::endl;

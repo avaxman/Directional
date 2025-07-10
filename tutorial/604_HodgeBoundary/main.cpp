@@ -20,9 +20,9 @@ int main()
     
     Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh, false);
     Eigen::SparseMatrix<double> d1 = directional::d1_matrix<double>(mesh, false);
-    Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
-    directional::hodge_star_1_matrix(mesh, hodgeStar, invHodgeStar, false);
-    Eigen::SparseMatrix<double> M2 = directional::face_mass_matrix_2D<double>(mesh, true);
+    Eigen::SparseMatrix<double> h1, invh1, h2, invh2;
+    directional::hodge_star_1_matrix(mesh, h1, invh1);
+    directional::hodge_star_2_matrix<double>(mesh, h2, invh2);
     
     //demonstrating the exact sequences even with boundary conditions
     Eigen::SparseMatrix<double> d1d0 = d1*d0;
@@ -35,7 +35,7 @@ int main()
     
     Eigen::MatrixXd harmBasis;
     int bettiNumber = mesh.EV.rows() - (mesh.V.rows()-1) - mesh.F.rows();
-    directional::cohomology_basis(d0, d1, hodgeStar,  bettiNumber, harmBasis);
+    directional::cohomology_basis(d0, d1, h1,  bettiNumber, harmBasis);
     std::cout<<"Betti number: "<<bettiNumber<<std::endl;
     
     Eigen::RowVector3d COM = mesh.V.colwise().mean();
@@ -55,15 +55,17 @@ int main()
     Eigen::VectorXd harmGT = harmBasis.col(0);
     Eigen::VectorXd z1ExactGT = d0*z0GT;
     Eigen::VectorXd z1CoexactGT, curlFiltered;
-    directional::project_exact(d1, hodgeStar, curlGT, z1CoexactGT, curlFiltered, true);
+    directional::project_exact(d1, h1, curlGT, z1CoexactGT, curlFiltered, true);
     
     //creating balanced GT results for exact, coexact, and harmonic
-    z1ExactGT.array()/=sqrt(((z1ExactGT.transpose()*hodgeStar*z1ExactGT).coeff(0,0)));
-    z1CoexactGT.array()/=sqrt(((z1CoexactGT.transpose()*hodgeStar*z1CoexactGT).coeff(0,0)));
+    z1ExactGT.array()/=sqrt(((z1ExactGT.transpose()*h1*z1ExactGT).coeff(0,0)));
+    z1CoexactGT.array()/=sqrt(((z1CoexactGT.transpose()*h1*z1CoexactGT).coeff(0,0)));
     
-    z1 = harmGT +z1ExactGT +  z1CoexactGT;
+    z1 = harmGT + z1ExactGT + z1CoexactGT;
     
-    directional::hodge_decomposition<double>(d0, d1, hodgeStar, M2, z1, 1,  z1Exact, z1Coexact,z1Harmonic, z0,  z2);
+    Eigen::SparseMatrix<double> I(mesh.F.rows(), mesh.F.rows());
+    I.setIdentity();
+    directional::hodge_decomposition<double>(d0, d1, h1, h2, z1, 1,  z1Exact, z1Coexact, z1Harmonic, z0,  z2);
     std::cout<<"Exact reproduction: "<<(z1Exact - z1ExactGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Coexact reproduction: "<<(z1Coexact - z1CoexactGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Harmonic reproduction: "<<(z1Harmonic - harmGT).cwiseAbs().maxCoeff()<<std::endl;

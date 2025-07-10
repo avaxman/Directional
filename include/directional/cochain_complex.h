@@ -102,7 +102,7 @@ void project_coexact(const Eigen::SparseMatrix<NumberType> d,
     directional::sparse_block(orderMat, matVec, A);
     Eigen::Vector<NumberType, Eigen::Dynamic> b(M.rows()+d.rows());
     b.head(M.rows()).setZero();
-    b.tail(d.rows())=d*cochain;
+    b.tail(d.rows())=MNext*d*cochain;
     
     Eigen::SparseLU<Eigen::SparseMatrix<NumberType>> solver;
     solver.compute(A);
