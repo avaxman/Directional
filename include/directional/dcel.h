@@ -114,8 +114,8 @@ public:
         }
     }
     
-    bool check_consistency(const bool verbose, const bool checkHalfedgeRepetition, const bool CheckTwinGaps,
-                           const bool checkPureBoundary) {
+    bool check_consistency(const bool verbose, const bool checkHalfedgeRepetition=true, const bool CheckTwinGaps=true,
+                           const bool checkPureBoundary=true) {
         
         for (int i = 0; i < vertices.size(); i++) {
             if (!vertices[i].valid)
@@ -913,9 +913,16 @@ public:
                 halfedges[halfedges[i].twin].edge=edges.size()-1;
             
         }
+        
+        //reorienting vertex halfedges in case of boundaries
+        for (int i=0;i<halfedges.size();i++)
+            if (halfedges[i].twin==-1)
+                vertices[halfedges[i].vertex].halfedge = i;
+        
+        
+        //assert(check_consistency(true) && "dcel::init(): something is wrong with the mesh!");
     }
-    
-    
+
     
 };
 

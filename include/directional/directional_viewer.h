@@ -362,7 +362,7 @@ public:
         //TODO: boundary vertices
         std::set<int> highlightFacesList;
         for (int i=0;i<highlightVertices.size();i++)
-            for (int j=0;j<surfaceMeshList[meshNum]->vertexValence(highlightVertices(i)) - surfaceMeshList[meshNum]->isBoundaryVertex(i);j++)
+            for (int j=0;j<surfaceMeshList[meshNum]->vertexValence(highlightVertices(i)) - surfaceMeshList[meshNum]->isBoundaryVertex(highlightVertices(i));j++)
                 highlightFacesList.insert(surfaceMeshList[meshNum]->VF(highlightVertices[i], j));
         
         Eigen::VectorXi highlightFaces(highlightFacesList.size());

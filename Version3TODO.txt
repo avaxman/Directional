@@ -1,23 +1,16 @@
 Features
 
-2. Exploring a good coefficient for GL
-3. Be verbose in the projection functions as well
 4. Draw principal directions in 305 in different colors to min/max
 6. Verbosity in integer rounding
-7. Header file cleanup and name changes
-8. Verbosity in the isoline mesher
-9. 603 still has a sign problem with non-conforming.
 
 Backend
 
 1. Remove the normalization option from power_to_raw (should be a pure conversion method)
 2. Correct assertions
 
-
 Bugs
 
-2. Fix streamlines stopping
-5. Check I'm not looking at absolute values in scalar field visualization when not needed
-6. Check 305 again, perhaps on a better mesh
-7. highlight_vertices doesn't really work with boundaries
-
+1. Fix streamlines stopping
+2. Check 305 again, perhaps on a better mesh
+3. special case for H=0 in conjugate 
+4. confidence is bad in 305.

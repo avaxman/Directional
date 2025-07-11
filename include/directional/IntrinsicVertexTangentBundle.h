@@ -58,22 +58,22 @@ public:
         cycleNormals = mesh->faceNormals;
         
         //creating vertex tangent lookup table
-        tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff());
+        tangentStartAngles.resize(mesh->V.rows(), mesh->vertexValence.maxCoeff()+1);
         for (int i=0;i<mesh->V.rows();i++){
             double totalTangentSum = (mesh->isBoundaryVertex(i) ? std::numbers::pi : 2.0*std::numbers::pi);
             double angleSum =  totalTangentSum - mesh->GaussianCurvature(i);
             tangentStartAngles.col(0).setZero();  //the first angle
-            Eigen::RowVector3d prevEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
+            Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->VH(i))))-mesh->V.row(i);
             int hebegin = mesh->VH(i);  //this should be the first boundary edge in case of boundary
-            int heiterate = mesh->twinH(mesh->prevH(hebegin));
+            int heiterate = hebegin; //mesh->twinH(mesh->prevH(hebegin));
             int j=1;
             do{
-                Eigen::RowVector3d currEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(heiterate)))-mesh->V.row(i);
-                double angleDiff = std::acos(currEdgeVector.dot(prevEdgeVector)/(prevEdgeVector.norm()*currEdgeVector.norm()));
+                Eigen::RowVector3d nextEdgeVector = mesh->V.row(mesh->HV(mesh->nextH(mesh->nextH(heiterate))))-mesh->V.row(i);
+                double angleDiff = std::acos(currEdgeVector.dot(nextEdgeVector)/(nextEdgeVector.norm()*currEdgeVector.norm()));
                 tangentStartAngles(i,j)=tangentStartAngles(i,j-1)+totalTangentSum*angleDiff/angleSum;
                 heiterate = mesh->twinH(mesh->prevH(heiterate));
                 j++;
-                prevEdgeVector=currEdgeVector;
+                currEdgeVector=nextEdgeVector;
             }while ((heiterate!=hebegin)&&(heiterate!=-1));
         }
         
