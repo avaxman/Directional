@@ -135,7 +135,7 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
         H.block(3,0,3,3) = G2;
         Eigen::RowVectorXd y0(6); y0<<rawField.extField.row(i).head(6);
         conjugacyBefore(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
-        if ((std::abs(tb->mesh->vertexPrincipalCurvatures(i,0))>10e-8)||(std::abs(tb->mesh->vertexPrincipalCurvatures(i,0))>10e-8))
+        if ((std::abs(tb->mesh->vertexPrincipalCurvatures(i,0))>10e-8)||(std::abs(tb->mesh->vertexPrincipalCurvatures(i,1))>10e-8))
             extField.row(i).head(6)<<project_on_quadric(y0, H);
         else
             extField.row(i).head(6) = y0;
