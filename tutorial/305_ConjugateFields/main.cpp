@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Core>
-#include <directional/readOBJ.h>
+#include <directional/readOFF.h>
 #include <directional/write_raw_field.h>
 #include <directional/polyvector_to_raw.h>
 #include <directional/raw_to_polyvector.h>
@@ -29,14 +29,14 @@ int N = 4;
 void callbackFunc() {
     ImGui::PushItemWidth(100);
     if (ImGui::Button("Perform Iteration")) {
-        directional::polyvector_iterate(pvData, pvFieldConjugate, iterationFunctions, 1);
+        directional::polyvector_iterate(pvData, pvFieldConjugate, iterationFunctions, directional::conjugate_termination, 1);
         directional::polyvector_to_raw(pvFieldConjugate, rawFieldConjugate, N%2==0);
         directional::principal_matching(rawFieldConjugate);
         viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 0);
         viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 0);
     }
     if (ImGui::Button("Perform Implicit Step")) {
-        directional::polyvector_iterate(pvData, pvFieldConjugate, std::vector<directional::PvIterationFunction>(), 1);
+        directional::polyvector_iterate(pvData, pvFieldConjugate, std::vector<directional::PvIterationFunction>(), directional::conjugate_termination, 1);
         directional::polyvector_to_raw(pvFieldConjugate, rawFieldConjugate, N%2==0);
         directional::principal_matching(rawFieldConjugate);
         viewer.set_cartesian_field(rawFieldConjugate,"Conjugate Field", 0);
@@ -49,7 +49,7 @@ void callbackFunc() {
 int main()
 {
     // Load mesh
-    directional::readOBJ(TUTORIAL_DATA_PATH "/inspired_mesh.obj", mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/botanic-garden-bubble.off", mesh);
     vtb.init(mesh);
     pvFieldConjugate.init(vtb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     pvFieldOrig.init(vtb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
@@ -59,12 +59,12 @@ int main()
     constVectors.resize(2*mesh.V.rows(),3);
     constSources.resize(2*mesh.V.rows(),3);
     alignWeights.resize(2*mesh.V.rows());
-    Eigen::VectorXd confidence = mesh.GaussianCurvature.cwiseAbs();
+    Eigen::VectorXd confidence = (mesh.vertexPrincipalCurvatures.col(0).array()*mesh.vertexPrincipalCurvatures.col(1).array()).cwiseAbs();
     for (int i=0;i<mesh.V.rows();i++)
         if (mesh.isBoundaryVertex(i))
             confidence(i) = 0.0;  //not aligning to these vertices
     
-    confidence = (confidence.array()-confidence.cwiseAbs().minCoeff())/(confidence.maxCoeff()-confidence.minCoeff());
+    confidence = (confidence.array()-confidence.minCoeff())/(confidence.maxCoeff()-confidence.minCoeff());
     
     for (int i=0;i<mesh.V.rows();i++){
         constVertices(2*i) = i;
@@ -79,9 +79,8 @@ int main()
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 1.0;
+    roSyWeight = 20.0;
     globalAlignWeight = 0.01;
-    //TODO: probably need a soft conjugate
     pvData.N = N;
     pvData.tb = &vtb;
     pvData.verbose = true;
@@ -98,10 +97,13 @@ int main()
     
     //Iterating for a conjugate field
     pvData.iterationMode = true;
-    pvData.initImplicitFactor = 0.5;
-    pvData.implicitScheduler = 0.9;
+    pvData.confidence = confidence;
+    pvData.initImplicitFactor = 0.01;
+    pvData.implicitScheduler = 0.7;
+    pvData.implicitFirst = false;
     iterationFunctions.push_back(directional::conjugate);
-    iterationFunctions.push_back(directional::hard_normalization);
+    //iterationFunctions.push_back(directional::hard_normalization);
+    //The initial solution
     directional::polyvector_field(pvData, pvFieldConjugate);
     rawFieldConjugate = rawFieldOrig;
     

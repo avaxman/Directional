@@ -28,6 +28,7 @@ namespace directional{
 //This file contains a collection of functions that can be used in the "local" or "projection" steps of the extended polyvector algorithm.
 
 typedef std::function<CartesianField(const CartesianField&, const PolyVectorData&)> PvIterationFunction;
+typedef std::function<bool(const CartesianField&, const PolyVectorData&)>           PvTerminationFunction;
 
 
 //Normalizes the field to have unit length on all its vectors
@@ -56,7 +57,7 @@ CartesianField soft_rosy(const CartesianField& pvField, const PolyVectorData& pv
     rosyField.col(0) = rosyField.col(0).array() / rosyField.col(0).array().abs();
     //doing closed-form implicit step
     CartesianField softRosyField = pvField;
-    Eigen::MatrixXcd interpField = (pvField.get_complex_intrinsic_field().array() + 2.0*pvData.currImplicitCoeff*rosyField.array())/(1+2.0*pvData.currImplicitCoeff);
+    Eigen::MatrixXcd interpField = (pvField.get_complex_intrinsic_field().array() + 2.0*pvData.currImplicitFactor*rosyField.array())/(1+2.0*pvData.currImplicitFactor);
     softRosyField.set_intrinsic_field(interpField);
     return softRosyField;
 }
@@ -65,7 +66,7 @@ CartesianField soft_rosy(const CartesianField& pvField, const PolyVectorData& pv
 CartesianField curl_projection(const CartesianField& pvField, const PolyVectorData& pvData){
     assert(pvData.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES && "Projecting curl only works for face-based fields for now!");
     CartesianField rawField, curlFreeFieldRaw, curlFreeFieldPv;
-    polyvector_to_raw(pvField, rawField, pvData.N%2==0, false);
+    polyvector_to_raw(pvField, rawField, pvData.N%2==0);
     directional::principal_matching(rawField);
     project_curl(rawField, Eigen::VectorXi(), Eigen::MatrixXd(), curlFreeFieldRaw);
     directional::raw_to_polyvector(curlFreeFieldRaw,  curlFreeFieldPv);
@@ -122,7 +123,7 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
     assert(pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES&& "directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!");
     
     CartesianField rawField, conjugatePvField;
-    polyvector_to_raw(pvField, rawField, pvData.N%2==0, true);
+    polyvector_to_raw(pvField, rawField, pvData.N%2==0);
     Eigen::MatrixXd extField = rawField.extField;
     IntrinsicVertexTangentBundle* tb =(IntrinsicVertexTangentBundle*)pvField.tb;
     Eigen::VectorXd conjugacy(tb->mesh->V.rows());
@@ -141,15 +142,56 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
             extField.row(i).head(6) = y0;
         extField.row(i).tail(6) = - extField.row(i).head(6);
         //checking conjugacy
-        conjugacy(i) = extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose();
+        conjugacy(i) = (extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose()).coeff(0,0);
     }
+    //std::cout<<"conjugacy: "<<conjugacy.head(20)<<std::endl;
     if (pvData.verbose){
         std:: cout<<"conjugacy before conjugate(): "<<conjugacyBefore.cwiseAbs().maxCoeff()<<std::endl;
         std:: cout<<"conjugacy after  conjugate(): "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
     }
     rawField.set_extrinsic_field(extField);
     directional::raw_to_polyvector(rawField, conjugatePvField);
+    //std::cout<<"rawField.row(0)"<<rawField.extField.row(0)<<std::endl;
+    //std::cout<<"conjugatePvField.row(0)"<<conjugatePvField.intField.row(0)<<std::endl;
+    CartesianField rawField2;
+    directional::polyvector_to_raw(conjugatePvField, rawField2, pvData.N%2==0);
+    //std::cout<<"rawField2.row(0)"<<rawField2.extField.row(0)<<std::endl;
+    //std::cout<<"rawField2 - rawField"<<(rawField.extField-rawField2.extField).maxCoeff()<<std::endl;
     return conjugatePvField;
+}
+
+bool conjugate_termination(const CartesianField& pvField, const PolyVectorData& pvData){
+    assert(pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES&& "directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!");
+    static double tolerance = 1e-3;
+    CartesianField rawField, conjugatePvField;
+    polyvector_to_raw(pvField, rawField, pvData.N%2==0);
+    //std::cout<<"rawField.row(0)"<<rawField.extField.row(0)<<std::endl;
+    Eigen::MatrixXd extField = rawField.extField;
+    IntrinsicVertexTangentBundle* tb =(IntrinsicVertexTangentBundle*)pvField.tb;
+    Eigen::VectorXd conjugacy(tb->mesh->V.rows());
+    for (int i=0;i<tb->mesh->V.rows();i++){
+        Eigen::Matrix3d G1 =tb->mesh->vertexPrincipalCurvatures(i,0)*tb->mesh->minVertexPrincipalDirections.row(i).transpose()*tb->mesh->minVertexPrincipalDirections.row(i);
+        Eigen::Matrix3d G2 =tb->mesh->vertexPrincipalCurvatures(i,1)*tb->mesh->maxVertexPrincipalDirections.row(i).transpose()*tb->mesh->maxVertexPrincipalDirections.row(i);
+        Eigen::Matrix<double, 6,6> H; H.setZero();
+        H.block(0,3,3,3) = G1;
+        H.block(3,0,3,3) = G2;
+        //conjugacy(i) = (extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose()).cwiseAbs().coeff(0,0);
+        conjugacy(i) = (extField.row(i).head(6)*H*extField.row(i).head(6).transpose()).cwiseAbs().coeff(0,0);
+        if (conjugacy(i)>tolerance){
+            if (pvData.verbose)
+                std::cout<<"Conjugace value in vertex "<<i<<" is "<<conjugacy(i)<<" and above termination threshold "<<tolerance<<std::endl;
+            return false;
+        }
+            
+    
+    }
+    //std::cout<<"conjugacy: "<<conjugacy.head(20)<<std::endl;
+    if (pvData.verbose)
+        std:: cout<<"conjugacy at termination: "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
+
+    //no value was above the termination tolerance
+    return true;
+    
 }
 
 }

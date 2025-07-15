@@ -31,12 +31,14 @@ public:
     double wSmooth;                 // Weight of smoothness
     double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
+    Eigen::VectorXd confidence;     // The confidence in each output of the iteration functions in the previous step (how much we want to keep it). Should be between [0,1], default is "1" (so it's transparent)
     double initImplicitFactor;      // Implicit smoothing factor
-    double currImplicitCoeff;       //The current implicit coeff in the given iteration
-    double implicitScheduler;       //How much to attenuate implicit factor by
-    int iterationMode;              //Making it possible to iterate energy reduction -> some custom projection function
-    int currIteration;              //The current iteration
-    
+    double currImplicitFactor;      // The current implicit coeff in the given iteration
+    double implicitScheduler;       // How much to attenuate the implicit factor with in each iteration
+    int iterationMode;              // Making it possible to iterate energy reduction -> some custom projection function
+    int currIteration;              // The current iteration
+    bool implicitFirst;             // Whether to do the implicit step first or last
+ 
     Eigen::SparseMatrix<std::complex<double>> smoothMat;    //Smoothness energy
     Eigen::SparseMatrix<std::complex<double>> roSyMat;      //Rotational-symmetry energy
     Eigen::SparseMatrix<std::complex<double>> alignMat;     //(soft) alignment energy.
@@ -54,10 +56,11 @@ public:
     Eigen::VectorXcd reducedDofs;                                   //The net solution in the minimal independent degrees of freedom
     Eigen::SparseMatrix<std::complex<double>> implicitLhs;          //The implicit system left-hand-side
     Eigen::VectorXcd implicitRhs;                                   //The implicit right-hand side
+    Eigen::SparseMatrix<std::complex<double>> confidenceMat;        //The confidence matrix for implicit iterations
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> reducProjSolver;           //The solver for the reduced dofs from the full dofs (in Least squares)
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> implicitSolver;            //The solver for the implicit system
     
-    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), iterationMode(false), currIteration(0), currImplicitCoeff(0.0), initImplicitFactor(0.5), implicitScheduler(0.8) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
+    PolyVectorData():signSymmetry(true),  tb(NULL), verbose(false), wSmooth(1.0), wRoSy(0.0), iterationMode(false), currIteration(0), currImplicitFactor(0.0), initImplicitFactor(0.5), implicitScheduler(0.8), implicitFirst(true) {wAlignment.resize(0); constSpaces.resize(0); constVectors.resize(0,3);}
     ~PolyVectorData(){}
 };
 
