@@ -373,7 +373,15 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         for (int i=0;i<iterationFunctions.size();i++)
             pvField = iterationFunctions[i](pvField, pvData);
         
+        //recreating prevSolution with reducedDof
+        for (int i = 0; i < pvField.intField.cols() / 2; ++i) {
+            fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).real() = pvField.intField.col(2 * i);
+            fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).imag() = pvField.intField.col(2 * i + 1);
+        }
+        pvData.reducedDofs = pvData.reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
         
+        
+        //Rescheduling the system
         pvData.currImplicitFactor*=pvData.implicitScheduler;
         if (std::abs(pvData.implicitScheduler-1.0)>10e-6){
             if (pvData.verbose)
@@ -384,12 +392,6 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         }
         pvData.currIteration++;
         
-        //recreating prevSolution with reducedDof
-        for (int i = 0; i < pvField.intField.cols() / 2; ++i) {
-            fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).real() = pvField.intField.col(2 * i);
-            fullDofs.segment(pvField.intField.rows() * i, pvField.intField.rows()).imag() = pvField.intField.col(2 * i + 1);
-        }
-        pvData.reducedDofs = pvData.reducProjSolver.solve(pvData.reducMat.adjoint()*pvData.M*(fullDofs-pvData.reducRhs));
         
         if (!pvData.implicitFirst){
             if (pvData.verbose){

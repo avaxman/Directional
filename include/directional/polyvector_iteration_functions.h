@@ -161,8 +161,8 @@ CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pv
 }
 
 bool conjugate_termination(const CartesianField& pvField, const PolyVectorData& pvData){
-    assert(pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES&& "directional::conjugate(): This method only works on symmetric 2^2 fields on vertices!");
-    static double tolerance = 1e-3;
+    assert(pvField.N==4 && pvData.signSymmetry && pvField.tb->discTangType()==discTangTypeEnum::VERTEX_SPACES&& "directional::conjugate_termination(): This method only works on symmetric 2^2 fields on vertices!");
+    static double tolerance = 1e-2;
     CartesianField rawField, conjugatePvField;
     polyvector_to_raw(pvField, rawField, pvData.N%2==0);
     //std::cout<<"rawField.row(0)"<<rawField.extField.row(0)<<std::endl;
@@ -177,20 +177,17 @@ bool conjugate_termination(const CartesianField& pvField, const PolyVectorData& 
         H.block(3,0,3,3) = G2;
         //conjugacy(i) = (extField.row(i).head(3)*tb->mesh->Sv[i]*extField.row(i).segment(3,3).transpose()).cwiseAbs().coeff(0,0);
         conjugacy(i) = (extField.row(i).head(6)*H*extField.row(i).head(6).transpose()).cwiseAbs().coeff(0,0);
-        if (conjugacy(i)>tolerance){
-            if (pvData.verbose)
-                std::cout<<"Conjugace value in vertex "<<i<<" is "<<conjugacy(i)<<" and above termination threshold "<<tolerance<<std::endl;
-            return false;
-        }
-            
-    
+        
     }
-    //std::cout<<"conjugacy: "<<conjugacy.head(20)<<std::endl;
-    if (pvData.verbose)
-        std:: cout<<"conjugacy at termination: "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
-
-    //no value was above the termination tolerance
-    return true;
+    if (conjugacy.maxCoeff()>tolerance){
+        if (pvData.verbose)
+            std::cout<<"Maximum conjugacy is "<<conjugacy.maxCoeff()<<" and above termination threshold "<<tolerance<<std::endl;
+        return false;
+    } else {
+        if (pvData.verbose)
+            std:: cout<<"conjugacy at termination: "<<conjugacy.cwiseAbs().maxCoeff()<<std::endl;
+        return true;
+    }
     
 }
 

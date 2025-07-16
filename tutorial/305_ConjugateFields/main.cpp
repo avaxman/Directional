@@ -49,44 +49,53 @@ void callbackFunc() {
 int main()
 {
     // Load mesh
-    directional::readOFF(TUTORIAL_DATA_PATH "/botanic-garden-bubble.off", mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/Concerthall.off", mesh);
     vtb.init(mesh);
     pvFieldConjugate.init(vtb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     pvFieldOrig.init(vtb, directional::fieldTypeEnum::POLYVECTOR_FIELD,N);
     
     //Soft constraints on principal directions
-    constVertices.resize(2*mesh.V.rows());
-    constVectors.resize(2*mesh.V.rows(),3);
-    constSources.resize(2*mesh.V.rows(),3);
+   
     alignWeights.resize(2*mesh.V.rows());
     Eigen::VectorXd confidence = (mesh.vertexPrincipalCurvatures.col(0).array()*mesh.vertexPrincipalCurvatures.col(1).array()).cwiseAbs();
     for (int i=0;i<mesh.V.rows();i++)
         if (mesh.isBoundaryVertex(i))
             confidence(i) = 0.0;  //not aligning to these vertices
     
-    confidence = (confidence.array()-confidence.minCoeff())/(confidence.maxCoeff()-confidence.minCoeff());
+    confidence = (confidence.array()-confidence.minCoeff())/(confidence.maxCoeff()-confidence.minCoeff())+10e-4;  //to avoid destabilizing the system
     
+    //Aligning to principal directions in the strongest-curved faces
+    std::vector<int> constVerticesList;
+    std::vector<Eigen::RowVector3d> constVectorsList, constSourcesList;
     for (int i=0;i<mesh.V.rows();i++){
-        constVertices(2*i) = i;
-        constSources.row(2*i) = mesh.V.row(i);
-        constVectors.row(2*i) = mesh.minVertexPrincipalDirections.row(i);
-        alignWeights(2*i) = confidence(i);
+        if (confidence(i)<0.7)
+            continue;
+        constVerticesList.push_back(i);
+        constSourcesList.push_back(mesh.V.row(i));
+        constVectorsList.push_back(mesh.minVertexPrincipalDirections.row(i));
+        constVerticesList.push_back(i);
+        constSourcesList.push_back(mesh.V.row(i));
+        constVectorsList.push_back(mesh.maxVertexPrincipalDirections.row(i));
         
-        constSources.row(2*i+1) = mesh.V.row(i);
-        constVertices(2*i+1) = i;
-        constVectors.row(2*i+1) = mesh.maxVertexPrincipalDirections.row(i);
-        alignWeights(2*i+1) = confidence(i);
+    }
+    
+    constVertices.resize(constVerticesList.size());
+    constVectors.resize(constVectorsList.size(),3);
+    constSources.resize(constSourcesList.size(),3);
+    for (int i=0;i<constVerticesList.size();i++){
+        constVertices[i] = constVerticesList[i];
+        constVectors.row(i) = constVectorsList[i];
+        constSources.row(i) = constSourcesList[i];
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 20.0;
-    globalAlignWeight = 0.01;
+    roSyWeight = 1.0;
     pvData.N = N;
     pvData.tb = &vtb;
     pvData.verbose = true;
     pvData.constSpaces = constVertices;
     pvData.constVectors = constVectors;
-    pvData.wAlignment = globalAlignWeight*alignWeights;
+    pvData.wAlignment = Eigen::VectorXd::Constant(constVertices.size(), -1);
     pvData.wSmooth = smoothWeight;
     pvData.wRoSy = roSyWeight;
     
@@ -98,11 +107,11 @@ int main()
     //Iterating for a conjugate field
     pvData.iterationMode = true;
     pvData.confidence = confidence;
-    pvData.initImplicitFactor = 0.01;
-    pvData.implicitScheduler = 0.7;
+    pvData.initImplicitFactor = 1;
+    pvData.implicitScheduler = 1;
     pvData.implicitFirst = false;
     iterationFunctions.push_back(directional::conjugate);
-    //iterationFunctions.push_back(directional::hard_normalization);
+    iterationFunctions.push_back(directional::hard_normalization);
     //The initial solution
     directional::polyvector_field(pvData, pvFieldConjugate);
     rawFieldConjugate = rawFieldOrig;
@@ -120,7 +129,7 @@ int main()
     extField<<mesh.minVertexPrincipalDirections, mesh.maxVertexPrincipalDirections, -mesh.minVertexPrincipalDirections, -mesh.maxVertexPrincipalDirections;
     viewer.set_raw_field(mesh.V, extField, "Principal directions Field", 1, 0.3*mesh.avgEdgeLength);
     viewer.set_surface_vertex_data(confidence, "Confidence function");
-    //viewer.set_surface_vertex_data(mesh.vertexPrincipalCurvatures.col(1), "Max curvature", 0);
+    //viewer.set_surface_vertex_data(mesh.GaussianCurvature, "Gaussian Curvature");
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0/255.0}, 0);
     viewer.set_callback(callbackFunc);
     viewer.launch();
