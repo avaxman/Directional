@@ -70,7 +70,7 @@ public:
     Eigen::MatrixXd barycenters;
     Eigen::MatrixXd midEdges;
     Eigen::VectorXd GaussianCurvature;
-    std::vector<Eigen::Matrix3d> Se,Sv,Sf;
+    std::vector<Eigen::Matrix2d> Sv,Sf;
     Eigen::MatrixXd minFacePrincipalDirections, minVertexPrincipalDirections;
     Eigen::MatrixXd maxFacePrincipalDirections, maxVertexPrincipalDirections;
     Eigen::MatrixXd facePrincipalCurvatures, vertexPrincipalCurvatures;
@@ -206,85 +206,42 @@ public:
         
         vertexNormals.rowwise().normalize();
         
+        //computing a local basis that aligns with the first projected edge of each triangle
+        VBx.resize(V.rows(),3);
+        VBy.resize(V.rows(),3);
+        for (int i=0;i<V.rows();i++){
+            Eigen::RowVector3d firstEdge = V.row(dcel.halfedges[dcel.halfedges[dcel.vertices[i].halfedge].next].vertex)-V.row(i);
+            VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals.row(i)))*vertexNormals.row(i);
+            VBx.row(i).normalize();
+            Eigen::RowVector3d currx=VBx.row(i);
+            Eigen::RowVector3d currn=vertexNormals.row(i);
+            VBy.row(i)=currn.cross(currx);
+            VBy.row(i).normalize();
+        }
+        
+        
+        
         midEdges.resize(EV.rows(), 3);
         for (int i=0;i<EV.rows();i++)
             midEdges.row(i) = (V.row(EV(i,0))+V.row(EV(i,1)))/2.0;
         
-        //igl::triangle_triangle_adjacency(F, TT);
-        //Curvatures
         gaussian_curvature(V,F,isBoundaryVertex, GaussianCurvature);
-        directional::shape_operator(V, F, EV, EF, faceNormals, vertexNormals,Se, Sv, Sf);
-        //computing the principal directions for all faces
-        /*minFacePrincipalDirections.resize(F.rows(),3);
-         maxFacePrincipalDirections.resize(F.rows(),3);
-         facePrincipalCurvatures.resize(F.rows(),2);
-         for (int i=0;i<F.rows();i++){
-         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(Sf[i]);
-         int best_idx = 0;
-         int minAbsIndex;
-         //std::cout<<"Min abs value: "<<eigensolver.eigenvalues().cwiseAbs().minCoeff(&minAbsIndex)<<std::endl;
-         
-         int minIndex, maxIndex;
-         minIndex = eigensolver.eigenvalues()((minAbsIndex+1)%3)>=eigensolver.eigenvalues()((minAbsIndex+2)%3) ? (minAbsIndex+2)%3 : (minAbsIndex+1)%3;
-         maxIndex = eigensolver.eigenvalues()((minAbsIndex+1)%3)>=eigensolver.eigenvalues()((minAbsIndex+2)%3) ? (minAbsIndex+1)%3 : (minAbsIndex+2)%3;
-         //std::cout<<"MinIndex, maxIndex: "<<minIndex<<","<<maxIndex<<std::endl;
-         facePrincipalCurvatures.row(i)<<eigensolver.eigenvalues()(minIndex), eigensolver.eigenvalues()(maxIndex);
-         //std::cout<<"facePrincipalCurvatures.row(i): "<<facePrincipalCurvatures.row(i)<<std::endl;
-         minFacePrincipalDirections.row(i) = eigensolver.eigenvectors().col(minIndex).transpose();
-         maxFacePrincipalDirections.row(i) = eigensolver.eigenvectors().col(maxIndex).transpose();
-         Eigen::RowVector3d operatorNormal = eigensolver.eigenvectors().col(minAbsIndex).transpose();
-         
-         // Rotating frame (hopefully slightly) to fit the face normal
-         Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(operatorNormal, faceNormals.row(i));
-         Eigen::Matrix3d R = q.toRotationMatrix();
-         
-         // Apply rotation to the eigenvectors
-         //minFacePrincipalDirections.row(i) = (R * eigensolver.eigenvectors().col(minIndex)).transpose();
-         //maxFacePrincipalDirections.row(i) = (R * eigensolver.eigenvectors().col(maxIndex)).transpose();
-         //operatorNormal = (R * eigensolver.eigenvectors().col(minAbsIndex)).transpose();
-         }*/
-        
+        directional::shape_operator(V,EV,VBx,VBy,vertexNormals, Sv);
         minVertexPrincipalDirections.resize(V.rows(),3);
         maxVertexPrincipalDirections.resize(V.rows(),3);
         vertexPrincipalCurvatures.resize(V.rows(),2);
         for (int i=0;i<V.rows();i++){
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(Sv[i]);
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> eigensolver(Sv[i]);
             int minAbsIndex;
             eigensolver.eigenvalues().cwiseAbs().minCoeff(&minAbsIndex);
-            //std::cout<<"minAbsIndex: "<<minAbsIndex<<std::endl;
-            //std::cout<<"eigensolver.eigenvectors(): "<<eigensolver.eigenvectors()<<std::endl;
-            //std::cout<<"vertexNormals.row(i): "<<vertexNormals.row(i)<<std::endl;
-            
-            //std::cout<<"accuracy of eigendecomposition: "<<eigensolver.eigenvectors()*eigensolver.eigenvalues().asDiagonal()*eigensolver.eigenvectors().transpose() - Sv[i]<<std::endl;
-            
             int minIndex, maxIndex;
-            minIndex = eigensolver.eigenvalues()((minAbsIndex+1)%3)>=eigensolver.eigenvalues()((minAbsIndex+2)%3) ? (minAbsIndex+2)%3 : (minAbsIndex+1)%3;
-            maxIndex = eigensolver.eigenvalues()((minAbsIndex+1)%3)>=eigensolver.eigenvalues()((minAbsIndex+2)%3) ? (minAbsIndex+1)%3 : (minAbsIndex+2)%3;
+            minIndex = eigensolver.eigenvalues()(0)>=eigensolver.eigenvalues()(1) ? 1 : 0;
+            maxIndex = eigensolver.eigenvalues()(0)>=eigensolver.eigenvalues()(1) ? 0 : 1;
             vertexPrincipalCurvatures.row(i)<<eigensolver.eigenvalues()(minIndex), eigensolver.eigenvalues()(maxIndex);
-            //minVertexPrincipalDirections.row(i) = eigensolver.eigenvectors().col(minIndex).transpose();
-            //maxVertexPrincipalDirections.row(i) = eigensolver.eigenvectors().col(maxIndex).transpose();
-            Eigen::RowVector3d operatorNormal = eigensolver.eigenvectors().col(minAbsIndex).transpose();
-            
-            //reorienting tensor to fit original vertex normal
-            if ((operatorNormal.dot(vertexNormals.row(i)))<0)
-                operatorNormal = -operatorNormal;
-            
-            //std::cout<<"conjugacy of principal directions: "<<minVertexPrincipalDirections.row(i)*Sv[i]*maxVertexPrincipalDirections.row(i).transpose()<<std::endl;
-            
-            // Rotating frame (hopefully slightly) to fit the face normal
-            Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(operatorNormal, vertexNormals.row(i));
-            //std::cout<<"eigenSolver.eigenvalues(): "<<eigensolver.eigenvalues()<<std::endl;
-            //std::cout<<"q: "<<q<<std::endl;
-            Eigen::Matrix3d R = q.toRotationMatrix();
-            
-            // Apply rotation to the eigenvectors
-            minVertexPrincipalDirections.row(i) = (R * eigensolver.eigenvectors().col(minIndex)).transpose();
-            maxVertexPrincipalDirections.row(i) = (R * eigensolver.eigenvectors().col(maxIndex)).transpose();
-            operatorNormal = (R * eigensolver.eigenvectors().col(minAbsIndex)).transpose();
-            Eigen::Matrix3d newEigenVectors; newEigenVectors<<minVertexPrincipalDirections.row(i), maxVertexPrincipalDirections.row(i), operatorNormal;
-            Eigen::Matrix3d newEigenValues = Eigen::Vector3d({vertexPrincipalCurvatures(i,0),vertexPrincipalCurvatures(i,1), 0.0}).asDiagonal();
-            Sv[i] = newEigenVectors.transpose()*newEigenValues*newEigenVectors;
-            
+            Eigen::RowVector2d minDirection = eigensolver.eigenvectors().col(minIndex).transpose();
+            Eigen::RowVector2d maxDirection = eigensolver.eigenvectors().col(maxIndex).transpose();
+            minVertexPrincipalDirections.row(i) = minDirection(0)*VBx.row(i)+minDirection(1)*VBy.row(i);
+            maxVertexPrincipalDirections.row(i) = maxDirection(0)*VBx.row(i)+maxDirection(1)*VBy.row(i);
         }
         
         //Average edge length
@@ -350,18 +307,7 @@ public:
             }while(hebegin!=heiterate);
         }
         
-        //computing a local basis that aligns with the first projected edge of each triangle
-        VBx.resize(V.rows(),3);
-        VBy.resize(V.rows(),3);
-        for (int i=0;i<V.rows();i++){
-            Eigen::RowVector3d firstEdge = V.row(dcel.halfedges[dcel.halfedges[dcel.vertices[i].halfedge].next].vertex)-V.row(i);
-            VBx.row(i)=firstEdge-(firstEdge.dot(vertexNormals.row(i)))*vertexNormals.row(i);
-            VBx.row(i).normalize();
-            Eigen::RowVector3d currx=VBx.row(i);
-            Eigen::RowVector3d currn=vertexNormals.row(i);
-            VBy.row(i)=currn.cross(currx);
-            VBy.row(i).normalize();
-        }
+   
         
     }
     

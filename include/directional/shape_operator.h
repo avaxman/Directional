@@ -11,8 +11,6 @@
 
 #include <Eigen/Core>
 #include <vector>
-#include <directional/igl_curvatures/principal_curvature.h>
-
 
 /***Computing principal curvatures and directions by estimating per-vertex shape operators
  Based on "Smooth Feature Lines on Surface Meshes" by Hildebrandt et al. 2005
@@ -31,7 +29,70 @@
 
 namespace directional
 {
-inline void shape_operator(const Eigen::MatrixXd& V,
+
+
+static std::unordered_map<int, std::set<int>> build_adjacency(const Eigen::MatrixXi& EV) {
+    std::unordered_map<int, std::set<int>> adj;
+    for (int i = 0; i < EV.rows(); ++i) {
+        int v0 = EV(i, 0);
+        int v1 = EV(i, 1);
+        adj[v0].insert(v1);
+        adj[v1].insert(v0);
+    }
+    return adj;
+}
+
+// Compute shape operator (2x2 Hessian of interpolated height function in tangent frame)
+void shape_operator(const Eigen::MatrixXd& V,
+                    const Eigen::MatrixXi& EV,
+                    const Eigen::MatrixXd& VBx,
+                    const Eigen::MatrixXd& VBy,
+                    const Eigen::MatrixXd& vertexNormals,
+                    std::vector<Eigen::Matrix2d>& Sv) {
+    
+    using namespace Eigen;
+
+    const int n = V.rows();
+    Sv.resize(n, Matrix2d::Constant(std::nan("")));  // default to NaNs
+
+    auto adjacency = build_adjacency(EV);
+
+    for (int vi = 0; vi < n; ++vi) {
+        const auto& neighbors = adjacency[vi];
+        
+        const RowVector3d origin = V.row(vi);
+        const RowVector3d normal = vertexNormals.row(vi).normalized();
+        const RowVector3d bx = VBx.row(vi).normalized();
+        const RowVector3d by = VBy.row(vi).normalized();
+
+        MatrixXd A(neighbors.size(), 5);
+        VectorXd rhs(neighbors.size());
+
+        int currRow = 0;
+        for (int nj : neighbors) {
+            RowVector3d delta = V.row(nj) - origin;
+            double x = delta.dot(bx);
+            double y = delta.dot(by);
+            double z = delta.dot(normal);  // height along normal direction
+
+            A.row(currRow)<<x * x, x * y, y * y, x, y;
+            rhs(currRow) = z;
+            currRow++;
+        }
+
+        VectorXd coeffs = A.colPivHouseholderQr().solve(rhs);
+        double a = coeffs(0), b = coeffs(1), c = coeffs(2);
+
+        Matrix2d H;
+        H << 2 * a, b,
+             b, 2 * c;
+
+        Sv[vi] = H;
+    }
+}
+
+
+/*inline void shape_operator(const Eigen::MatrixXd& V,
                            const Eigen::MatrixXi& F,
                            const Eigen::MatrixXi& EV,
                            const Eigen::MatrixXi& EF,
@@ -87,7 +148,7 @@ inline void shape_operator(const Eigen::MatrixXd& V,
     }*/
     
     //averaging operator to faces
-    for (int i=0;i<F.rows();i++){
+    /*for (int i=0;i<F.rows();i++){
         SelfAdjointEigenSolver<Matrix3d> esA(Sv[F(i,0)]), esB(Sv[F(i,1)]), esC(Sv[F(i,2)]);
         Matrix3d Qsum = esA.eigenvectors() + esB.eigenvectors() + esC.eigenvectors();
         JacobiSVD<Matrix3d> svd(Qsum, ComputeFullU | ComputeFullV);
@@ -95,7 +156,8 @@ inline void shape_operator(const Eigen::MatrixXd& V,
         Vector3d eval_avg = (esA.eigenvalues() + esB.eigenvalues() + esC.eigenvalues()) / 3.0;
         Sf[i] = Qavg * eval_avg.asDiagonal() * Qavg.transpose();
     }
-}
+}*/
+
 }
 
 

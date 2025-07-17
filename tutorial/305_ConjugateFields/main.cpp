@@ -109,7 +109,7 @@ int main()
     Eigen::MatrixXd extField(mesh.V.rows(), 3*N);
     extField<<mesh.minVertexPrincipalDirections, mesh.maxVertexPrincipalDirections, -mesh.minVertexPrincipalDirections, -mesh.maxVertexPrincipalDirections;
     rawFieldConjugate.set_extrinsic_field(extField);
-    directional::principal_matching(rawFieldConjugate);
+    //directional::principal_matching(rawFieldConjugate);
     directional::raw_to_polyvector(rawFieldConjugate, pvFieldConjugate, N%2==0);
     
     //Visualization
