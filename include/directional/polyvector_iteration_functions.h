@@ -170,8 +170,8 @@ bool conjugate_termination(const CartesianField& pvField, const PolyVectorData& 
     IntrinsicVertexTangentBundle* tb =(IntrinsicVertexTangentBundle*)pvField.tb;
     Eigen::VectorXd conjugacy(tb->mesh->V.rows());
     for (int i=0;i<tb->mesh->V.rows();i++){
-        Eigen::Matrix3d G1 =tb->mesh->vertexPrincipalCurvatures(i,0)*tb->mesh->minVertexPrincipalDirections.row(i).transpose()*tb->mesh->minVertexPrincipalDirections.row(i);
-        Eigen::Matrix3d G2 =tb->mesh->vertexPrincipalCurvatures(i,1)*tb->mesh->maxVertexPrincipalDirections.row(i).transpose()*tb->mesh->maxVertexPrincipalDirections.row(i);
+        Eigen::Matrix3d G1 = tb->mesh->vertexPrincipalCurvatures(i,0)*tb->mesh->minVertexPrincipalDirections.row(i).transpose()*tb->mesh->minVertexPrincipalDirections.row(i);
+        Eigen::Matrix3d G2 = tb->mesh->vertexPrincipalCurvatures(i,1)*tb->mesh->maxVertexPrincipalDirections.row(i).transpose()*tb->mesh->maxVertexPrincipalDirections.row(i);
         Eigen::Matrix<double, 6,6> H; H.setZero();
         H.block(0,3,3,3) = G1;
         H.block(3,0,3,3) = G2;

@@ -50,6 +50,7 @@ inline void polyvector_precompute(directional::CartesianField& pvField,
     if (pvData.N%2!=0) pvData.signSymmetry=false;  //it has to be for odd N
     
     pvData.totalSmoothWeight = pvField.tb->connectionMass.sum();
+    pvData.totalMass = pvField.tb->tangentSpaceMass.sum();
     
     //vector<Triplet<complex<double>>> WSmoothTriplets, MTriplets;
     for (int n = 0; n < pvData.N; n++)
@@ -87,6 +88,8 @@ inline void polyvector_precompute(directional::CartesianField& pvField,
     directional::sparse_diagonal(MVector, M);
     pvData.WSmooth = WSmooth.cast<std::complex<double>>();
     pvData.M = M.cast<std::complex<double>>();
+    
+    
     
     //pvData.WSmooth.resize(rowCounter, rowCounter);
     //pvData.WSmooth.setFromTriplets(WSmoothTriplets.begin(), WSmoothTriplets.end());
@@ -294,16 +297,10 @@ inline void polyvector_field(PolyVectorData& pvData,
     pvField.fieldType = fieldTypeEnum::POLYVECTOR_FIELD;
     pvField.set_intrinsic_field(intField);
     
-    double totalMass;
     if (pvData.iterationMode){
         if (pvData.verbose)
             std::cout<<"Iteration Mode"<<std::endl;
-        //approximating the smallest non-zero eigenvalues
-        complex<double> energy = (0.5 * pvData.reducedDofs.adjoint() * pvData.totalLhs* pvData.reducedDofs- pvData.reducedDofs.adjoint() * pvData.totalRhs).coeff(0,0);
-        complex<double> mass = (pvData.reducedDofs.adjoint() * pvData.reducMat.adjoint()*pvData.M*pvData.reducMat * pvData.reducedDofs).coeff(0,0);
-        double approxEig = std::abs(energy/mass);
-        pvData.currImplicitFactor = pvData.initImplicitFactor/approxEig;
-        pvData.currIteration = 0;
+        
         
         VectorXcd unreducedConfidence;
         if (pvData.confidence.size()==0)
@@ -316,16 +313,24 @@ inline void polyvector_field(PolyVectorData& pvData,
         }
         pvData.confidenceMat = sparse_diagonal(unreducedConfidence);
         
+        //approximating the smallest non-zero eigenvalues
+        complex<double> energy = (0.5 * pvData.reducedDofs.adjoint() * pvData.totalLhs* pvData.reducedDofs- pvData.reducedDofs.adjoint() * pvData.totalRhs).coeff(0,0);
+        complex<double> mass = (pvData.reducedDofs.adjoint() * pvData.reducMat.adjoint()*(pvData.confidenceMat.adjoint()*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs).coeff(0,0)/pvData.totalMass;
+        double approxEig = std::abs(energy/mass);
+        pvData.currImplicitFactor = pvData.initImplicitFactor/approxEig;
+        pvData.currIteration = 0;
+        
         if (pvData.verbose)
             cout<<"initial implicit coefficient: "<<pvData.currImplicitFactor<<endl;
         pvData.reducProjSolver.compute(pvData.reducMat.adjoint()*pvData.M*pvData.reducMat);
         assert(pvData.reducProjSolver.info() == Success && "Reduction Projection solver failed!");
         
-        pvData.implicitLhs = pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat +  pvData.currImplicitFactor*pvData.totalLhs;
+        pvData.implicitLhs = (pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat)/pvData.totalMass +  pvData.currImplicitFactor*pvData.totalLhs;
         pvData.implicitSolver.compute(pvData.implicitLhs);
         assert(pvData.implicitSolver.info() == Success && "Implicit factorization failed!");
     }
 }
+
 
 // Computes iterations of the extended PolyVector algorithm, which includes a single implicit step and running the set of projection iteration functions by order once.
 // Inputs:
@@ -346,7 +351,6 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         if (pvData.verbose)
             std::cout<<"Iteration no. "<<pvData.currIteration<<std::endl;
         
-        //TODO: I think there is some pipeline issue with updating reducedDOF vs fullDOFs.
         //An implicit step to reduce the energy
         Eigen::VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
         if (pvData.implicitFirst){
@@ -355,7 +359,7 @@ inline void polyvector_iterate(PolyVectorData& pvData,
                 std::cout<<"RoSy energy before implicit step: "<<(fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight);
                 std::cout<<"Total Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
             }
-            pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs;
+            pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + (pvData.reducMat.adjoint()*(pvData.confidenceMat.adjoint()*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs)/pvData.totalMass;
             pvData.reducedDofs = pvData.implicitSolver.solve(pvData.implicitRhs);
             if (pvData.verbose)
                 std::cout<<"Energy after implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
@@ -386,7 +390,7 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         if (std::abs(pvData.implicitScheduler-1.0)>10e-6){
             if (pvData.verbose)
                 std::cout<<"Current implicit factor: "<<pvData.currImplicitFactor<<std::endl;
-            pvData.implicitLhs = pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat +  pvData.currImplicitFactor*pvData.totalLhs;
+            pvData.implicitLhs = (pvData.reducMat.adjoint()*(pvData.confidenceMat.adjoint()*pvData.M*pvData.confidenceMat)*pvData.reducMat)/pvData.totalMass +  pvData.currImplicitFactor*pvData.totalLhs;
             pvData.implicitSolver.compute(pvData.implicitLhs);
             assert(pvData.implicitSolver.info() == Eigen::Success && "Implicit factorization failed!");
         }
@@ -399,7 +403,7 @@ inline void polyvector_iterate(PolyVectorData& pvData,
                 std::cout<<"RoSy energy before implicit step: "<<(fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).cwiseAbs().coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight)<<std::endl;
                 std::cout<<"Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
             }
-            pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs;
+            pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + (pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs)/pvData.totalMass;
             Eigen::VectorXcd newReducedDofs = pvData.implicitSolver.solve(pvData.implicitRhs);
             std::cout<<"Difference from previous solution: "<<(pvData.reducedDofs-newReducedDofs).cwiseAbs().maxCoeff()<<std::endl;
             pvData.reducedDofs = newReducedDofs;

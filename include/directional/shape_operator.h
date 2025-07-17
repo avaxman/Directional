@@ -11,6 +11,8 @@
 
 #include <Eigen/Core>
 #include <vector>
+#include <directional/igl_curvatures/principal_curvature.h>
+
 
 /***Computing principal curvatures and directions by estimating per-vertex shape operators
  Based on "Smooth Feature Lines on Surface Meshes" by Hildebrandt et al. 2005
@@ -41,11 +43,27 @@ inline void shape_operator(const Eigen::MatrixXd& V,
 
 {
     using namespace Eigen;
-    MatrixXd e(EV.rows(),3);
-    MatrixXd Ne(EV.rows(),3);
+    
     Se.resize(EV.rows());
     Sv.resize(V.rows());
     Sf.resize(F.rows());
+    
+    //test: trying libigl principal curvatures and directions
+    MatrixXd PD1, PD2;
+    VectorXd PV1, PV2;
+    igl::principal_curvature(V, F, PD1, PD2, PV1, PV2);
+    for (int i=0;i<V.rows();i++){
+        RowVector3d PD1local = PD1.row(i);
+        RowVector3d PD2local = PD2.row(i);
+        RowVector3d inducedNormal = PD1local.cross(PD2local);
+        Matrix3d eigenVectors; eigenVectors<<PD1.row(i), PD2.row(i),inducedNormal;
+        Matrix3d eigenValues; eigenValues(0,0)=PV1(i); eigenValues(1,1)=PV2(i), eigenValues(2,2)=0.0;
+        Sv[i] = eigenVectors.transpose()*eigenValues*eigenVectors;
+    }
+                        
+    /*MatrixXd e(EV.rows(),3);
+    MatrixXd Ne(EV.rows(),3);
+   
   
     for (int i=0;i<V.rows();i++)
         Sv[i] = Matrix3d::Zero();
@@ -66,7 +84,7 @@ inline void shape_operator(const Eigen::MatrixXd& V,
         Se[i] = He * eNe.transpose() * eNe;
         Sv[EV(i,0)] += 0.5 * Se[i] * (ne.dot(vertexNormals.row(EV(i,0))));
         Sv[EV(i,1)] += 0.5 * Se[i] * (ne.dot(vertexNormals.row(EV(i,1))));
-    }
+    }*/
     
     //averaging operator to faces
     for (int i=0;i<F.rows();i++){

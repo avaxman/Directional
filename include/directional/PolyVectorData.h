@@ -48,7 +48,7 @@ public:
     
     //Mass and stiffness matrices
     Eigen::SparseMatrix<std::complex<double>> WSmooth, WAlign, WRoSy, M;
-    double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight;    //for co-scaling energies
+    double totalRoSyWeight, totalConstrainedWeight, totalSmoothWeight, totalMass;    //for co-scaling energies
     
     //state-machine solvers and vectors
     Eigen::SparseMatrix<std::complex<double>> totalLhs;             //The total left-hand-side of the system
