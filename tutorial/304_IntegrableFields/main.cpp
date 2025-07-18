@@ -20,12 +20,10 @@ directional::PCFaceTangentBundle ftb;
 directional::CartesianField pvFieldCurlFree, rawFieldCurlFree,constraintsField, rawFieldOrig, pvFieldOrig;
 Eigen::MatrixXd constVectors;
 Eigen::VectorXd curlOrig,curlCF;
-
 double smoothWeight, roSyWeight, alignWeight;
-
 directional::DirectionalViewer viewer;
-
 int N = 4;
+
 typedef enum {CONSTRAINTS, HARD_PRESCRIPTION, SOFT_PRESCRIPTION} ViewingModes;
 ViewingModes viewingMode=CONSTRAINTS;
 
@@ -60,7 +58,7 @@ int main()
     }
     
     smoothWeight = 1.0;
-    roSyWeight = 1.0;
+    roSyWeight = 5.0;
     alignWeight = 1.0;
     
     directional::PolyVectorData pvData;
@@ -79,7 +77,7 @@ int main()
     directional::curl_matching(rawFieldOrig, curlOrig);
     
     //Iterating for a curl-free field
-    int numIterations = 25;
+    int numIterations = 10;
     pvData.iterationMode = true;
     std::vector<directional::PvIterationFunction> iterationFunctions;
     iterationFunctions.push_back(directional::soft_rosy);
@@ -99,6 +97,10 @@ int main()
     viewer.set_cartesian_field(rawFieldOrig,"Original Field", 1);
     viewer.set_cartesian_field(rawFieldCurlFree,"Curl-free Field", 2);
     viewer.set_field_color({107.0/255.0, 8.0/255.0, 125.0}, 2);
+    
+    int where;
+    std::cout<<"Maximum final curl: "<<curlCF.cwiseAbs().maxCoeff(&where)<<std::endl;
+    //viewer.highlight_faces({mesh.EF(where,0), mesh.EF(where,1)}, "bad faces", 0);
    
     //Setting both curl views to the same range to increase sensitivity and be comparable
     viewer.set_surface_edge_data(curlOrig,  "Original Abs Curl", 0)->setMapRange(std::pair<double, double>(curlOrig.cwiseAbs().minCoeff(), curlOrig.cwiseAbs().maxCoeff()/10.0));

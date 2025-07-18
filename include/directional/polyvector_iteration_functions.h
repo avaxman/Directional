@@ -117,6 +117,11 @@ Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen:
     return y.transpose(); // Return RowVectorXd
 }
 
+//This is a "no termination" function which is the case by default
+bool default_termination(const CartesianField& pvField, const PolyVectorData& pvData){
+    return false;
+}
+
 
 //Projecting a 2^2 Rosy field to a conjugate field
 CartesianField conjugate(const CartesianField& pvField, const PolyVectorData& pvData){

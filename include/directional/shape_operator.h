@@ -50,27 +50,25 @@ void shape_operator(const Eigen::MatrixXd& V,
                     const Eigen::MatrixXd& vertexNormals,
                     std::vector<Eigen::Matrix2d>& Sv) {
     
-    using namespace Eigen;
-
-    const int n = V.rows();
-    Sv.resize(n, Matrix2d::Constant(std::nan("")));  // default to NaNs
+    
+    Sv.resize(V.rows(), Eigen::Matrix2d::Constant(std::nan("")));  // default to NaNs
 
     auto adjacency = build_adjacency(EV);
 
-    for (int vi = 0; vi < n; ++vi) {
+    for (int vi = 0; vi < V.rows(); ++vi) {
         const auto& neighbors = adjacency[vi];
         
-        const RowVector3d origin = V.row(vi);
-        const RowVector3d normal = vertexNormals.row(vi).normalized();
-        const RowVector3d bx = VBx.row(vi).normalized();
-        const RowVector3d by = VBy.row(vi).normalized();
+        const Eigen::RowVector3d origin = V.row(vi);
+        const Eigen::RowVector3d normal = vertexNormals.row(vi).normalized();
+        const Eigen::RowVector3d bx = VBx.row(vi).normalized();
+        const Eigen::RowVector3d by = VBy.row(vi).normalized();
 
-        MatrixXd A(neighbors.size(), 5);
-        VectorXd rhs(neighbors.size());
+        Eigen::MatrixXd A(neighbors.size(), 5);
+        Eigen::VectorXd rhs(neighbors.size());
 
         int currRow = 0;
         for (int nj : neighbors) {
-            RowVector3d delta = V.row(nj) - origin;
+            Eigen::RowVector3d delta = V.row(nj) - origin;
             double x = delta.dot(bx);
             double y = delta.dot(by);
             double z = delta.dot(normal);  // height along normal direction
@@ -80,14 +78,14 @@ void shape_operator(const Eigen::MatrixXd& V,
             currRow++;
         }
 
-        VectorXd coeffs = A.colPivHouseholderQr().solve(rhs);
+        Eigen::VectorXd coeffs = A.colPivHouseholderQr().solve(rhs);
         double a = coeffs(0), b = coeffs(1), c = coeffs(2);
 
-        Matrix2d H;
+        Eigen::Matrix2d H;
         H << 2 * a, b,
              b, 2 * c;
 
-        Sv[vi] = H;
+        Sv[vi] = - H;
     }
 }
 

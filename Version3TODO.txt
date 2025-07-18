@@ -1,9 +1,9 @@
 Features
 
-4. Draw principal directions in 305 in different colors to min/max
-6. Verbosity in integer rounding
-
+1. Verbosity in integer rounding
+2. Switch shape_operator to work with the halfedge
 Backend
+3. Set different fields in different colors
 
 1. Remove the normalization option from power_to_raw (should be a pure conversion method)
 2. Correct assertions
@@ -11,6 +11,3 @@ Backend
 Bugs
 
 1. Fix streamlines stopping
-2. Check 305 again, perhaps on a better mesh
-3. special case for H=0 in conjugate 
-4. confidence is bad in 305.

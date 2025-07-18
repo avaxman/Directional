@@ -337,16 +337,24 @@ inline void polyvector_field(PolyVectorData& pvData,
 //  pvData: The data structure which should have been initialized with polyvector_precompute()
 //  pvField: The current POLYVECTOR_FIELD type cartesian field object
 //  iterationFunctions: the iteration functions, as objects of type PvIterationFunction (see examples in polyvector_iteration_functions.h)
+//  terminationFUnction: the function that determines if to terminate iterations by some condition.
 //  numIterations: how many iterations (of everyting) to run
 // Outputs:
 //  pvField: a POLYVECTOR_FIELD type cartesian field object
 inline void polyvector_iterate(PolyVectorData& pvData,
                                directional::CartesianField& pvField,
                                const std::vector<directional::PvIterationFunction> iterationFunctions,
-                               const directional::PvTerminationFunction terminationFunction,
-                               const int numIterations=1){
+                               const int numIterations = 1,
+                               const directional::PvTerminationFunction terminationFunction = directional::default_termination){
     
     assert(pvData.iterationMode && "polyvector_iterate(): Iteration mode has not been set");
+    
+    //checking in advance
+    if (terminationFunction(pvField, pvData)){
+        if (pvData.verbose)
+            std::cout<<"Iterations terminated by termination function"<<std::endl;
+        return;
+    }
     for (int i=0;i<numIterations;i++){
         if (pvData.verbose)
             std::cout<<"Iteration no. "<<pvData.currIteration<<std::endl;
@@ -355,8 +363,8 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         Eigen::VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
         if (pvData.implicitFirst){
             if (pvData.verbose){
-                std::cout<<"Smoothness energy before implicit step: "<<(fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs).coeff(0,0) * (pvData.wSmooth / pvData.totalSmoothWeight);
-                std::cout<<"RoSy energy before implicit step: "<<(fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight);
+                std::cout<<"Smoothness energy before implicit step: "<<std::abs((fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs).coeff(0,0) * (pvData.wSmooth / pvData.totalSmoothWeight))<<std::endl;
+                std::cout<<"RoSy energy before implicit step: "<<std::abs((fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight))<<std::endl;
                 std::cout<<"Total Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
             }
             pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + (pvData.reducMat.adjoint()*(pvData.confidenceMat.adjoint()*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs)/pvData.totalMass;
@@ -399,8 +407,8 @@ inline void polyvector_iterate(PolyVectorData& pvData,
         
         if (!pvData.implicitFirst){
             if (pvData.verbose){
-                std::cout<<"Smoothness energy before implicit step: "<<(fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs).cwiseAbs().coeff(0,0) * (pvData.wSmooth / pvData.totalSmoothWeight)<<std::endl;
-                std::cout<<"RoSy energy before implicit step: "<<(fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).cwiseAbs().coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight)<<std::endl;
+                std::cout<<"Smoothness energy before implicit step: "<<std::abs((fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs).cwiseAbs().coeff(0,0) * (pvData.wSmooth / pvData.totalSmoothWeight))<<std::endl;
+                std::cout<<"RoSy energy before implicit step: "<<std::abs((fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).cwiseAbs().coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight))<<std::endl;
                 std::cout<<"Energy before implicit step: "<<(pvData.totalLhs*pvData.reducedDofs-pvData.totalRhs).cwiseAbs().maxCoeff()<<std::endl;
             }
             pvData.implicitRhs = pvData.currImplicitFactor*pvData.totalRhs + (pvData.reducMat.adjoint()*(pvData.confidenceMat*pvData.M*pvData.confidenceMat)*pvData.reducMat * pvData.reducedDofs)/pvData.totalMass;
