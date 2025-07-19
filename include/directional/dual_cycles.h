@@ -179,7 +179,7 @@ inline void dual_cycles(const TriMesh& mesh,
     }
     
     for (int i=0;i<mesh.EV.rows();i++)
-        if (!((isBoundary(mesh.EV(i,0)))&&(isBoundary(mesh.EV(i,1)))))
+        if ((mesh.EF(i,0) != -1)&&(mesh.EF(i,1) != -1))
             innerEdgesList.push_back(i);
     
     //summing up boundary loops

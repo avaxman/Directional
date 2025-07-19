@@ -4,10 +4,11 @@ Features
 2. Switch shape_operator to work with the halfedge
 Backend
 3. Set different fields in different colors
-
-1. Remove the normalization option from power_to_raw (should be a pure conversion method)
-2. Correct assertions
+4. dual_cycles should use mesh quantities for boundaries instead of computing them again
+5. Remove the normalization option from power_to_raw (should be a pure conversion method)
+6. Correct assertions
 
 Bugs
 
 1. Fix streamlines stopping
+2. 201 doesn't allow clicking on boundaries
