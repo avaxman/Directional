@@ -16,7 +16,7 @@ directional::DirectionalViewer viewer;
 int main()
 {
     bool dirichletBoundary = false;
-    directional::readOFF(TUTORIAL_DATA_PATH "/FlatMesh.off",mesh);
+    directional::readOFF(TUTORIAL_DATA_PATH "/flatmesh.off",mesh);
     
     Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh, false);
     Eigen::SparseMatrix<double> d1 = directional::d1_matrix<double>(mesh, false);

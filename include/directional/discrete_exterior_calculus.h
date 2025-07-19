@@ -8,7 +8,7 @@
 #ifndef DIRECTIONAL_DISCRETE_EXTERIOR_CALCULUS_H
 #define DIRECTIONAL_DISCRETE_EXTERIOR_CALCULUS_H
 
-#include <eigen/sparse>
+#include <Eigen/Sparse>
 #include <directional/TriMesh.h>
 #include <directional/mass_matrices.h>
 
