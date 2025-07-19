@@ -1,11 +1,11 @@
-# Directional tutorial notes
+# Directional Tutorial
 
 
 ## Introduction
 
 Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and in many newer papers in the literature, cited within context in this tutorial and in the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries.
 
-Directional has gone through a major paradigm shift in version 3.0: the discretization is abstracted from face-based fields into general discrete tangent bundles that can represent a rich class of directional-field representations. As a result, many of the algorithm of the library can now work seamlessly on several representations without change (as an example, power fields can be computed on either vertex-based or face-based fields with the same function).
+Directional has gone through a major paradigm shift in version 2.0: the discretization is abstracted from face-based fields into general discrete tangent bundles that can represent a rich class of directional-field representations. As a result, many of the algorithms of the library can now work seamlessly on several representations without change (for example, power fields can be computed on either vertex-based or face-based fields with the same function).
 The library comprises two basic elements:
 
 1. Classes representing the basic tangent bundle and field structures. They are built with inheritance so that
@@ -13,16 +13,17 @@ functions can be written polymorphically and consequently algorithms can be appl
 
 2. Standalone functions, implementing directional-field algorithms, that take these classes as parameters.
 
-Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal,
-and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces).
-The structure of these standalone functions follows the general philosophy of [libigl](https://libigl.github.io/libigl/): the library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
-The visualization is done through a specialized class ```DirectionalViewer```, on the basis of [libigl](https://libigl.github.io/libigl/) viewer, with many extended options that allow the rendering of directional fields.
+Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions, and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.
 
-The header files contain documentation of the parameters to each function and their required composition; in this tutorial we will mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
+
+The library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
+The visualization is done through a specialized class ``DirectionalViewer``, which is a wrapper around [PolyScope](https://polyscope.run/), with many extended options that facilitate the rendering of directional fields.
+
+The header files contain documentation of the parameters to each function and their required composition; in this tutorial, we mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
 
 ### Installing the tutorial examples
 
-This tutorial comprises an exhaustive set of examples that demonstrates the capabilities of Directional, where every subchapter entails a single concept. The tutorial code can be installed by going into the `tutorial` folder from the main Directional folder, and typing the following instructions in a terminal:
+This tutorial comprises an exhaustive set of examples that demonstrate the capabilities of Directional, where every subchapter entails a single concept. The tutorial code can be installed by going into the `tutorial` folder from the main Directional folder, and typing the following instructions in a terminal:
 
 
 ```cpp
@@ -32,11 +33,13 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-This will build all tutorial chapters in the `build` folder. The necessary dependencies will be appended and built automatically. To build in windows, use the `cmake-gui ..` options instead of the last two commands, and create the project using Visual Studio, with the proper tutorial subchapter as the "startup project".
+This will build all tutorial chapters in the `bin` folder. The necessary dependencies will be appended and built automatically. To build in Windows, use the `cmake-gui ..` options instead of the last two commands, and create the project using Visual Studio, with the proper tutorial subchapter as the "startup project".
 
-To access a single example, say ``202_Sampling``, go to the ``build`` subfolder, and the executable will be there. Command-line arguments are never required; the data is read from the ``shared`` folder directly for each example.
+To access a single example, say ``202_Sampling``, go to the ``bin`` subfolder, and the executable will be there. Command-line arguments are never required; the data is read from the ``data`` folder directly for each example. Some examples save output data in the ``output`` folder.
 
-Most examples require a modest amount of user interaction; the instructions of what to do are given in the command-line output upon execution.
+Most examples require a modest amount of user interaction; the GUI should usually be clear on how to do this.
+
+#STOPPED HERE
 
 ### <a Id = "#discrete-tangent-bundles"></a>Discrete tangent bundles
 

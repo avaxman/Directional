@@ -1,5 +1,15 @@
 # Directional Version Log
 
+## Version 3.0 Changes
+
+- Libigl and CGAL are not longer dependencies.
+- The viewer is now based on PolyScope.
+- Added finite elements fields and discrete exterior calculus forms
+- Mesher is now independent, but can use GMP to speed up, if installed.
+- Added PolyVector customize algorithms, with the possibility to iterate implicit steps and projections. Exemplified by Ginzburg-Landau fields and integrable fields.
+- Phased out (temporarily) subdivision fields and conjugate fields, to modernize the code to the new version.
+
+
 ## Version 2.0 Changes
 
 - Paradigm shift of the entire library to work with polymoprhic discrete tangent bundles. All algorithms (if possible) converted to work with this paradigm directly.
