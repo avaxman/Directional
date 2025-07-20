@@ -3,9 +3,9 @@
 
 ## Introduction
 
-Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and in many newer papers in the literature, cited within context in this tutorial and in the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries.
+Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and in many newer papers in the literature, cited within context in this tutorial and the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries.
 
-Directional has gone through a major paradigm shift in version 2.0: the discretization is abstracted from face-based fields into general discrete tangent bundles that can represent a rich class of directional-field representations. As a result, many of the algorithms of the library can now work seamlessly on several representations without change (for example, power fields can be computed on either vertex-based or face-based fields with the same function).
+Discretization in Directional is abstracted by general discrete tangent bundles that can represent a rich class of directional fields. As a result, many of the library's algorithms can now work seamlessly on multiple representations without modification (for example, power fields can be computed on either vertex-based or face-based fields using the same function).
 The library comprises two basic elements:
 
 1. Classes representing the basic tangent bundle and field structures. They are built with inheritance so that
@@ -13,11 +13,13 @@ functions can be written polymorphically and consequently algorithms can be appl
 
 2. Standalone functions, implementing directional-field algorithms, that take these classes as parameters.
 
-Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions, and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.
+3. Algebraic structures, such as cochain complexes. See chapter 6 TODO: link.
+
+Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.
 
 
 The library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
-The visualization is done through a specialized class ``DirectionalViewer``, which is a wrapper around [PolyScope](https://polyscope.run/), with many extended options that facilitate the rendering of directional fields.
+The visualization is done through a specialized class `DirectionalViewer`, which is a wrapper around [PolyScope](https://polyscope.run/), with many extended options that facilitate the rendering of directional fields.
 
 The header files contain documentation of the parameters to each function and their required composition; in this tutorial, we mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
 
@@ -39,14 +41,12 @@ To access a single example, say ``202_Sampling``, go to the ``bin`` subfolder, a
 
 Most examples require a modest amount of user interaction; the GUI should usually be clear on how to do this.
 
-#STOPPED HERE
 
 ### <a Id = "#discrete-tangent-bundles"></a>Discrete tangent bundles
 
-In the continuum, directional fields are represented as elements of tangent spaces, where a tangent space is a linear space attached to each point of a manifold. The set of all such tangent spaces is called a *tangent bundle*.
+In the continuum, directional fields are represented as elements (formally: *sections*) of tangent spaces, where a tangent space is a linear space attached to each point of a manifold. The set of all such tangent spaces is called a *tangent bundle*. 
 
-In the discrete setting, a tangent bundle is a finite set of
-The central data structure of Directional is the *discrete tangent bundle*, which is a finite and discrete graph $G_{TB} = (V_{TB},E_{TB})$ of tangent spaces, which are independent vector spaces of dimension $d$. This concept is implemented in class ```TangentBundle```. Discrete tangent bundles can supply one of more of the following properties:
+In the discrete setting, a tangent bundle is a finite graph $G_{TB} = (V_{TB},E_{TB})$ of tangent spaces. Each tangent space is an independent vector space of dimension $d$. This concept is implemented in the class `TangentBundle`. Discrete tangent bundles supply one or more of the following properties:
 
 1. **Intrinsic parameterization**: vectors in a single tangent space are represented with coordinates $\left(x_1,\cdots,x_d\right)$ in an arbitrary, but fixed basis of dimension $d$. The basis itself does not need to be specified for many algorithms, it can stay abstract.
 
@@ -56,54 +56,47 @@ The central data structure of Directional is the *discrete tangent bundle*, whic
 
 4. **metric** the metric on the bundle is supplied in two quantities: ```connectionMass``` is the weight of each edge $E_{TB}$, and ```tangentSpaceMass``` packs the weights of an inner product on vectors on the bundle. That is, it has either $V_{TB}$ or $V_{TB}+E_{TB}$ that are the non-zero components of the vector mass matrix.
 
-5. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to the curvature of the cycle modulo $2\pi$. There are two types of cycles, which define the topology of the underlying manifold: *local* cycles (aking to "faces" in $G_{TB}$), which are small closed loops, and *global* cycles, which can be homological generators and boundary loops. The *singularities* of fields are defined on the local cycles.
+5. **Cycles**: $G_{TB}$ can be equipped with a notion of *cycles* $F_{TB}$ that are simply-connected closed chains of spaces. Given a connection, the *holonomy* of a cycle is the failure of a vector to return to itself following a set of parallel transports around the cycle. Concretely, it is encoded in the logarithm the product of connection matrices. In $d=2$, holonomy, which is then a single angle, is equivalent to the curvature of the cycle modulo $2\pi$. There are two types of cycles, which define the topology of the underlying manifold: *local* cycles (akin to "faces" in $G_{TB}$), which are small closed loops, and *global* cycles, which can be homological generators and boundary loops. The *singularities* of fields are defined on the local cycles.
 
-6. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
-
-$$v = Gf + M^{-1}C^Tg + h$$
-
-The inner product also introduces the discrete divergence operator $G^T\cdot M$. Note that the coexact part is divergence free since $G^T\cdot C^T = 0$. The harmonic part $h$ is both.
-
-Oftentimes the above intrinsic quantities are enough for all algorithms; nevertheless, even for reasons of input, output, and visualization, a ```TangentBundle``` will contain the following, embedding-based extrinsic quantities:
+Oftentimes, the above intrinsic quantities are enough for all algorithms; nevertheless, for reasons of input, output, and visualization, a `TangentBundle` will contain the following, embedding-based extrinsic quantities:
 
 8. **Sources and normals**: point locations and their normals (the codimensional directions of the manifold), which define the tangent planes of the manifold in the Euclidean space. Note that this doesn't mean it's a watertight mesh; that could also encode a pointcloud, for instance.
 
-9. **extrinsic to intrinsic and back**: functionality that projects extrinsic vectors into intrinsic space (might lose information), or produces the extrinsic representation of an intrinsic directional.
+9. **extrinsic to intrinsic and back**: functionality that projects extrinsic vectors into intrinsic space (might lose information), or produces the extrinsic representation of an intrinsic directional object.
 
-10. **Cycles sources and normals**. Like (7), but for the cycles themselves, This would be where singularities are ```located``` in space, and might just be a visualization quantity.
+10. **Cycles sources and normals**. Like sources and normals, but for the cycles themselves. These quantities mark the locations of the singularities in space, for visualization purposes.
 
-Two main types are currently implemented in directional: ```IntrinsicFaceTangentBundle``` implements face-based tangent spaces, where the fields are tangent to the natural plane supporting triangles of surface meshes, and ```IntrinsicVertexTangentBundle``` implements vertex-based intrinsic tangent spaces, which parameterize the cone environment of the $1$-ring directly CITE.
+Two main types are currently implemented in directional: `PCFaceTangentBundle` implements face-based tangent spaces for 2D triangle meshes, where the fields are tangent to the natural plane supporting the triangles. `IntrinsicVertexTangentBundle` implements vertex-based intrinsic tangent spaces, which parameterize the cone environment of the $1$-ring directly TODO: CITE.
 
-For example, this is how ```IntrinsicFaceTangentBundle``` implements the above quantities:
+For example, this is how `PCFaceTangentBundle` implements the above quantities:
 
 1. Intrinsic parameterization: a local basis in every face.
 2. Adjacency: dual (inner) edges between any two faces.
 3. Connection: the rotation matrix between the bases of any two adjacent faces.
 4. Cycles: the local cycles are around vertex $1$-rings, where singularities are then defined as (dual) vertex values, and global cycles are dual loops of generators and boundaries.
-5. Cochain complex: the classical FEM face-based gradient and curl.
-6. Inner product: the natural face-based mass matrix (just a diagonal matrix of face areas).
-7. Sources are face barycenters, and normals are just face normals.
-8. The projection to the supporting plane of the face and encoding in local coordinates.
-9. Vertices and vertex normals (area-weighted from adjacent faces).
+5. Inner product: the natural face-based mass matrix (just a diagonal matrix of face areas).
+6. Sources are face barycenters, and normals are just face normals.
+7. The projection to the supporting plane of the face and encoding in local coordinates.
+8. Vertices and vertex normals (area-weighted from adjacent faces) are the cycle quantities.
 
-Some of the choices above can of course be variated to different flavors of face-based fields (for instance, the metric culminating in the mass weights). ```IntrinsicFaceTangentBundle``` wraps around a an *orientable* input triangle mesh in a *single connected-component*. There are no general limitations on the genus or the boundaries. If your input comprises several connected components altogether, you should use several tangent bundles.
+Some of the choices above can be varied to different flavors of face-based fields (for instance, the metric culminating in the mass weights). ```PCFaceTangentBundle``` wraps around a an *orientable* input triangle mesh in a *single connected-component*. There are no other limitations on its genus or boundaries. If your input comprises several connected components altogether, you should use several tangent bundles.
 
 ### Representation
 
-The representation of a directional field is its encoding in each discrete tangent plane. The most important element is the number of vectors in each tangent plane, which we denote as the *degree* of the field $N$. Currently, Directional supports fields that are represented by explicit (intrinsic) coordinates, which we call a *cartesian field*, and is represented by the class ```CartesianField```. Directional currently supports the following variants of Cartesian fields[^vaxman_2016]:
+The representation of a directional field is its encoding in each discrete tangent plane. The most important element is the number of vectors in each tangent plane, which we denote as the *degree* of the field $N$. Currently, Directional supports fields that are represented by explicit (intrinsic) coordinates, which we call a *cartesian field*, and are represented by the class ```CartesianField```. Directional currently supports the following variants of Cartesian fields [^vaxman_2016]:
 
-1. **Raw** - a vector of $d\times N$ entries represents an intrinsic $1^N$-vector (a directional with $N$ independent vectors in each tangent plane) a dimension-dominant ordering: $(X_{1,1},\ldots, X_{1,d}),(X_{1,2},\ldots,X_{2,d}),\ldots (X_{N,1},\ldots, X_{N,d})$ per face. Vectors are assumed to be ordered in counterclockwise order in most Directional functions that process raw fields. the memory complexity is then $dN|V_{TB}|$ for the entire directional field. A Cartesian Field indicates being a raw-field by setting ```CartesianField::fieldType``` to ```directional::RAW_FIELD```.
+1. **Raw** - a vector of $d\times N$ entries represents an intrinsic $1^N$-vector (a directional with $N$ independent vectors in each tangent space) in dimension-dominant ordering: $(X_{1,1},\ldots, X_{1,d}),(X_{1,2},\ldots,X_{2,d}),\ldots (X_{N,1},\ldots, X_{N,d})$ per space (for instance, for $d=3$ and $N=4$ it would be $xyzxyzxyzxyz$ ordering with 12 components per tangent space). Vectors are assumed to be ordered in counterclockwise order in most Directional functions that process raw fields. the memory complexity is then $dN|V_{TB}|$ for the entire directional field. A Cartesian Field indicates being a raw field by setting ```CartesianField::fieldType``` to ```directional::RAW_FIELD```.
 2. **Power Field** - This is a unique type to $d=2$. It encodes an $N$-rotational-symmetric ($N$-RoSy) object as a single complex number $y=u^N$ relative to the local basis in the tangent space, where the $N$-RoSy is the set of roots $u \cdot e^{\frac{2\pi i k}{N}}, k \in [0,N-1]$. The magnitude is also encoded this way, though it may be neglected in some applications. The memory complexity is then $2|V_{TB}|$.
-3. **PolyVector** - Also unique to $d=2$, this is a generalization of power fields that represents an $N$-directional object in a tangent space as the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. In case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero. ***Note***: A PolyVector that represents a perfect $N$-RoSy would have all $a_i=0,\ \forall i>0$, but $a_0$ would have opposite sign from the power-field representation of the same $N$-RoSy. This is since the power field represents $u^N$ directly, whereas a PolyVector represents the coefficients of $z^N-U^N$ in this case. The memory complexity is $2N|V_{TB}|$.
+3. **PolyVector** - Also unique to $d=2$, this is a generalization of power fields that represents an $N$-directional object in a tangent space as the coefficients $a$ of a monic complex polynomial $f(z)=z^N+\sum_{i=0}^{N-1}{a_iz^i}$, which roots $u$ are the encoded $1^N$-vector field. In the case where the field is an $N$-RoSy, all coefficients but $a_0$ are zero. ***Note***: A PolyVector that represents a perfect $N$-RoSy would have all $a_i=0,\ \forall i>0$, but $a_0$ would have opposite sign from the power-field representation of the same $N$-RoSy. This is since the power field represents $u^N$ directly, whereas a PolyVector represents the coefficients of $z^N-u^N$ in this case. The memory complexity is $2N|V_{TB}|$.
 
-Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence. However, note that not every conversion is possible; for instance, it is not possible to convert from PolyVectors to power fields, as they do not possess the same power of expression. Converting into the more explicit raw representation is often needed for I/O and visualization.
+Directional provides a number of conversion functions to switch between different representations. Each of the functions is of the form ```rep1_to_rep2```, where ```rep1``` and ```rep2``` are the representation names in the above list. e.g., ```polyvector_to_raw()```. Some possible combinations are given by composing two functions in sequence. However, note that not every conversion is possible; for instance, it is not possible to convert from PolyVectors to power fields, as they do not possess the same power of expression. Converting into the more explicit raw representation is often needed for I/O and visualization, but not only.
 
 
 ## Chapter 1: I/O and Visualization
 
 ### Visualization paradigm
 
-Directional uses a specialized class called ```DirectionalViewer``` which inherits and extends the libigl ```Viewer``` class, augmenting it with functionality that pertains to directional fields. A mesh is then stored with its accompanying geometric quantities: the field, edge, vertex, and face-based scalar data, isolines, and more, that we detail in the tutorial per chapter in context. Like libigl viewer, Directional supports independent multiple meshes, each with its own set of quantities. Internally, the visualization schemes carete sub-meshes which serve as layers on the original meshes: arrows for glyphs, bars for edge highlights, etc. In practice this is encapsulated from the user and does not need to be controlled directly.
+Directional uses a specialized class called `directional::DirectionalViewer` which wraps around `PolyScope`, augmenting it with functionality that pertains to directional fields. A mesh is then stored with its accompanying geometric quantities: the field, edge, vertex, and face-based scalar data, isolines, and more, that we detail in the tutorial per chapter in context. Like PolyScope, Directional supports independent multiple meshes, each with its own set of quantities. The viewer also returns the corresponding PolyScope quantities (for instance, the `PolyScope::SurfaceMesh`), so that one can use the entire functionality of PolyScope independently.
 
 ### 101 Glyph Rendering
 
@@ -111,18 +104,20 @@ The most basic operation on directional fields is reading them from a file and d
 
 ```cpp
 
-directional::readOFF(TUTORIAL_SHARED_PATH "/bumpy.off",mesh);
-directional::read_raw_field(TUTORIAL_SHARED_PATH "/bumpy.rawfield", mesh, N, field);
-directional::read_singularities(TUTORIAL_SHARED_PATH "/bumpy.sings", field);
-directional::DirectionalViewer viewer;
+directional::readOFF(TUTORIAL_DATA_PATH "/bumpy.off",mesh);
+ftb.init(mesh);
+directional::read_raw_field(TUTORIAL_DATA_PATH "/bumpy.rawfield", ftb, N, field);
+directional::read_singularities(TUTORIAL_DATA_PATH "/bumpy.sings", field);
 
-viewer.set_mesh(mesh);
-viewer.set_field(field);
+viewer.init();
+viewer.set_surface_mesh(mesh);
+viewer.set_cartesian_field(field);
+viewer.launch();
 ```
 
 The field is read in *raw* format (see [File Formats](file_formats.md)), which is detailed in the [Introduction](#introduction). The field is *face-based*, and the singularities are consequently *vertex-based*,
 
-The singularities and glyphs (and most other properties) can be toggled by functions of the type  ```DirectionalViewer::toggle_field()``` and  ```DirectionalViewer::toggle_singularities()```.
+The singularities and glyphs (and most other properties) can be toggled directly from the common PolyScope GUI. The field (and its singularities) are named `field 0` and `singularities 0`, unless a custom name is provided by the user.
 
 ![Example 101](images/101_GlyphRendering.png)
 <p align=center><em>Glyph Rendering on a mesh with singularities.</em></p>
@@ -416,6 +411,14 @@ Directional fields can be used with subdivision surfaces in a manner which is *s
 
 ![Example 601](images/601_SubdivisionFields.png)<p align=center><em>Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.</em></p>
 
+
+COPY PASTE:
+
+6. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
+
+$$v = Gf + M^{-1}C^Tg + h$$
+
+The inner product also introduces the discrete divergence operator $G^T\cdot M$. Note that the coexact part is divergence free since $G^T\cdot C^T = 0$. The harmonic part $h$ is both.
 
 ## Outlook for continuing development
 
