@@ -124,57 +124,87 @@ The singularities and glyphs (and most other properties) can be toggled directly
 
 ### 102 Discrete Tangent Bundles
 
-This example shows a Cartesian field computed (with the power field method described in [Example 301](#301-power-fields) on either a vertex-based tangent bundle, or a face-based tangent bundle, to highlight the flexibility of choosing a discretization. The relevant code segments are:
+This example shows a Cartesian field computed (with the power-field method described in [Example 301](#301-power-fields)) on either a vertex-based tangent bundle or a face-based tangent bundle. This highlights the flexibility of choosing a discretization. The relevant code segments are:
 
 ```cpp
-directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
-powerFaceField.init(mesh, POWER_FIELD, N);
-powerVertexField.init(mesh, POWER_FIELD, N);
+
+directional::IntrinsicVertexTangentBundle vtb;
+directional::PCFaceTangentBundle ftb;
 
 ...
 
-directional::power_field(mesh, constFaces, constVectors, Eigen::VectorXd::Constant(constFaces.size(),-1.0), N, powerFaceField);
-directional::power_field(mesh, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N, powerVertexField);
+void callbackFunc()
+{
+    ImGui::PushItemWidth(100); // Make ui elements 100 pixels wide,
+    
+    if (viewingMode==FACE_FIELD)
+        if (ImGui::Button("Toggle Vertex Field"))
+            viewingMode=VERTEX_FIELD;
+    
+    if (viewingMode==VERTEX_FIELD)
+        if (ImGui::Button("Toggle Face Field"))
+            viewingMode=FACE_FIELD;
+    
+    viewer.toggle_singularities(viewingMode==FACE_FIELD, 0);
+    viewer.toggle_singularities(viewingMode==VERTEX_FIELD, 1);
+    viewer.toggle_cartesian_field(viewingMode==FACE_FIELD,0);
+    viewer.toggle_cartesian_field(viewingMode==VERTEX_FIELD,1);
+    
+    ImGui::PopItemWidth();
+}
 
-//computing power fields
-directional::power_to_raw(powerFaceField, N, rawFaceField,true);
-directional::power_to_raw(powerVertexField, N, rawVertexField,true);
+...
+
+directional::readOBJ(TUTORIAL_SHARED_PATH "/elephant.obj", mesh);
+viewer.init();
+viewer.set_callback(&callbackFunc);
+ftb.init(mesh);
+vtb.init(mesh);
+
+...
+
+viewer.set_surface_mesh(mesh);
+viewer.set_cartesian_field(rawFaceField, "Face-Based Field",  0);
+viewer.set_cartesian_field(rawVertexField, "Vertex-Based Field", 1);
+viewer.launch();
+
 ```
 
-One can see the stages of computing a field: first reading a mesh (```readOBJ()```), then initializing the approxiate tangent bundle with the mesh (```powerFace/VertexField.init()```), and then computing this power field on top of this representation (```power_field()```). The field is converted to raw representation in ```power_to_raw()```) for later visualization.
+One can see the stages of computing a field: first reading a mesh (`readOBJ()`), then initializing the approxiate tangent bundle with the mesh (`ftb/vtb.init()`), and after computing the fields and converting it to raw format, setting the two fields (with appropriate names and ordinal numbers) to the scene. Note that a visual Cartesian field is a separate entity from a surface mesh; the visual quantities needed for Cartesian field are taken from its inner tangent bundle class (you can infact show the field "floating" without the underlying mesh. `viewer.toggle_X()` functions are used to control what's shown.
 
 ![Example 102](images/102_DiscreteTangentBundles.png) <p align=center><em>Power fields on a face-based tangent bundle (left) and vertex-based (right)</em></p>
 
 
-### 103 Picking and editing
-
-This example demonstrates the editing paradigm in Directional, based on libigl picking. A face and a vector within the face are chosen, and clicking on a new direction for the vector changes it. Note the different colors for glyphs and selected faces. The specificiation of selection is done via the following code:
-
-```cpp
-directionalViewer->set_selected_faces(selectedFaces);
-directionalViewer->set_selected_vector(currF, currVec);
-
-```
-
-![Example 103](images/103_PickingEditing.png)<p align=center><em>Editing several vectors on a single face.</em></p>
-
-### 104 Streamline Tracing
+### 103 Streamline Tracing
 
 Vector fields on surfaces are commonly visualized by tracing [streamlines] (https://en.wikipedia.org/wiki/Streamlines,_streaklines,_and_pathlines). Directional supports the seeding and tracing of streamlines, for all types of directionals. The seeds for the streamlines are initialized using `DirectionalViewer::init_streamlines()`, and the lines are traced using `DirectionalViewer::streamlines_next()`. Each call to `DirectionalViewer::advance_streamlines()` extends each line by one triangle, allowing interactive rendering of the traced lines. The streamline have the same colors as the initial glyphs, where the colors fade into white as the streamline advance.
 
-![Example 104](images/104_StreamlineTracing.png)<p align=center><em>Interactive streamlines tracing.</em></p>
+![Example 103](images/103_StreamlineTracing.png)<p align=center><em>Tracing the original field (left) into streamlines (right)</em></p>
 
-### 105 Scalar quantities on meshes
+### 104 Scalar quantities on meshes
 
-It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, that also allow the setting of the viewable range of the function (the rest is clipped).
+It is possible to set and visualize scalar quantities on meshes at different discretization locations: either face based quantities that appear as flat colors per face, vertex-based (pointwise) quantities that interpolate linearly on faces, appearing smooth, and edge-based (integrated) quantities, that appear as flat quantities on a diamond mesh associates with each edge (taking a $\frac{1}{3}$ of the area of each adjacent triangle). The is controlled by the ```DirectionalViewer::set_X_data()``` functions, which also allow the setting of the viewable range of the function (the rest is clipped). The code generating the image below is:
 
-![Example 105](images/105_FaceVertexEdgeData.png)<p align=center><em>Face-, Vertex- and edge-based data on a mesh, with a field as a layer of (white) glyphs.</em></p>
+```cpp
+    viewer.set_surface_face_data(faceData, "x of normal");
+    viewer.set_surface_vertex_data(vertexData, "sin(y)");
+    viewer.set_surface_edge_data(edgeData, "principal effort");
+```
 
-### 106 Sparse Glyph View
+![Example 104](images/104_FaceVertexEdgeData.png)<p align=center><em>Edge-, Vertex- and face-based data on a mesh, with the field that induced the matching (Chapter 2).</em></p>
 
-On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_field()```.
+### 105 Sparse glyph view
 
-![Example 106](images/106_Sparsity.png)<p align=center><em>Dense and Sparse views of a field as glyphs.</em></p>
+On big meshes, it might appear cumbersome to view *all* glyphs on every face. It is possible to only view the glyphs on a subsample of faces, by using the ```sparsity``` parameter in ```DirectionalViewer::set_cartesian_field()```. This is an integer parameter that controls the density of the sampling, in terms of face distance. Note the setting of the `unitToAvgLengthRatio` parameter, which controls the length of a vector of unit magnitude, relative to the average edge length.
+
+![Example 105](images/105_Sparsity.png)<p align=center><em>Dense (sparsity 0) and Sparse (sparsity 5) views of a field as glyphs</em></p>
+
+### 106 Principal directions
+
+Principal directions, the directions of minimum and maximum normal curvature on a mesh, are important quantities for many applications. They are shown in the example below. The new code part is `viewer.set_raw_field()`, which allows setting a raw field without the entire data structure of a Cartesian field.
+
+![Example 106](images/106_PrincipalDirections.png)<p align=center><em>The minimum (left) and maximum (right) principal directions, computed on the vertices. The respective normal curvatures are color-coded.</em></p>
+
 
 
 ## Chapter 2: Discretization and Representation
@@ -183,36 +213,38 @@ In the following sections, we show some effects of working with different repres
 
 ### 201 Principal Matching
 
-One of the fundamental operations in directional-field processing is *matching*. That is, defining which vectors in tangent space $t_i$ correspond to those in adjacent tangent space $t_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in tangent space $t_i$ is matched to vector $m$ in $t_j$, then for any $l \in \mathbb{Z}$, vector $k+l$ is matched to vector $m+l$ (modulu $N$). Suppose that the orientation of the TB graph edge is $t_i \rightarrow t_j$. Then, the matching is encoded as $m-k$. The matching is sometimes not known in advance (for instance, when the Cartesian field is input or computed), and it needs to be devised from the field.
+One of the fundamental operations in directional-field processing is *matching*. That is, defining which vectors in tangent space $t_i$ correspond to those in adjacent tangent space $t_j$. In Directional, we only work with order-preserving matchings: if vector $k$ in tangent space $t_i$ is matched to vector $m$ in $t_j$, then for any $l \in \mathbb{Z}$, vector $k+l$ is matched to vector $m+l$ (modulo $N$). Suppose that the orientation of the TB graph edge is $t_i \rightarrow t_j$. Then, the matching is encoded as $m-k$. Given a directional field, the matching is sometimes not known in advance (for instance, when the Cartesian field is input or computed), and it needs to be devised from the field.
 
-Given a raw field (in assumed CCW order in every tangent space), it is possible to devise the rotation angles $\delta_{ij}$ by the process of *principal matching* [^diamanti_2014]. Principal matching is defined as the matching with minimal effort, always putting it within the range of $[-\pi, \pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
+Given a raw field (in assumed CCW order in every tangent space), and a matching, one defines the (sum of) rotation angles $\delta_{ij}$ (measured against the parallel transport) as the *effort* of the matching. The process of *principal matching* [^diamanti_2014] computes the unique matching of least effort, which is within the range of $[-N\pi, N\pi)$ (and therefore denoted as "principal"). It corresponds to the "smallest angle" matching for $N$-RoSy fields.
 
-principal matching is done through the function ```principal_matching()``` , that accepts a Cartesian field as a parameter, and computes the following:
+Principal matching is done through the function `principal_matching()`, which accepts a Cartesian field as a parameter and computes the following:
 
-1. The matching on each (directed) TB-graph edge. This is stored in the ```matching``` member of the field class.
-2. The indices of the cycles. The singular local cycles are are stored in the corresponding ```singLocalCycles``` and ```singIndices``` of the field class.
+1. The matching on each (directed) TB-graph edge. This is stored in the `matching` member of the field class.
+2. The indices of the cycles. The singular local cycles are stored in the corresponding `singLocalCycles` and `singIndices` of the field class.
 
-The singularities are computed as the <i>index</i> of each local cycle from the *effort* around it. The index of a cycle is the amount of rotations a directional object undergoes around a cycle. A directional must return to itself after a cycle, and therefore the index is an integer $I$ when a vector $m$ in the face ended up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulu $N$), where the index can be unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). Note that for face-based field singular cycles are vertices, whereas in vertex-based fields, singular cycles are faces. Further note that Directional computes singularities only around the *local* cycles. That is, ```principal_matching()``` does not update singularities around boundary or generator loops.
+Singularities are computed as the <i>index</i> of each local cycle from the effort around it. The index of a cycle is the sum of efforts around a cycle. A directional must return to itself after a cycle, and therefore, the index is an integer $I$ when a vector $m$ in the face ends up in vector $m+I$. Note that this can also include multiple full rotations (i.e., this is *not* taken modulo $N$), where the index can be unbounded. The *fractional* part of the index is encoded by the matching; however, matching alone cannot encode *integral* indices (for instance, a single vector field has trivial (Zero) matching anywhere, but can have singularities). This is the reason singularity indices are computed from summing up effort and not matching integers. Note that for face-based fields, the singular cycles are vertices, whereas in vertex-based fields, the singular cycles are faces. Further note that Directional computes singularities only around the *local* cycles. That is, `principal_matching()` does not update singularities around boundary or generator loops.
 
-![Example 201](images/201_PrincipalMatching.png)<p align=center><em>A Field is shown with singularities, and a single face is shown with the principal matching to its neighbors (in multiple colors).</em></p>
+Note that the callback function in this example shows how to pick and select faces on a mesh.
+
+![Example 201](images/201_PrincipalMatching.png)<p align=center><em>A field with singularities is shown, with a selected face illustrating principal matching via colored vectors</em></p>
 
 ### 202 Sampling
 
-This is an educational example that demonstrates the loss of information when generating a Cartesian field from rotation angles, and then trying to retrieve them back by principal matching. This causes low valence cycles and undersampling cause aliasing in the perceived field. There are three modes seen in the example:
+This is an educational example that demonstrates the loss of information when generating a Cartesian field from rotation angles, and then trying to retrieve them by principal matching. This causes low valence cycles and undersampling causes aliasing in the perceived field. There are three modes seen in the example:
 
-1. In the polar mode, the user can prescribe the index of a singularity directly, and compute the field with index prescription (see [example 401](#index-prescription)). With this, the rotation angles between adjacent faces can be arbitrarily large, and appear as noise in the low valence cycles.
+1. **Polar mode**: The user can prescribe the index of a singularity directly, and compute the field with index prescription (see [example 401](#index-prescription)). With this, the rotation angles between adjacent faces can be arbitrarily large, and appear as noise in the low-valence cycles.
 
-2. In the principal-matching mode, the rotations are reconstructed from the field, without prior knowledge of the polar-prescribed rotations from the previous mode. The large rotation between adjacent faces is lost, which gives rise to a "singularity party": many perceived singularities or a lower index.
+2. **Principal-matching mode**: The rotations are reconstructed from the field, without prior knowledge of the prescribed singularity from the polar mode. The large rotations between adjacent faces are aliased, giving rise to a "singularity party": many perceived singularities or a lower index.
 
-3. In the interpolation mode, the field is interpolated on the free faces (white) from the constrained faces (red), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
+3. In the interpolation mode, the field is interpolated from the constrained faces (red) to the free faces (white), keeping the red band fixed from the polar mode. We see a field that is smooth in the Cartesian sense, with more uniformly-placed singularities.
 
-![Example 202](images/202_Sampling.png)<p align=center><em>Alternating: the polar mode, the principal-matching mode, and the Cartesian mode.</em></p>
+![Example 202](images/202_Sampling.png)<p align=center><em>Left to right: the polar mode, the principal-matching mode, and the Cartesian mode.</em></p>
 
 ### 203 Combing
 
-Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index each face (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to prepare a directional field for integration, for instance. In the presence of singularities, the field can only be combed up to a forest of paths that connect between singularities, also known as *seams*. Note that such paths do not necessarily cut the mesh into a simply-connected patch, but may only connects subgroups of singularities with indices adding up to an integer; as a trivial example, a 1-vector field is always trivially combed, even in the presence of integral singularities, and the set of seams is zero. The combing is done through the function ```directional::combing()```. The matching in the output ```combedField``` is already set to the trivial matching in the combed regions, and the correct matching across the seam.
+Given a matching (in this case, principal matching), it is possible to "comb" the field. That is, re-index the vectors in each tangent space (keeping the CCW order), so that the vector indexing aligns perfectly with the matching to the neighbors---then, the new matching on the dual edges becomes trivially zero. This operation is important in order to prepare a directional field for integration. In the presence of singularities, the field can only be combed up to a forest of paths that connect between singularities, also known as *seams*. Note that such paths do not necessarily cut the mesh into a simply-connected patch, but may only connect subgroups of singularities with indices adding up to an integer; as a trivial example, a 1-vector field is always trivially combed, even in the presence of integral singularities, and the set of seams is empty. The combing is done through the function `directional::combing()`. The matching in the output `combedField` is already set to the trivial matching in the combed regions, and the correct matching across the seam.
 
-![Example 203](images/203_Combing.png)<p align=center><em>Colored indices of directionals, alternating between combed (with seams) and uncombed) indexing.</em></p>
+![Example 203](images/203_Combing.png)<p align=center><em>Colored indices of an uncombed field (left), and a combed one (right). Seams are in black</em></p>
 
 ## Chapter 3: Cartesian Methods
 
