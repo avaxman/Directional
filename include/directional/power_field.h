@@ -40,6 +40,7 @@ inline void power_field(const TangentBundle& tb,
     PolyVectorData pvData;
     pvData.N = N;
     pvData.tb = &tb;
+    //pvData.verbose = true;
     if (constSpaces.size()!=0) {
         pvData.constSpaces = constSpaces;
         pvData.constVectors = constVectors;

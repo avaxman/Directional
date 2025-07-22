@@ -254,46 +254,87 @@ The Cartesian representation is a meta-category for representation of vectors in
 
 ### <a Id = "#power-fields"></a>301 Power Fields
 
-This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" coined in [^azencot_2017].
+This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" which is coined in [^azencot_2017]. A power field representation uses a complex basis in each tangent plane of a discrete tangent bundle, and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
 
-A power field representation uses a complex basis in each tangent plane of a discrete tangent bundle, and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
-
-By prescribing constraints $y_B$ on a set of faces $B$, the algorithm interpolates the field to the rest of the faces $y_I$ by minimizing the face-based quadratic Dirichlet energy:
-
-$$Y_I=\text{argmin}\sum_{e=(f,g)\in F \times F}{\omega_e\left|Y_fe_f^N - Y_ge_g^N\right|^2},$$
-
-where $e_f$ is the representation of the vector of edge $e$ in the basis of $f$, and $e_g$ is for $g$ respectively. The weights $\omega_e$ are the harmonic weights as given by [^brandt_2018]. The field is computed through the function `directional::power_field()`. It is possible to softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
-
-$$y_I=\text{argmin} \left[\lambda_S\sum_{e=(f,g)}{\omega_e\left|Y_fe_f^N  - Y_ge_g^N\right|^2}+\lambda_B\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
-
-where $\lambda_S,\lambda_C, \omega_c, \forall c\in C$ are user-controlled.
+By prescribing constraints $y_C$ on a set of tangent spaces $C$, the algorithm interpolates the field to the rest of the spaces $y_I = V_{TB} \setminus y_C$ by minimizing the face-based quadratic Dirichlet energy:
 
 
-If the set $B$ is empty, the field is only well-defined up to a global rotation; therefore, the algorithm arbitrarily sets a single vector in one tangent space and interpolates it to the rest of the mesh.
+$$Y_I=\text{argmin}\sum_{e=(f,g) \in E_{TB}}{\omega_e\left|Y_fr_{fg}^N - Y_g\right|^2},$$
+
+where $r_{fg} \in \mathbb{C}$ is the connection coefficient between tangent spaces $f$ and $g$, and $\omega_e$ are the connection weights. For instance, in the face-based `PCFaceTangentBundle`,  $r_{fg} = \frac{e_g}{e_f}$, where $e_f$ and  $e_g$ are the normalized edge vectors in their local complex bases, and the weights $\omega_e$ are the harmonic weights as given by [^brandt_2018]. The field is computed through the function `directional::power_field()`. It is possible to softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
+
+$$y_I=\text{argmin} \left[\sum_{e=(f,g)\in E_{TB}}{\omega_e\left|Y_fr_{fg}^N  - Y_g\right|^2}+\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
+
+where $\omega_c, \forall c\in C$ are user-controlled. The control of soft vs. hard constraints is expressed in this part of the code: 
+
+```cpp
+
+void recompute_field()
+{
+    directional::power_field(vtb, constVertices, constVectors, Eigen::VectorXd::Constant(constVertices.size(),-1.0), N,powerFieldHard, normalizeField);
+    directional::power_field(vtb, constVertices, constVectors, alignWeights, N,powerFieldSoft, normalizeField);
+}
+
+```
+The `alignWeights` parameter can either express a soft constraint $\omega_c$, or, where it is smaller than zero, it encodes a hard constraint that will be interpolated (it's possible to then mix both hard and soft constraints).
+
+
+If the set $C$ is empty, the field is only well-defined up to a global rotation; therefore, the algorithm arbitrarily sets a single vector in one tangent space and interpolates it to the rest of the mesh.
+
 ![Example 301](images/301_PowerFields.png)<p align=center><em>Hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.</em></p>
 
 
 ### <a Id = "#polyvectors"></a>302 PolyVectors
 
-A Polyvector field [^diamanti_2014] is a generalization of power fields that allows to represent independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local compex basis:
+A Polyvector field [^diamanti_2014] is a generalization of power fields that allows for representing independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local complex basis:
 
 $$P(z) = X_0 + X_1z + \ldots + X_{N-1} z^{N-1} + z^N,$$
 
-where the roots $P(z)=0$ are the vectors of the face-based directional object, represented as complex numbers in the local basis. The Dirichlet energy is as for power fields, except with a term for each $a_i$, with the appropriate power $i$. Note that an $N$-RoSy is represented as a polynomial where all $a$ are zero except $a_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
+where the roots $P(z)=0$ are the vectors of the face-based directional object, represented as complex numbers in the local basis. The Dirichlet energy is as for power fields, except with a term for each $X_i$, with the appropriate power $i$. Note that an $N$-RoSy is represented as a polynomial where all $X$'s are zero except $X_0$. Principal matching, combing, and effort are well-defined on PolyVectors as well.
 
-With the function ```polyvector_field()``` one can solve the linear Polyvector problem in its full capacity; the input is a set of prescribed constraints $v_b$ per tangent space set $B \subset V_{TB}$, where you can prescribe any amount of vectors smaller of equal than $N$ (unless there is symmetry) per tangent space (that means we allow set $B$ to have repeating tangent spaces). Further consider the soft-alignment vectors $v_c$ for face set $c \subset C$, accompanied by an alignment weight $\omega_c$ (again with repeating faces). We then solve the following quadratic optimization problem:
+With the function ```polyvector_field()``` one can solve the linear Polyvector problem in its full capacity; the input is a set of prescribed hard constraints $v_b$ per tangent space set $B \subset V_{TB}$, where one can prescribe any number of vectors smaller of equal than $N$ (unless there is symmetry) per tangent space (that means we allow set $C$ to have repeating tangent spaces). Further consider the soft-alignment vectors $v_c$ for face set $c \subset C$, accompanied by an alignment weight $\omega_c$ (again with possibly repeating tangent space). We then solve the following quadratic optimization problem:
 
-$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g)}{\omega_e\left|X_{n,f}e_f^{N-n} - X_{n,g}e_g^{N-n}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{f}{A_f\left|X_{n,f}\right|^2}}\right)+\left(\lambda_C\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
+$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g) \in E_{TB}}{\omega_e\left|X_{n,f}r_{fg}^{N-n} - X_{n,g}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{v \in V_{TB}}{w_v\left|X_{n,f}\right|^2}}\right)+\left(\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
 
-So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Meekes_2021]. The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\lambda_C$. It is also possible to constrain the field to be a perfect power field; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
+So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Meekes_2021]. $\omega_v$ is the mass of the tangent space (for instance, the area of a face in face-based fields). The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\omega_c$. It is also possible to constrain the field to be a perfect power field by setting $\lambda_R=-1$; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
 
-![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right).</em></p>
+The algorithm is controled by the data structure `PolyVectorData`, with the important following fields:
 
-### <a Id = "#polycurl-reduction"></a>303 PolyCurl Reduction
+```cpp
+
+struct PolyVectorData{
+public:
+    
+    //User parameters
+    Eigen::VectorXi constSpaces;    // List of tangent spaces where there are (partial) constraints. The faces can repeat to constrain more vectors
+    Eigen::MatrixXd constVectors;   // Corresponding to constSpaces.
+    ...
+    int N;                          // Degree of field
+    const TangentBundle* tb;        //The tangent bundle on which the field is defined
+    bool verbose;                   //whether to output anything
+    bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
+    double wSmooth;                 // Weight of smoothness
+    double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
+    Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
+    ...
+};
+
+```
+
+`wSmooth` is $\lambda_S$, `wRosy` is $\lambda_R$, and `wAlignment` is $\omega_c$ (and where it is $-1$ this marks a constraint in $B$). `verbose` should be flagged when output is expected (`false` by default), and `signSymmetry` is flagged when the algorithm should enforce that for every vector $u$ in any single PolyVector in a tangent space, the PolyVector also contains $-u$ (only if $N$ is even); it is `true` by default.
+
+![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right) TODO Replace.</em></p>
+
+**Extension: PolyVector Iterations**: The polyvector algorithm allows for alternate smooth-and-project iterations, which are commonplace in may algorithms CITE. The next two subchapters of Chapter 3 are examples.
+
+### <a Id = "#Ginzburg-Landau"></a>303 Ginzburg-Landau Fields
+
+STOPPED HERE
+
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
 Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors in the two adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the PolyVector itself, allowing for singularities to naturally emerge. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors (for a bijective parameterization), and opting for as smooth and orthogonal as possible result.
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors in the two adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the PolyVector itself, allowing for singularities to emerge naturally. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors (for a bijective parameterization), and opting for as smooth and orthogonal as possible result.
 
 A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-integration-and-meshing). We demonstrate the PolyCurl-reduction optimization. Note that this tutorial demonstrates an alternative matching ```curl_matching()```with that minimizes curl instead of rotation.
 

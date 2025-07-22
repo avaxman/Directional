@@ -290,6 +290,12 @@ inline void polyvector_field(PolyVectorData& pvData,
     assert(solver.info() == Success && "PolyVector solver failed!");
     VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
     
+    if (pvData.verbose){
+        std::cout<<"Smoothness energy: "<<std::abs((fullDofs.adjoint()*pvData.smoothMat.adjoint()*pvData.WSmooth*pvData.smoothMat*fullDofs).coeff(0,0) * (pvData.wSmooth / pvData.totalSmoothWeight))<<std::endl;
+        std::cout<<"RoSy energy: "<<std::abs((fullDofs.adjoint()*(pvData.roSyMat.adjoint()*pvData.WRoSy*pvData.roSyMat)*fullDofs).coeff(0,0) * (pvData.wRoSy/pvData.totalRoSyWeight))<<std::endl;
+        std::cout<<"Alignment energy: "<<((pvData.alignMat.adjoint()*pvData.WAlign*pvData.alignMat)/pvData.totalConstrainedWeight * fullDofs - totalUnreducedRhs).cwiseAbs().maxCoeff()<<std::endl;
+    }
+    
     MatrixXcd intField(pvData.tb->numSpaces, pvData.N);
     for (int i=0;i<pvData.N;i++)
         intField.col(i) = fullDofs.segment(i*pvData.tb->numSpaces,pvData.tb->numSpaces);
@@ -300,7 +306,6 @@ inline void polyvector_field(PolyVectorData& pvData,
     if (pvData.iterationMode){
         if (pvData.verbose)
             std::cout<<"Iteration Mode"<<std::endl;
-        
         
         VectorXcd unreducedConfidence;
         if (pvData.confidence.size()==0)

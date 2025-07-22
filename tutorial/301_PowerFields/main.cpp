@@ -32,6 +32,7 @@ void recompute_field()
 void update_visualization()
 {
     directional::power_to_raw((viewFieldHard ? powerFieldHard : powerFieldSoft), N, rawField);
+    std::cout<<"viewFieldHard: "<<viewFieldHard<<std::endl;
     
     directional::principal_matching(rawField);
     viewer.set_cartesian_field(rawField,"Power field");
@@ -47,19 +48,56 @@ void update_visualization()
     
     directional::power_to_raw(constraintPowerField, N, constraintRawField);
     viewer.set_cartesian_field(constraintRawField, "Constraints", 1);
+    viewer.set_field_color({255.0/255.0, 255.0/255.0, 0.0}, 1);
     viewer.highlight_vertices(constVertices);
     
 }
 
 void callbackFunc()
 {
-    viewer.psSurfaceMeshList[0]->setSelectionMode(polyscope::MeshSelectionMode::FacesOnly);
+    ImGui::PushItemWidth(300);
     
     if (ImGui::Checkbox("Normalize Field", &normalizeField)){
         recompute_field();
         update_visualization();
     }
     
+    const char* items[] = { "Hard prescription", "Soft prescription"};
+    static const char* current_item = NULL;
+    
+    float combo_width = 0.0f;
+    if (combo_width == 0.0f) {
+        ImGuiStyle& style = ImGui::GetStyle();
+        for (auto& item : items)
+            combo_width = std::max(combo_width, ImGui::CalcTextSize(item).x);
+        combo_width += style.FramePadding.x * 5.0 + ImGui::GetFontSize() + style.ItemInnerSpacing.x;
+    }
+    
+    ImGui::PushItemWidth(combo_width);
+    if (ImGui::BeginCombo("Viewing mode", current_item)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
+            if (ImGui::Selectable(items[n], is_selected)){
+                current_item = items[n];
+                switch (n){
+                    case 0:
+                        viewFieldHard = true;
+                        break;
+                    case 1:
+                        viewFieldHard = false;
+                        break;
+                }
+                update_visualization();
+            }
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+        }
+        ImGui::EndCombo();
+    }
+    
+    viewer.psSurfaceMeshList[0]->setSelectionMode(polyscope::MeshSelectionMode::FacesOnly);
     ImGuiIO& io = ImGui::GetIO();
     if (io.MouseClicked[0]) { // if clicked
         glm::vec2 screenCoords{io.MousePos.x, io.MousePos.y};
@@ -88,7 +126,7 @@ void callbackFunc()
                     constVectors.conservativeResize(constVectors.rows() + 1, 3);
                     alignWeights.conservativeResize(alignWeights.size()+1);
                     if (alignWeights.size()==1)
-                        alignWeights(0)=1.0;
+                        alignWeights(0)=10e-4;
                     else
                         alignWeights(alignWeights.size()-1)=alignWeights(alignWeights.size()-2);
                 }

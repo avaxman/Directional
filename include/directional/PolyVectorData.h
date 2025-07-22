@@ -27,7 +27,7 @@ public:
     const TangentBundle* tb;        //The tangent bundle on which the field is defined
     bool verbose;                   //whether to output anything
     bool signSymmetry;              // Whether field enforces a ssign symmetry (only when N is even, otherwise by default set to false)
-    bool perfectRoSy;               // Whether the field must be perfect rotationally-symmetric (but not unit).
+    //bool perfectRoSy;               // Whether the field must be perfect rotationally-symmetric (but not unit).
     double wSmooth;                 // Weight of smoothness
     double wRoSy;                   // Weight of rotational-symmetry. "-1" means a perfect RoSy field (power field)
     Eigen::VectorXd wAlignment;     // Weight of alignment per each of the constfaces. "-1" means a fixed vector
