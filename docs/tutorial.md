@@ -363,31 +363,22 @@ The basic version is highly configurable, including switching steps (1) and (2),
 ![Example 303](images/303_GinzburgLandauFields.png)<p align=center><em>Left: The original PolyVector Fields. Right: After MBO iterations. Note the improved singularity in the zoom-in.</em></p>
 
 
+### <a Id = "#integrable-fields"></a>304 Integrable Fields
 
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
 Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. In [^diamanti_2015], a method for creating integrable polyvector fields was introduced by the process of *curl reduction*. This method takes as input a given field and improves its integrability by iteratively reducing the *PolyCurl* of the field; that is, the coefficients of a dual-edge-based polynomial, whose roots are the curl of the matched vectors in the two adjacent faces. By working with PolyCurl instead of matching, the optimization can be done on the PolyVector itself, allowing for singularities to emerge naturally. However, the optimization is nonlinear---it reduces the PolyCurl iteratively, while preserving the CCW order of the vectors (for a bijective parameterization), and opting for as smooth and orthogonal as possible result.
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. 
 
-A field that has zero PolyCurl everywhere is locally (away from singularities) integrable into $N$ different scalar functions; globally, it is integrable into a *rotationally-seamless* multi-branched function, which we further demonstrate in [Chapter 5](#chapter-5-seamless-integration-and-meshing). We demonstrate the PolyCurl-reduction optimization. Note that this tutorial demonstrates an alternative matching ```curl_matching()```with that minimizes curl instead of rotation.
+In modern methods, this is usually achieved by a smooth-and-reduce-curl approach, which is again doable by the PolyVector Iterations, and using the following projection functions:
 
-![Example 303](images/303_PolyCurlReduction.png)<p align=center><em>PolyCurl is iteratively reduced from an initial PolyVector field, Top: fields for iteration 0 (original), 10, and 50. Bottom: PolyCurl plots. The color is the norm of the vector of the roots of the PolyCurl. Its maximal value (infinity norm) appears below.</em></p>
+```cpp
+iterationFunctions.push_back(directional::soft_rosy);  iterationFunctions.push_back(directional::curl_projection);
+```
+`soft_rosy()` works by only taking the PolyVector part-way towards a perfect RoSy, and `curl_projection()` does principal matching, and then projects out the curl of the field. Following the iterations, the field is by design curl-free numerically, and the `curl_matching()` retrieves it.
 
-### 304 Conjugate Fields
+![Example 304](images/304_IntegrableFields.png)<p align=center><em>Left: The original PolyVector Fields. Right: An Integrable field (the curl is color-coded with maximum of 0.09 at yellow).</em></p>
 
-This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
-
-Two tangent vectors $u$ and $v$ are conjugate if
-
-$$k_1 (u^T d_1)(v^T d_1) + k_2(u^T d_2)(v^T d_2) = 0, $$
-where $k_1$ and $k_2$ are the principal curvatures and $d_1$ and $d_2$ are the respective principal directions.
-
-Conjugate vector fields are very important in architectural geometry: their integral lines form, informally speaking, an infinitesimal planar quad mesh. As such, the finite quad mesh that results from discretizing conjugate networks is a good candidate for consequent planarity parameterization [^liu_2011].
-
-Finding a conjugate vector field that satisfies given directional constraints is a standard problem in architectural geometry, which can be tackled by deforming a $2^2$ PolyVector field to the closest conjugate field. Such an algorithm was presented in [^diamanti_2014], which alternates between a global smoothness and orthogonality step, and a local step that projects the field on every face to the closest conjugate field.
-
-
-![Example 304](images/304_ConjugateFields.png)<p align=center><em>A smooth $2^2$-PolyVector field (left) is deformed to become a conjugate field (right). Top: fields Bottom: conjugacy plots.</em></p>
 
 
 ## Chapter 4: Polar Methods
