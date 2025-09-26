@@ -360,6 +360,9 @@ The new parts are the function `polyvector_iterate` that runs an iterative algor
 
 The basic version is highly configurable, including switching steps (1) and (2), and is controlled by the `PolyVectorData` structure. This includes, for instance, the ability to slow the implicit step (equivalent to playing with $\epsilon$) according to some scheduling. In the GL example, we simply include a project of a polyvector to a perfect RoSy field, using the `hard_rosy()` function.
 
+![Example 303](images/303_GinzburgLandauFields.png)<p align=center><em>Left: The original PolyVector Fields. Right: After MBO iterations. Note the improved singularity in the zoom-in.</em></p>
+
+
 
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
