@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [^vaxman_2016] and [^degoes_2016], and in many newer papers in the literature, cited within context in this tutorial and the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries.
+Directional is a C++ geometry processing library focused on directional-field processing. The functionality is based on the definitions and taxonomy surveyed theoretically in [[Vaxman et al. 2016](#Vaxman2016)] and [[de Goes et al. 2016](#deGoes2016)], and in many newer papers in the literature, cited within context in this tutorial and the code. Directional contains tools to edit, analyze, and visualize directional fields of various degrees, orders, and symmetries.
 
 Discretization in Directional is abstracted by general discrete tangent bundles that can represent a rich class of directional fields. As a result, many of the library's algorithms can now work seamlessly on multiple representations without modification (for example, power fields can be computed on either vertex-based or face-based fields using the same function).
 The library comprises two basic elements:
@@ -435,17 +435,17 @@ bool verbose;           //output the integration log.
 
 ### 502 Integration in various orders
 
-Directional can handle integration for every $N$, including less common ones like the non-periodic $N \neq 2,3,4,6$. The properties of fields and integration in such unconventional $N$ are explored in [^Meekes_2021].
+Directional can handle integration for every $N$, including less common ones like the non-periodic $N \neq 2,3,4,6$. The properties of fields and integration in such unconventional $N$ are explored in [[Meekes and Vaxman 2021](#Meekes2021)].
 
-In this example we demonstrate the results for $N=2,4,7,11$, for the same ```lengthRatio```, and all fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting.  
+In this example, we demonstrate the results for $N=2,4,7,11$, for the same `lengthRatio`. All are fully seamless. Note that the density of the isolines increases with $N$, and that we round the singularity function values, leading to junctions of multiple isolines meeting.  
 
 ![Example 502](images/502_DifferentOrders.png)<p align=center><em>Left to right: $N=2,4,7,11$. Top: field. Bottom: integer isolines.</em></p>
 
 ### 503 Rounding either seams or singularities
 
-It is possible to choose whether to round the seam jumps $T_e \in \mathbb{Z}^N$ directly, or the function values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases the seams will have integer values, but the latter case is more restrictive and will result in multiple isolines meeting at every singularity. For quad meshes with $N=4$, for instance, this is the difference between pure-quad results (round singularities), or just quad-dominant (round seams).
+It is possible to choose whether to round the seam jumps $T_e \in \mathbb{Z}^N$ directly, or the function values around singularities (and of topological handles, in case of non-simply-connected topology). In both cases, the seams will have integer values, but the latter case is more restrictive and will result in multiple isolines meeting at every singularity. For quad meshes with $N=4$, for instance, this is the difference between pure-quad results (round singularities), or just quad-dominant (round seams).
 
-![Example 503](images/503_SeamsSingsRounding.png)<p align=center><em>Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the right singularity being offset), and rounding singularity function values directly.]</em></p>
+![Example 503](images/503_SeamsSingsRounding.png)<p align=center><em>Left to right (bottom is zoom-in of top): Field, rounding only seams (leading to the top singularity being offset), and rounding singularity function values directly.]</em></p>
 
 ### 504 Linear Reductions
 
@@ -533,7 +533,7 @@ Directional is a budding project, and there are many algorithms in the state-of-
 <a id="Diamanti2015"></a>Diamanti et al., 2015
 : Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, Integrable PolyVector Fields.
 
-<a id="Degoes2016"></a>de Goes et al., 2016
+<a id="deGoes2016"></a>de Goes et al., 2016
 : Fernando de Goes, Mathieu Desbrun, Yiying Tong, Vector Field Processing on Triangle Meshes.
 
 <a id="Kaelberer2007"></a>Kälberer et al., 2007
