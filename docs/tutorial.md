@@ -451,37 +451,32 @@ It is possible to choose whether to round the seam jumps $T_e \in \mathbb{Z}^N$ 
 
 It is possible to constrain the functions to have linear relations between them, which reduce the degrees of freedom. This is done by inputting a matrix $U: N \times n$ so that $n \leq N$, and where $F = U\cdot f$ for the independent degrees of freedom encoded in $f$. This relationship should be mirrored in the integrated directional field. *Warning*: not every linear reduction is suitable for integration on surfaces! it needs to commute with the permutation around singularities. Feeding an incompatible linear reduction might then result in a failure of the algorithm. One popular example is triangular symmetry where $U_{3 \times 2} = [1, 0; 0, 1; -1, -1]$. Another is sign symmetry where $U = [Id_{n \times n}; -Id_{n \times n}]$, and $n = \frac{N}{2}$. The latter is always assumed when $N$ is even, and both are always valid in any singularity configuration. Symmetries can also be combined. $U$ is fed into ```intData``` through the field ```linRed```, and there are pre-made funtcions to set it, such as ```set_triangular_symmetry(int N)```.
 
-![Example 504](images/504_LinearReductions.png)<p align=center><em>Left to right: $6$-directional fields with a singularity, $N=6$ with only sign symmetry (the three lines don't always meet at all intersections), and the same with added triangular symmetry, where the intersections are enforced.</em></p>
+![Example 504](images/504_LinearReductions.png)<p align=center><em>Top: A $6$-directional fields with a singularity. Bottom left: $N=6$ only sign symmetry is enforced (the three lines don't always meet at all intersections). Right: the same with added triangular symmetry, where all lines intersect.</em></p>
 
 ### 505 Meshing
 
-This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in libhedra format[^libhedra] of $(V,D,F)$, where $D$ is a vector $|F| \times 1$ of face degrees, and $F$ is a $|F| \times max(D)$ matrix of indices into $V$.
+This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in the <a href=https://avaxman.github.io/libhedra/>libhedra</a> format of $(V,D,F)$, where $D$ is a vector $|F| \times 1$ of face degrees, and $F$ is a $|F| \times max(D)$ matrix of indices into $V$.
 
-The meshing unit is independent from the integration unit, and can be potentially used with external functions; one should fill the ```MeshFunctionIsolinesData``` structure with the input, and call ```mesh_function_isolines()```.
+The meshing unit is independent from the integration unit, and can be potentially used with external functions. However, it is easy to pipeline iit with the integration as follows:
+```cpp
+//setting up mesh data from integration data
+directional::MesherData mData;
+directional::setup_mesher(meshCut[i], intData, mData);
 
-The input is given as functions on the vertices of the whole (original) mesh in ```vertexNFunction```, where the user must supply two sparse matrices: ```orig2CutMat``` to produce values per corner of the cut mesh, and the equivalent ```exactOrig2CutMatInteger``` to do the same in exact numbers. This ensures that the values across seams are perfectly matching in rationals, and the robustness of the meshing.
+//meshing and saving
+mData.verbose = false;
+std::cout<<"Meshing N="<<N[i]<<std::endl;
+directional::mesher(meshWhole, mData, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
+std::cout<<"Done!"<<std::endl;
+```
 
-There is a natural transition between the integrator and the mesher, which is done by calling ```setup_mesh_function_isolines()```, which translates the ```IntegratorData``` to the meshing data.
+This reads the integrated information from `intData`. Conversely to previous version, the mesher does not necessarily need an external dependency. Nevertheless, it can optionally be sped up (consdierably) by including <a href=https://gmplib.org/>GMP</a>. This is controlled by CMake within the compilation of the tutorial.
 
-The meshing function requires CGAL as a dependency, which is operated through the libigl CGAL dependency mechanism.
+![Example 505](images/505_Meshing.png)<p align=center><em>Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders).</em></p>
 
-![Example 505](images/505_Meshing.png)<p align=center><em>Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders). The screenshots are from Meshlab[^Meshlab]]</em></p>
+## Chapter 6: Cochain Complexes
 
-## Chapter 6: High-Order Fields
-
-This chapter introduces representations for fields that use high-order interpolants in order to work with fields with smoother bases in the finite-element paradigm.
-
-### 601 Subdivision Directional Fields
-
-This examples only works with ```IntrinsicFaceTangentBundle``` by design, since the algorithm targets face-based fields.
-
-Directional fields can be used with subdivision surfaces in a manner which is *structure preserving*. That is, the subdivision of a coarse directional field into a fine directional field subdivides a coarse gradient into a fine gradient, and its coarse curl into fine curl. The challenge of doing it for piecewise-constant fields is worked by  [^Custers_2020]. We optimize for a curl free field ```rawFieldCoarse```, subdivide it into ```rawFieldFine``` using ```subdivide_field()```, and compute a seamless parameterization for both. The coarse field is optimized for being curl-free fast (using the PolyCurl optimization; see  [Example 303](#polycurl-reduction), and then the fine field is curl free by design, with the same singularities, which makes for an efficient process.
-
-![Example 601](images/601_SubdivisionFields.png)<p align=center><em>Top Left to right: coarse  curl-reduced directional field, curl plot, and parameterization. Bottom: subdivided fine results.</em></p>
-
-COPY PASTE:
-
-6. **Cochain complex**: vector fields are often objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
+Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
 
 $$v = Gf + M^{-1}C^Tg + h$$
 
@@ -565,6 +560,3 @@ Directional is a budding project, and there are many algorithms in the state-of-
 
 <a id="Vaxman2021"></a>Vaxman, 2021
 : Amir Vaxman, Directional Technical Reports: Seamless Integration.
-
-<a id="Libhedra"></a>Vaxman et al., Libhedra
-: Amir Vaxman et al., libhedra: geometric processing and optimization of polygonal meshes.
