@@ -38,7 +38,7 @@ To access a single example, say ``202_Sampling``, go to the ``bin`` subfolder, a
 
 Most examples require a modest amount of user interaction; the GUI should usually be clear on how to do this.
 
-### <a Id = "#discrete-tangent-bundles"></a>Discrete tangent bundles
+### Discrete tangent bundles
 
 In the continuum, directional fields are represented as elements (formally: *sections*) of tangent spaces, where a tangent space is a linear space attached to each point of a manifold. The set of all such tangent spaces is called a *tangent bundle*. 
 
@@ -242,7 +242,7 @@ Given a matching (in this case, principal matching), it is possible to "comb" th
 
 The Cartesian representation is a meta-category for representation of vectors in explicit coordinates, either $\left(x,y\right)$ in some local 2D basis on a tangent plane, or $\left(x,y,z\right)$ in the ambient coordinates of the 3D space. The raw, representative (of an $N$-RoSy), power field, and PolyVector representations are all such examples. Cartesian fields often do not automatically contain information about the matching, or rotation, of a field between one face and the next, and it needs to be computed using principal matching. This chapter focuses on computing fields with this representation.
 
-### <a Id = "#power-fields"></a>301 Power Fields
+### 301 Power Fields
 
 This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" which is coined in [^azencot_2017]. A power field representation uses a complex basis in each tangent plane of a discrete tangent bundle, and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
 
@@ -270,7 +270,7 @@ If the set $C$ is empty, the field is only well-defined up to a global rotation;
 
 ![Example 301](images/301_PowerFields.png)<p align=center><em>Hard (left) and soft (right) aligned constraints (yellow on red faces) interpolated to the rest of the mesh. Note the singularities that are discovered through principal matching.</em></p>
 
-### <a Id = "#polyvectors"></a>302 PolyVectors
+### 302 PolyVectors
 
 A Polyvector field [^diamanti_2014] is a generalization of power fields that allows for representing independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local complex basis:
 
@@ -311,7 +311,7 @@ public:
 
 **Extension: PolyVector Iterations**: The polyvector algorithm allows for alternate smooth-and-project iterations, which are commonplace in may algorithms CITE. The next two subchapters of Chapter 3 are examples.
 
-### <a Id = "#Ginzburg-Landau"></a>303 Ginzburg-Landau Fields
+### 303 Ginzburg-Landau Fields
 
 We demonstrate how to compute fields that minimize the so-called "Ginzburg-Landau functional":
 $$
@@ -346,7 +346,7 @@ The basic version is highly configurable, including switching steps (1) and (2),
 
 ![Example 303](images/303_GinzburgLandauFields.png)<p align=center><em>Left: The original PolyVector Fields. Right: After MBO iterations. Note the improved singularity in the zoom-in.</em></p>
 
-### <a Id = "#integrable-fields"></a>304 Integrable Fields
+### 304 Integrable Fields
 
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
@@ -476,25 +476,75 @@ This reads the integrated information from `intData`. Conversely to previous ver
 
 ## Chapter 6: Cochain Complexes
 
-Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and other vector calculus identities. A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
+Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $H_{i+1}=ker(d_{i+1})/im(d_{i})$. These only arise in case of nontrivial topology, and $|H_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation.
+
+
+**Example**: All gradient fields are curl free, but there are only curl-free fields that are not also gradient in topologies like annuli or tori. the torus has genus $1$ and admits two harmonic fields.
+
+In the discrete setting, the spaces are represented as arrays that represent degrees of freedom in some finite space, the $d$ operators are (often sparse) matrices, and the metrics are implemented as symmetric positive matrices $M$ so that $<a,b>_i = a^TM_ib$. The hodge star is then simply a multiplication by $M_i$. However, it is often that this defines a separate dual structure rather then result in an object of the same space.
+
+Although abstract, the notion has multiple concrete manifestations in directional field processing, which we explore through the chapter’s examples.
+
+### 601 Face-Based Finite Elements
+
+What is called "face-based FEM" is in fact just the structure with face-based vectors depicted in the following figure:
+![Example 6-1](images/601_FaceBasedFEM_complex.png)<p align=center><em>Top: the primal cochain complex, taking conforming piecewise linear (PL) functions to face-based piecewise-constant fields, and the curl operator takes the latter to edge-based diamond regions. In the bottom dual structure (right to left), the rotated cogradient of non-conforming piecewise-linear functions are also piecewise-constant fields. their divergence is defined on dual vertex voronoi areas. Going from PL functions to dual regions is done by the mass matrices $M_v$ and $M_e$. The face rotation operator $J$ simply rotates a vector by $\frac{\pi}{2}$ in a face.</em></p>
+
+
+Which is popular in geometry processing (for instance, studied extensively in [[Wardetzky 2007](#Wardetzky2007)]. This is exemplified in the following code:
+```cpp
+Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix_2D<double>(mesh);
+Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(mesh);
+Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<double>(mesh);
+
+Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
+Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
+```
+`Ge` is the non-conforming (Edge-based) cogradient, and `J` is the in-face rotation matrix. The code proceeds by verifying the cochain relations (discrete curl of gradient and divergence of rotated cogradient):
+
+```cpp
+std::cout<<"max abs curl of exact field (should be numerically zero): "<<(C*Gv*confVec).cwiseAbs().maxCoeff()<<std::endl;
+std::cout<<"max abs divergence of coexact field (should be numerically zero): "<<(D*J*Ge*nonConfVec).cwiseAbs().maxCoeff()<<std::endl;
+```
+
+![Example 6-1](images/601_FaceBasedFEM.png)<p align=center><em>Left: a conforming PL function with its gradient. Right: a non-conforming PL function with its rotated cogradient.</em></p>
+
+### 602 Discrete Exterior Calculus
+
+### 603 Hodge Decomposition
+
+### 604 Hodge decomposition with boundaries
+
+### 605 Harmonic Fields
+
+
+
+<!-- 
+A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. 
+
+The "cochain" aspect can be purely algebraic and not rely on any explicit nodes in $G_{TB}$; we call $G\cdot f$ for any "scalar" function $f$ *exact* (or *conservative*) fields and fields where $C\cdot v=0$ *closed* (or *curl-free*) fields. 
+
+A cochain complex is enough to define *deRham cohomology* with the correct dimensions $ker(C)/im(G)$. However to extract the explicit harmonic fields we need the next property. 
+
+The combination of a metric and a cochain complex allows for a well-defined notion of *Helmholtz-Hodge decomposition*: any vector field $v$ can be decomposed into exact part $Gf$, coexact part $M^{-1}C^Tg$ and harmonic part $h$ as follows [~boksebeld_2022]:
 
 $$v = Gf + M^{-1}C^Tg + h$$
 
 The inner product also introduces the discrete divergence operator $G^T\cdot M$. Note that the coexact part is divergence free since $G^T\cdot C^T = 0$. The harmonic part $h$ is both.
+-->
 
 ## Outlook for continuing development
 
-Directional is a budding project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:
+Directional is a an ever-evolving project, and there are many algorithms in the state-of-the-art that we look forward to implement, with the help of volunteer researchers and practitioners from the field. Prominent examples of desired implementations are:
 
 1. Support for 3D fields, particularly *Octahedral* fields [^solomon_2017], both in tet meshes and with the boundary-element method.
 
-2. A discrete exterior calculus framework.
+2. Support for tensor fields.
 
-3. Differential operators and Hodge decomposition.
+3. Higher-order fields.
 
-4. Support for tensor fields.
 
-5. Advanced and better visualization techniques.
+
 
 ## References
 
@@ -560,3 +610,6 @@ Directional is a budding project, and there are many algorithms in the state-of-
 
 <a id="Vaxman2021"></a>Vaxman, 2021
 : Amir Vaxman, Directional Technical Reports: Seamless Integration.
+
+<a id="Wardetzky2007"></a>Wardetzky, 2007
+: Max Wardetzky, Discrete differential operators on polyhedral surfaces-convergence and approximation.
