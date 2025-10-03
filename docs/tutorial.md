@@ -511,6 +511,41 @@ std::cout<<"max abs divergence of coexact field (should be numerically zero): "<
 
 ### 602 Discrete Exterior Calculus
 
+DEC [[Desbrun et al 2005.](#Desbrun2005)] is primarily working with differential forms rather than vector fields. As such, it decouples metric from differentials. In the discrete setting, $0$-forms (Scalar functions) are represented on vertices, $1$-forms (the equivalent of tangent vector fields) as differentials on oriented edges, and $2$-forms (volume forms in 2D) as numbers on faces indicating an integrated quantity. The Hodge star defines a duality to the dual Voronoi mesh, as in the following diagram:
+
+![Example 6-2 structure](images/602_DiscreteExteriorCalculus_Complex.png)<p align=center><em>Top: the primal complex, where $d_0$ is the differential (EQuivalent of gradient), $d_1$ is the equivalent of curl, and their adjoints (up to Hodge duality) are the equivalents of rotated cogradient and divergence.</em></p>
+
+The *sharp* operator converts the discrete forms into their continuous counterparts, which in the PL case are Whitney forms (for instance, for $0$-forms it's just PL functions, as illustrated above). These can be used to create the mass matrices $M_0,M_1,M_2$ to be served as Hodge stars. However, it is sometimes preferred to lump $M_1$ to the primal/dual hodge star $\star_1$, since it provides an easy inverse, albeit less accurate in some interpretations. Directional offers both options:
+
+```cpp
+Eigen::SparseMatrix<double> d0 = directional::d0_matrix<double>(mesh);
+Eigen::SparseMatrix<double> d1 = directional::d1_matrix<double>(mesh);
+Eigen::SparseMatrix<double> hodgeStar, invHodgeStar;
+directional::hodge_star_1_matrix(mesh, hodgeStar, invHodgeStar);
+Eigen::SparseMatrix<double> M1;
+directional::linear_whitney_mass_matrix(mesh, M1);
+
+Eigen::SparseMatrix<double> L1 = d0.adjoint()*M1*d0;
+Eigen::SparseMatrix<double> L2 = d0.adjoint()*hodgeStar*d0;
+Eigen::SparseMatrix<double> diff = L1-L2;
+
+double maxAbsValue = 0.0;
+for (int k = 0; k < diff.outerSize(); ++k)
+    for (Eigen::SparseMatrix<double>::InnerIterator it(diff, k); it; ++it)
+        maxAbsValue = std::max(maxAbsValue, std::abs(it.value()));
+
+std::cout<<"Exact laplacian identity (should be numerically zero): "<<maxAbsValue<<std::endl;
+directional::project_exact(d1, hodgeStar, z2, z1Diag, z2Exact, true);
+std::cout<<"Reproducing the original curl (z2Diag, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
+directional::project_exact(d1, M1, z2, z1, z2Exact, true);
+std::cout<<"Reproducing the original curl (z2, should be numerically zero): "<<(z2-z2Exact).cwiseAbs().maxCoeff()<<std::endl;
+std::cout<<"Difference between z1 and z1Diag (small, not zero): "<<(z1-z1Diag).cwiseAbs().maxCoeff()<<std::endl;
+```
+
+The differences will only be culminated in the last `z1` vs. `z1Diag`. Other than the functions to construct the operators, this also introduces the `project_exact()` function which we discuss in the next tutorial example.
+
+![Example 6-2](images/602_DiscreteExteriorCalculus.png)<p align=center><em>Left: The reconstructed field with the Whitney $1$-form mass matrix. Right: with the diagonal Hodge star. The visual difference in this case is mild.</em></p>
+
 ### 603 Hodge Decomposition
 
 ### 604 Hodge decomposition with boundaries
@@ -571,6 +606,9 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 
 <a id="Custers2020"></a>Custers & Vaxman, 2020
 : Bram Custers, Amir Vaxman, Subdivision Directional Fields.
+
+<a id="Desbrun2005"></a>Desbrun et al., 2005
+: Discrete Differential Forms for Computational Modeling.
 
 <a id="Diamanti2014"></a>Diamanti et al., 2014
 : Olga Diamanti, Amir Vaxman, Daniele Panozzo, Olga Sorkine-Hornung, Designing N-PolyVector Fields with Complex Polynomials.
