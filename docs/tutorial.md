@@ -476,7 +476,7 @@ This reads the integrated information from `intData`. Conversely to previous ver
 
 ## Chapter 6: Cochain Complexes
 
-Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $H_{i+1}=ker(d_{i+1})/im(d_{i})$. These only arise in case of nontrivial topology, and $|H_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation.
+Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $\mathbb{H}_{i+1}=ker(d_{i+1})/im(d_{i})$. These only arise in case of nontrivial topology, and $|\mathbb{H}_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation.
 
 
 **Example**: All gradient fields are curl free, but there are only curl-free fields that are not also gradient in topologies like annuli or tori. the torus has genus $1$ and admits two harmonic fields.
@@ -547,6 +547,53 @@ The differences will only be culminated in the last `z1` vs. `z1Diag`. Other tha
 ![Example 6-2](images/602_DiscreteExteriorCalculus.png)<p align=center><em>Left: The reconstructed field with the Whitney $1$-form mass matrix. Right: with the diagonal Hodge star. The visual difference in this case is mild.</em></p>
 
 ### 603 Hodge Decomposition
+
+STILL TODO INDICES AND SIGNS
+
+The combination of a cochain complex and metric introduces the Hodge decomposition, where we can also define the codifferential $\delta_i = (-1)^i\star_i^{-1}d_{i+1}^T\star_{i+1}$. Every $i$-form $z_i \in \Omega_i, 1\leq i \leq n-1$ can be decomposed as:
+$$
+z_i = d_{i-1}f_{i-1}+\delta_i g_{i+1} + h_i,
+$$
+where $f_{i-1}$ is an $(i-1)$-form, $g_{i+1}$ is an $(i+1)$-form, and $h_i \in \mathbb{H}_i$ is a harmonic $i$-form.  $d_{i-1}f_{i-1}$ is the *exact* component, and $\star_i^{-1}d_{i+1}^T\star_{i+1}g_{i+1}$ is the *coexact* component. The exact, coexact and harmonic compoennts are always unique; however, $f,g$ (the potentials) might not be, and one might need to further constrain them.. The existence of boundaries makes the problem even more intricate, as we discuss in Example 604.
+
+Hodge decomposition in directional is done by the function `Hodge_decomposition()`. To undersstand how it works, we need to examine its implementation:
+
+```cpp
+project_exact(d, M, cochain, prevCochain, exactCochain);
+project_coexact(dNext, M, MNext, cochain, k, coexactCochain, nextCochain);
+harmCochain = cochain - exactCochain - coexactCochain;
+```
+
+`project_exact()` finds $f$ and consequently the exact part. In case $d_0$ has a trivial null-space, the defaul option its to solve the Poisson equation:
+$$
+f = \text{argmin}|d_{i-1} f - z_i|^2.
+$$
+The least-squares solution is obtained where:
+$$
+\delta_i d_{i-1}f = \delta_i z_i
+$$
+
+In case $d_i$ has a meaningful null-space (for instance, when it is part of a longer ccochain complex, and $f$ itself has a non-trivial Hodge decomposition), one should instead opt for a *Gauge-fixing solution*, where we solve for the minimum $2$-norm solution:
+$$
+f = \text{argmin}|f|^2\ \ s.t.\ \ \delta_i d_{i-1}f = \delta_iz_i.
+$$ 
+Nevertheless, obtaining the codifferential includes the inverse of the Hodge star, which might not be invertible, and it is actually unnecessary; one can instead supplant 
+$$
+\delta_i d_{i-1}f = \delta_i z_i  \Rightarrow (d_{i-1})^T\star_1d_{i-1}f = (d_{i-1})^T\star_1z_i
+$$
+
+
+In terms of code arguments, `d` is $d_{i-1}$, $M$ is $\star_i$, `prevCochain` is $f$ and `exactCochain` is $d_{i-1}f$.
+
+`project_coexact()` is simpler, as it just computes:
+$$
+z_\text{coexact} = \text{argmin}|z_\text{coexact}|^2\ \ s.t.\ \ d_iz_\text{coexact} = d_iz_{i}
+$$
+This amount to an orthogonal projection of $z_i$ to the space of coexact forms. Interestingly, the Lagrange multipler of this contraint is exactly the desired potential $g$.
+
+![Example 6-3](images/603_HodgeDecomposition.png)<p align=center><em>Top: a $1$-form. Bottom: its decomposition into exact, coexact, and harmonic forms. The colors indicate the potential field (left $f$ and middle $g$).
+</em></p>
+
 
 ### 604 Hodge decomposition with boundaries
 

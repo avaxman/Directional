@@ -24,8 +24,11 @@ int main()
     //Must use intrinsic since otherwise the harmonic field will have spurious normal components
     Eigen::SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(mesh, true);
     Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh,true);
+    //Face-based mass matrix for vectors
     Eigen::SparseMatrix<double> Mx = directional::face_mass_matrix_2D<double>(mesh, false, 2);
+    //Inverse mass matrix
     Eigen::SparseMatrix<double> iMx = directional::face_mass_matrix_2D<double>(mesh, true, 2);
+    //Conversion matrix intrinsic to extrinsic
     Eigen::SparseMatrix<double> IE = directional::face_intrinsic_to_extrinsic_matrix_2D<double>(mesh);
     
     Eigen::MatrixXd harmBasis;
@@ -51,6 +54,7 @@ int main()
     //Using identity matrix since the convention is that Hodge decomposition in face based fields uses the non-conforming mid-edge based function
     Eigen::SparseMatrix<double> I(mesh.EV.rows(), mesh.EV.rows());
     I.setIdentity();
+    
     directional::hodge_decomposition<double>(G, C, Mx, I, origFieldVec, 1,  gradFieldVec, rotCogradFieldVec,harmFieldVec, vertexFunction, edgeFunction);
     std::cout<<"Reproduction of exact part (numerically zero): "<<(gradFieldVec -gradientGT).cwiseAbs().maxCoeff()<<std::endl;
     std::cout<<"Reproduction of coexact part (numerically zero): "<<(rotCogradFieldVec - rotCogradientGT).cwiseAbs().maxCoeff()<<std::endl;
