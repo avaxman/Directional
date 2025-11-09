@@ -591,13 +591,29 @@ z_\text{coexact} = \text{argmin}|z_\text{coexact}|^2\ \ s.t.\ \ d_iz_\text{coexa
 $$
 This amount to an orthogonal projection of $z_i$ to the space of coexact forms. Interestingly, the Lagrange multipler of this contraint is exactly the desired potential $g$.
 
-![Example 6-3](images/603_HodgeDecomposition.png)<p align=center><em>Top: a $1$-form. Bottom: its decomposition into exact, coexact, and harmonic forms. The colors indicate the potential field (left $f$ and middle $g$).
+![Example 6-3](images/603_HodgeDecomposition.png)<p align=center><em>Top: a piecewise-constant face-based vector field. Bottom: its decomposition into exact, coexact, and harmonic forms. The colors indicate the potential fields (left $f$ and middle $g$).
 </em></p>
 
 
 ### 604 Hodge decomposition with boundaries
 
+In the case of boundaries, $\delta$ and $d$ are not adjoint anymore without setting explicit boundary conditions. These can be intricate in higher dimensions, but in 2D surfaces can usually be the choice between Dirichlet or Neumann. This culminates in the construction of the operators themselves. For instance:
+```cpp
+template<typename NumberType>
+Eigen::SparseMatrix<NumberType> d0_matrix(const TriMesh& mesh,
+                                          const bool isDirichlet=false)
+```
+Currently only Neumann conditions are implemeneted for DEC; that means that the exact component of the Hodge decomposition is free, whereas the coexact and the harmonic components are tangent the the boundaries.
+
+![Example 6-4](images/604_HodgeBoundary.png)<p align=center><em>Top: a $1$-form. Bottom: its decomposition into exact, coexact, and harmonic forms with Neumann boundary conditions (coexact and harmonic are tangent to the boundaries). The colors indicate the potential field (left $f$ and middle $g$).
+</em></p>
+
 ### 605 Harmonic Fields
+
+it is possible to enumerate the harmonic fields as the null-space independent vectors (cohmology) of the harmonic operator. This is obtained through `cohomology_basis()`.
+
+![Example 6-4](images/605_HarmonicFields.png)<p align=center><em>Two example of harmonic fields. They are naturally associated to homologies (handles) of the surface.
+</em></p>
 
 
 
@@ -696,5 +712,10 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 <a id="Vaxman2021"></a>Vaxman, 2021
 : Amir Vaxman, Directional Technical Reports: Seamless Integration.
 
+<a id = "Wang2023"></a>Wang et al., 2023 
+: Stephanie Wang, Mohammad Sina Nabizadeh, Albert Chern, Exterior Calculus in Graphics.
+
 <a id="Wardetzky2007"></a>Wardetzky, 2007
 : Max Wardetzky, Discrete differential operators on polyhedral surfaces-convergence and approximation.
+
+
