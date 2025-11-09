@@ -4,8 +4,8 @@
 
 - Libigl and CGAL are not longer dependencies.
 - The viewer is now based on PolyScope.
-- Added finite elements fields and discrete exterior calculus forms
-- Mesher is now independent, but can use GMP to speed up, if installed.
+- Added finite elements fields and discrete exterior calculus forms. This are special examples of the cochain complexes module that can incorporate rich structures.
+- The Mesher is now independent, but can use GMP to speed up, if installed.
 - Added PolyVector customize algorithms, with the possibility to iterate implicit steps and projections. Exemplified by Ginzburg-Landau fields and integrable fields.
 - Phased out (temporarily) subdivision fields and conjugate fields, to modernize the code to the new version.
 
