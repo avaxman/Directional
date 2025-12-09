@@ -8,7 +8,7 @@ Directional won the [SGP 2021 software award](http://awards.geometryprocessing.o
 To cite Directional, use the following DOIs:
 
 Release 3.0.0
-[![DOI](TBD)
+[![DOI](https://zenodo.org/badge/99353881.svg)](https://doi.org/10.5281/zenodo.3338174)
 
 Release 2.0.0
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7225343.svg)](https://doi.org/10.5281/zenodo.7225343)
