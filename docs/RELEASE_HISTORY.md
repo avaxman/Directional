@@ -6,7 +6,7 @@
 - The viewer is now based on PolyScope.
 - Added finite elements fields and discrete exterior calculus forms. This are special examples of the cochain complexes module that can incorporate rich structures.
 - The Mesher is now independent, but can use GMP to speed up, if installed.
-- Added PolyVector customize algorithms, with the possibility to iterate implicit steps and projections. Exemplified by Ginzburg-Landau fields and integrable fields.
+- Added PolyVector customization algorithms, with the possibility to iterate implicit energy-reduction steps and projections. Exemplified by Ginzburg-Landau fields and integrable fields.
 - Phased out (temporarily) subdivision fields and conjugate fields, to modernize the code to the new version.
 
 
@@ -20,7 +20,7 @@
 
 ## Version 1.7.0 Changes
 
-- Major overhaul of the viewer, where most operation are encapsulated in a new  ```DIrectionalViewer``` class, allowing properties such as isolines, vertex, face, and edge data to be associated with a mesh. User does not (need to) directly control shapes and colors, but rather only provide the geometric quantities.
+- Major overhaul of the viewer, where most operation are encapsulated in a new  ```DirectionalViewer``` class, allowing properties such as isolines, vertex, face, and edge data to be associated with a mesh. User does not (need to) directly control shapes and colors, but rather only provide the geometric quantities.
 - Many changes in the actual visualizations - thin arrows for glyphs, edge bars for seams and $N$-function isolines, and nicer spheres for singularities.
 - Several bug fixes.
 

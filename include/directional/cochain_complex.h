@@ -213,9 +213,10 @@ void hodge_decomposition(const Eigen::SparseMatrix<NumberType> d,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& coexactCochain,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& harmCochain,
                          Eigen::Vector<NumberType, Eigen::Dynamic>& prevCochain,
-                         Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain){
+                         Eigen::Vector<NumberType, Eigen::Dynamic>& nextCochain,
+                         const bool GaugeFixing=false){
     
-    project_exact(d, M, cochain, prevCochain, exactCochain);
+    project_exact(d, M, cochain, prevCochain, exactCochain, GaugeFixing);
     project_coexact(dNext, M, MNext, cochain, k, coexactCochain, nextCochain);
     harmCochain = cochain - exactCochain - coexactCochain;
 }

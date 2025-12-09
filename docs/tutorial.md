@@ -12,7 +12,7 @@ The library comprises two basic elements:
 
 2. Standalone functions, implementing directional-field algorithms, that take these classes as parameters.
 
-3. Algebraic structures, such as cochain complexes. See chapter 6 TODO: link.
+3. Algebraic structures, such as cochain complexes. 
 
 Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.
 
@@ -244,13 +244,13 @@ The Cartesian representation is a meta-category for representation of vectors in
 
 ### 301 Power Fields
 
-This representation is offered in [^knoppel_2013], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" which is coined in [^azencot_2017]. A power field representation uses a complex basis in each tangent plane of a discrete tangent bundle, and represents an $N$-RoSy using a *power vector*---a single complex number $y$ per face so that its root set $y=u^N$ comprises the vectors of the $N$-RoSy.
+This representation is offered in [[Knöppel et al. 2013](#Knoeppel2013)], but they did not give it a specific name (the method in general is called "globally optimal"). We use the name "power fields" which is coined in [[Azencot et al. 2017](#Azencot2017)]. A power field representation uses a complex basis in each tangent plane of a discrete tangent bundle, and represents an $N$-RoSy using a *power vector*: a single complex number $Y$ per face so that its root set $Y=u^N$ comprises the vectors of the $N$-RoSy.
 
-By prescribing constraints $y_C$ on a set of tangent spaces $C$, the algorithm interpolates the field to the rest of the spaces $y_I = V_{TB} \setminus y_C$ by minimizing the face-based quadratic Dirichlet energy:
+By prescribing constraints $Y_C$ on a set of tangent spaces $C$, the algorithm interpolates the field to the rest of the spaces $Y_I = V_{TB} \setminus Y_C$ by minimizing the face-based quadratic Dirichlet energy:
 
 $$Y_I=\text{argmin}\sum_{e=(f,g) \in E_{TB}}{\omega_e\left|Y_fr_{fg}^N - Y_g\right|^2},$$
 
-where $r_{fg} \in \mathbb{C}$ is the connection coefficient between tangent spaces $f$ and $g$, and $\omega_e$ are the connection weights. For instance, in the face-based `PCFaceTangentBundle`,  $r_{fg} = \frac{e_g}{e_f}$, where $e_f$ and  $e_g$ are the normalized edge vectors in their local complex bases, and the weights $\omega_e$ are the harmonic weights as given by [^brandt_2018]. The field is computed through the function `directional::power_field()`. It is possible to softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
+where $r_{fg} \in \mathbb{C}$ is the connection coefficient between tangent spaces $f$ and $g$, and $\omega_e$ are the connection weights. For instance, in the face-based `PCFaceTangentBundle`,  $r_{fg} = \frac{\overline{e_g}}{\overline{e_f}}$, where $e_f$ and  $e_g$ are the normalized edge vectors in their local complex bases, and the weights $\omega_e$ are the harmonic weights as given by [[Brandt et al. 2018](#Brandt2018)]. The field is computed through the function `directional::power_field()`. It is possible to softly prescribe the constraints $\left\{Y^*_C\right\}$ with alignment weights $\omega_c$, solving the following minimization problem:
 
 $$y_I=\text{argmin} \left[\sum_{e=(f,g)\in E_{TB}}{\omega_e\left|Y_fr_{fg}^N  - Y_g\right|^2}+\sum_{c \in C}{\omega_c \left|Y_c - Y^*_c\right|^2}\right],$$
 
@@ -272,7 +272,7 @@ If the set $C$ is empty, the field is only well-defined up to a global rotation;
 
 ### 302 PolyVectors
 
-A Polyvector field [^diamanti_2014] is a generalization of power fields that allows for representing independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $a_{0 \cdots N-1}$ of a monic complex polynomial in the local complex basis:
+A Polyvector field [^diamanti_2014] is a generalization of power fields that allows for representing independent vectors in each tangent space, invariant to their order. The representation is as the coefficient set $X_{0 \cdots N-1}$ of a monic complex polynomial in the local complex basis:
 
 $$P(z) = X_0 + X_1z + \ldots + X_{N-1} z^{N-1} + z^N,$$
 
@@ -280,9 +280,9 @@ where the roots $P(z)=0$ are the vectors of the face-based directional object, r
 
 With the function ```polyvector_field()``` one can solve the linear Polyvector problem in its full capacity; the input is a set of prescribed hard constraints $v_b$ per tangent space set $B \subset V_{TB}$, where one can prescribe any number of vectors smaller of equal than $N$ (unless there is symmetry) per tangent space (that means we allow set $C$ to have repeating tangent spaces). Further consider the soft-alignment vectors $v_c$ for face set $c \subset C$, accompanied by an alignment weight $\omega_c$ (again with possibly repeating tangent space). We then solve the following quadratic optimization problem:
 
-$$y_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g) \in E_{TB}}{\omega_e\left|X_{n,f}r_{fg}^{N-n} - X_{n,g}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{v \in V_{TB}}{w_v\left|X_{n,f}\right|^2}}\right)+\left(\sum_{C,n}{\omega_c\left|X_{n,f}-Q_{c}Q_{c}^{\dagger}(X_{n,f}-q_{c})+q_{c}\right|^2}\right).$$
+$$X_I = \text{argmin} \left(\lambda_S \sum_{n=0}^{N-1}{\sum_{e=(f,g) \in E_{TB}}{\omega_e\left|X_{n,f}r_{fg}^{N-n} - X_{n,g}\right|^2}}\right)+\left(\lambda_R\sum_{n=1}^{N-1}{\sum_{v \in V_{TB}}{w_v\left|X_{n,f}\right|^2}}\right)+\left(\sum_{C,n}{\omega_c\left|X_{n,f}-U_{c}U_{c}^{\dagger}(X_{n,f}-u_{c})+u_{c}\right|^2}\right).$$
 
-So that the set $B$ is perfectly interpolated. The matrices $Q_{c}$ and vectors $q_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [^Meekes_2021]. $\omega_v$ is the mass of the tangent space (for instance, the area of a face in face-based fields). The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\omega_c$. It is also possible to constrain the field to be a perfect power field by setting $\lambda_R=-1$; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
+So that the set $B$ is perfectly interpolated. The matrices $U_{c}$ and vectors $u_{c}$ are designed to create a linear subspace of polynomials for which the respective vectors $v_c$ are roots; for details see Appendix A in [[Meekes and Vaxman 2021](#Meekes2021)]. $\omega_v$ is the mass of the tangent space (for instance, the area of a face in face-based fields). The last term then measures the soft alignment, also weighted by $\omega_c$ per vector. The same technique is used as a hard reduction for the set $B$. The middle term subdues all non-free powers of $P(z)$, thus optimizing $P(z)$ to be as much a power vector as possible. The different energies are also controlled globally by user parameters $\lambda_S, \lambda_R$ and $\omega_c$. It is also possible to constrain the field to be a perfect power field by setting $\lambda_R=-1$; in fact ```power_field()``` is implemented by calling ```polyvector_field()```. This tutorial examples allows interacting with the alignment weights.
 
 The algorithm is controled by the data structure `PolyVectorData`, with the important following fields:
 
@@ -307,13 +307,13 @@ public:
 
 `wSmooth` is $\lambda_S$, `wRosy` is $\lambda_R$, and `wAlignment` is $\omega_c$ (and where it is $-1$ this marks a constraint in $B$). `verbose` should be flagged when output is expected (`false` by default), and `signSymmetry` is flagged when the algorithm should enforce that for every vector $u$ in any single PolyVector in a tangent space, the PolyVector also contains $-u$ (only if $N$ is even); it is `true` by default.
 
-![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted smoothness (left), alignment (middle) and rotational symmetry (right) TODO Replace.</em></p>
+![Example 302](images/302_PolyVectors.png)<p align=center><em>Top: Sharp-edge constraints (left; note sometimes more than one per face), Hard (middle) and soft (right) solution. Bottom: dominant-weighted alignment (left), and rotational symmetry (right).</em></p>
 
-**Extension: PolyVector Iterations**: The polyvector algorithm allows for alternate smooth-and-project iterations, which are commonplace in may algorithms CITE. The next two subchapters of Chapter 3 are examples.
+**Extension: PolyVector Iterations**: The polyvector algorithm allows for alternate smooth-and-project iterations, which are commonplace in many algorithms. The next two subchapters of Chapter 3 are examples.
 
 ### 303 Ginzburg-Landau Fields
 
-We demonstrate how to compute fields that minimize the so-called "Ginzburg-Landau functional":
+We demonstrate how to compute fields that minimize the so-called "Ginzburg-Landau functional" [[Viertel and Osting 2017](#Viertel2017)]:
 $$
 \int{|\nabla v|^2} + \frac{1}{\epsilon}\int{(|v|^2-1)^2},
 $$
@@ -351,7 +351,7 @@ The basic version is highly configurable, including switching steps (1) and (2),
 This functionality only works with face-based fields via ```IntrinsicFaceTangentBundle```.
 
 Vector-field guided surface parameterization is based on the idea of designing the *candidate* gradients
-of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods (eg. [^ray_2008], [^knoppel_2013], [^diamanti_2014], [^Bommes_2009], [^panozzo_2014]) do not have this property in general. 
+of the parameterization functions (which are tangent vector fields on the surface) instead of the functions themselves. Thus, vector-set fields ($N$-Rosy, frame fields, and polyvector fields) that are to be used for parameterization (and subsequent remeshing) should be as *integrable* as possible: it should be possible to locally comb them into individual vector fields that are approximately gradients of scalar functions. Fields obtained by "as-smooth-as-possible" design methods do not have this property in general. 
 
 In modern methods, this is usually achieved by a smooth-and-reduce-curl approach, which is again doable by the PolyVector Iterations, and using the following projection functions:
 
@@ -391,7 +391,7 @@ The basis cycles form the cycles around which curvatures (and singularities) hav
 
 The full details of the method implemented in this chapter can be found in a technical report [[Vaxman 2021]](#Vaxman2021). Many of the therotical ideas for general $N$-functions are explored in [[Meekes and Vaxman 2021]](#Meekes2021). Moreover, this chapter currently only works with ```IntrinsicFaceTangentBundle```.
 
-$N$-Directional fields are commonly used as candidate gradients to seamless $N$-Functions, which are in turn used to generate meshes that are aligned to the original fields [Bommes et al. 2009](#Bommes2009),[Kaelberer et al. 2007](Kalberer2007),[Myles et al. 2014](#Myles2014). Recall that [combing](#203-combing) trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed $N$-directional $\left\{u_0,\cdots,u_{N-1} \right\}$ as a set of $N$ candidate gradients for $N$ vertex-based scalar functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. We proceed by solving the Poisson problem:
+$N$-Directional fields are commonly used as candidate gradients to seamless $N$-Functions, which are in turn used to generate meshes that are aligned to the original fields [Bommes et al. 2009](#Bommes2009),[Kälberer et al. 2007](Kalberer2007),[Myles et al. 2014](#Myles2014). Recall that [combing](#203-combing) trivializes the matching everywhere except a sparse set of seams. We augment these seams so that the mesh is cut into a topological disc. Then, we treat a combed $N$-directional $\left\{u_0,\cdots,u_{N-1} \right\}$ as a set of $N$ candidate gradients for $N$ vertex-based scalar functions $\left\{F_0,\cdots,F_{N-1}\right\}$ on the cut mesh. We proceed by solving the Poisson problem:
 
 $$F = argmin{\sum_{i=0}^{N-1}{\left|\nabla F_i - u_i\right|^2}}$$
 
@@ -401,7 +401,7 @@ $$F_{i,k}= \pi_e \cdot F_{i,l}  + T_e,$$
 
 where $\pi_e:N \times N$ is a permutation matrix attached to the (dual) edge $e$, matching values in the integrated function $F$ as it did for the directional field $v$. and $T_e:N \times 1$ is a *translational jump* (also: period jump), that encodes the discontinuity in $F$ across the seam. For quick intuition, this encodes the integration of the function over a loop around the mesh beginning and ending with the seam edge: in a $4$-function, leading to a quad mesh, it is the number of quads in such a loop. If $T_e \in \mathbb{Z}^N$, then the $N$-function is *fully* seamless: the integer isolines of a function connect perfectly along a seam. Otherwise, it is only *permutationally* seamless: the gradients match, which means they are only co-oriented.
 
-Seamless $N$-functions are denoted as such for that obeying the seamless constraints; it can be easily shown [[Kaelberer et al. 2007]](#Kaelberer2007) that the translational jumps $T_e$ is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh ($\times N$).
+Seamless $N$-functions are denoted as such for that obeying the seamless constraints; it can be easily shown [[Kälberer et al. 2007]](#Kaelberer2007) that the translational jumps $T_e$ is in fact uniform across seam curves between singularities. Thus, the number of such translational jump variables is the number of seam curves in the mesh ($\times N$).
 
 ### 501 Seamless Integration
 
@@ -470,25 +470,25 @@ directional::mesher(meshWhole, mData, VPolyMesh[i], DPolyMesh[i], FPolyMesh[i]);
 std::cout<<"Done!"<<std::endl;
 ```
 
-This reads the integrated information from `intData`. Conversely to previous version, the mesher does not necessarily need an external dependency. Nevertheless, it can optionally be sped up (consdierably) by including <a href=https://gmplib.org/>GMP</a>. This is controlled by CMake within the compilation of the tutorial.
+This reads the integrated information from `intData`. Conversely to previous version, the mesher does not necessarily need an external dependency. Nevertheless, it can optionally be sped up (considerably) by including <a href=https://gmplib.org/>GMP</a>. This is controlled by CMake within the compilation of the tutorial.
 
 ![Example 505](images/505_Meshing.png)<p align=center><em>Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples ($N=2$ is not yet supported) in [Example 502](#502-integration-in-various-orders).</em></p>
 
 ## Chapter 6: Cochain Complexes
 
-Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $\mathbb{H}_{i+1}=ker(d_{i+1})/im(d_{i})$. These only arise in case of nontrivial topology, and $|\mathbb{H}_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation.
+Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $\mathbb{H}_{i}=ker(d_{i})/im(d_{i-1})$. These only arise in case of nontrivial topology, and $|\mathbb{H}_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation; that often defines a dual cochain with a *codifferential* operator $\delta_i = (-1)^i\star_i^{-1}d_i^T\star_{i+1}$.
 
 
 **Example**: All gradient fields are curl free, but there are only curl-free fields that are not also gradient in topologies like annuli or tori. the torus has genus $1$ and admits two harmonic fields.
 
-In the discrete setting, the spaces are represented as arrays that represent degrees of freedom in some finite space, the $d$ operators are (often sparse) matrices, and the metrics are implemented as symmetric positive matrices $M$ so that $<a,b>_i = a^TM_ib$. The hodge star is then simply a multiplication by $M_i$. However, it is often that this defines a separate dual structure rather then result in an object of the same space.
+In the discrete setting, the spaces are represented as arrays of nodal values in some finite space, the $d$ operators are (often sparse) matrices, and the metrics are implemented as symmetric positive matrices $M$ so that $<a,b>_i = a^TM_ib$. The hodge star is then simply a multiplication by $M_i$. However, it is often that this defines a separate dual structure rather then result in an object of the same space.
 
 Although abstract, the notion has multiple concrete manifestations in directional field processing, which we explore through the chapter’s examples.
 
 ### 601 Face-Based Finite Elements
 
 What is called "face-based FEM" is in fact just the structure with face-based vectors depicted in the following figure:
-![Example 6-1](images/601_FaceBasedFEM_complex.png)<p align=center><em>Top: the primal cochain complex, taking conforming piecewise linear (PL) functions to face-based piecewise-constant fields, and the curl operator takes the latter to edge-based diamond regions. In the bottom dual structure (right to left), the rotated cogradient of non-conforming piecewise-linear functions are also piecewise-constant fields. their divergence is defined on dual vertex voronoi areas. Going from PL functions to dual regions is done by the mass matrices $M_v$ and $M_e$. The face rotation operator $J$ simply rotates a vector by $\frac{\pi}{2}$ in a face.</em></p>
+![Example 6-1](images/601_FaceBasedFEM_complex.png)<p align=center><em>Top: the primal cochain complex, taking conforming piecewise linear (PL) functions to face-based piecewise-constant fields, and the curl operator takes the latter to edge-based diamond regions. In the bottom dual structure (right to left), the rotated cogradient of non-conforming piecewise-linear functions are also piecewise-constant fields. their divergence is defined on dual vertex voronoi areas. Going from PL functions to dual regions is done by the mass matrices $M_v$ and $M_e$. The face rotation operator $J$ simply rotates a vector by $\frac{\pi}{2}$ in a face. The cochain structure is actually such that $CG_v=0$, and the matching dual cochain structure $DJG_e=0$ </em></p>
 
 
 Which is popular in geometry processing (for instance, studied extensively in [[Wardetzky 2007](#Wardetzky2007)]. This is exemplified in the following code:
@@ -496,7 +496,7 @@ Which is popular in geometry processing (for instance, studied extensively in [[
 Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix_2D<double>(mesh);
 Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(mesh);
 Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<double>(mesh);
-
+◊
 Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
 Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
 ```
@@ -511,7 +511,7 @@ std::cout<<"max abs divergence of coexact field (should be numerically zero): "<
 
 ### 602 Discrete Exterior Calculus
 
-DEC [[Desbrun et al 2005.](#Desbrun2005)] is primarily working with differential forms rather than vector fields. As such, it decouples metric from differentials. In the discrete setting, $0$-forms (Scalar functions) are represented on vertices, $1$-forms (the equivalent of tangent vector fields) as differentials on oriented edges, and $2$-forms (volume forms in 2D) as numbers on faces indicating an integrated quantity. The Hodge star defines a duality to the dual Voronoi mesh, as in the following diagram:
+DEC [[Desbrun et al. 2005](#Desbrun2005)] is primarily working with differential forms rather than vector fields. As such, it decouples metric from differentials. In the discrete setting, $0$-forms (Scalar functions) are represented on vertices, $1$-forms (the equivalent of tangent vector fields) as differentials on oriented edges, and $2$-forms (volume forms in 2D) as numbers on faces indicating an integrated quantity. The Hodge star defines a duality to the dual Voronoi mesh, as in the following diagram:
 
 ![Example 6-2 structure](images/602_DiscreteExteriorCalculus_Complex.png)<p align=center><em>Top: the primal complex, where $d_0$ is the differential (EQuivalent of gradient), $d_1$ is the equivalent of curl, and their adjoints (up to Hodge duality) are the equivalents of rotated cogradient and divergence.</em></p>
 
@@ -548,15 +548,14 @@ The differences will only be culminated in the last `z1` vs. `z1Diag`. Other tha
 
 ### 603 Hodge Decomposition
 
-STILL TODO INDICES AND SIGNS
 
-The combination of a cochain complex and metric introduces the Hodge decomposition, where we can also define the codifferential $\delta_i = (-1)^i\star_i^{-1}d_{i+1}^T\star_{i+1}$. Every $i$-form $z_i \in \Omega_i, 1\leq i \leq n-1$ can be decomposed as:
+The combination of a cochain complex and metric introduces the Hodge decomposition, where we can also define the codifferential $\delta_i = (-1)^i\star_i^{-1}d_{i}^T\star_{i+1}$. Every $i$-form $z_i \in \Omega_i, 1\leq i \leq n-1$ can be decomposed as:
 $$
 z_i = d_{i-1}f_{i-1}+\delta_i g_{i+1} + h_i,
 $$
-where $f_{i-1}$ is an $(i-1)$-form, $g_{i+1}$ is an $(i+1)$-form, and $h_i \in \mathbb{H}_i$ is a harmonic $i$-form.  $d_{i-1}f_{i-1}$ is the *exact* component, and $\star_i^{-1}d_{i+1}^T\star_{i+1}g_{i+1}$ is the *coexact* component. The exact, coexact and harmonic compoennts are always unique; however, $f,g$ (the potentials) might not be, and one might need to further constrain them.. The existence of boundaries makes the problem even more intricate, as we discuss in Example 604.
+where $f_{i-1}$ is an $(i-1)$-form, $g_{i+1}$ is an $(i+1)$-form, and $h_i \in \mathbb{H}_i$ is a harmonic $i$-form.  $z_\text{exact}=d_{i-1}f_{i-1}$ is the *exact* component, and $z_\text{coexact}=\delta_{i+1}g_{i+1}$ is the *coexact* component. The exact, coexact and harmonic compoennts are always unique; however, $f,g$ (the potentials) might not be, and one might need to further constrain them.. The existence of boundaries makes the problem even more intricate, as we discuss in Example 604.
 
-Hodge decomposition in directional is done by the function `Hodge_decomposition()`. To undersstand how it works, we need to examine its implementation:
+Hodge decomposition in directional is done by the function `Hodge_decomposition()`. To understand how it works, we need to examine its implementation:
 
 ```cpp
 project_exact(d, M, cochain, prevCochain, exactCochain);
@@ -564,26 +563,21 @@ project_coexact(dNext, M, MNext, cochain, k, coexactCochain, nextCochain);
 harmCochain = cochain - exactCochain - coexactCochain;
 ```
 
-`project_exact()` finds $f$ and consequently the exact part. In case $d_0$ has a trivial null-space, the defaul option its to solve the Poisson equation:
+`project_exact()` finds $f$ and consequently the exact part. In case $d_0$ has a trivial null-space, the default option its to solve the Poisson equation:
 $$
 f = \text{argmin}|d_{i-1} f - z_i|^2.
 $$
 The least-squares solution is obtained where:
 $$
-\delta_i d_{i-1}f = \delta_i z_i
+d_{i-1}^T\star_i d_{i-1}f = d_{i-1}^T\star_i z_i
 $$
 
 In case $d_i$ has a meaningful null-space (for instance, when it is part of a longer ccochain complex, and $f$ itself has a non-trivial Hodge decomposition), one should instead opt for a *Gauge-fixing solution*, where we solve for the minimum $2$-norm solution:
 $$
-f = \text{argmin}|f|^2\ \ s.t.\ \ \delta_i d_{i-1}f = \delta_iz_i.
+f = \text{argmin}|f|^2\ \ s.t.\ \ d_{i-1}^T\star_i  d_{i-1}f = d_{i-1}^T\star_i z_i.
 $$ 
-Nevertheless, obtaining the codifferential includes the inverse of the Hodge star, which might not be invertible, and it is actually unnecessary; one can instead supplant 
-$$
-\delta_i d_{i-1}f = \delta_i z_i  \Rightarrow (d_{i-1})^T\star_1d_{i-1}f = (d_{i-1})^T\star_1z_i
-$$
 
-
-In terms of code arguments, `d` is $d_{i-1}$, $M$ is $\star_i$, `prevCochain` is $f$ and `exactCochain` is $d_{i-1}f$.
+In terms of code arguments, `d` is $d_{i-1}$, $M$ is $\star_i$, `prevCochain` is $f$ and `exactCochain` is $d_{i-1}f$. Fixing Gauge is controlled by a `GagueFixing` flag and is by default `False`.
 
 `project_coexact()` is simpler, as it just computes:
 $$
@@ -682,7 +676,7 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 <a id="deGoes2016"></a>de Goes et al., 2016
 : Fernando de Goes, Mathieu Desbrun, Yiying Tong, Vector Field Processing on Triangle Meshes.
 
-<a id="Kaelberer2007"></a>Kälberer et al., 2007
+<a id="Kälberer2007"></a>Kälberer et al., 2007
 : Felix Kälberer, Matthias Nieser, Konrad Polthier, QuadCover - Surface Parameterization using Branched Coverings.
 
 <a id="Knoeppel2013"></a>Knöppel et al., 2013
@@ -711,6 +705,9 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 
 <a id="Vaxman2021"></a>Vaxman, 2021
 : Amir Vaxman, Directional Technical Reports: Seamless Integration.
+
+<a id="Viertel2017"></a>Viertel and Osting, 2017
+: An Approach to Quad Meshing Based on Harmonic Cross-Valued Maps and the Ginzburg-Landau Theory.
 
 <a id = "Wang2023"></a>Wang et al., 2023 
 : Stephanie Wang, Mohammad Sina Nabizadeh, Albert Chern, Exterior Calculus in Graphics.
