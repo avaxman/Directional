@@ -39,7 +39,7 @@ public:
     int numSpaces;                                      //The number of tangent spaces
     
     //combinatorics and topology
-    Eigen::Matrix<int, Eigen::Dynamic, 2> adjSpaces;    //Adjacent tangent spaces (edges of the tangent bundle graph)
+    Eigen::Matrix<int, Eigen::Dynamic, 2> adjSpaces;    //Adjacent tangent spaces (edges of the tangent bundle graph). This includes boundaries! one side will be "-1" when this is the case. Also see "innerAdjacencies"
     Eigen::MatrixXi oneRing;                            //(Ordered) tangent spaces adjacent around each tangent space
     Eigen::VectorXi innerAdjacencies;                   //Indices into adjSpaces that are not boundary
     Eigen::SparseMatrix<double> cycles;                 //Adjaceny matrix of cycles

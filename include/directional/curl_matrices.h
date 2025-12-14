@@ -36,7 +36,7 @@ Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh& mesh,
     assert(d==1 && "This method is currently defined only for d==1");
     Eigen::VectorXi matching;
     if (_matching.size()==0)
-        matching = Eigen::VectorXi::Zero(mesh.innerEdges.size());
+        matching = Eigen::VectorXi::Zero(mesh.EF.size());
     else
         matching = _matching;
     
@@ -60,9 +60,9 @@ Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh& mesh,
                 singleCurlMatTris.push_back(
                                             Eigen::Triplet<double>(N * i + n, 2 * N * mesh.EF(mesh.innerEdges(i), 0) + 2*n + 1, -einLeft(1)));
                 singleCurlMatTris.push_back(
-                                            Eigen::Triplet<double>(N * i + n, 2 * N * mesh.EF(mesh.innerEdges(i), 1) + 2*((n+matching(i)+N)%N), einRight(0)));
+                                            Eigen::Triplet<double>(N * i + n, 2 * N * mesh.EF(mesh.innerEdges(i), 1) + 2*((n+matching(mesh.innerEdges(i))+N)%N), einRight(0)));
                 singleCurlMatTris.push_back(
-                                            Eigen::Triplet<double>(N * i + n, 2 * N * mesh.EF(mesh.innerEdges(i), 1) + 2*((n+matching(i)+N)%N) + 1, einRight(1)));
+                                            Eigen::Triplet<double>(N * i + n, 2 * N * mesh.EF(mesh.innerEdges(i), 1) + 2*((n+matching(mesh.innerEdges(i))+N)%N) + 1, einRight(1)));
             } else {
                 singleCurlMatTris.push_back(
                                             Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 0) + 3*n, -e(0)));
@@ -71,11 +71,11 @@ Eigen::SparseMatrix<NumberType> curl_matrix_2D(const TriMesh& mesh,
                 singleCurlMatTris.push_back(
                                             Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 0) + 3*n + 2, -e(2)));
                 singleCurlMatTris.push_back(
-                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(i)+N)%N), e(0)));
+                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(mesh.innerEdges(i))+N)%N), e(0)));
                 singleCurlMatTris.push_back(
-                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(i)+N)%N) + 1, e(1)));
+                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(mesh.innerEdges(i))+N)%N) + 1, e(1)));
                 singleCurlMatTris.push_back(
-                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(i)+N)%N) + 2, e(2)));
+                                            Eigen::Triplet<double>(N * i + n, 3 * N * mesh.EF(mesh.innerEdges(i), 1) + 3*((n+matching(mesh.innerEdges(i))+N)%N) + 2, e(2)));
             }
         }
     }

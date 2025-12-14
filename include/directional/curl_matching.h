@@ -39,7 +39,7 @@ inline void curl_matching(directional::CartesianField& rawField,
     PCFaceTangentBundle* ftb = (PCFaceTangentBundle*)(rawField.tb);
     rawField.matching.conservativeResize(ftb->mesh->EF.rows());
     rawField.matching.setConstant(-1);
-    curlNorm.conservativeResize(ftb->mesh->EF.rows());
+    curlNorm = Eigen::VectorXd::Zero(ftb->mesh->EF.rows());
     
     MatrixXd edgeVectors(ftb->mesh->EF.rows(), 3);
     for (int i = 0; i < ftb->mesh->EF.rows(); i++) {

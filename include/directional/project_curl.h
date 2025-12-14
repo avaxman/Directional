@@ -116,6 +116,7 @@ inline void project_curl(const CartesianField& origField,
     SparseMatrix<double> CRt=CR.transpose();
     SparseMatrix<double> ER=E*R;
     
+
     //cout<<"(C*rawFieldVec).lpNorm<Infinity>() before: "<<(C*rawFieldVec).lpNorm<Infinity>()<<endl;
     
     Eigen::Matrix2i orderMat; orderMat<<0,1,2,3;
