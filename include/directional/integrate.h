@@ -20,7 +20,10 @@
 #include <directional/CartesianField.h>
 #include <directional/principal_matching.h>
 #include <directional/setup_integration.h>
-#include <directional/branched_gradient.h>
+//#include <directional/branched_gradient.h>
+#include <directional/gradient_matrices.h>
+#include <directional/mass_matrices.h>
+#include <directional/MixedIntegerSolver.h>
 
 
 namespace directional
@@ -52,55 +55,29 @@ inline bool integrate(const directional::CartesianField& field,
     VectorXd edgeWeights = VectorXd::Constant(meshWhole.FE.maxCoeff() + 1, 1.0);
     double paramLength = (meshWhole.V.colwise().maxCoeff()-meshWhole.V.colwise().minCoeff()).norm()*intData.lengthRatio;
     
-    MatrixXd rawField = field.extField;
+    //Scaling field uniformly to have average length intData.lengthRatio * bounding_box_diagonal (Default is 0.02)
+    VectorXd rawField = field.flatten();
     double avgGradNorm=0;
-    for (int i=0;i<meshWhole.F.rows();i++)
-        for (int j=0;j<intData.N;j++)
-            avgGradNorm+=rawField.block(i,3*j,1,3).norm();
-    
-    avgGradNorm/=(double)(intData.N*meshWhole.F.rows());
-    
-    rawField.array()/=avgGradNorm;
-    paramLength/=avgGradNorm;
-    
-    int numVars = intData.linRedMat.cols();
-    //constructing face differentials
-    //TODO: convert to the common branched gradient operator
-    vector<Triplet<double> >  d0Triplets;
-    vector<Triplet<double> > M1Triplets;
-    VectorXd gamma(3 * intData.N * meshWhole.F.rows());
-    for(int i = 0; i < meshCut.F.rows(); i++)
-    {
-        for(int j = 0; j < 3; j++)
-        {
-            for(int k = 0; k < intData.N; k++)
-            {
-                d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, j) + k, -1.0);
-                d0Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, intData.N * meshCut.F(i, (j + 1) % 3) + k, 1.0);
-                Vector3d edgeVector = (meshCut.V.row(meshCut.F(i, (j + 1) % 3)) - meshCut.V.row(meshCut.F(i, j))).transpose();
-                gamma(3 * intData.N * i + intData.N * j + k) = (rawField.block(i, 3 * k, 1, 3) * edgeVector)(0, 0)/paramLength;
-                M1Triplets.emplace_back(3 * intData.N * i + intData.N * j + k, 3 * intData.N * i + intData.N * j + k, edgeWeights(meshWhole.FE(i, j)));
-            }
-        }
-    }
-    SparseMatrix<double> d0(3 * intData.N * meshWhole.F.rows(), intData.N * meshCut.V.rows());
-    d0.setFromTriplets(d0Triplets.begin(), d0Triplets.end());
-    SparseMatrix<double> M1(3 * intData.N * meshWhole.F.rows(), 3 * intData.N *  meshWhole.F.rows());
-    M1.setFromTriplets(M1Triplets.begin(), M1Triplets.end());
-    SparseMatrix<double> d0T = d0.transpose();
-    
-    //creating face vector mass matrix
-    std::vector<Triplet<double>> MxTri;
-    VectorXd darea = meshCut.faceAreas/2.0;
-    //igl::doublearea(meshCut.V,meshCut.F,darea);
     for (int i=0;i<meshCut.F.rows();i++)
         for (int j=0;j<intData.N;j++)
-            for (int k=0;k<3;k++)
-                MxTri.push_back(Triplet<double>(i*3*intData.N+3*j+k,3*i*intData.N+3*j+k,darea(i)/2.0));
+            avgGradNorm+=rawField.segment(3*intData.N*i+3*j,3).norm();
     
-    SparseMatrix<double> Mx(3*intData.N*meshCut.F.rows(), 3*intData.N*meshCut.F.rows());
-    Mx.setFromTriplets(MxTri.begin(), MxTri.end());
+    avgGradNorm/=(double)(intData.N*meshCut.F.rows());
     
+    std::cout<<"paramLength: "<<paramLength<<std::endl;
+    std::cout<<"avgGradNorm: "<<avgGradNorm<<std::endl;
+    rawField.array()*=1.0/(paramLength*avgGradNorm);
+    //paramLength/=avgGradNorm;
+    
+    int numVars = intData.linRedMat.cols();
+    
+    //constructing face differentials
+    
+    SparseMatrix<double> G = directional::conf_gradient_matrix_2D<double>(meshCut, false, intData.N);
+    SparseMatrix<double> Mx = directional::face_mass_matrix_2D<double>(meshCut, false, 3*intData.N);
+    SparseMatrix<double> GT = G.transpose();
+    
+
     //The variables that should be fixed in the end
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
@@ -134,7 +111,51 @@ inline bool integrate(const directional::CartesianField& field,
     for (int i=0;i<intData.fixedValues.size();i++)
         fixedValues(intData.fixedIndices(i))=intData.fixedValues(i);
     
-    SparseMatrix<double> Efull = d0 * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    directional::MixedIntegerSolver mis;
+    
+    mis.A = G * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    mis.M = Mx;
+    mis.fixedMask = fixedMask;
+    mis.fixedValues = fixedValues;
+    mis.alreadyFixedMask = alreadyFixed;
+    mis.C = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    mis.b = rawField;
+    mis.numVars = numVars;
+    mis.verbose = intData.verbose;
+    bool success = mis.solve();
+    if (!success)
+        return success;
+    VectorXd xFull= mis.x;
+    
+    //solve again for extra integers for topological unrounded seams
+    if ((!intData.roundSeams)&&(!roundedSingularities)&&(intData.integralSeamless)) {
+        for (int i = 0; i < intData.integerVars.size(); i++)
+            for (int j = 0; j < intData.n; j++)
+                mis.fixedMask(intData.n * intData.integerVars(i) + j) = 1;
+        
+        roundedSingularities = true;
+    }
+    if (intData.verbose)
+        std::cout<<"Rounding extra unrounded topological seams if needed"<<std::endl;
+    
+    success = mis.solve();
+    if (!success)
+        return success;
+    xFull= mis.x;
+    
+    //need to integrate this code:
+    /****
+     //in case all singularities are rounded in the rounding-singularities mode, but there are left unrounded seams (like topological handles).
+     if ((alreadyFixed.sum()==fixedMask.sum())&&(!intData.roundSeams)&(!roundedSingularities)&&(intData.integralSeamless)) {
+         for (int i = 0; i < intData.integerVars.size(); i++)
+             for (int j = 0; j < intData.n; j++)
+                 fixedMask(intData.n * intData.integerVars(i) + j) = 1;
+         roundedSingularities = true;
+     }
+     ***//////
+    
+
+    /*SparseMatrix<double> Efull = G * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     VectorXd x, xprev;
     
     // until then all the N depedencies should be resolved?
@@ -183,7 +204,7 @@ inline bool integrate(const directional::CartesianField& field,
         
         SparseMatrix<double> Epart = Efull * var2AllMat;
         VectorXd torhs = -Efull * fixedValues;
-        SparseMatrix<double> EtE = Epart.transpose() * M1 * Epart;
+        SparseMatrix<double> EtE = Epart.transpose() * Mx * Epart;
         SparseMatrix<double> Cpart = Cfull * var2AllMat;
         
         //reducing rank on Cpart
@@ -233,7 +254,7 @@ inline bool integrate(const directional::CartesianField& field,
         
         //Right-hand side with fixed values
         VectorXd b = VectorXd::Zero(EtE.rows() + Cpart.rows());
-        b.segment(0, EtE.rows())= Epart.transpose() * M1 * (gamma + torhs);
+        b.segment(0, EtE.rows())= Epart.transpose() * Mx * (rawField + torhs);
         VectorXd bfull = -Cfull * fixedValues;
         VectorXd bpart(CpartRank);
         for(int k = 0; k < CpartRank; k++)
@@ -272,14 +293,14 @@ inline bool integrate(const directional::CartesianField& field,
                 }
             }
         }
-        
+        /*
         if (minIntDiffIndex != -1)
         {
             alreadyFixed(minIntDiffIndex) = 1;
             double func = fullx(minIntDiffIndex) ;
             double funcInteger=std::round(func);
-            fixedValues(minIntDiffIndex) = /*pinvSymm*projMat**/funcInteger;
-        }
+            fixedValues(minIntDiffIndex) = /*pinvSymm*projMat**///funcInteger;
+    /*}
         //in case all singularities are rounded in the rounding-singularities mode, but there are left unrounded seams (like topological handles).
         if ((alreadyFixed.sum()==fixedMask.sum())&&(!intData.roundSeams)&(!roundedSingularities)&&(intData.integralSeamless)) {
             for (int i = 0; i < intData.integerVars.size(); i++)
@@ -295,10 +316,10 @@ inline bool integrate(const directional::CartesianField& field,
                 xprev(varCounter++) = fullx(i);
         
         xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());
-    }
+    }*/
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
+    VectorXd NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
     NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
@@ -311,37 +332,13 @@ inline bool integrate(const directional::CartesianField& field,
         for (int j=0;j<3;j++)
             NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(meshCut.F(i,j));
     
-    SparseMatrix<double> G;
-    //MatrixXd FN;
-    //igl::per_face_normals(cutV, meshCut, FN);
-    branched_gradient(meshCut, intData.N, G);
-    //cout<<"cutF.rows(): "<<cutF.rows()<<endl;
-    SparseMatrix<double> Gd=G*intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
-    SparseMatrix<double> x2CornerMat=intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
-    //igl::matlab::MatlabWorkspace mw;
-    VectorXi integerIndices(intData.integerVars.size()*intData.n);
-    for(int i = 0; i < intData.integerVars.size(); i++)
-        for (int j=0;j<intData.n;j++)
-            integerIndices(intData.n * i+j) = intData.n * intData.integerVars(i)+j;
-    
-    
-    //bool success=directional::iterative_rounding(Efull, field.extField, intData.fixedIndices, intData.fixedValues, intData.singularIndices, integerIndices, intData.lengthRatio, gamma, Cfull, Gd, meshCut.faceNormals, intData.N, intData.n, meshCut.V, meshCut.F, x2CornerMat,  intData.integralSeamless, intData.roundSeams, intData.localInjectivity, intData.verbose, fullx);
-    bool success = true;
-    
-    //if ((!success)&&(intData.verbose))
-    //    cout<<"Rounding has failed!"<<endl;
-    
-    //the results are packets of N functions for each vertex, and need to be allocated for corners
-    NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * fullx;
+    NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
     NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
-    intData.nVertexFunction = fullx;
+    intData.nVertexFunction = xFull;
     
-    //nFunction = fullx;
-    
-    //cout<<"paramFuncsd: "<<paramFuncsd<<endl;
     
     //allocating per corner
     NCornerFunctions.resize(meshWhole.F.rows(), intData.N*3);

@@ -125,29 +125,18 @@ inline void setup_integration(const directional::CartesianField& field,
     cut_mesh_with_singularities(meshWhole, field.singLocalCycles, intData.face2cut);
     combing(field, combedField, intData.face2cut);
     
-    //std::cout<<"intData.face2cut: "<<intData.face2cut<<endl;
-    // std::cout<<"combedField.matching: "<<combedField.matching<<endl;
-    
-    //MatrixXi EFi,EH, FH;
-    //MatrixXd FEs;
-    //VectorXi VH, HV, HE, HF, nextH, prevH, twinH, innerEdges;
-    
     // it stores number of edges per face, for now only tirangular
-    VectorXi D = VectorXi::Constant(meshWhole.F.rows(), 3);
+    //VectorXi D = VectorXi::Constant(meshWhole.F.rows(), 3);
     
     // mark vertices as being a singularity vertex of the vector field
     VectorXi isSingular = VectorXi::Zero(meshWhole.V.rows());
     for (int i = 0; i < field.singLocalCycles.size(); i++)
         isSingular(field.singLocalCycles(i)) = 1;
-    
-    //cout<<"singVertices: "<<singVertices<<endl;
+
     
     intData.constrainedVertices = VectorXi::Zero(meshWhole.V.rows());
     
-    // compute the half-edge representation
-    //hedra::dcel(D, meshWhole.F, meshWhole.EV, meshWhole.EF, meshWhole.EFi, meshWhole.innerEdges, VH, EH, FH, HV, HE, HF, nextH, prevH, twinH);
-    
-    // find boundary vertices and mark them
+    // Find boundary vertices and mark them
     VectorXi isBoundary = VectorXi::Zero(meshWhole.V.rows());
     for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
         if (meshWhole.twinH(i) == -1){
@@ -155,18 +144,18 @@ inline void setup_integration(const directional::CartesianField& field,
             isSingular(meshWhole.HV(i)) = 0; //boundary vertices cannot be singular
         }
     
-    // here we compute a permutation matrix
+    // Compute a permutation matrix
     vector<MatrixXi> constParmMatrices(intData.N);
     MatrixXi unitPermMatrix = MatrixXi::Zero(intData.N, intData.N);
     for (int i = 0; i < intData.N; i++)
         unitPermMatrix((i + 1) % intData.N, i) = 1;
     
-    // generate all the members of the permutation group
+    // Generate all the members of the permutation group
     constParmMatrices[0] = MatrixXi::Identity(intData.N, intData.N);
     for (int i = 1; i < intData.N; i++)
         constParmMatrices[i] = unitPermMatrix * constParmMatrices[i - 1];
     
-    // each edge which is on the cut seam is marked by 1 and 0 otherwise
+    // Each edge which is on the cut seam is marked by 1 and 0 otherwise
     VectorXi isSeam = VectorXi::Zero(meshWhole.EV.rows());
     for(int i = 0; i < meshWhole.FE.rows(); i++)
     {
@@ -175,7 +164,7 @@ inline void setup_integration(const directional::CartesianField& field,
                 isSeam(meshWhole.FE(i, j)) = 1;
     }
     
-    // do the same for the half-edges, mark edges which correspond to the cut seam
+    // Do the same for the half-edges, mark edges which correspond to the cut seam
     VectorXi isHEcut = VectorXi::Zero(meshWhole.dcel.halfedges.size());
     for(int i = 0; i < meshWhole.F.rows(); i++)
     {
@@ -190,7 +179,7 @@ inline void setup_integration(const directional::CartesianField& field,
         }
     }
     
-    // calculate valency of the vertices which lay on the seam
+    // Calculate valence of the vertices which lay on the seam
     VectorXi cutValence = VectorXi::Zero(meshWhole.V.rows());
     for(int i = 0; i < meshWhole.EV.rows(); i++)
     {
@@ -201,12 +190,12 @@ inline void setup_integration(const directional::CartesianField& field,
         }
     }
     
-    //establishing transition variables by tracing cut curves
+    // Establish transition variables by tracing cut curves
     VectorXi Halfedge2TransitionIndices = VectorXi::Constant(meshWhole.dcel.halfedges.size(), 32767);
     VectorXi Halfedge2Matching(meshWhole.dcel.halfedges.size());
     VectorXi isHEClaimed = VectorXi::Zero(meshWhole.dcel.halfedges.size());
     
-    // here we convert the matching that was calculated for the vector field over edges to half-edges
+    // Convert the matching that was calculated for the vector field over edges to half-edges
     for (int i = 0; i < meshWhole.dcel.halfedges.size(); i++)
     {
         // HE is a map between half-edges to edges, but it does not carry the direction
@@ -218,9 +207,7 @@ inline void setup_integration(const directional::CartesianField& field,
     
     int currTransition = 1;
     
-    /*
-     * Next steps: cutting mesh and creating map between wholeF and cutF
-     */
+    /*****Cutting mesh and creating map between wholeF and cutF********/
     
     //cutting the mesh
     vector<int> cut2whole;
@@ -341,12 +328,11 @@ inline void setup_integration(const directional::CartesianField& field,
     // end of cutting
     
     int numTransitions = currTransition - 1;
-    //cout<<"numtransitions: "<<numTransitions<<endl;
     vector<Triplet<double> > vertexTrans2CutTriplets, constTriplets;
     vector<Triplet<int> > vertexTrans2CutTripletsInteger, constTripletsInteger;
-    //forming the constraints and the singularity positions
+    // Forming the constraints and the singularity positions
     int currConst = 0;
-    // this loop set up the transtions (vector field matching) across the cuts
+    // Set up the transition functions (vector field matching) across the cuts
     for (int i = 0; i < meshWhole.V.rows(); i++)
     {
         std::vector<MatrixXi> permMatrices;
@@ -506,8 +492,7 @@ inline void setup_integration(const directional::CartesianField& field,
     intData.vertexTrans2CutMat.setFromTriplets(cleanTriplets.begin(), cleanTriplets.end());
     intData.vertexTrans2CutMatInteger.setFromTriplets(cleanTripletsInteger.begin(), cleanTripletsInteger.end());
     
-    //
-    
+
     intData.constraintMat.resize(intData.N * currConst, intData.N * (meshWhole.V.rows() + numTransitions));
     intData.constraintMatInteger.resize(intData.N * currConst, intData.N * (meshWhole.V.rows() + numTransitions));
     cleanTriplets.clear();
