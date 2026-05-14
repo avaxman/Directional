@@ -24,6 +24,75 @@ namespace directional{
 
 enum class RoundingTypeEnum{ITERATIVE_ROUNDING, BRANCH_AND_BOUND};
 
+
+bool solveConstrainedLeastSquares(const Eigen::SparseMatrix<double>& A,
+                                  const Eigen::SparseMatrix<double>& M,
+                                  const Eigen::VectorXd& b,
+                                  const Eigen::SparseMatrix<double>& C,
+                                  const Eigen::VectorXd& d,
+                                  Eigen::VectorXd& x,
+                                  double regEps = 1e-10)
+{
+    using namespace Eigen;
+
+    // Normal equations:
+    // H x = r
+    SparseMatrix<double> H = A.transpose() * M * A;
+
+    // Small Tikhonov regularization
+    SparseMatrix<double> I(H.rows(), H.cols());
+    I.setIdentity();
+    H += regEps * I;
+
+    // Factorize H
+    SimplicialLDLT<SparseMatrix<double>> ldlt(H);
+    if (ldlt.info() != Success)
+        return false;
+
+    const int m = C.rows();
+    const int n = H.rows();
+
+    // Build Y = H^{-1} C^T
+    MatrixXd Y(n, m);
+    for (int i = 0; i < m; ++i)
+    {
+        Y.col(i) = ldlt.solve(C.row(i).transpose());
+    }
+
+    // Schur complement:
+    // S = C H^{-1} C^T
+    MatrixXd S = C * Y;
+
+    // RHS:
+    // r = A^T M b
+    VectorXd r = A.transpose() * M * b;
+
+    // Solve:
+    // (C H^{-1} C^T) lambda = C H^{-1} r - d
+    VectorXd rhs_lambda =
+        C * ldlt.solve(r) - d;
+
+    ColPivHouseholderQR<MatrixXd> sqr(S);
+    VectorXd lambda = sqr.solve(rhs_lambda);
+
+    // Recover primal variable:
+    // x = H^{-1}(r - C^T lambda)
+    x = ldlt.solve(r - C.transpose() * lambda);
+
+    // Constraint residual (L-infinity norm)
+    /*std::cout << "Constraint residual Linf: "
+              << (C * x - d).cwiseAbs().maxCoeff()
+              << std::endl;
+
+    // KKT residual
+    std::cout << "KKT residual norm: "
+              << (H * x + C.transpose() * lambda - r).norm()
+              << std::endl;*/
+
+    return true;
+}
+
+
 class MixedIntegerSolver{
 public:
     RoundingTypeEnum roundingType;
@@ -43,6 +112,7 @@ public:
     ~MixedIntegerSolver(){}
     
     
+    
     bool solve(){
         
         using namespace Eigen;
@@ -51,30 +121,6 @@ public:
         //Currently online doing iterative rounding
         Eigen::SparseMatrix<double> CPart = C;
         VectorXd xPart;
-    
-        //Initial reduction of the constrain matrix to not contain redundant constraints
-        /*SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
-        if (CFull.rows()!=0){
-            qrsolver.compute(CFull.transpose());
-            int CRank = qrsolver.rank();
-            
-            //creating sliced permutation matrix
-            VectorXi PIndices = qrsolver.colsPermutation().indices();
-            
-            vector<Triplet<double> > CTriplets;
-            for(int k = 0; k < CFull.outerSize(); ++k)
-            {
-                for(SparseMatrix<double>::InnerIterator it(CFull, k); it; ++it)
-                {
-                    for(int j = 0; j < CRank; j++)
-                        if(it.row() == PIndices(j))
-                            CTriplets.emplace_back(j, it.col(), it.value());
-                }
-            }
-            
-            CFull.resize(CRank, CFull.cols());
-            CFull.setFromTriplets(CTriplets.begin(), CTriplets.end());
-        }*/
         
         
         if (verbose)
@@ -89,84 +135,21 @@ public:
             if (verbose)
                 std::cout<<"Solving system with "<<numVars - fixedMask.sum()<<" variables"<<std::endl;
             SparseMatrix<double> var2AllMat;
-            SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
-            //the non-fixed variables to all variables
+           //the non-fixed variables to all variables
             var2AllMat.resize(numVars, numVars - fixedMask.sum());
             int varCounter = 0;
             vector<Triplet<double> > var2AllTriplets;
             for(int i = 0; i < numVars; i++)
                 if (!fixedMask(i))
                     var2AllTriplets.emplace_back(i, varCounter++, 1.0);
-                
+            
             var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
             
             SparseMatrix<double> APart = A * var2AllMat;
             VectorXd torhs = -A * fixedValues;
-            SparseMatrix<double> AtMA = APart.transpose() * M * APart;
-            CPart = C * var2AllMat;   //keep reducing rows from the already-reduced constraints matrix (the number of columns stays the same TODO THAT
-            
-            //reducing rank on Cpart
-            int CPartRank=0;
-            VectorXi PIndices(0);
-            if (CPart.rows()!=0){
-                qrsolver.compute(CPart.transpose());
-                CPartRank = qrsolver.rank();
-                
-                //creating sliced permutation matrix
-                PIndices = qrsolver.colsPermutation().indices();
-                
-                vector<Triplet<double> > CPartTriplets;
-                
-                for(int k = 0; k < CPart.outerSize(); ++k)
-                {
-                    for (SparseMatrix<double>::InnerIterator it(CPart, k); it; ++it)
-                    {
-                        for (int j = 0; j < CPartRank; j++)
-                            if (it.row() == PIndices(j))
-                                CPartTriplets.emplace_back(j, it.col(), it.value());
-                    }
-                }
-                
-                CPart.resize(CPartRank, CPart.cols());
-                CPart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
-            }
-            SparseMatrix<double> E(AtMA.rows()+ CPart.rows(), AtMA.rows() + CPart.rows());
-            
-            vector<Triplet<double>> ETriplets;
-            for(int k = 0; k < AtMA.outerSize(); ++k)
-            {
-                for (SparseMatrix<double>::InnerIterator it(AtMA, k); it; ++it)
-                    ETriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
-            }
-            
-            for(int k = 0; k < CPart.outerSize(); ++k)
-            {
-                for(SparseMatrix<double>::InnerIterator it(CPart, k); it; ++it)
-                {
-                    ETriplets.emplace_back(it.row() + AtMA.rows(), it.col(), it.value());
-                    ETriplets.emplace_back(it.col(), it.row() + AtMA.rows(), it.value());
-                }
-            }
-            
-            E.setFromTriplets(ETriplets.begin(), ETriplets.end());
-            
-            //Building Right-hand side with fixed values
-            VectorXd rhs = VectorXd::Zero(AtMA.rows() + CPart.rows());
-            rhs.segment(0, AtMA.rows())= APart.transpose() * M * (b + torhs);
-            VectorXd dfull = -C * fixedValues;
-            VectorXd dPart(CPartRank);
-            for(int k = 0; k < CPartRank; k++)
-                dPart(k)=dfull(PIndices(k));
-            rhs.segment(AtMA.rows(), CPart.rows()) = dPart;
-            
-            SparseLU<SparseMatrix<double> > lusolver;
-            lusolver.compute(E);
-            if(lusolver.info() != Success){
-                if (verbose)
-                    cout<<"LU decomposition failed!"<<endl;
-                return false;
-            }
-            xPart = lusolver.solve(rhs);
+            CPart = C * var2AllMat;   //keep reducing rows from the already-reduced constraints matrix (the number of columns stays the same TODO
+            VectorXd dFull = -C * fixedValues;
+            solveConstrainedLeastSquares(APart, M, b + torhs, CPart, dFull, xPart);
             
             x = var2AllMat * xPart.head(numVars - fixedMask.sum()) + fixedValues;
             
@@ -182,8 +165,8 @@ public:
             {
                 if ((toRoundMask(i))&&(fixedMask(i))){  //this variable has already been rounded before (assuming it's integer!)
                     toRoundMask(i) = 0;
-                    if (verbose)
-                        std::cout<<"Index "<<i<<" already pre-fixed; ignoring"<<std::endl;
+                    //if (verbose)
+                    //    std::cout<<"Index "<<i<<" already pre-fixed; ignoring"<<std::endl;
                     continue;
                 }
                 
@@ -196,8 +179,8 @@ public:
                     if (currIntDiff<integerTolerance){  //already been rounded to tolerance
                         fixedMask(i) = 1;
                         toRoundMask(i) = 0;
-                        if (verbose)
-                            std::cout<<"adding tolerance-rounded "<<i<<" with current value "<<func<<"and integer difference "<<currIntDiff<<" to fixed variables"<<std::endl;
+                        //if (verbose)
+                        //    std::cout<<"adding tolerance-rounded "<<i<<" with current value "<<func<<" and integer difference "<<currIntDiff<<" to fixed variables"<<std::endl;
                         fixedValues(i) = std::round(func);
                     }else if (currIntDiff < minIntDiff)
                     {
@@ -222,17 +205,6 @@ public:
                 break;
         }
         
-        //for(int intIter = 0; intIter < fixedMask.sum(); intIter++)
-        //{
-            
-            /*xprev.resize(x.rows() - 1);
-            varCounter = 0;
-            for(int i = 0; i < numVars; i++)
-                if (!alreadyFixed(i))
-                    xprev(varCounter++) = fullx(i);
-            
-            xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());*/
-        //}
         
         return true;
     }
