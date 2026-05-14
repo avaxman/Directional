@@ -78,32 +78,12 @@ inline bool integrate(const directional::CartesianField& field,
     SparseMatrix<double> GT = G.transpose();
     
 
-    //The variables that should be fixed in the end
+    //The variables that should be fixed aprior
     VectorXi fixedMask(numVars);
     fixedMask.setZero();
     
     for (int i=0;i<intData.fixedIndices.size();i++)
         fixedMask(intData.fixedIndices(i)) = 1;
-    
-    bool roundedSingularities = false;  //if all singularities have been rounded (only relevant to intData.roundSeams=false)
-    if(intData.integralSeamless) {
-        if (intData.roundSeams) {
-            for (int i = 0; i < intData.integerVars.size(); i++)
-                for (int j = 0; j < intData.n; j++)
-                    fixedMask(intData.n * intData.integerVars(i) + j) = 1;
-        }else {
-            for (int i = 0; i < intData.singularIndices.size(); i++)
-                fixedMask(intData.singularIndices(i)) = 1;
-        }
-    }
-    
-    //the variables that were already fixed to begin with
-    VectorXi alreadyFixed(numVars);
-    alreadyFixed.setZero();
-    
-    
-    for (int i=0;i<intData.fixedIndices.size();i++)
-        alreadyFixed(intData.fixedIndices(i)) = 1;
     
     //the values for the fixed variables (size is as all variables)
     VectorXd fixedValues(numVars);
@@ -111,13 +91,40 @@ inline bool integrate(const directional::CartesianField& field,
     for (int i=0;i<intData.fixedValues.size();i++)
         fixedValues(intData.fixedIndices(i))=intData.fixedValues(i);
     
+    
+    //The variables that need to be rounded
+    VectorXi toRoundMask(numVars);
+    toRoundMask.setZero();
+    
+    
+    bool roundedSingularities = false;  //if all singularities have been rounded (only relevant to intData.roundSeams=false)
+    if(intData.integralSeamless) {
+        if (intData.roundSeams) {
+            for (int i = 0; i < intData.integerVars.size(); i++)
+                for (int j = 0; j < intData.n; j++)
+                    toRoundMask(intData.n * intData.integerVars(i) + j) = 1;
+        }else {
+            for (int i = 0; i < intData.singularIndices.size(); i++)
+                toRoundMask(intData.singularIndices(i)) = 1;
+        }
+    }
+    
+    //the variables that were already fixed to begin with
+    /*VectorXi alreadyFixed(numVars);
+    alreadyFixed.setZero();
+    
+    
+    for (int i=0;i<intData.fixedIndices.size();i++)
+        alreadyFixed(intData.fixedIndices(i)) = 1;*/
+    
+    
     directional::MixedIntegerSolver mis;
     
     mis.A = G * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     mis.M = Mx;
     mis.fixedMask = fixedMask;
     mis.fixedValues = fixedValues;
-    mis.alreadyFixedMask = alreadyFixed;
+    mis.toRoundMask = toRoundMask;
     mis.C = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     mis.b = rawField;
     mis.numVars = numVars;
@@ -128,10 +135,11 @@ inline bool integrate(const directional::CartesianField& field,
     VectorXd xFull= mis.x;
     
     //solve again for extra integers for topological unrounded seams
+    //Some of these might have been rounded already, in which case the solver ignores them
     if ((!intData.roundSeams)&&(!roundedSingularities)&&(intData.integralSeamless)) {
         for (int i = 0; i < intData.integerVars.size(); i++)
             for (int j = 0; j < intData.n; j++)
-                mis.fixedMask(intData.n * intData.integerVars(i) + j) = 1;
+                mis.toRoundMask(intData.n * intData.integerVars(i) + j) = 1;
         
         roundedSingularities = true;
     }

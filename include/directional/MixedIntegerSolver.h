@@ -16,6 +16,9 @@
 //This is a "home-made" mixed integer solver for quadratic optimization with linear constraints. This might be slow-ish.
 //This problem solved is as following:
 // x = argmin |Ax - b|^2 with metric matrix M, so that Cx = 0, and where a subset x_int \in Z, and x_fixed = fixedValues;
+//fixed values are known in advance, and get removed from the system immediately. Values that have been rounded off join the fixed mask after having been rounded.
+//the toRound values are to be fixed by rounding. After having been rounded they are removed from the list. Even if they were previously rounded, it is not checked here.
+
 
 namespace directional{
 
@@ -27,13 +30,16 @@ public:
     
     Eigen::SparseMatrix<double> A, C, M;
     Eigen::VectorXd b, fixedValues;
-    Eigen::VectorXi fixedMask, alreadyFixedMask;  //alreadyfixed are values that are already done, fixedMask is all values (including the already-ones) that need to be fixed;
+    Eigen::VectorXi fixedMask;
+    Eigen::VectorXi toRoundMask;
+    
     int numVars;
     bool verbose;
+    double integerTolerance;
     
     Eigen::VectorXd x;
     
-    MixedIntegerSolver():verbose(false), numVars(0){}
+    MixedIntegerSolver():verbose(false), numVars(0), integerTolerance(10e-12){}
     ~MixedIntegerSolver(){}
     
     
@@ -42,13 +48,12 @@ public:
         using namespace Eigen;
         using namespace std;
         
-        
         //Currently online doing iterative rounding
-        Eigen::SparseMatrix<double> CFull = C;
-        VectorXd xPart;//, xprev;
+        Eigen::SparseMatrix<double> CPart = C;
+        VectorXd xPart;
     
-        //reducing constraintMat
-        SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
+        //Initial reduction of the constrain matrix to not contain redundant constraints
+        /*SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
         if (CFull.rows()!=0){
             qrsolver.compute(CFull.transpose());
             int CRank = qrsolver.rank();
@@ -69,55 +74,63 @@ public:
             
             CFull.resize(CRank, CFull.cols());
             CFull.setFromTriplets(CTriplets.begin(), CTriplets.end());
-        }
-        SparseMatrix<double> var2AllMat;
-        for(int intIter = 0; intIter < fixedMask.sum(); intIter++)
+        }*/
+        
+        
+        if (verbose)
+            std::cout<<"the initial #fixing variables: "<<fixedMask.sum()<<std::endl;
+        
+        if (verbose)
+            std::cout<<"Need to round "<<toRoundMask.sum()<<" integers"<<std::endl;
+        
+        //This is done at least once, and until the toRound set is emptied
+        while(true)
         {
+            if (verbose)
+                std::cout<<"Solving system with "<<numVars - fixedMask.sum()<<" variables"<<std::endl;
+            SparseMatrix<double> var2AllMat;
+            SparseQR<SparseMatrix<double>, COLAMDOrdering<int> > qrsolver;
             //the non-fixed variables to all variables
-            var2AllMat.resize(numVars, numVars - alreadyFixedMask.sum());
+            var2AllMat.resize(numVars, numVars - fixedMask.sum());
             int varCounter = 0;
             vector<Triplet<double> > var2AllTriplets;
             for(int i = 0; i < numVars; i++)
-            {
-                if (!alreadyFixedMask(i)){
-                    //for (int j=0;j<intData.d;j++)
+                if (!fixedMask(i))
                     var2AllTriplets.emplace_back(i, varCounter++, 1.0);
-                }
                 
-            }
             var2AllMat.setFromTriplets(var2AllTriplets.begin(), var2AllTriplets.end());
             
-            SparseMatrix<double> Apart = A * var2AllMat;
+            SparseMatrix<double> APart = A * var2AllMat;
             VectorXd torhs = -A * fixedValues;
-            SparseMatrix<double> AtMA = Apart.transpose() * M * Apart;
-            SparseMatrix<double> Cpart = CFull * var2AllMat;
+            SparseMatrix<double> AtMA = APart.transpose() * M * APart;
+            CPart = C * var2AllMat;   //keep reducing rows from the already-reduced constraints matrix (the number of columns stays the same TODO THAT
             
             //reducing rank on Cpart
-            int CpartRank=0;
+            int CPartRank=0;
             VectorXi PIndices(0);
-            if (Cpart.rows()!=0){
-                qrsolver.compute(Cpart.transpose());
-                CpartRank = qrsolver.rank();
+            if (CPart.rows()!=0){
+                qrsolver.compute(CPart.transpose());
+                CPartRank = qrsolver.rank();
                 
                 //creating sliced permutation matrix
                 PIndices = qrsolver.colsPermutation().indices();
                 
                 vector<Triplet<double> > CPartTriplets;
                 
-                for(int k = 0; k < Cpart.outerSize(); ++k)
+                for(int k = 0; k < CPart.outerSize(); ++k)
                 {
-                    for (SparseMatrix<double>::InnerIterator it(Cpart, k); it; ++it)
+                    for (SparseMatrix<double>::InnerIterator it(CPart, k); it; ++it)
                     {
-                        for (int j = 0; j < CpartRank; j++)
+                        for (int j = 0; j < CPartRank; j++)
                             if (it.row() == PIndices(j))
                                 CPartTriplets.emplace_back(j, it.col(), it.value());
                     }
                 }
                 
-                Cpart.resize(CpartRank, Cpart.cols());
-                Cpart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
+                CPart.resize(CPartRank, CPart.cols());
+                CPart.setFromTriplets(CPartTriplets.begin(), CPartTriplets.end());
             }
-            SparseMatrix<double> E(AtMA.rows()+ Cpart.rows(), AtMA.rows() + Cpart.rows());
+            SparseMatrix<double> E(AtMA.rows()+ CPart.rows(), AtMA.rows() + CPart.rows());
             
             vector<Triplet<double>> ETriplets;
             for(int k = 0; k < AtMA.outerSize(); ++k)
@@ -126,9 +139,9 @@ public:
                     ETriplets.push_back(Triplet<double>(it.row(), it.col(), it.value()));
             }
             
-            for(int k = 0; k < Cpart.outerSize(); ++k)
+            for(int k = 0; k < CPart.outerSize(); ++k)
             {
-                for(SparseMatrix<double>::InnerIterator it(Cpart, k); it; ++it)
+                for(SparseMatrix<double>::InnerIterator it(CPart, k); it; ++it)
                 {
                     ETriplets.emplace_back(it.row() + AtMA.rows(), it.col(), it.value());
                     ETriplets.emplace_back(it.col(), it.row() + AtMA.rows(), it.value());
@@ -138,13 +151,13 @@ public:
             E.setFromTriplets(ETriplets.begin(), ETriplets.end());
             
             //Building Right-hand side with fixed values
-            VectorXd rhs = VectorXd::Zero(AtMA.rows() + Cpart.rows());
-            rhs.segment(0, AtMA.rows())= Apart.transpose() * M * (b + torhs);
-            VectorXd dfull = -CFull * fixedValues;
-            VectorXd dPart(CpartRank);
-            for(int k = 0; k < CpartRank; k++)
+            VectorXd rhs = VectorXd::Zero(AtMA.rows() + CPart.rows());
+            rhs.segment(0, AtMA.rows())= APart.transpose() * M * (b + torhs);
+            VectorXd dfull = -C * fixedValues;
+            VectorXd dPart(CPartRank);
+            for(int k = 0; k < CPartRank; k++)
                 dPart(k)=dfull(PIndices(k));
-            rhs.segment(AtMA.rows(), Cpart.rows()) = dPart;
+            rhs.segment(AtMA.rows(), CPart.rows()) = dPart;
             
             SparseLU<SparseMatrix<double> > lusolver;
             lusolver.compute(E);
@@ -155,22 +168,38 @@ public:
             }
             xPart = lusolver.solve(rhs);
             
-            x = var2AllMat * xPart.head(numVars - alreadyFixedMask.sum()) + fixedValues;
+            x = var2AllMat * xPart.head(numVars - fixedMask.sum()) + fixedValues;
             
-            if((alreadyFixedMask - fixedMask).sum() == 0)
-                break;
+            if (toRoundMask.sum()==0)
+                break;  //nothing more to do
             
+            
+            //Otherwise, find the next roundable integer
             double minIntDiff = std::numeric_limits<double>::max();
             int minIntDiffIndex = -1;
+            bool changedFixed = false;
             for (int i = 0; i < numVars; i++)
             {
-                if ((fixedMask(i)) && (!alreadyFixedMask(i)))
+                if ((toRoundMask(i))&&(fixedMask(i))){  //this variable has already been rounded before (assuming it's integer!)
+                    toRoundMask(i) = 0;
+                    if (verbose)
+                        std::cout<<"Index "<<i<<" already pre-fixed; ignoring"<<std::endl;
+                    continue;
+                }
+                
+                if ((toRoundMask(i))&&(!fixedMask(i)))  //a variable to round that has not been fixed already
                 {
+                    changedFixed = true;  //there is an event that changed fixed variable, and need resolving
                     double currIntDiff =0;
-                    double func = x(i); //fullx.segment(intData.d*i,intData.d);
-                    //for (int j=0;j<intData.d;j++)
+                    double func = x(i);
                     currIntDiff += std::fabs(func - std::round(func));
-                    if (currIntDiff < minIntDiff)
+                    if (currIntDiff<integerTolerance){  //already been rounded to tolerance
+                        fixedMask(i) = 1;
+                        toRoundMask(i) = 0;
+                        if (verbose)
+                            std::cout<<"adding tolerance-rounded "<<i<<" with current value "<<func<<"and integer difference "<<currIntDiff<<" to fixed variables"<<std::endl;
+                        fixedValues(i) = std::round(func);
+                    }else if (currIntDiff < minIntDiff)
                     {
                         minIntDiff = currIntDiff;
                         minIntDiffIndex = i;
@@ -180,13 +209,21 @@ public:
             
             if (minIntDiffIndex != -1)
             {
-                alreadyFixedMask(minIntDiffIndex) = 1;
+                fixedMask(minIntDiffIndex) = 1;
+                toRoundMask(minIntDiffIndex) = 0;
                 double func = x(minIntDiffIndex) ;
                 double funcInteger=std::round(func);
                 if (verbose)
                     std::cout<<"rounding index "<<minIntDiffIndex<<" from "<<func<<" to "<<funcInteger<<std::endl;
                 fixedValues(minIntDiffIndex) = funcInteger;
             }
+            
+            if (!changedFixed)  //no resolving needed
+                break;
+        }
+        
+        //for(int intIter = 0; intIter < fixedMask.sum(); intIter++)
+        //{
             
             /*xprev.resize(x.rows() - 1);
             varCounter = 0;
@@ -195,7 +232,7 @@ public:
                     xprev(varCounter++) = fullx(i);
             
             xprev.tail(Cpart.rows()) = x.tail(Cpart.rows());*/
-        }
+        //}
         
         return true;
     }
