@@ -35,63 +35,58 @@ bool solveConstrainedLeastSquares(const Eigen::SparseMatrix<double>& A,
 {
     using namespace Eigen;
 
-    // Normal equations:
-    // H x = r
+    // H = A^T M A
     SparseMatrix<double> H = A.transpose() * M * A;
 
-    // Small Tikhonov regularization
-    SparseMatrix<double> I(H.rows(), H.cols());
-    I.setIdentity();
-    H += regEps * I;
+    // regularization
+    H.coeffRef(0, 0) += regEps; // cheaper than building identity matrix
 
-    // Factorize H
-    SimplicialLDLT<SparseMatrix<double>> ldlt(H);
+    SimplicialLDLT<SparseMatrix<double>> ldlt;
+    ldlt.analyzePattern(H);
+    ldlt.factorize(H);
+
     if (ldlt.info() != Success)
         return false;
 
-    const int m = C.rows();
     const int n = H.rows();
+    const int m = C.rows();
 
-    // Build Y = H^{-1} C^T
-    MatrixXd Y(n, m);
-    for (int i = 0; i < m; ++i)
-    {
-        Y.col(i) = ldlt.solve(C.row(i).transpose());
-    }
-
-    // Schur complement:
-    // S = C H^{-1} C^T
-    MatrixXd S = C * Y;
-
-    // RHS:
     // r = A^T M b
     VectorXd r = A.transpose() * M * b;
 
-    // Solve:
-    // (C H^{-1} C^T) lambda = C H^{-1} r - d
-    VectorXd rhs_lambda =
-        C * ldlt.solve(r) - d;
+    // -----------------------------
+    // FAST PATH: build Y in one shot
+    // -----------------------------
+    MatrixXd Ct = C.transpose().eval();   // force contiguous dense RHS
+    MatrixXd Y  = ldlt.solve(Ct);         // single block solve
 
-    ColPivHouseholderQR<MatrixXd> sqr(S);
-    VectorXd lambda = sqr.solve(rhs_lambda);
+    // S = C H^{-1} C^T
+    MatrixXd S = C * Y;
 
-    // Recover primal variable:
-    // x = H^{-1}(r - C^T lambda)
+    // rhs = C H^{-1} r - d
+    VectorXd Hr = ldlt.solve(r);
+    VectorXd rhs_lambda = C * Hr - d;
+
+    // Solve Schur system
+    VectorXd lambda;
+
+    // Prefer LDLT if possible (S is symmetric PSD)
+    LDLT<MatrixXd> sldlt(S);
+    if (sldlt.info() == Success)
+    {
+        lambda = sldlt.solve(rhs_lambda);
+    }
+    else
+    {
+        // fallback
+        lambda = S.colPivHouseholderQr().solve(rhs_lambda);
+    }
+
+    // primal recovery
     x = ldlt.solve(r - C.transpose() * lambda);
-
-    // Constraint residual (L-infinity norm)
-    /*std::cout << "Constraint residual Linf: "
-              << (C * x - d).cwiseAbs().maxCoeff()
-              << std::endl;
-
-    // KKT residual
-    std::cout << "KKT residual norm: "
-              << (H * x + C.transpose() * lambda - r).norm()
-              << std::endl;*/
 
     return true;
 }
-
 
 class MixedIntegerSolver{
 public:
@@ -155,7 +150,6 @@ public:
             
             if (toRoundMask.sum()==0)
                 break;  //nothing more to do
-            
             
             //Otherwise, find the next roundable integer
             double minIntDiff = std::numeric_limits<double>::max();

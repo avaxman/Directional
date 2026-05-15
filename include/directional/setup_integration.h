@@ -43,6 +43,7 @@ struct IntegrationData
     Eigen::VectorXi fixedIndices;                       // Translation fixing indices
     Eigen::VectorXd fixedValues;                        // Translation fixed values
     Eigen::VectorXi singularIndices;                    // Singular-vertex indices
+    Eigen::VectorXi featureIndices;                     // Indices of the feature edges
     
     //integer versions, for exact seamless parameterizations (good for error-free meshing)
     Eigen::SparseMatrix<int> vertexTrans2CutMatInteger;
@@ -56,6 +57,8 @@ struct IntegrationData
     bool integralSeamless;                              // Whether to do full translational seamless.
     bool roundSeams;                                    // Whether to round seams or round singularities
     bool verbose;                                       // Output the integration log.
+    bool featureAlignment;                              // Whether to align to feature edges
+    bool autoFeatureFunc;                               // Whether to automatically derive the function index that should be aligned (the one most orthogonal to the matched vectors on each side)
     
     IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false){
         N=_N;
