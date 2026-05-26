@@ -31,10 +31,11 @@ struct IntegrationData
     Eigen::MatrixXi linRed;                             // Linear Reduction tying the n dofs to the full N
     Eigen::MatrixXi periodMat;                          // Function spanning integers
     Eigen::SparseMatrix<double> vertexTrans2CutMat;     // Map between the whole mesh (vertex + translational jump) representation to the vertex-based representation on the cut mesh
-    Eigen::SparseMatrix<double> constraintMat;          // Linear constraints (resulting from non-singular nodes)
+    Eigen::SparseMatrix<double> constraintMat;          // Linear constraints (resulting from non-singular nodes and feature alignment)
     Eigen::SparseMatrix<double> linRedMat;              // Global uncompression of n->N
     Eigen::SparseMatrix<double> intSpanMat;             // Spanning the translational jump lattice
     Eigen::SparseMatrix<double> singIntSpanMat;         // Layer for the singularities
+    Eigen::SparseMatrix<double> featureAlignMat;        // A constraint matrix for the feature alignment (directly on the cut mesh)
     Eigen::VectorXi constrainedVertices;                // Constrained vertices (fixed points in the parameterization)
     Eigen::VectorXi integerVars;                        // Variables that are to be rounded.
     Eigen::MatrixXi face2cut;                           // |F|x3 map of which edges of faces are seams
@@ -51,6 +52,7 @@ struct IntegrationData
     Eigen::SparseMatrix<int> linRedMatInteger;
     Eigen::SparseMatrix<int> intSpanMatInteger;
     Eigen::SparseMatrix<int> singIntSpanMatInteger;
+    //Eigen::SparseMatrix<int> FeatureMatInteger;
     
     double lengthRatio;                                 // Global scaling of functions
     //Flags
@@ -60,7 +62,7 @@ struct IntegrationData
     bool featureAlignment;                              // Whether to align to feature edges
     bool autoFeatureFunc;                               // Whether to automatically derive the function index that should be aligned (the one most orthogonal to the matched vectors on each side)
     
-    IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false){
+    IntegrationData(int _N):lengthRatio(0.02), integralSeamless(false), roundSeams(true), verbose(false), autoFeatureFunc(true), featureAlignment(false){
         N=_N;
         n=(N%2==0 ? N/2 : N);
         if (N%2==0)
@@ -612,6 +614,51 @@ inline void setup_integration(const directional::CartesianField& field,
     intData.singularIndices=singularIndices;
     intData.fixedValues.resize(intData.n);
     intData.fixedValues.setConstant(0);
+    
+    //Doing feature lines
+    //This is a constraint matrix done directly on the cut mesh
+    if (intData.featureAlignment){
+        //featureAlignMat.resize(featureIndices.size(), intData.N*meshCut.V.rows());
+        Triplets<double> featureAlignMatTriplets;
+        int featureIndex=0;
+        for (int e=0;e<intData.featureEdges.size();e++){
+            int faceLeft = meshWhole.EF(intData.featureEdges(e), 0);
+            int faceRight = meshWhole.EF(intData.featureEdges(e), 1);
+            int inFaceLeft = meshWhole.EFi(intData.featureEdges(e), 0);
+            int inFaceRight = meshWhole.EFi(intData.featureEdges(e), 1);
+            if (intData.autoFeatureFunc){
+                //figuring out the directional field that is most orthogonal to the edge. This can be independent on both sides! forces agreement with matching
+                double maxOrth = 1.0;
+                int orthWhere = -1;
+                RowVector3d normEdgeVector = (meshWhole.V.row(meshWhole.EV(e,1)) - meshWhole.V.row(meshWhole.EV(e,0))).normalized();
+                for (int i=0;i<intData.N;i++){
+                    RowVector3d vecLeft = field.extField.segment(faceLeft, i * 3, 1, 3);
+                    double currOrth = abs(vecLeft.dot(normEdgeVector)/vecLeft.norm());
+                    if (faceRight!=-1){
+                        RowVector3d vecRight = field.extField.segment(faceRight, field.matching(i) * 3, 1, 3);
+                        //If this is sign symmetry, one would get chosen arbitrarily, and eventually this should not be important which
+                        currOrth = (currOrth+abs(vecRight.dot(normEdgeVector)/vecLeft.norm()))/2.0;
+                    }
+                    if (currOrth<=maxOrth){
+                        orthWhere = i;
+                        maxOrth = currOrth;
+                    }
+                }
+                
+                //adding a constraint for the proper differential on the edge to be zero. Is this wasteful?
+                featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+N*meshCut(faceLeft, inFaceLeft), -1.0));
+                featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+N*meshCut(faceLeft, (inFaceLeft+1)%3), 1.0));
+                if (faceRight!=-1){
+                    featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+N*meshCut(faceRight, inFaceRight), -1.0));
+                    featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+N*meshCut(faceRight, (inFaceRight+1)%3), 1.0));
+                }
+                    
+            }
+            featureAlignMat.resize(featureIndex, intData.N*meshCut.V.rows());
+            featureAlignMat.setFromTriplets(featureAlignmentMatTriplets.begin(), featureAlignmentMatTriplets.end());
+        }
+        //TODO: adjoint this to the constraint matrix
+    }
     
     meshCut.set_mesh(cutV, cutF);
     

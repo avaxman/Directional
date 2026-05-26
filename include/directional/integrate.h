@@ -118,6 +118,8 @@ inline bool integrate(const directional::CartesianField& field,
     mis.fixedValues = fixedValues;
     mis.toRoundMask = toRoundMask;
     mis.C = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    if (intData.verbose)
+        std::cout<<"Number of constraints: "<<mis.C.rows()<<std::endl;
     mis.b = rawField;
     mis.numVars = numVars;
     mis.verbose = intData.verbose;

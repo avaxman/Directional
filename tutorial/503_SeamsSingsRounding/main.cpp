@@ -87,7 +87,7 @@ int main()
     std::cout<<"Setting up Integration"<<std::endl;
     directional::setup_integration(rawField, intData, meshCut, combedField);
     
-    intData.verbose=false;
+    intData.verbose=true;
     intData.integralSeamless=true;
     intData.roundSeams=true;
     
