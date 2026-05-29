@@ -20,6 +20,7 @@
 #include <directional/dcel.h>
 #include <directional/cut_mesh_with_singularities.h>
 #include <directional/combing.h>
+#include <directional/sparse_identity.h>
 
 namespace directional
 {
@@ -104,6 +105,110 @@ struct IntegrationData
     }
 };
 
+
+/**
+ * Computes connected components directly from the constraint matrix C * y = 0.
+ * * @param C  A sparse matrix of size (num_constraints x num_y), where each row
+ * contains exactly one 1.0 and one -1.0.
+ * @return   An Eigen::VectorXi of size num_y, where the i-th entry is the
+ * contiguous, zero-indexed component ID (the z-index).
+ */
+Eigen::VectorXi dofsFromConstraintMatrix(const Eigen::SparseMatrix<double>& C) {
+    const int numy = C.cols();
+    
+    // 1. Construct the adjacency topology: A = C^T * C
+    // This creates a symmetric matrix where A(i,j) is non-zero if y_i and y_j
+    // share an equality constraint.
+    Eigen::SparseMatrix<double> A = C.transpose() * C;
+    A.makeCompressed(); // Ensure optimal traversal memory layout
+
+    Eigen::VectorXi dofMap = Eigen::VectorXi::Constant(numy, -1);
+    int currentDofId = 0;
+    
+    // Reuse a single vector as a queue for memory efficiency during BFS
+    std::vector<int> bfsQueue;
+    bfsQueue.reserve(numy);
+
+    // 2. Linear-time standard BFS traversal across the sparse graph topology
+    for (int i = 0; i < numy; ++i) {
+        // If this node is already assigned to a z-component, skip it
+        if (dofMap(i) != -1) continue;
+
+        // Found a new connected component! Start BFS.
+        dofMap(i) = currentDofId;
+        bfsQueue.push_back(i);
+        
+        size_t head = 0;
+        while (head < bfsQueue.size()) {
+            int u = bfsQueue[head++];
+            
+            // Traverse all structural neighbors of node 'u'
+            for (Eigen::SparseMatrix<double>::InnerIterator it(A, u); it; ++it) {
+                int v = it.index();
+                
+                if (dofMap(v) == -1) {
+                    dofMap(v) = currentDofId;
+                    bfsQueue.push_back(v);
+                }
+            }
+        }
+        
+        bfsQueue.clear();
+        currentDofId++; // Increment for the next isolated variable group
+    }
+
+    return dofMap;
+}
+
+/**
+ * Computes the sparse transfer operator T = (E^T * E)^-1 * E^T directly
+ * from the connected component mappings.
+ *
+ * @param z_mapping  The VectorXi output from computeZMappingFromConstraintMatrix.
+ * @return           A sparse matrix T of size (num_z x num_y).
+ */
+Eigen::SparseMatrix<double> featureProjectionMat(const Eigen::VectorXi& dofMapping) {
+    const int numy = dofMapping.size();
+    const int numz = dofMapping.maxCoeff() + 1;
+
+    // 1. Group the original y-indices into their respective z-clusters
+    std::vector<std::vector<int>> clusters(numz);
+    for (int i = 0; i < numy; ++i) {
+        clusters[dofMapping(i)].push_back(i);
+    }
+
+    // 2. Assemble the triplets for the square projection matrix P
+    // Each cluster forms an isolated, fully connected dense block
+    // where every entry inside that block has a weight of 1.0 / cluster_size.
+    std::vector<Eigen::Triplet<double>> triplets;
+    
+    // Estimate allocation size to prevent vector reallocations
+    size_t estimated_elements = 0;
+    for (const auto& cluster : clusters) {
+        estimated_elements += cluster.size() * cluster.size();
+    }
+    triplets.reserve(estimated_elements);
+
+    for (const auto& cluster : clusters) {
+        if (cluster.empty()) continue;
+        
+        double weight = 1.0 / static_cast<double>(cluster.size());
+        
+        // Populate the cross-product block for this component
+        for (int row_idx : cluster) {
+            for (int col_idx : cluster) {
+                triplets.push_back(Eigen::Triplet<double>(row_idx, col_idx, weight));
+            }
+        }
+    }
+
+    // 3. Construct the square (numy x numy) filter matrix
+    Eigen::SparseMatrix<double> P(numy, numy);
+    P.setFromTriplets(triplets.begin(), triplets.end());
+    P.makeCompressed();
+
+    return P;
+}
 
 
 /*** Setting up the seamless integration algorithm. Seamless integration only works on IntrinsicFaceTangentBundle at the moment.
@@ -615,27 +720,29 @@ inline void setup_integration(const directional::CartesianField& field,
     intData.fixedValues.resize(intData.n);
     intData.fixedValues.setConstant(0);
     
+    meshCut.set_mesh(cutV, cutF);
+    
     //Doing feature lines
     //This is a constraint matrix done directly on the cut mesh
     if (intData.featureAlignment){
         //featureAlignMat.resize(featureIndices.size(), intData.N*meshCut.V.rows());
-        Triplets<double> featureAlignMatTriplets;
+        vector<Eigen::Triplet<double>> featureAlignMatTriplets;
         int featureIndex=0;
-        for (int e=0;e<intData.featureEdges.size();e++){
-            int faceLeft = meshWhole.EF(intData.featureEdges(e), 0);
-            int faceRight = meshWhole.EF(intData.featureEdges(e), 1);
-            int inFaceLeft = meshWhole.EFi(intData.featureEdges(e), 0);
-            int inFaceRight = meshWhole.EFi(intData.featureEdges(e), 1);
+        for (int e=0;e<intData.featureIndices.size();e++){
+            int faceLeft = meshWhole.EF(intData.featureIndices(e), 0);
+            int faceRight = meshWhole.EF(intData.featureIndices(e), 1);
+            int inFaceLeft = meshWhole.EFi(intData.featureIndices(e), 0);
+            int inFaceRight = meshWhole.EFi(intData.featureIndices(e), 1);
             if (intData.autoFeatureFunc){
                 //figuring out the directional field that is most orthogonal to the edge. This can be independent on both sides! forces agreement with matching
                 double maxOrth = 1.0;
                 int orthWhere = -1;
                 RowVector3d normEdgeVector = (meshWhole.V.row(meshWhole.EV(e,1)) - meshWhole.V.row(meshWhole.EV(e,0))).normalized();
                 for (int i=0;i<intData.N;i++){
-                    RowVector3d vecLeft = field.extField.segment(faceLeft, i * 3, 1, 3);
+                    RowVector3d vecLeft = field.extField.block(faceLeft, i * 3, 1, 3);
                     double currOrth = abs(vecLeft.dot(normEdgeVector)/vecLeft.norm());
                     if (faceRight!=-1){
-                        RowVector3d vecRight = field.extField.segment(faceRight, field.matching(i) * 3, 1, 3);
+                        RowVector3d vecRight = field.extField.block(faceRight, field.matching(i) * 3, 1, 3);
                         //If this is sign symmetry, one would get chosen arbitrarily, and eventually this should not be important which
                         currOrth = (currOrth+abs(vecRight.dot(normEdgeVector)/vecLeft.norm()))/2.0;
                     }
@@ -646,21 +753,26 @@ inline void setup_integration(const directional::CartesianField& field,
                 }
                 
                 //adding a constraint for the proper differential on the edge to be zero. Is this wasteful?
-                featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+N*meshCut(faceLeft, inFaceLeft), -1.0));
-                featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+N*meshCut(faceLeft, (inFaceLeft+1)%3), 1.0));
+                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+intData.N*meshCut.F(faceLeft, inFaceLeft), -1.0));
+                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3), 1.0));
                 if (faceRight!=-1){
-                    featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+N*meshCut(faceRight, inFaceRight), -1.0));
-                    featureAlignmentMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+N*meshCut(faceRight, (inFaceRight+1)%3), 1.0));
+                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+intData.N*meshCut.F(faceRight, inFaceRight), -1.0));
+                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+intData.N*meshCut.F(faceRight, (inFaceRight+1)%3), 1.0));
                 }
                     
             }
-            featureAlignMat.resize(featureIndex, intData.N*meshCut.V.rows());
-            featureAlignMat.setFromTriplets(featureAlignmentMatTriplets.begin(), featureAlignmentMatTriplets.end());
+            intData.featureAlignMat.resize(featureIndex, intData.N*meshCut.V.rows());
+            intData.featureAlignMat.setFromTriplets(featureAlignMatTriplets.begin(), featureAlignMatTriplets.end());
         }
-        //TODO: adjoint this to the constraint matrix
+        
+        //Separating the DOFs of the features so they can be used as a layer matrix
+        Eigen::VectorXi featureDofMap = dofsFromConstraintMatrix(intData.featureAlignMat);
+        intData.featureAlignMat = featureProjectionMat(featureDofMap);
+        //TODO: create integer version
+    } else {
+        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
     }
     
-    meshCut.set_mesh(cutV, cutF);
     
 }
 }

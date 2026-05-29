@@ -112,7 +112,7 @@ inline bool integrate(const directional::CartesianField& field,
     
     directional::MixedIntegerSolver mis;
     
-    mis.A = G * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    mis.A = G * intData.featureAlignMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     mis.M = Mx;
     mis.fixedMask = fixedMask;
     mis.fixedValues = fixedValues;
@@ -146,7 +146,7 @@ inline bool integrate(const directional::CartesianField& field,
     xFull= mis.x;
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
+    VectorXd NFunctionVec = intData.featureAlignMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
     NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
@@ -159,7 +159,7 @@ inline bool integrate(const directional::CartesianField& field,
         for (int j=0;j<3;j++)
             NCornerFunctions.block(i, intData.N*j, 1, intData.N) = NFunction.row(meshCut.F(i,j));
     
-    NFunctionVec = intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
+    NFunctionVec = intData.featureAlignMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
     NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
