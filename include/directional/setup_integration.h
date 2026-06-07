@@ -36,7 +36,8 @@ struct IntegrationData
     Eigen::SparseMatrix<double> linRedMat;              // Global uncompression of n->N
     Eigen::SparseMatrix<double> intSpanMat;             // Spanning the translational jump lattice
     Eigen::SparseMatrix<double> singIntSpanMat;         // Layer for the singularities
-    Eigen::SparseMatrix<double> featureAlignMat;        // A constraint matrix for the feature alignment (directly on the cut mesh)
+    Eigen::SparseMatrix<double> featureAlignMat;        // The feature layer that projects a given cut-mesh solution to a feature-aligned one
+    Eigen::SparseMatrix<double> featureAlignConstMat;   // A constraint matrix for the feature alignment (directly on the cut mesh)
     Eigen::VectorXi constrainedVertices;                // Constrained vertices (fixed points in the parameterization)
     Eigen::VectorXi integerVars;                        // Variables that are to be rounded.
     Eigen::MatrixXi face2cut;                           // |F|x3 map of which edges of faces are seams
@@ -733,44 +734,84 @@ inline void setup_integration(const directional::CartesianField& field,
             int faceRight = meshWhole.EF(intData.featureIndices(e), 1);
             int inFaceLeft = meshWhole.EFi(intData.featureIndices(e), 0);
             int inFaceRight = meshWhole.EFi(intData.featureIndices(e), 1);
+            //std::cout<<"meshWhole.EV.row(intData.featureIndices(e)): "<<meshWhole.EV.row(intData.featureIndices(e))<<std::endl;
+            //std::cout<<"meshWhole.F.row(faceLeft): "<<meshWhole.F.row(faceLeft)<<std::endl;
+            //std::cout<<"meshWhole.F.row(faceRight): "<<meshWhole.F.row(faceRight)<<std::endl;
+            //std::cout<<"inFaceLeft, inFaceRight: "<<inFaceLeft<<","<<inFaceRight<<std::endl;
             if (intData.autoFeatureFunc){
                 //figuring out the directional field that is most orthogonal to the edge. This can be independent on both sides! forces agreement with matching
-                double maxOrth = 1.0;
-                int orthWhere = -1;
-                RowVector3d normEdgeVector = (meshWhole.V.row(meshWhole.EV(e,1)) - meshWhole.V.row(meshWhole.EV(e,0))).normalized();
+                double maxOrth = 2.0;
+                int orthWhereLeft = -1, orthWhereRight = -1;
+                RowVector3d normEdgeVector = (meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),1)) - meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),0))).normalized();
+                //std::cout<<"normEdgeVector: "<<normEdgeVector<<std::endl;
                 for (int i=0;i<intData.N;i++){
-                    RowVector3d vecLeft = field.extField.block(faceLeft, i * 3, 1, 3);
-                    double currOrth = abs(vecLeft.dot(normEdgeVector)/vecLeft.norm());
+                    RowVector3d vecLeft = combedField.extField.block(faceLeft, i * 3, 1, 3).normalized();
+                    //std::cout<<"vecLeft: "<<vecLeft<<std::endl;
+                    double currOrth = abs(vecLeft.dot(normEdgeVector));
+                    //std::cout<<"currOrth: "<<currOrth<<std::endl;
                     if (faceRight!=-1){
-                        RowVector3d vecRight = field.extField.block(faceRight, field.matching(i) * 3, 1, 3);
+                        RowVector3d vecRight = combedField.extField.block(faceRight, ((i+combedField.matching(intData.featureIndices(e))+intData.N)%intData.N) * 3, 1, 3).normalized();
+                        /*if (e==0){
+                            std::cout<<"field.matching(intData.featureIndices(e)): "<<combedField.matching(intData.featureIndices(e))<<std::endl;
+                            std::cout<<"normEdgeVector: "<<normEdgeVector<<std::endl;
+                            std::cout<<"vecRight: "<<vecRight<<std::endl;
+                            std::cout<<"vecLeft: "<<vecLeft<<std::endl;
+                        }*/
                         //If this is sign symmetry, one would get chosen arbitrarily, and eventually this should not be important which
-                        currOrth = (currOrth+abs(vecRight.dot(normEdgeVector)/vecLeft.norm()))/2.0;
+                        currOrth = (currOrth+abs(vecRight.dot(normEdgeVector)))/2.0;
+                        //std::cout<<"currOrth: "<<currOrth<<std::endl;
                     }
                     if (currOrth<=maxOrth){
-                        orthWhere = i;
+                        orthWhereLeft = i;
+                        orthWhereRight = (i+combedField.matching(intData.featureIndices(e))+intData.N)%intData.N;
                         maxOrth = currOrth;
                     }
                 }
                 
+                /*if (e==0){
+                    std::cout<<"orthWhereLeft: "<<orthWhereLeft<<std::endl;
+                    std::cout<<"orthWhereRight: "<<orthWhereRight<<std::endl;
+                }*/
+                
                 //adding a constraint for the proper differential on the edge to be zero. Is this wasteful?
-                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+intData.N*meshCut.F(faceLeft, inFaceLeft), -1.0));
-                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3), 1.0));
+                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft, -1.0));
+                featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft, 1.0));
+                /*if (e==0){
+                    std::cout<<"intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft: "<<intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft<<std::endl;
+                    std::cout<<" intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft: "<< intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft<<std::endl;
+                }*/
                 if (faceRight!=-1){
-                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, orthWhere+intData.N*meshCut.F(faceRight, inFaceRight), -1.0));
-                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, orthWhere+intData.N*meshCut.F(faceRight, (inFaceRight+1)%3), 1.0));
+                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight, -1.0));
+                    featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight, 1.0));
+                   /* if (e==0){
+                        std::cout<<"intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight: "<<intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight<<std::endl;
+                        std::cout<<"intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight: "<< intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight<<std::endl;
+                        std::cout<<"<meshCut.V.row(meshCut.F(faceRight, inFaceRight)): "<<meshCut.V.row(meshCut.F(faceRight, inFaceRight))<<std::endl;
+                        std::cout<<"<meshCut.V.row(meshCut.F(faceRight, (inFaceRight+1)%3)): "<<meshCut.V.row(meshCut.F(faceRight, (inFaceRight+1)%3))<<std::endl;
+                        std::cout<<"meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),0)): "<<meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),0))<<std::endl;
+                        std::cout<<"meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),1)): "<<meshWhole.V.row(meshWhole.EV(intData.featureIndices(e),1))<<std::endl;
+                        std::cout<<"combedField.extField.block(faceLeft, orthWhereLeft * 3, 1, 3): "<<combedField.extField.block(faceLeft, orthWhereLeft * 3, 1, 3)<<std::endl;
+                        std::cout<<"combedField.extField.block(faceRight, orthWhereRight * 3, 1, 3): "<<combedField.extField.block(faceRight, orthWhereRight * 3, 1, 3)<<std::endl;
+                        std::cout<<"meshCut.F(faceLeft, inFaceLeft): "<<meshCut.F(faceLeft, inFaceLeft)<<std::endl;
+                        std::cout<<"meshCut.F(faceLeft, (inFaceLeft+1)%3): "<<meshCut.F(faceLeft, (inFaceLeft+1)%3)<<std::endl;
+                        std::cout<<"meshCut.F(faceRight, inFaceRight): "<<meshCut.F(faceRight, inFaceRight)<<std::endl;
+                        std::cout<<"meshCut.F(faceRight, (inFaceRight+1)%3): "<<meshCut.F(faceRight, (inFaceRight+1)%3)<<std::endl;
+                        
+                    }*/
                 }
                     
             }
-            intData.featureAlignMat.resize(featureIndex, intData.N*meshCut.V.rows());
-            intData.featureAlignMat.setFromTriplets(featureAlignMatTriplets.begin(), featureAlignMatTriplets.end());
         }
+        intData.featureAlignConstMat.resize(featureIndex, intData.N*meshCut.V.rows());
+        intData.featureAlignConstMat.setFromTriplets(featureAlignMatTriplets.begin(), featureAlignMatTriplets.end());
         
         //Separating the DOFs of the features so they can be used as a layer matrix
-        Eigen::VectorXi featureDofMap = dofsFromConstraintMatrix(intData.featureAlignMat);
+        Eigen::VectorXi featureDofMap = dofsFromConstraintMatrix(intData.featureAlignConstMat);
         intData.featureAlignMat = featureProjectionMat(featureDofMap);
         //TODO: create integer version
     } else {
         directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
     }
     
     

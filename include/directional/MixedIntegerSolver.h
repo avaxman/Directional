@@ -144,7 +144,11 @@ public:
             VectorXd torhs = -A * fixedValues;
             CPart = C * var2AllMat;   //keep reducing rows from the already-reduced constraints matrix (the number of columns stays the same TODO
             VectorXd dFull = -C * fixedValues;
-            solveConstrainedLeastSquares(APart, M, b + torhs, CPart, dFull, xPart);
+            if (!solveConstrainedLeastSquares(APart, M, b + torhs, CPart, dFull, xPart)){
+                if (verbose)
+                    std::cout<<"solveConstrainedLeastSquares() has failed!"<<std::endl;
+                return false;
+            }
             
             x = var2AllMat * xPart.head(numVars - fixedMask.sum()) + fixedValues;
             

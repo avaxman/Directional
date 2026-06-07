@@ -151,6 +151,12 @@ inline bool integrate(const directional::CartesianField& field,
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
     
+    //Checking consistency
+    //std::cout<<"intData.constraintMat * NFunctionVec: "<<intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull<<std::endl;
+    
+    VectorXd errorVec = intData.featureAlignConstMat * NFunctionVec;
+    std::cout<<"intData.featureAlignConstMat * NFunctionVec: "<<errorVec.lpNorm<Infinity>()<<std::endl;
+    
     //nFunction = fullx;
     
     //allocating per corner
