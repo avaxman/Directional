@@ -21,6 +21,7 @@
 #include <directional/cut_mesh_with_singularities.h>
 #include <directional/combing.h>
 #include <directional/sparse_identity.h>
+#include <directional/sparse_block.h>
 
 namespace directional
 {
@@ -55,6 +56,10 @@ struct IntegrationData
     Eigen::SparseMatrix<int> intSpanMatInteger;
     Eigen::SparseMatrix<int> singIntSpanMatInteger;
     //Eigen::SparseMatrix<int> FeatureMatInteger;
+    
+    //Debug variables
+    Eigen::VectorXi featureFaces;
+    Eigen::VectorXi featureInFaceVectors;
     
     double lengthRatio;                                 // Global scaling of functions
     //Flags
@@ -726,6 +731,7 @@ inline void setup_integration(const directional::CartesianField& field,
     //Doing feature lines
     //This is a constraint matrix done directly on the cut mesh
     if (intData.featureAlignment){
+        vector<int> featureFaceList, featureInFaceVectorList;
         //featureAlignMat.resize(featureIndices.size(), intData.N*meshCut.V.rows());
         vector<Eigen::Triplet<double>> featureAlignMatTriplets;
         int featureIndex=0;
@@ -776,6 +782,8 @@ inline void setup_integration(const directional::CartesianField& field,
                 //adding a constraint for the proper differential on the edge to be zero. Is this wasteful?
                 featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft, -1.0));
                 featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft, 1.0));
+                featureFaceList.push_back(faceLeft);
+                featureInFaceVectorList.push_back(orthWhereLeft);
                 /*if (e==0){
                     std::cout<<"intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft: "<<intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft<<std::endl;
                     std::cout<<" intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft: "<< intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft<<std::endl;
@@ -783,6 +791,8 @@ inline void setup_integration(const directional::CartesianField& field,
                 if (faceRight!=-1){
                     featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight, -1.0));
                     featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight, 1.0));
+                    featureFaceList.push_back(faceRight);
+                    featureInFaceVectorList.push_back(orthWhereRight);
                    /* if (e==0){
                         std::cout<<"intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight: "<<intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight<<std::endl;
                         std::cout<<"intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight: "<< intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight<<std::endl;
@@ -809,9 +819,30 @@ inline void setup_integration(const directional::CartesianField& field,
         Eigen::VectorXi featureDofMap = dofsFromConstraintMatrix(intData.featureAlignConstMat);
         intData.featureAlignMat = featureProjectionMat(featureDofMap);
         //TODO: create integer version
+        
+        //Debug
+        intData.featureFaces.resize(featureFaceList.size());
+        for (int it=0;it<featureFaceList.size();it++)
+            intData.featureFaces(it)=featureFaceList[it];
+        
+        intData.featureInFaceVectors.resize(featureInFaceVectorList.size());
+        for (int it=0;it<featureInFaceVectorList.size();it++)
+            intData.featureInFaceVectors(it)=featureInFaceVectorList[it];
+        
+        //Test: doing it with constraints
+        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        Eigen::MatrixXi blockIndices(2,1); blockIndices<<0,1;
+        vector<SparseMatrix<double>> bigC(2);
+        bigC[0] = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        bigC[1] = intData.featureAlignConstMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        SparseMatrix<double> fullC;
+        directional::sparse_block(blockIndices, bigC, fullC);
+        intData.constraintMat = fullC;
+            
     } else {
         directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
         intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
+        intData.constraintMat =  intData.constraintMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     }
     
     
