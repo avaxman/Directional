@@ -107,12 +107,15 @@ inline bool integrate(const directional::CartesianField& field,
             for (int i = 0; i < intData.singularIndices.size(); i++)
                 toRoundMask(intData.singularIndices(i)) = 1;
         }
+        
+        for (int i = 0; i < intData.featureIntegerIndices.size(); i++)
+            toRoundMask(intData.featureIntegerIndices(i)) = 1;
     }
     
     
     directional::MixedIntegerSolver mis;
     
-    mis.A = G * /** intData.featureAlignMat * */intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+    mis.A = G * intData.featureAlignMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
     mis.M = Mx;
     mis.fixedMask = fixedMask;
     mis.fixedValues = fixedValues;
@@ -124,9 +127,15 @@ inline bool integrate(const directional::CartesianField& field,
     mis.numVars = numVars;
     mis.verbose = intData.verbose;
     bool success = mis.solve();
-    if (!success)
+    if (!success){
+        std::cout<<"MixedIntegerSolver failed!" <<std::endl;
         return success;
+    }
     VectorXd xFull= mis.x;
+    if (intData.verbose){
+        Eigen::VectorXd resVec = (mis.A*xFull - mis.b);
+        std::cout<<"Final energy is: "<<resVec.transpose() * mis.M * resVec<<std::endl;
+    }
     
     //solve again for extra integers ¯for topological unrounded seams
     //Some of these might have been rounded already, in which case the solver ignores them
@@ -148,17 +157,15 @@ inline bool integrate(const directional::CartesianField& field,
     std::cout<<"intData.constraintMat * xFull: "<<(intData.constraintMat * xFull).lpNorm<Infinity>()<<std::endl;
     
     //the results are packets of N functions for each vertex, and need to be allocated for corners
-    VectorXd NFunctionVec = /*intData.featureAlignMat * */intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
+    VectorXd NFunctionVec = intData.featureAlignMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull;
     NFunction.resize(meshCut.V.rows(), intData.N);
     for(int i = 0; i < NFunction.rows(); i++)
         NFunction.row(i) << NFunctionVec.segment(intData.N * i, intData.N).transpose();
-    
-    //Checking consistency
-    //std::cout<<"intData.constraintMat * NFunctionVec: "<<intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat * xFull<<std::endl;
+
     
     //std::cout<<"NFunctionVec: "<<NFunctionVec<<std::endl;
     VectorXd errorVec = intData.featureAlignConstMat * NFunctionVec;
-    std::cout<<"intData.featureAlignConstMat * NFunctionVec: "<<errorVec.lpNorm<Infinity>()<<std::endl;
+    std::cout<<"intData.featureAlignConstMat * NFunctionVec: "<<errorVec/*.lpNorm<Infinity>()*/<<std::endl;
     
     //nFunction = fullx;
     

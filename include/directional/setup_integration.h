@@ -11,6 +11,7 @@
 #include <queue>
 #include <vector>
 #include <cmath>
+#include <unordered_set>
 #include <Eigen/Core>
 #include <directional/TriMesh.h>
 #include <directional/PCFaceTangentBundle.h>
@@ -34,6 +35,7 @@ struct IntegrationData
     Eigen::MatrixXi periodMat;                          // Function spanning integers
     Eigen::SparseMatrix<double> vertexTrans2CutMat;     // Map between the whole mesh (vertex + translational jump) representation to the vertex-based representation on the cut mesh
     Eigen::SparseMatrix<double> constraintMat;          // Linear constraints (resulting from non-singular nodes and feature alignment)
+    //Eigen::SparseMatrix<double> constraintProjectMat;   // A constraint projection matrix
     Eigen::SparseMatrix<double> linRedMat;              // Global uncompression of n->N
     Eigen::SparseMatrix<double> intSpanMat;             // Spanning the translational jump lattice
     Eigen::SparseMatrix<double> singIntSpanMat;         // Layer for the singularities
@@ -48,6 +50,7 @@ struct IntegrationData
     Eigen::VectorXd fixedValues;                        // Translation fixed values
     Eigen::VectorXi singularIndices;                    // Singular-vertex indices
     Eigen::VectorXi featureIndices;                     // Indices of the feature edges
+    Eigen::VectorXi featureIntegerIndices;              //Indices (into the whole mesh + transitions) of integer variables from the feature alignment
     
     //integer versions, for exact seamless parameterizations (good for error-free meshing)
     Eigen::SparseMatrix<int> vertexTrans2CutMatInteger;
@@ -213,6 +216,109 @@ Eigen::SparseMatrix<double> featureProjectionMat(const Eigen::VectorXi& dofMappi
     P.setFromTriplets(triplets.begin(), triplets.end());
     P.makeCompressed();
 
+    return P;
+}
+
+/**
+ * Computes a sparse matrix P such that:
+ *   - P * v is the 2-norm minimizing projection of v onto ker(C)
+ *   - C * P = 0  (by construction)
+ *   - P = I - C^T (C C^T)^+ C  (pseudoinverse formulation)
+ *
+ * Uses sparse QR on C^T to handle rank-deficient C of any size without
+ * ever forming a dense k x k matrix.
+ *
+ * @param C  Sparse constraint matrix (k x n), any rank
+ * @return   Sparse projection matrix P (n x n)
+ */
+Eigen::SparseMatrix<double> nullSpaceProjection(
+    const Eigen::SparseMatrix<double>& C,
+    double rankTolerance = 1e-10)
+{
+    using namespace Eigen;
+
+    const int n = C.cols();
+    const int k = C.rows();
+
+    // P = I - C^T (C C^T)^+ C
+    // We compute this implicitly via sparse QR of C^T:
+    //
+    // C^T = Q * R * P_col   (SparseQR decomposition)
+    //
+    // The first `rank` columns of Q span the row space of C.
+    // P_C (projection onto row space) = Q1 * Q1^T
+    // P_ker(C) = I - Q1 * Q1^T
+    //
+    // We materialise this as a sparse matrix by applying it to
+    // the identity: P = I - Q1 * Q1^T, where Q1 is dense (n x rank)
+    // but rank << n typically.
+
+    // Step 1: sparse QR of C^T
+    SparseMatrix<double> Ct = C.transpose();
+    Ct.makeCompressed();
+
+    SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> sqr;
+    sqr.compute(Ct);
+
+    if (sqr.info() != Success)
+        throw std::runtime_error("nullSpaceProjection: SparseQR failed");
+
+    // Step 2: determine numerical rank
+    const int rank = sqr.rank();
+
+    if (rank == 0)
+    {
+        // C is zero matrix — projection is identity
+        SparseMatrix<double> I(n, n);
+        I.setIdentity();
+        return I;
+    }
+
+    // Step 3: extract Q1 = first `rank` columns of Q (n x rank, dense)
+    // matrixQ() is an implicit operator; materialise only the needed columns
+    // by multiplying against the first `rank` standard basis vectors.
+    //
+    // Eigen's SparseQR returns Q as an implicit Householder sequence.
+    // The safest way to get Q1 is to apply Q to I_{n x rank}.
+    MatrixXd I_rank = MatrixXd::Identity(n, rank);
+    MatrixXd Q1 = sqr.matrixQ() * I_rank;   // n x rank, dense
+
+    // Step 4: P = I - Q1 * Q1^T  (as sparse)
+    // Q1 * Q1^T is dense n x n — too large to form explicitly for big n.
+    // Instead build P column by column:
+    //   P[:,j] = e_j - Q1 * (Q1^T * e_j)
+    //          = e_j - Q1 * Q1.row(j)^T
+    // and store only entries above a sparsity threshold.
+    //
+    // For typical meshes rank << n, so Q1 * Q1^T is low-rank and
+    // P is well approximated as sparse after thresholding near-zeros.
+
+    // Build P = I - Q1*Q1^T column by column into triplets
+    std::vector<Triplet<double>> triplets;
+    triplets.reserve(n * (rank + 1));  // rough estimate
+
+    const double thresh = 1e-12;
+
+    for (int j = 0; j < n; j++)
+    {
+        // Q1^T * e_j = j-th row of Q1, as a column vector
+        VectorXd q1j = Q1.row(j).transpose();   // rank x 1
+
+        // Q1 * q1j  = projection component  (n x 1)
+        VectorXd proj = Q1 * q1j;               // n x 1
+
+        // Column j of P: e_j - proj
+        for (int i = 0; i < n; i++)
+        {
+            double val = (i == j ? 1.0 : 0.0) - proj(i);
+            if (std::fabs(val) > thresh)
+                triplets.emplace_back(i, j, val);
+        }
+    }
+
+    SparseMatrix<double> P(n, n);
+    P.setFromTriplets(triplets.begin(), triplets.end());
+    P.makeCompressed();
     return P;
 }
 
@@ -730,6 +836,7 @@ inline void setup_integration(const directional::CartesianField& field,
     
     //Doing feature lines
     //This is a constraint matrix done directly on the cut mesh
+    vector<int> featureCutIntegerIndices;
     if (intData.featureAlignment){
         vector<int> featureFaceList, featureInFaceVectorList;
         //featureAlignMat.resize(featureIndices.size(), intData.N*meshCut.V.rows());
@@ -774,12 +881,16 @@ inline void setup_integration(const directional::CartesianField& field,
                     }
                 }
                 
+                std::cout<<"maxOrth: "<<maxOrth<<std::endl;
+                
                 /*if (e==0){
                     std::cout<<"orthWhereLeft: "<<orthWhereLeft<<std::endl;
                     std::cout<<"orthWhereRight: "<<orthWhereRight<<std::endl;
                 }*/
                 
                 //adding a constraint for the proper differential on the edge to be zero. Is this wasteful?
+                featureCutIntegerIndices.push_back(intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft);
+                featureCutIntegerIndices.push_back(intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft);
                 featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceLeft, inFaceLeft) + orthWhereLeft, -1.0));
                 featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft, 1.0));
                 featureFaceList.push_back(faceLeft);
@@ -789,6 +900,8 @@ inline void setup_integration(const directional::CartesianField& field,
                     std::cout<<" intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft: "<< intData.N*meshCut.F(faceLeft, (inFaceLeft+1)%3) + orthWhereLeft<<std::endl;
                 }*/
                 if (faceRight!=-1){
+                    featureCutIntegerIndices.push_back(intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight);
+                    featureCutIntegerIndices.push_back(intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight);
                     featureAlignMatTriplets.push_back(Triplet<double>(featureIndex, intData.N*meshCut.F(faceRight, inFaceRight) + orthWhereRight, -1.0));
                     featureAlignMatTriplets.push_back(Triplet<double>(featureIndex++, intData.N*meshCut.F(faceRight, (inFaceRight+1)%3) + orthWhereRight, 1.0));
                     featureFaceList.push_back(faceRight);
@@ -829,20 +942,53 @@ inline void setup_integration(const directional::CartesianField& field,
         for (int it=0;it<featureInFaceVectorList.size();it++)
             intData.featureInFaceVectors(it)=featureInFaceVectorList[it];
         
+        //trying to project out the constraint matrix
+        //intData.constraintProjectMat = nullSpaceProjection(intData.constraintMat  *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat);
+        
         //Test: doing it with constraints
-        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        /*directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
         Eigen::MatrixXi blockIndices(2,1); blockIndices<<0,1;
         vector<SparseMatrix<double>> bigC(2);
         bigC[0] = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         bigC[1] = intData.featureAlignConstMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         SparseMatrix<double> fullC;
         directional::sparse_block(blockIndices, bigC, fullC);
-        intData.constraintMat = fullC;
-            
+        intData.constraintMat = fullC;*/
+        
+        //test: just making the relevant variables in the integer list
+        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        intData.constraintMat =  intData.constraintMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        //intData.constraintProjectMat = nullSpaceProjection(intData.constraintMat);
+        //intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
+        
+        //finding out all the variables that need to be integer
+        Eigen::SparseMatrix<double, Eigen::RowMajor> FilterMat = intData.vertexTrans2CutMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        std::vector<int> featureIntegerList, mark(FilterMat.cols(), 0);
+        for (int r : featureCutIntegerIndices){
+            for (Eigen::SparseMatrix<double, Eigen::RowMajor>::InnerIterator it(FilterMat, r); it; ++it){
+                if (mark[it.col()] != 1){
+                    mark[it.col()] = 1;
+                    featureIntegerList.push_back(it.col());
+                }
+            }
+        }
+        
+        
+        std::unordered_set<int> S(featureIntegerList.begin(), featureIntegerList.end());
+        //S.insert(intData.integerVars.data(), intData.integerVars.data() + intData.integerVars.size());
+        std::vector<int> tmp(S.begin(), S.end());
+        std::sort(tmp.begin(), tmp.end());
+        intData.featureIntegerIndices.resize(tmp.size());
+        for (int i = 0; i < tmp.size(); ++i)
+            intData.featureIntegerIndices(i) = tmp[i];
+
+
     } else {
         directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
-        intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
         intData.constraintMat =  intData.constraintMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        //intData.constraintProjectMat = nullSpaceProjection(intData.constraintMat);
+        intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
+       
     }
     
     
