@@ -579,6 +579,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#305-extrinsic-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        305 Extrinsic Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1182,6 +1193,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#305-extrinsic-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        305 Extrinsic Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1447,7 +1469,7 @@ The library comprises two basic elements:</p>
 </li>
 </ol>
 <p>Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.</p>
-<p>The library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in <a href="http://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a>,
+<p>The library is header-only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in <a href="http://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a>,
 The visualization is done through a specialized class <code>DirectionalViewer</code>, which is a wrapper around <a href="https://polyscope.run/">PolyScope</a>, with many extended options that facilitate the rendering of directional fields.</p>
 <p>The header files contain documentation of the parameters to each function and their required composition; in this tutorial, we mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.</p>
 <h3 id="installing-the-tutorial-examples">Installing the tutorial examples<a class="headerlink" href="#installing-the-tutorial-examples" title="Permanent link">&para;</a></h3>
@@ -1723,6 +1745,9 @@ of the parameterization functions (which are tangent vector fields on the surfac
 </code></pre></div>
 <p><code>soft_rosy()</code> works by only taking the PolyVector part-way towards a perfect RoSy, and <code>curl_projection()</code> does principal matching, and then projects out the curl of the field. Following the iterations, the field is by design curl-free numerically, and the <code>curl_matching()</code> retrieves it.</p>
 <p><img alt="Example 304" src="../images/304_IntegrableFields.png" /><p align=center><em>Left: The original PolyVector Fields. Right: An Integrable field (the curl is color-coded with maximum of 0.09 at yellow).</em></p></p>
+<h3 id="305-extrinsic-fields">305 Extrinsic Fields<a class="headerlink" href="#305-extrinsic-fields" title="Permanent link">&para;</a></h3>
+<p>Discrete tangent bundles are technically abstract and can be separated from any underlying mesh structure. Specifically, we demonstrate this on extrinsic vertex-based fields [<a href="#Liu2026">Liu et al. 2026</a>]. Extrinsic vertex fields have an extra structure of defining the field pointwise by parallel transport and barycentric blending, to define an extrinsic field that is continuous across edges. The tutorial also demonstrates how to find the exact location of singularities that might appear anywhere on triangles.</p>
+<p><img alt="Example 305" src="../images/305_ExtrinsicFields.png" /><p align=center><em>Left: A face-based field (computed by a power field). Right: An extrinsic power-field. Zoom-in: two singularities inside faces.</em></p></p>
 <h2 id="chapter-4-polar-methods">Chapter 4: Polar Methods<a class="headerlink" href="#chapter-4-polar-methods" title="Permanent link">&para;</a></h2>
 <h3 id="polar-fields">Polar Fields<a class="headerlink" href="#polar-fields" title="Permanent link">&para;</a></h3>
 <p>Polar fields are represented using angles. These angles may encode the rotation from some given basis on a tangent space (and so it is a &ldquo;logarithmic&rdquo; representation, when compared to Cartesian methods), or an angle difference between two neighboring tangent spaces (in the sense of deviation from parallel transport). The former usually requires integer variables for directional-field design. The latter does not, but state-of-the-art methods require the prescription of indices around independent dual cycles in the mesh. Currently, Directional supports the latter.</p>
@@ -1789,7 +1814,7 @@ of the parameterization functions (which are tangent vector fields on the surfac
 <p><img alt="Example 504" src="../images/504_LinearReductions.png" /><p align=center><em>Top: A <span class="arithmatex"><span class="MathJax_Preview">6</span><script type="math/tex">6</script></span>-directional fields with a singularity. Bottom left: <span class="arithmatex"><span class="MathJax_Preview">N=6</span><script type="math/tex">N=6</script></span> only sign symmetry is enforced (the three lines don&rsquo;t always meet at all intersections). Right: the same with added triangular symmetry, where all lines intersect.</em></p></p>
 <h3 id="505-meshing">505 Meshing<a class="headerlink" href="#505-meshing" title="Permanent link">&para;</a></h3>
 <p>This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in the <a href=https://avaxman.github.io/libhedra/>libhedra</a> format of <span class="arithmatex"><span class="MathJax_Preview">(V,D,F)</span><script type="math/tex">(V,D,F)</script></span>, where <span class="arithmatex"><span class="MathJax_Preview">D</span><script type="math/tex">D</script></span> is a vector <span class="arithmatex"><span class="MathJax_Preview">|F| \times 1</span><script type="math/tex">|F| \times 1</script></span> of face degrees, and <span class="arithmatex"><span class="MathJax_Preview">F</span><script type="math/tex">F</script></span> is a <span class="arithmatex"><span class="MathJax_Preview">|F| \times max(D)</span><script type="math/tex">|F| \times max(D)</script></span> matrix of indices into <span class="arithmatex"><span class="MathJax_Preview">V</span><script type="math/tex">V</script></span>.</p>
-<p>The meshing unit is independent from the integration unit, and can be potentially used with external functions. However, it is easy to pipeline iit with the integration as follows:
+<p>The meshing unit is independent from the integration unit, and can be potentially used with external functions. However, it is easy to pipeline iit with the integration as follows:</p>
 <div class="highlight"><pre><span></span><code><span class="c1">//setting up mesh data from integration data</span>
 <span class="n">directional</span><span class="o">::</span><span class="n">MesherData</span><span class="w"> </span><span class="n">mData</span><span class="p">;</span>
 <span class="n">directional</span><span class="o">::</span><span class="n">setup_mesher</span><span class="p">(</span><span class="n">meshCut</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">intData</span><span class="p">,</span><span class="w"> </span><span class="n">mData</span><span class="p">);</span>
@@ -1799,7 +1824,7 @@ of the parameterization functions (which are tangent vector fields on the surfac
 <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">&quot;Meshing N=&quot;</span><span class="o">&lt;&lt;</span><span class="n">N</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
 <span class="n">directional</span><span class="o">::</span><span class="n">mesher</span><span class="p">(</span><span class="n">meshWhole</span><span class="p">,</span><span class="w"> </span><span class="n">mData</span><span class="p">,</span><span class="w"> </span><span class="n">VPolyMesh</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">DPolyMesh</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">FPolyMesh</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
 <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">&quot;Done!&quot;</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-</code></pre></div></p>
+</code></pre></div>
 <p>This reads the integrated information from <code>intData</code>. Conversely to previous version, the mesher does not necessarily need an external dependency. Nevertheless, it can optionally be sped up (considerably) by including <a href=https://gmplib.org/>GMP</a>. This is controlled by CMake within the compilation of the tutorial.</p>
 <p><img alt="Example 505" src="../images/505_Meshing.png" /><p align=center><em>Left to right: polygonal meshes of the arrangements of isolines from the N=4,7,11 examples (<span class="arithmatex"><span class="MathJax_Preview">N=2</span><script type="math/tex">N=2</script></span> is not yet supported) in <a href="#502-integration-in-various-orders">Example 502</a>.</em></p></p>
 <h2 id="chapter-6-cochain-complexes">Chapter 6: Cochain Complexes<a class="headerlink" href="#chapter-6-cochain-complexes" title="Permanent link">&para;</a></h2>
@@ -1810,7 +1835,7 @@ of the parameterization functions (which are tangent vector fields on the surfac
 <h3 id="601-face-based-finite-elements">601 Face-Based Finite Elements<a class="headerlink" href="#601-face-based-finite-elements" title="Permanent link">&para;</a></h3>
 <p>What is called &ldquo;face-based FEM&rdquo; is in fact just the structure with face-based vectors depicted in the following figure:
 <img alt="Example 6-1" src="images/601_FaceBasedFEM_complex.png" /><p align=center><em>Top: the primal cochain complex, taking conforming piecewise linear (PL) functions to face-based piecewise-constant fields, and the curl operator takes the latter to edge-based diamond regions. In the bottom dual structure (right to left), the rotated cogradient of non-conforming piecewise-linear functions are also piecewise-constant fields. their divergence is defined on dual vertex voronoi areas. Going from PL functions to dual regions is done by the mass matrices <span class="arithmatex"><span class="MathJax_Preview">M_v</span><script type="math/tex">M_v</script></span> and <span class="arithmatex"><span class="MathJax_Preview">M_e</span><script type="math/tex">M_e</script></span>. The face rotation operator <span class="arithmatex"><span class="MathJax_Preview">J</span><script type="math/tex">J</script></span> simply rotates a vector by <span class="arithmatex"><span class="MathJax_Preview">\frac{\pi}{2}</span><script type="math/tex">\frac{\pi}{2}</script></span> in a face. The cochain structure is actually such that <span class="arithmatex"><span class="MathJax_Preview">CG_v=0</span><script type="math/tex">CG_v=0</script></span>, and the matching dual cochain structure <span class="arithmatex"><span class="MathJax_Preview">DJG_e=0</span><script type="math/tex">DJG_e=0</script></span> </em></p></p>
-<p>Which is popular in geometry processing (for instance, studied extensively in [<a href="#Wardetzky2007">Wardetzky 2007</a>]. This is exemplified in the following code:
+<p>Which is popular in geometry processing (for instance, studied extensively in [<a href="#Wardetzky2007">Wardetzky 2007</a>]. This is exemplified in the following code:</p>
 <div class="highlight"><pre><span></span><code><span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Gv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">directional</span><span class="o">::</span><span class="n">conf_gradient_matrix_2D</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mesh</span><span class="p">);</span>
 <span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Ge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">directional</span><span class="o">::</span><span class="n">non_conf_gradient_matrix_2D</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mesh</span><span class="p">);</span>
 <span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">J</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="n">directional</span><span class="o">::</span><span class="n">face_vector_rotation_matrix_2D</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mesh</span><span class="p">);</span>
@@ -1818,7 +1843,7 @@ of the parameterization functions (which are tangent vector fields on the surfac
 <span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">directional</span><span class="o">::</span><span class="n">curl_matrix_2D</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mesh</span><span class="p">);</span>
 <span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">directional</span><span class="o">::</span><span class="n">div_matrix_2D</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">mesh</span><span class="p">);</span>
 </code></pre></div>
-<code>Ge</code> is the non-conforming (Edge-based) cogradient, and <code>J</code> is the in-face rotation matrix. The code proceeds by verifying the cochain relations (discrete curl of gradient and divergence of rotated cogradient):</p>
+<p><code>Ge</code> is the non-conforming (Edge-based) cogradient, and <code>J</code> is the in-face rotation matrix. The code proceeds by verifying the cochain relations (discrete curl of gradient and divergence of rotated cogradient):</p>
 <div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">&quot;max abs curl of exact field (should be numerically zero): &quot;</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">C</span><span class="o">*</span><span class="n">Gv</span><span class="o">*</span><span class="n">confVec</span><span class="p">).</span><span class="n">cwiseAbs</span><span class="p">().</span><span class="n">maxCoeff</span><span class="p">()</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
 <span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="o">&lt;&lt;</span><span class="s">&quot;max abs divergence of coexact field (should be numerically zero): &quot;</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">D</span><span class="o">*</span><span class="n">J</span><span class="o">*</span><span class="n">Ge</span><span class="o">*</span><span class="n">nonConfVec</span><span class="p">).</span><span class="n">cwiseAbs</span><span class="p">().</span><span class="n">maxCoeff</span><span class="p">()</span><span class="o">&lt;&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
 </code></pre></div>
@@ -1884,12 +1909,12 @@ This amount to an orthogonal projection of <span class="arithmatex"><span class=
 <p><img alt="Example 6-3" src="../images/603_HodgeDecomposition.png" /><p align=center><em>Top: a piecewise-constant face-based vector field. Bottom: its decomposition into exact, coexact, and harmonic forms. The colors indicate the potential fields (left <span class="arithmatex"><span class="MathJax_Preview">f</span><script type="math/tex">f</script></span> and middle <span class="arithmatex"><span class="MathJax_Preview">g</span><script type="math/tex">g</script></span>).
 </em></p></p>
 <h3 id="604-hodge-decomposition-with-boundaries">604 Hodge decomposition with boundaries<a class="headerlink" href="#604-hodge-decomposition-with-boundaries" title="Permanent link">&para;</a></h3>
-<p>In the case of boundaries, <span class="arithmatex"><span class="MathJax_Preview">\delta</span><script type="math/tex">\delta</script></span> and <span class="arithmatex"><span class="MathJax_Preview">d</span><script type="math/tex">d</script></span> are not adjoint anymore without setting explicit boundary conditions. These can be intricate in higher dimensions, but in 2D surfaces can usually be the choice between Dirichlet or Neumann. This culminates in the construction of the operators themselves. For instance:
+<p>In the case of boundaries, <span class="arithmatex"><span class="MathJax_Preview">\delta</span><script type="math/tex">\delta</script></span> and <span class="arithmatex"><span class="MathJax_Preview">d</span><script type="math/tex">d</script></span> are not adjoint anymore without setting explicit boundary conditions. These can be intricate in higher dimensions, but in 2D surfaces can usually be the choice between Dirichlet or Neumann. This culminates in the construction of the operators themselves. For instance:</p>
 <div class="highlight"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">NumberType</span><span class="o">&gt;</span>
 <span class="n">Eigen</span><span class="o">::</span><span class="n">SparseMatrix</span><span class="o">&lt;</span><span class="n">NumberType</span><span class="o">&gt;</span><span class="w"> </span><span class="n">d0_matrix</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">TriMesh</span><span class="o">&amp;</span><span class="w"> </span><span class="n">mesh</span><span class="p">,</span>
 <span class="w">                                          </span><span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">isDirichlet</span><span class="o">=</span><span class="nb">false</span><span class="p">)</span>
 </code></pre></div>
-Currently only Neumann conditions are implemeneted for DEC; that means that the exact component of the Hodge decomposition is free, whereas the coexact and the harmonic components are tangent the the boundaries.</p>
+<p>Currently only Neumann conditions are implemeneted for DEC; that means that the exact component of the Hodge decomposition is free, whereas the coexact and the harmonic components are tangent the the boundaries.</p>
 <p><img alt="Example 6-4" src="../images/604_HodgeBoundary.png" /><p align=center><em>Top: a <span class="arithmatex"><span class="MathJax_Preview">1</span><script type="math/tex">1</script></span>-form. Bottom: its decomposition into exact, coexact, and harmonic forms with Neumann boundary conditions (coexact and harmonic are tangent to the boundaries). The colors indicate the potential field (left <span class="arithmatex"><span class="MathJax_Preview">f</span><script type="math/tex">f</script></span> and middle <span class="arithmatex"><span class="MathJax_Preview">g</span><script type="math/tex">g</script></span>).
 </em></p></p>
 <h3 id="605-harmonic-fields">605 Harmonic Fields<a class="headerlink" href="#605-harmonic-fields" title="Permanent link">&para;</a></h3>
@@ -1954,6 +1979,8 @@ The inner product also introduces the discrete divergence operator $G^T\cdot M$.
 : Felix Knöppel, Keenan Crane, Ulrich Pinkall, Peter Schröder, Globally Optimal Direction Fields.</p>
 <p><a id="Liu2011"></a>Liu et al., 2008
 : Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, General Planar Quadrilateral Mesh Design Using Conjugate Direction Field.</p>
+<p><a id="Liu2026"></a>Liu et al., 2026
+: Hongyi Liu, Oded Stein, Amir Vaxman, Mirela Ben-Chen, and Misha Kazhdan, Phong-Rodrigues Extrinsic Vector-Field Processing.</p>
 <p><a id="Myles2014"></a>Myles et al., 2014
 : Ashish Myles, Nico Pietroni, Denis Zorin, Robust Field-aligned Global Parametrization.</p>
 <p><a id="Meekes2021"></a>Meekes &amp; Vaxman, 2021
