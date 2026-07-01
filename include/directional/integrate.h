@@ -165,7 +165,7 @@ inline bool integrate(const directional::CartesianField& field,
     
     //std::cout<<"NFunctionVec: "<<NFunctionVec<<std::endl;
     VectorXd errorVec = intData.featureAlignConstMat * NFunctionVec;
-    std::cout<<"intData.featureAlignConstMat * NFunctionVec: "<<errorVec/*.lpNorm<Infinity>()*/<<std::endl;
+    std::cout<<"intData.featureAlignConstMat * NFunctionVec: "<<errorVec.lpNorm<Infinity>()<<std::endl;
     
     //nFunction = fullx;
     

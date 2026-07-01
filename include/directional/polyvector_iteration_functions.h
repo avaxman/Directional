@@ -73,6 +73,34 @@ CartesianField curl_projection(const CartesianField& pvField, const PolyVectorDa
     return curlFreeFieldPv;
 }
 
+//Enforcing hard alignment in the field
+CartesianField hard_alignment(const CartesianField& pvField, const PolyVectorData& pvData){
+    assert(pvData.tb->discTangType()==directional::discTangTypeEnum::FACE_SPACES && "Projecting curl only works for face-based fields for now!");
+    CartesianField rawField, curlFreeFieldRaw, curlFreeFieldPv;
+    polyvector_to_raw(pvField, rawField, pvData.N%2==0);
+    Eigen::MatrixXd extField = rawField.extField;
+    for (int i=0;i<pvData.constSpaces.size();i++){
+        if (pvData.wAlignment(i)<0){
+            int maxAlignWhere=-1;
+            double maxAlign = -3276700.0;
+            for (int j=0;j<pvData.N;j++){
+                Eigen::RowVector3d currVector = extField.block(pvData.constSpaces(i), 3*j, 1,3).normalized();
+                double currAlign = currVector.dot(pvData.constVectors.row(i));
+                if (currAlign>maxAlign){
+                    maxAlign=currAlign;
+                    maxAlignWhere=j;
+                }
+            }
+            extField.block(pvData.constSpaces(i), 3*maxAlignWhere, 1,3) = pvData.constVectors.row(i);
+            if (pvData.signSymmetry) extField.block(pvData.constSpaces(i), 3*((maxAlignWhere+pvData.N/2)%pvData.N), 1,3) = -pvData.constVectors.row(i);
+        }
+    }
+    rawField.set_extrinsic_field(extField);
+    CartesianField hapvField;
+    directional::raw_to_polyvector(rawField,  hapvField);
+    return hapvField;
+}
+
 //Projects a vector on a quadric (used for the conjugacy projection)
 Eigen::RowVectorXd project_on_quadric(const Eigen::RowVectorXd& y0, const Eigen::MatrixXd& H){
     // Step 1: Perform eigen-decomposition of H (since it's symmetric)

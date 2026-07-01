@@ -881,7 +881,7 @@ inline void setup_integration(const directional::CartesianField& field,
                     }
                 }
                 
-                std::cout<<"maxOrth: "<<maxOrth<<std::endl;
+                //std::cout<<"maxOrth: "<<maxOrth<<std::endl;
                 
                 /*if (e==0){
                     std::cout<<"orthWhereLeft: "<<orthWhereLeft<<std::endl;
@@ -946,23 +946,23 @@ inline void setup_integration(const directional::CartesianField& field,
         //intData.constraintProjectMat = nullSpaceProjection(intData.constraintMat  *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat);
         
         //Test: doing it with constraints
-        /*directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
         Eigen::MatrixXi blockIndices(2,1); blockIndices<<0,1;
         vector<SparseMatrix<double>> bigC(2);
         bigC[0] = intData.constraintMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         bigC[1] = intData.featureAlignConstMat * intData.vertexTrans2CutMat * intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         SparseMatrix<double> fullC;
         directional::sparse_block(blockIndices, bigC, fullC);
-        intData.constraintMat = fullC;*/
+        intData.constraintMat = fullC;
         
         //test: just making the relevant variables in the integer list
-        directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
-        intData.constraintMat =  intData.constraintMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        //directional::sparse_identity(intData.N*meshCut.V.rows(), intData.N*meshCut.V.rows(), intData.featureAlignMat);
+        //intData.constraintMat =  intData.constraintMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         //intData.constraintProjectMat = nullSpaceProjection(intData.constraintMat);
         //intData.featureAlignConstMat.resize(0,intData.N*meshCut.V.rows());
         
         //finding out all the variables that need to be integer
-        Eigen::SparseMatrix<double, Eigen::RowMajor> FilterMat = intData.vertexTrans2CutMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
+        /*Eigen::SparseMatrix<double, Eigen::RowMajor> FilterMat = intData.vertexTrans2CutMat *  intData.linRedMat * intData.singIntSpanMat * intData.intSpanMat;
         std::vector<int> featureIntegerList, mark(FilterMat.cols(), 0);
         for (int r : featureCutIntegerIndices){
             for (Eigen::SparseMatrix<double, Eigen::RowMajor>::InnerIterator it(FilterMat, r); it; ++it){
@@ -980,7 +980,7 @@ inline void setup_integration(const directional::CartesianField& field,
         std::sort(tmp.begin(), tmp.end());
         intData.featureIntegerIndices.resize(tmp.size());
         for (int i = 0; i < tmp.size(); ++i)
-            intData.featureIntegerIndices(i) = tmp[i];
+            intData.featureIntegerIndices(i) = tmp[i];*/
 
 
     } else {

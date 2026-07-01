@@ -65,7 +65,7 @@ int main()
                 seamsList.push_back(meshWhole.FE(i,j));
        
     Eigen::VectorXi seams = Eigen::VectorXi::Map(seamsList.data(), seamsList.size());
-    intData.integralSeamless=false;
+    intData.integralSeamless = true;
     std::cout<<"Solving for permutationally-seamless integration"<<std::endl;
     directional::integrate(combedField, intData, meshCut, cutUVRot ,cornerWholeUV);
     //Extracting the UV from [U,V,-U, -V];
