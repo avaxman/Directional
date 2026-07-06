@@ -212,6 +212,34 @@ public:
         }
     }
     
+    inline polyscope::PointCloud* update_singularities_locations(const CartesianField& field,
+                                                                 const Eigen::MatrixXd& singLocations,
+                                                                 const int fieldNum=0,
+                                                                 const std::string name="",
+                                                                 const double radiusRatio=0.3)
+    {
+        //assert("set_singularities(): singElements.size()!=singIndices.size()" && singElements.size()==singIndices.size());
+        //Eigen::MatrixXd singSources(singElements.rows(),3);
+        //for (int i=0;i<singElements.size();i++)
+        //    singSources.row(i) = field.tb->cycleSources.row(singElements(i));
+        
+        //_field.singLocalCycles, _field.singIndices
+        
+        std::string singName;
+        if (name.empty())
+            singName = "Singularities " + std::to_string(fieldNum);
+        else
+            singName = name;
+        
+        psSingList[fieldNum] = polyscope::registerPointCloud(singName, singLocations)->setPointRadius(radiusRatio*field.tb->avgAdjLength, false);
+        std::vector<glm::vec3> singColors(field.singIndices.size());
+        for (int i=0;i<field.singIndices.size();i++)
+            singColors[i] = default_index_color(field.singIndices[i]);
+        
+        psSingList[fieldNum]->addColorQuantity("Indices", singColors)->setEnabled(true);
+        return psSingList[fieldNum];
+    }
+    
     Eigen::MatrixXd inline set_1form(const Eigen::VectorXd& oneForm,
                                      const std::string formName = "",
                                      const int meshNum=0,

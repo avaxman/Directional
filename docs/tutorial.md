@@ -16,7 +16,7 @@ The library comprises two basic elements:
 
 Our paradigm avoids buffed classes with a complicated nested hierarchy; instead, the member functions in the classes are minimal, and only used to implement the essential properties of a geometric object (for instance, the connection between tangent spaces). Nevertheless, Directional strives to minimize the number of cumbersome parameters in functions and therefore relies considerably on (passive) data classes aggregating information about specific algorithms.
 
-The library is header only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
+The library is header-only, where each header contains a set of functions closely related (for instance, the precomputation and computation of some directional quantity over a mesh). For the most part, one header contains only one function. The atomic data structures are, for the most part, simple matrices in [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page),
 The visualization is done through a specialized class `DirectionalViewer`, which is a wrapper around [PolyScope](https://polyscope.run/), with many extended options that facilitate the rendering of directional fields.
 
 The header files contain documentation of the parameters to each function and their required composition; in this tutorial, we mostly tie the functionality of Directional to the theoretical concepts of directional fields and the methods to process and visualize them.
@@ -363,6 +363,12 @@ iterationFunctions.push_back(directional::soft_rosy);  iterationFunctions.push_b
 
 ![Example 304](images/304_IntegrableFields.png)<p align=center><em>Left: The original PolyVector Fields. Right: An Integrable field (the curl is color-coded with maximum of 0.09 at yellow).</em></p>
 
+### 305 Extrinsic Fields
+
+Discrete tangent bundles are technically abstract and can be separated from any underlying mesh structure. Specifically, we demonstrate this on extrinsic vertex-based fields [[Liu et al. 2026](#Liu2026)]. Extrinsic vertex fields have an extra structure of defining the field pointwise by parallel transport and barycentric blending, to define an extrinsic field that is continuous across edges. The tutorial also demonstrates how to find the exact location of singularities that might appear anywhere on triangles.
+
+![Example 305](images/305_ExtrinsicFields.png)<p align=center><em>Left: A face-based field (computed by a power field). Right: An extrinsic power-field. Zoom-in: two singularities inside faces.</em></p>
+
 ## Chapter 4: Polar Methods
 
 ### Polar Fields
@@ -458,6 +464,7 @@ It is possible to constrain the functions to have linear relations between them,
 This subchapter demonstrates how we can create an actual polygonal mesh from the arrangement of isolines on the surface. This creates an arrangement of lines (in exact numbers) on every triangle, and stitches them together across triangles to get a complete conforming mesh. The new mesh is given in the <a href=https://avaxman.github.io/libhedra/>libhedra</a> format of $(V,D,F)$, where $D$ is a vector $|F| \times 1$ of face degrees, and $F$ is a $|F| \times max(D)$ matrix of indices into $V$.
 
 The meshing unit is independent from the integration unit, and can be potentially used with external functions. However, it is easy to pipeline iit with the integration as follows:
+
 ```cpp
 //setting up mesh data from integration data
 directional::MesherData mData;
@@ -478,7 +485,6 @@ This reads the integrated information from `intData`. Conversely to previous ver
 
 Directional fields, and differential forms, are objects of differential geometry where the underlying manifold is equipped with notions of gradient, curl, divergence, and where gradient fields are curl free and cogradient fields (or just "curl fields") are divergence free. These are special cases of the more abstract algebraic notion of *cochain complexes*. Without going into the full formality, such a complex is defined by a series of spaces $\Omega_i$,  $0 \leq i \leq d$, for some dimension $d$, which are related by differential operators $d_i:\Omega_i\rightarrow \Omega_{i+1}$. These spaces can be equipped with a metric $<>_i:\Omega_i \times \Omega_i \rightarrow \mathbb{R}^{+}$. Essential to the definition is that $d_{i+1}d_i=0$. For instance, scalars to vectors by the gradient operator, and then vectors to scalars (in 2D) by the curl operators comprise a cochain complex. A cochain complex also defines $i^{th}$ singular cohomologies, which are the quotient spaces $\mathbb{H}_{i}=ker(d_{i})/im(d_{i-1})$. These only arise in case of nontrivial topology, and $|\mathbb{H}_i|=\beta_i$ are called the *Betti numbers*, which are in fact generators of the topology. The fields in these spaces are called *harmonic*. The metric also defines a Hodge star $\star_i: \Omega_i\rightarrow\Omega_{d-i}$, which is a duality relation; that often defines a dual cochain with a *codifferential* operator $\delta_i = (-1)^i\star_i^{-1}d_i^T\star_{i+1}$.
 
-
 **Example**: All gradient fields are curl free, but there are only curl-free fields that are not also gradient in topologies like annuli or tori. the torus has genus $1$ and admits two harmonic fields.
 
 In the discrete setting, the spaces are represented as arrays of nodal values in some finite space, the $d$ operators are (often sparse) matrices, and the metrics are implemented as symmetric positive matrices $M$ so that $<a,b>_i = a^TM_ib$. The hodge star is then simply a multiplication by $M_i$. However, it is often that this defines a separate dual structure rather then result in an object of the same space.
@@ -490,8 +496,8 @@ Although abstract, the notion has multiple concrete manifestations in directiona
 What is called "face-based FEM" is in fact just the structure with face-based vectors depicted in the following figure:
 ![Example 6-1](images/601_FaceBasedFEM_complex.png)<p align=center><em>Top: the primal cochain complex, taking conforming piecewise linear (PL) functions to face-based piecewise-constant fields, and the curl operator takes the latter to edge-based diamond regions. In the bottom dual structure (right to left), the rotated cogradient of non-conforming piecewise-linear functions are also piecewise-constant fields. their divergence is defined on dual vertex voronoi areas. Going from PL functions to dual regions is done by the mass matrices $M_v$ and $M_e$. The face rotation operator $J$ simply rotates a vector by $\frac{\pi}{2}$ in a face. The cochain structure is actually such that $CG_v=0$, and the matching dual cochain structure $DJG_e=0$ </em></p>
 
-
 Which is popular in geometry processing (for instance, studied extensively in [[Wardetzky 2007](#Wardetzky2007)]. This is exemplified in the following code:
+
 ```cpp
 Eigen::SparseMatrix<double> Gv = directional::conf_gradient_matrix_2D<double>(mesh);
 Eigen::SparseMatrix<double> Ge = directional::non_conf_gradient_matrix_2D<double>(mesh);
@@ -500,6 +506,7 @@ Eigen::SparseMatrix<double> J =  directional::face_vector_rotation_matrix_2D<dou
 Eigen::SparseMatrix<double> C = directional::curl_matrix_2D<double>(mesh);
 Eigen::SparseMatrix<double> D = directional::div_matrix_2D<double>(mesh);
 ```
+
 `Ge` is the non-conforming (Edge-based) cogradient, and `J` is the in-face rotation matrix. The code proceeds by verifying the cochain relations (discrete curl of gradient and divergence of rotated cogradient):
 
 ```cpp
@@ -548,7 +555,6 @@ The differences will only be culminated in the last `z1` vs. `z1Diag`. Other tha
 
 ### 603 Hodge Decomposition
 
-
 The combination of a cochain complex and metric introduces the Hodge decomposition, where we can also define the codifferential $\delta_i = (-1)^i\star_i^{-1}d_{i}^T\star_{i+1}$. Every $i$-form $z_i \in \Omega_i, 1\leq i \leq n-1$ can be decomposed as:
 $$
 z_i = d_{i-1}f_{i-1}+\delta_i g_{i+1} + h_i,
@@ -588,15 +594,16 @@ This amount to an orthogonal projection of $z_i$ to the space of coexact forms. 
 ![Example 6-3](images/603_HodgeDecomposition.png)<p align=center><em>Top: a piecewise-constant face-based vector field. Bottom: its decomposition into exact, coexact, and harmonic forms. The colors indicate the potential fields (left $f$ and middle $g$).
 </em></p>
 
-
 ### 604 Hodge decomposition with boundaries
 
 In the case of boundaries, $\delta$ and $d$ are not adjoint anymore without setting explicit boundary conditions. These can be intricate in higher dimensions, but in 2D surfaces can usually be the choice between Dirichlet or Neumann. This culminates in the construction of the operators themselves. For instance:
+
 ```cpp
 template<typename NumberType>
 Eigen::SparseMatrix<NumberType> d0_matrix(const TriMesh& mesh,
                                           const bool isDirichlet=false)
 ```
+
 Currently only Neumann conditions are implemeneted for DEC; that means that the exact component of the Hodge decomposition is free, whereas the coexact and the harmonic components are tangent the the boundaries.
 
 ![Example 6-4](images/604_HodgeBoundary.png)<p align=center><em>Top: a $1$-form. Bottom: its decomposition into exact, coexact, and harmonic forms with Neumann boundary conditions (coexact and harmonic are tangent to the boundaries). The colors indicate the potential field (left $f$ and middle $g$).
@@ -608,8 +615,6 @@ it is possible to enumerate the harmonic fields as the null-space independent ve
 
 ![Example 6-4](images/605_HarmonicFields.png)<p align=center><em>Two example of harmonic fields. They are naturally associated to homologies (handles) of the surface.
 </em></p>
-
-
 
 <!-- 
 A *cochain complex* is defined by a gradient operator $G$ and a curl operator $C$ where $C \cdot G=0$. 
@@ -634,9 +639,6 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 2. Support for tensor fields.
 
 3. Higher-order fields.
-
-
-
 
 ## References
 
@@ -685,6 +687,9 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 <a id="Liu2011"></a>Liu et al., 2008
 : Yang Liu, Weiwei Xu, Jun Wang, Lifeng Zhu, Baining Guo, Falai Chen, Guoping Wang, General Planar Quadrilateral Mesh Design Using Conjugate Direction Field.
 
+<a id="Liu2026"></a>Liu et al., 2026
+: Hongyi Liu, Oded Stein, Amir Vaxman, Mirela Ben-Chen, and Misha Kazhdan, Phong-Rodrigues Extrinsic Vector-Field Processing.
+
 <a id="Myles2014"></a>Myles et al., 2014
 : Ashish Myles, Nico Pietroni, Denis Zorin, Robust Field-aligned Global Parametrization.
 
@@ -714,5 +719,3 @@ Directional is a an ever-evolving project, and there are many algorithms in the 
 
 <a id="Wardetzky2007"></a>Wardetzky, 2007
 : Max Wardetzky, Discrete differential operators on polyhedral surfaces-convergence and approximation.
-
-
