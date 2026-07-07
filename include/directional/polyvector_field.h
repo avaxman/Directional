@@ -286,8 +286,9 @@ inline void polyvector_field(PolyVectorData& pvData,
     //Initial solution (or only solution if numIterations = 0)
     SimplicialLDLT<SparseMatrix<complex<double>>> solver;
     solver.compute(pvData.totalLhs);
+    assert(solver.info() == Success && "PolyVector solver compute() failed!");
     pvData.reducedDofs = solver.solve(pvData.totalRhs);
-    assert(solver.info() == Success && "PolyVector solver failed!");
+    assert(solver.info() == Success && "PolyVector solver solve() failed!");
     VectorXcd fullDofs = pvData.reducMat*pvData.reducedDofs+pvData.reducRhs;
     
     if (pvData.verbose){
