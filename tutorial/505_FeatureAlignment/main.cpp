@@ -143,7 +143,7 @@ int main()
     intDataFull.featureIndices = featureIndices;
     std::cout<<"Doing aligned full-seamless integration"<<std::endl;
     directional::setup_integration(rawField, intDataFull, meshCut, combedField);
-    directional::integrate(combedField, intDataFull, meshCut, NFunctionRot, NCornerFunc);
+    directional::integrate(combedField, intDataFull, meshCut, NFunctionFull, NCornerFunc);
     std::cout<<"Done with aligned full-seamless integration"<<std::endl;
     
     viewer.init();
