@@ -31,7 +31,7 @@ namespace directional
 {
 
 
-static std::unordered_map<int, std::set<int>> build_adjacency(const Eigen::MatrixXi& EV) {
+inline std::unordered_map<int, std::set<int>> build_adjacency(const Eigen::MatrixXi& EV) {
     std::unordered_map<int, std::set<int>> adj;
     for (int i = 0; i < EV.rows(); ++i) {
         int v0 = EV(i, 0);
@@ -43,7 +43,7 @@ static std::unordered_map<int, std::set<int>> build_adjacency(const Eigen::Matri
 }
 
 // Compute shape operator (2x2 Hessian of interpolated height function in tangent frame)
-void shape_operator(const Eigen::MatrixXd& V,
+inline void shape_operator(const Eigen::MatrixXd& V,
                     const Eigen::MatrixXi& EV,
                     const Eigen::MatrixXd& VBx,
                     const Eigen::MatrixXd& VBy,
